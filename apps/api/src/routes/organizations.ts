@@ -57,6 +57,79 @@ orgRouter.post(
   })
 );
 
+orgRouter.get(
+  "/plans",
+  asyncHandler(async (_req, res) => {
+    ok(res, await prisma.plan.findMany({ where: { enabled: true }, orderBy: [{ price: "asc" }, { createdAt: "asc" }] }));
+  })
+);
+
+orgRouter.get(
+  "/:organizationId/subscription",
+  requireOrg,
+  asyncHandler(async (req, res) => {
+    const [subscription, usage, quotaPackages] = await Promise.all([
+      prisma.subscription.findFirst({
+        where: {
+          organizationId: req.organizationId!,
+          active: true,
+          OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }]
+        },
+        include: { plan: true },
+        orderBy: { startsAt: "desc" }
+      }),
+      prisma.organization.findUniqueOrThrow({
+        where: { id: req.organizationId! },
+        select: { _count: { select: { apartments: true, members: true } } }
+      }),
+      prisma.orgQuotaPackage.findMany({
+        where: { organizationId: req.organizationId! },
+        orderBy: { createdAt: "desc" }
+      })
+    ]);
+
+    const extraQuota = quotaPackages.reduce(
+      (sum, item) => ({
+        apartmentQuota: sum.apartmentQuota + item.apartmentQuota,
+        roomQuota: sum.roomQuota + item.roomQuota,
+        memberQuota: sum.memberQuota + item.memberQuota
+      }),
+      { apartmentQuota: 0, roomQuota: 0, memberQuota: 0 }
+    );
+
+    ok(res, { subscription, usage: usage._count, extraQuota, quotaPackages });
+  })
+);
+
+orgRouter.post(
+  "/:organizationId/subscriptions",
+  requireOrg,
+  requirePermission(PERMISSIONS.ORG_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z.object({ planId: z.string() }).parse(req.body);
+    const plan = await prisma.plan.findUnique({ where: { id: input.planId } });
+    if (!plan || !plan.enabled) throw new HttpError(404, "套餐不存在或已停用");
+
+    const subscription = await prisma.$transaction(async (tx) => {
+      await tx.subscription.updateMany({
+        where: { organizationId: req.organizationId!, active: true },
+        data: { active: false, endsAt: new Date() }
+      });
+      return tx.subscription.create({
+        data: {
+          organizationId: req.organizationId!,
+          planId: plan.id,
+          startsAt: new Date(),
+          endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        },
+        include: { plan: true }
+      });
+    });
+
+    ok(res, subscription);
+  })
+);
+
 orgRouter.put(
   "/:organizationId",
   requireOrg,

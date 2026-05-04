@@ -69,6 +69,7 @@ export const styles = StyleSheet.create({
   codeButton: { width: 104, minHeight: 40, borderRadius: 6, borderWidth: 1, borderColor: "#146c5c", alignItems: "center", justifyContent: "center" },
   textarea: { minHeight: 88, paddingTop: 10, textAlignVertical: "top" },
   button: { minHeight: 40, borderRadius: 6, backgroundColor: "#146c5c", alignItems: "center", justifyContent: "center" },
+  buttonDisabled: { opacity: 0.48 },
   buttonText: { color: "white", fontWeight: "700" },
   secondaryButton: { minHeight: 40, borderRadius: 6, borderWidth: 1, borderColor: "#146c5c", alignItems: "center", justifyContent: "center" },
   secondaryButtonText: { color: "#146c5c", fontWeight: "700" },
@@ -142,5 +143,11 @@ export const styles = StyleSheet.create({
   settingItemText: { color: "#102522", fontSize: 15, fontWeight: "700" },
   subPageHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
   backButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: "#eef6f2" },
-  backButtonText: { color: "#146c5c", fontWeight: "700" }
+  backButtonText: { color: "#146c5c", fontWeight: "700" },
+  planCard: { padding: 12, borderWidth: 1, borderColor: "#e3dece", borderRadius: 8, gap: 10, backgroundColor: "#fffdf7" },
+  planCardActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
+  planHeader: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  planPrice: { marginTop: 4, color: "#146c5c", fontSize: 18, fontWeight: "700" },
+  quotaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  quotaText: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: "#f4f2ec", color: "#394341", fontSize: 12, overflow: "hidden" }
 });

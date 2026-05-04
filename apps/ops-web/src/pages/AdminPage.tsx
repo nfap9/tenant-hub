@@ -166,6 +166,20 @@ export function AdminPage({ section }: { section: AdminSection }) {
             columns={[
               { title: "组织", dataIndex: "name" },
               { title: "编码", dataIndex: "code" },
+              {
+                title: "当前套餐",
+                render: (_, row) => {
+                  const subscription = row.subscriptions?.find((item: any) => item.active);
+                  return subscription ? <Tag color="green">{subscription.plan?.name}</Tag> : <Tag>未购买</Tag>;
+                }
+              },
+              {
+                title: "有效期",
+                render: (_, row) => {
+                  const subscription = row.subscriptions?.find((item: any) => item.active);
+                  return subscription?.endsAt ? new Date(subscription.endsAt).toLocaleDateString() : "-";
+                }
+              },
               { title: "公寓", render: (_, row) => row._count?.apartments },
               { title: "成员", render: (_, row) => row._count?.members },
               { title: "状态", dataIndex: "status" },

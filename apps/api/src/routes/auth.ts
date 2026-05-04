@@ -118,3 +118,33 @@ authRouter.get(
     ok(res, { user: { ...user, effectivePlatformRole }, memberships });
   })
 );
+
+authRouter.put(
+  "/password",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        currentPassword: z.string().min(1, "请输入当前密码"),
+        newPassword: passwordSchema,
+        confirmPassword: passwordSchema
+      })
+      .refine((value) => value.newPassword === value.confirmPassword, "两次密码不一致")
+      .parse(req.body);
+
+    if (input.currentPassword === input.newPassword) {
+      throw new HttpError(400, "新密码不能与当前密码相同");
+    }
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
+    const matched = await bcrypt.compare(input.currentPassword, user.passwordHash);
+    if (!matched) throw new HttpError(400, "当前密码不正确");
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(input.newPassword, 12) }
+    });
+
+    ok(res, { message: "密码已更新" });
+  })
+);
