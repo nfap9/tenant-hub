@@ -86,6 +86,14 @@ orgRouter.delete(
 );
 
 orgRouter.get(
+  "/:organizationId/roles",
+  requireOrg,
+  asyncHandler(async (_req, res) => {
+    ok(res, await prisma.role.findMany({ orderBy: [{ system: "desc" }, { createdAt: "asc" }] }));
+  })
+);
+
+orgRouter.get(
   "/:organizationId/members",
   requireOrg,
   asyncHandler(async (req, res) => {
@@ -94,6 +102,21 @@ orgRouter.get(
       include: { user: { select: { id: true, phone: true, username: true } }, role: true }
     });
     ok(res, members);
+  })
+);
+
+orgRouter.delete(
+  "/:organizationId/members/:memberId",
+  requireOrg,
+  requirePermission(PERMISSIONS.MEMBER_MANAGE),
+  asyncHandler(async (req, res) => {
+    const member = await prisma.orgMember.findUniqueOrThrow({
+      where: { id: req.params.memberId },
+      include: { role: true }
+    });
+    if (member.organizationId !== req.organizationId) throw new HttpError(404, "成员不存在");
+    if (member.role.code === "owner") throw new HttpError(400, "所有者不可移除");
+    ok(res, await prisma.orgMember.update({ where: { id: member.id }, data: { status: "DISABLED" } }));
   })
 );
 
