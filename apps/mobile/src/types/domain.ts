@@ -38,3 +38,82 @@ export type SubscriptionOverview = {
   usage: { apartments: number; members: number };
   extraQuota: { apartmentQuota: number; roomQuota: number; memberQuota: number };
 };
+
+export type RoomStatus = "VACANT" | "RESERVED" | "OCCUPIED" | "MAINTENANCE";
+export type RentCycle = "MONTHLY" | "QUARTERLY" | "YEARLY";
+export type LeaseStatus = "ACTIVE" | "TERMINATED" | "EXPIRED";
+
+export type ApartmentExpense = {
+  id: string;
+  apartmentId: string;
+  name: string;
+  amount: string | number;
+  spentAt: string;
+  note?: string;
+};
+
+export type ApartmentFeeItem = {
+  id: string;
+  apartmentId: string;
+  name: string;
+  spec?: string;
+  amount: string | number;
+  enabled: boolean;
+};
+
+export type Apartment = {
+  id: string;
+  organizationId: string;
+  name: string;
+  location: string;
+  floors: number;
+  landArea?: string | number;
+  totalArea?: string | number;
+  landlordName?: string;
+  landlordPhone?: string;
+  contractStart?: string;
+  contractEnd?: string;
+  rentAmount?: string | number;
+  waterUnitPrice: string | number;
+  powerUnitPrice: string | number;
+  rooms?: Room[];
+  expenses?: ApartmentExpense[];
+  feeItems?: ApartmentFeeItem[];
+};
+
+export type LeaseFee = {
+  id: string;
+  leaseId: string;
+  feeItemId?: string;
+  name: string;
+  amount: string | number;
+};
+
+export type Lease = {
+  id: string;
+  organizationId: string;
+  roomId: string;
+  tenantName: string;
+  tenantPhone: string;
+  startDate: string;
+  endDate: string;
+  cycle: RentCycle;
+  rentAmount: string | number;
+  depositAmount: string | number;
+  waterUnitPrice: string | number;
+  powerUnitPrice: string | number;
+  status: LeaseStatus;
+  fees?: LeaseFee[];
+};
+
+export type Room = {
+  id: string;
+  apartmentId: string;
+  roomNo: string;
+  layout: string;
+  area?: string | number;
+  facilities: string[];
+  status: RoomStatus;
+  apartment?: Apartment;
+  leases?: Lease[];
+};

@@ -62,3 +62,5 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ## 设计说明
 
 系统以组织为租户边界，业务表均携带 `organizationId`。权限采用“角色-权限码”模型，系统预置所有者、管家、只读成员，运营端可配置可选角色与权限。账单生成按租约交租周期创建周期账单，并拆分为房租、水电和其他费用子账单，便于异常处理和收款追踪。
+
+移动端业务页面遵循 [移动端交互规范](docs/mobile-ui-guidelines.md)，页面级导航、实体卡片操作和表单操作需要分层放置。

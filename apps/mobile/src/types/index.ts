@@ -1,3 +1,19 @@
 export type { MobileSession } from "./auth";
-export type { Membership, OrgMember, OrgRole, Plan, Subscription, SubscriptionOverview } from "./domain";
+export type {
+  Apartment,
+  ApartmentExpense,
+  ApartmentFeeItem,
+  Lease,
+  LeaseFee,
+  LeaseStatus,
+  Membership,
+  OrgMember,
+  OrgRole,
+  Plan,
+  RentCycle,
+  Room,
+  RoomStatus,
+  Subscription,
+  SubscriptionOverview
+} from "./domain";
 export type { TabKey } from "./navigation";

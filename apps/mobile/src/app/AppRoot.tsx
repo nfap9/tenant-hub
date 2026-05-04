@@ -99,9 +99,13 @@ export default function AppRoot() {
         {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
         <Text style={styles.title}>{title}</Text>
         {active === "home" ? <HomeScreen /> : null}
-        {active === "rooms" ? <RoomsScreen /> : null}
+        {active === "rooms" ? (
+          <RoomsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} />
+        ) : null}
         {active === "bills" ? <BillsScreen /> : null}
-        {active === "apartments" ? <ApartmentsScreen /> : null}
+        {active === "apartments" ? (
+          <ApartmentsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} />
+        ) : null}
         {active === "settings" ? (
           <SettingsScreen
             token={session.token}

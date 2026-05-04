@@ -5,7 +5,7 @@ import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.j
 import { generateLeaseBills } from "../services/billing.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ok } from "../utils/http.js";
+import { HttpError, ok } from "../utils/http.js";
 
 export const leaseRouter = Router();
 leaseRouter.use(requireAuth, requireOrg);
@@ -48,6 +48,21 @@ leaseRouter.post(
       .parse(req.body);
 
     const { fees, roomId, ...leaseData } = input;
+    const room = await prisma.room.findFirst({
+      where: { id: roomId, apartment: { organizationId: req.organizationId! } },
+      include: { apartment: { select: { id: true } } }
+    });
+    if (!room) throw new HttpError(404, "房间不存在");
+    if (room.status !== "VACANT") throw new HttpError(400, "仅空闲房间可以签约");
+
+    const feeItemIds = fees.map((fee) => fee.feeItemId).filter((feeItemId): feeItemId is string => Boolean(feeItemId));
+    if (feeItemIds.length) {
+      const feeCount = await prisma.apartmentFeeItem.count({
+        where: { id: { in: feeItemIds }, apartmentId: room.apartment.id, enabled: true }
+      });
+      if (feeCount !== feeItemIds.length) throw new HttpError(400, "费用项目不可用");
+    }
+
     const lease = await prisma.lease.create({
       data: {
         ...leaseData,
@@ -69,6 +84,11 @@ leaseRouter.post(
     const input = z
       .object({ type: z.enum(["EXPIRED", "NEGOTIATED", "BREACH"]), reason: z.string().optional(), terminatedAt: z.coerce.date().default(new Date()) })
       .parse(req.body);
+    const current = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      select: { id: true }
+    });
+    if (!current) throw new HttpError(404, "租约不存在");
     const lease = await prisma.lease.update({
       where: { id: req.params.id },
       data: { status: "TERMINATED", terminationType: input.type, terminationReason: input.reason, terminatedAt: input.terminatedAt }

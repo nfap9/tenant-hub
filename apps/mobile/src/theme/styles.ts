@@ -89,6 +89,7 @@ export const styles = StyleSheet.create({
   card: { padding: 14, backgroundColor: "white", borderRadius: 8, flexDirection: "row", justifyContent: "space-between", gap: 12 },
   cardTitle: { color: "#102522", fontSize: 17, fontWeight: "700" },
   cardStat: { color: "#146c5c", fontWeight: "700" },
+  apartmentListCard: { padding: 12, borderWidth: 1, borderColor: "#e3dece", borderRadius: 8, gap: 10, backgroundColor: "#fffdf7" },
   muted: { color: "#6b7471" },
   orgOption: { padding: 12, borderWidth: 1, borderColor: "#e3dece", borderRadius: 8, flexDirection: "row", justifyContent: "space-between", gap: 12 },
   orgOptionActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
@@ -118,6 +119,8 @@ export const styles = StyleSheet.create({
 
   // 新增：房间
   roomCard: { padding: 14, backgroundColor: "white", borderRadius: 8, gap: 10 },
+  roomGrid: { gap: 10 },
+  roomCardActive: { borderWidth: 1, borderColor: "#146c5c", backgroundColor: "#eef6f2" },
   roomHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
   roomActions: { flexDirection: "row", gap: 8 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, fontSize: 12, fontWeight: "700", overflow: "hidden" },
@@ -137,6 +140,14 @@ export const styles = StyleSheet.create({
   // 新增：详情面板
   detailPanel: { padding: 14, backgroundColor: "#fffdf7", borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", gap: 8 },
   detailRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  formGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  formField: { flexGrow: 1, flexBasis: 104, gap: 4 },
+  fieldLabel: { color: "#6b7471", fontSize: 12, fontWeight: "700" },
+  gridInput: { flexGrow: 1, flexBasis: 104 },
+  actionButton: { flex: 1 },
+  feeItem: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", backgroundColor: "#fffdf7", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  feeItemActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
 
   // 新增：设置与子页面
   settingItem: { padding: 14, backgroundColor: "white", borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
