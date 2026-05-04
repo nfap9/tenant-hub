@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS development
 COPY apps/api apps/api
 EXPOSE 4000
-CMD ["pnpm", "--filter", "@tenant-hub/api", "dev"]
+CMD ["sh", "-c", "pnpm --filter @tenant-hub/api prisma generate && pnpm --filter @tenant-hub/api dev"]
 
 FROM deps AS build
 COPY apps/api apps/api

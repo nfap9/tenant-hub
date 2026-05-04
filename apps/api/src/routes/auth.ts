@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { platformAdminPhones } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -99,10 +100,21 @@ authRouter.get(
   "/me",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: req.user!.id },
+      select: { id: true, phone: true, username: true, platformRole: true }
+    });
     const memberships = await prisma.orgMember.findMany({
       where: { userId: req.user!.id, status: "ACTIVE" },
       include: { organization: true, role: true }
     });
-    ok(res, { user: req.user, memberships });
+    const platformAdminCount = await prisma.user.count({ where: { platformRole: { not: "NONE" } } });
+    const effectivePlatformRole =
+      user.platformRole !== "NONE"
+        ? user.platformRole
+        : platformAdminPhones.includes(user.phone) || platformAdminCount === 0
+          ? "SUPER_ADMIN"
+          : "NONE";
+    ok(res, { user: { ...user, effectivePlatformRole }, memberships });
   })
 );

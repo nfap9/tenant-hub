@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { env } from "../config/env.js";
+import { env, platformAdminPhones } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../utils/http.js";
 
@@ -35,20 +35,24 @@ export const requireAuth = (req: Request, _res: Response, next: NextFunction) =>
   }
 };
 
-export const requireOrg = async (req: Request, _res: Response, next: NextFunction) => {
-  if (!req.user) throw new HttpError(401, "请先登录");
-  const organizationId = req.header("x-organization-id") || req.params.organizationId;
-  if (!organizationId) throw new HttpError(400, "缺少组织");
+export const requireOrg = (req: Request, _res: Response, next: NextFunction) => {
+  Promise.resolve()
+    .then(async () => {
+      if (!req.user) throw new HttpError(401, "请先登录");
+      const organizationId = req.header("x-organization-id") || req.params.organizationId;
+      if (!organizationId) throw new HttpError(400, "缺少组织");
 
-  const member = await prisma.orgMember.findUnique({
-    where: { organizationId_userId: { organizationId, userId: req.user.id } },
-    include: { role: true }
-  });
-  if (!member || member.status !== "ACTIVE") throw new HttpError(403, "无组织访问权限");
+      const member = await prisma.orgMember.findUnique({
+        where: { organizationId_userId: { organizationId, userId: req.user.id } },
+        include: { role: true }
+      });
+      if (!member || member.status !== "ACTIVE") throw new HttpError(403, "无组织访问权限");
 
-  req.organizationId = organizationId;
-  req.permissions = member.role.permissions;
-  next();
+      req.organizationId = organizationId;
+      req.permissions = member.role.permissions;
+      next();
+    })
+    .catch(next);
 };
 
 export const requirePermission =
@@ -58,3 +62,21 @@ export const requirePermission =
     }
     next();
   };
+
+export const requirePlatformAccess = (req: Request, _res: Response, next: NextFunction) => {
+  Promise.resolve()
+    .then(async () => {
+      if (!req.user) throw new HttpError(401, "请先登录");
+      if (platformAdminPhones.includes(req.user.phone)) return next();
+
+      const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { platformRole: true } });
+      if (!user) throw new HttpError(403, "无运营平台权限");
+      if (user.platformRole === "NONE") {
+        const platformAdminCount = await prisma.user.count({ where: { platformRole: { not: "NONE" } } });
+        if (platformAdminCount === 0) return next();
+        throw new HttpError(403, "无运营平台权限");
+      }
+      next();
+    })
+    .catch(next);
+};

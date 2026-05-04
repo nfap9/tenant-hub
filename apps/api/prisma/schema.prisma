@@ -65,11 +65,19 @@ enum BillItemType {
   OTHER
 }
 
+enum PlatformRole {
+  NONE
+  OPERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
 model User {
   id           String       @id @default(cuid())
   phone        String       @unique
   username     String
   passwordHash String
+  platformRole PlatformRole @default(NONE)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   memberships  OrgMember[]

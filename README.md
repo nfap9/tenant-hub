@@ -3,8 +3,8 @@
 面向二房东和小型物业公司的轻量化公寓管理系统。仓库使用 TypeScript monorepo：
 
 - `apps/api`：Node.js + Express + Prisma 5 + PostgreSQL
-- `apps/ops-web`：React 18 + Vite + Ant Design 5 运营/管理前端
-- `apps/mobile`：React Native/Expo 客户端骨架
+- `apps/ops-web`：React 18 + Vite + Ant Design 5 平台运营端，仅用于系统配置、租户管理、套餐配置等
+- `apps/mobile`：React Native/Expo 最终用户 App，用于组织、公寓、房间、租约、账单等业务管理
 
 ## 本地启动
 
@@ -25,8 +25,8 @@ pnpm dev
 
 - `postgres`：PostgreSQL 16，宿主机端口 `5433`，容器内端口 `5432`
 - `api`：Express API，端口 `4000`，启动时自动执行 `prisma migrate deploy`
-- `ops-web`：运营前端 nginx 静态服务，端口 `5173`
-- `mobile`：React Native/Expo 开发服务，端口 `8081`、`19000-19002`
+- `ops-web`：平台运营端 nginx 静态服务，端口 `5173`
+- `mobile`：最终用户 App 的 React Native/Expo Web 预览服务，端口 `19006`
 
 ```bash
 docker compose up --build
@@ -41,10 +41,12 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 访问地址：
 
 - API 健康检查：`http://localhost:4000/health`
-- 运营前端：`http://localhost:5173`
-- 移动端 Metro/Expo：`http://localhost:8081`
+- 平台运营端：`http://localhost:5173`
+- 客户端 App 浏览器预览：`http://localhost:19006`
 
 生产部署前请修改 `docker-compose.yml` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL` 和 `JWT_SECRET`。
+
+运营端账号与客户端账号使用同一套手机号登录，但权限隔离。普通用户默认没有运营平台权限；在系统没有任何运营管理员时，首个已登录用户可临时进入运营端，在“用户管理”中给指定用户授予运营权限。也可以通过环境变量 `PLATFORM_ADMIN_PHONES` 配置初始化超级管理员手机号，多个手机号用英文逗号分隔。
 
 ## 已实现范围
 
@@ -54,7 +56,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - 公寓、房东合同、房间、水电单价、可选费用配置
 - 租约签订、终止、自动生成周期账单
 - 房租、水电、其他费用子账单，水电读数录入、批量导出/导入、收款记录
-- 运营端套餐配置、组织状态管理、额度包发放、角色权限配置、系统参数
+- 运营端只包含套餐配置、租户组织状态管理、额度包发放、角色权限配置、系统参数
+- 移动端承载最终用户的组织、公寓、房间、租约、账单、水电录入、收款等业务入口
 
 ## 设计说明
 

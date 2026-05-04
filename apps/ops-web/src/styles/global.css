@@ -10,6 +10,13 @@ body {
   font-family: Avenir Next, PingFang SC, Microsoft YaHei, sans-serif;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -36,10 +43,16 @@ body {
 }
 
 .workspace {
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f4f2ec;
 }
 
 .topbar {
+  flex: 0 0 56px;
   height: 56px;
   display: flex;
   align-items: center;
@@ -49,7 +62,46 @@ body {
   color: white;
 }
 
+.ops-layout {
+  flex: 1;
+  min-height: 0;
+  background: #f4f2ec;
+}
+
+.ops-sider {
+  min-height: 0;
+  border-right: 1px solid #e0dac8;
+  background: #fffaf0 !important;
+}
+
+.ops-sider .ant-layout-sider-children {
+  height: 100%;
+  background: #fffaf0;
+}
+
+.ops-sider .ant-menu {
+  height: 100%;
+  border-inline-end: 0 !important;
+  background: transparent;
+  padding-top: 8px;
+}
+
+.ops-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: #f4f2ec;
+}
+
+.no-access {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  background: #f4f2ec;
+}
+
 .page {
+  min-height: 100%;
   padding: 18px;
 }
 
@@ -97,4 +149,49 @@ body {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
+}
+
+.permission-help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.permission-help .ant-tag {
+  margin-inline-end: 0;
+  padding: 4px 8px;
+}
+
+.permission-help-compact {
+  margin: -6px 0 14px;
+}
+
+.permission-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.permission-checks .ant-checkbox-wrapper {
+  min-height: 40px;
+  margin-inline-start: 0;
+  padding: 8px;
+  border: 1px solid #e3dece;
+  border-radius: 6px;
+  background: #fffaf0;
+}
+
+.permission-code {
+  display: block;
+  margin-top: 2px;
+  color: #68736f;
+  font-size: 12px;
+}
+
+.tag-code {
+  margin-left: 6px;
+  color: #68736f;
+  font-size: 12px;
 }

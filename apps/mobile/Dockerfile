@@ -10,5 +10,5 @@ RUN pnpm install --frozen-lockfile
 
 COPY apps/mobile apps/mobile
 WORKDIR /app/apps/mobile
-EXPOSE 8081 19000 19001 19002
-CMD ["pnpm", "dev", "--", "--host", "lan"]
+EXPOSE 8081 19000 19001 19002 19006
+CMD ["pnpm", "web"]

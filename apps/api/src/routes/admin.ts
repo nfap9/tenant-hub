@@ -1,12 +1,70 @@
 import { Router } from "express";
 import { z } from "zod";
+import { platformAdminPhones } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requirePlatformAccess } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ok } from "../utils/http.js";
+import { HttpError, ok } from "../utils/http.js";
 
 export const adminRouter = Router();
-adminRouter.use(requireAuth);
+adminRouter.use(requireAuth, requirePlatformAccess);
+
+adminRouter.get(
+  "/users",
+  asyncHandler(async (req, res) => {
+    const keyword = z.string().optional().parse(req.query.keyword);
+    const platformAdminCount = await prisma.user.count({ where: { platformRole: { not: "NONE" } } });
+    const users = await prisma.user.findMany({
+      where: keyword
+        ? {
+            OR: [
+              { phone: { contains: keyword } },
+              { username: { contains: keyword, mode: "insensitive" } }
+            ]
+          }
+        : undefined,
+      select: {
+        id: true,
+        phone: true,
+        username: true,
+        platformRole: true,
+        createdAt: true,
+        _count: { select: { memberships: true } }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100
+    });
+    ok(
+      res,
+      users.map((user) => ({
+        ...user,
+        effectivePlatformRole:
+          user.platformRole !== "NONE"
+            ? user.platformRole
+            : platformAdminPhones.includes(user.phone) || (platformAdminCount === 0 && user.id === req.user!.id)
+              ? "SUPER_ADMIN"
+              : "NONE",
+        bootstrapAdmin: platformAdminPhones.includes(user.phone) || (platformAdminCount === 0 && user.id === req.user!.id)
+      }))
+    );
+  })
+);
+
+adminRouter.put(
+  "/users/:id/platform-role",
+  asyncHandler(async (req, res) => {
+    const input = z.object({ platformRole: z.enum(["NONE", "OPERATOR", "ADMIN", "SUPER_ADMIN"]) }).parse(req.body);
+    if (req.params.id === req.user!.id && input.platformRole === "NONE" && !platformAdminPhones.includes(req.user!.phone)) {
+      throw new HttpError(400, "不能移除自己的运营权限");
+    }
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { platformRole: input.platformRole },
+      select: { id: true, phone: true, username: true, platformRole: true }
+    });
+    ok(res, user);
+  })
+);
 
 adminRouter.get(
   "/summary",
@@ -107,11 +165,44 @@ adminRouter.get(
   })
 );
 
+adminRouter.post(
+  "/roles",
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        code: z.string().min(2).regex(/^[a-z][a-z0-9_-]*$/),
+        name: z.string().min(1),
+        description: z.string().optional(),
+        permissions: z.array(z.string()).default([])
+      })
+      .parse(req.body);
+    ok(res, await prisma.role.create({ data: { ...input, system: false } }));
+  })
+);
+
 adminRouter.put(
   "/roles/:id",
   asyncHandler(async (req, res) => {
-    const input = z.object({ name: z.string().min(1), description: z.string().optional(), permissions: z.array(z.string()) }).parse(req.body);
-    ok(res, await prisma.role.update({ where: { id: req.params.id }, data: input }));
+    const role = await prisma.role.findUniqueOrThrow({ where: { id: req.params.id } });
+    const input = z
+      .object({
+        code: z.string().min(2).regex(/^[a-z][a-z0-9_-]*$/).optional(),
+        name: z.string().min(1),
+        description: z.string().optional(),
+        permissions: z.array(z.string())
+      })
+      .parse(req.body);
+    ok(res, await prisma.role.update({ where: { id: role.id }, data: { ...input, code: role.system ? role.code : input.code ?? role.code } }));
+  })
+);
+
+adminRouter.delete(
+  "/roles/:id",
+  asyncHandler(async (req, res) => {
+    const role = await prisma.role.findUniqueOrThrow({ where: { id: req.params.id }, include: { _count: { select: { members: true } } } });
+    if (role.system) throw new HttpError(400, "系统预置角色不可删除");
+    if (role._count.members > 0) throw new HttpError(400, "角色正在被成员使用，无法删除");
+    ok(res, await prisma.role.delete({ where: { id: role.id } }));
   })
 );
 

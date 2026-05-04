@@ -2,15 +2,17 @@
   "name": "@tenant-hub/mobile",
   "private": true,
   "version": "0.1.0",
-  "main": "expo/AppEntry",
+  "main": "index.js",
   "scripts": {
     "dev": "expo start",
-    "web": "expo start --web",
+    "web": "expo start --web --host lan --port 19006",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "echo mobile lint pending"
   },
   "dependencies": {
+    "@babel/runtime": "^7.29.2",
+    "@expo/metro-runtime": "~4.0.1",
     "expo": "^52.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

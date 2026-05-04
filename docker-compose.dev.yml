@@ -2,6 +2,7 @@ services:
   api:
     build:
       target: development
+    command: sh -c "pnpm --filter @tenant-hub/api prisma generate && pnpm --filter @tenant-hub/api dev"
     environment:
       NODE_ENV: development
     volumes:
@@ -12,7 +13,7 @@ services:
     build:
       target: development
     command: pnpm --filter @tenant-hub/ops-web dev
-    ports:
+    ports: !override
       - "5173:5173"
     volumes:
       - ./apps/ops-web/src:/app/apps/ops-web/src

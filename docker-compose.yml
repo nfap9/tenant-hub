@@ -28,6 +28,7 @@ services:
       PORT: 4000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tenant_hub?schema=public
       JWT_SECRET: tenant-hub-docker-development-secret
+      PLATFORM_ADMIN_PHONES: ${PLATFORM_ADMIN_PHONES:-}
     ports:
       - "4000:4000"
     depends_on:
@@ -67,6 +68,7 @@ services:
       - "19000:19000"
       - "19001:19001"
       - "19002:19002"
+      - "19006:19006"
     depends_on:
       api:
         condition: service_healthy
