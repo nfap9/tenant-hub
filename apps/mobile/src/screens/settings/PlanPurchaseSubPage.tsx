@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Modal, Text, TouchableOpacity, View } from "react-native";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Membership, Plan, SubscriptionOverview } from "../../types";
@@ -24,6 +24,7 @@ export default function PlanPurchaseSubPage({
   const [plans, setPlans] = useState<Plan[]>([]);
   const [overview, setOverview] = useState<SubscriptionOverview>();
   const [buyingPlanId, setBuyingPlanId] = useState<string>();
+  const [confirmingPlanId, setConfirmingPlanId] = useState<string>();
   const canManageOrg = currentMembership?.role.permissions.includes("*") || currentMembership?.role.permissions.includes("org:manage");
 
   const loadPlans = async () => {
@@ -62,6 +63,7 @@ export default function PlanPurchaseSubPage({
       setNotice("套餐购买成功");
       await loadPlans();
       await reload();
+      setConfirmingPlanId(undefined);
     } catch (err) {
       setNotice((err as Error).message);
     } finally {
@@ -71,6 +73,7 @@ export default function PlanPurchaseSubPage({
 
   const activePlanId = overview?.subscription?.planId;
   const endsAt = overview?.subscription?.endsAt ? new Date(overview.subscription.endsAt).toLocaleDateString() : "长期有效";
+  const confirmingPlan = plans.find((plan) => plan.id === confirmingPlanId);
 
   return (
     <>
@@ -118,7 +121,7 @@ export default function PlanPurchaseSubPage({
               <TouchableOpacity
                 style={[styles.secondaryButton, (!canManageOrg || active || buying) && styles.buttonDisabled]}
                 disabled={!canManageOrg || active || buying}
-                onPress={() => buy(plan.id)}
+                onPress={() => setConfirmingPlanId(plan.id)}
               >
                 <Text style={styles.secondaryButtonText}>{active ? "已购买" : buying ? "购买中" : "购买此套餐"}</Text>
               </TouchableOpacity>
@@ -127,6 +130,41 @@ export default function PlanPurchaseSubPage({
           );
         })}
       </View>
+      <Modal visible={Boolean(confirmingPlan)} transparent animationType="fade" onRequestClose={() => setConfirmingPlanId(undefined)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.sectionTitle}>确认购买套餐</Text>
+            {confirmingPlan ? (
+              <>
+                <View style={styles.detailPanel}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.muted}>套餐</Text>
+                    <Text style={styles.cardTitle}>{confirmingPlan.name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.muted}>价格</Text>
+                    <Text style={styles.planPrice}>{formatPlanPrice(confirmingPlan.price)}</Text>
+                  </View>
+                  <View style={styles.quotaRow}>
+                    <Text style={styles.quotaText}>公寓 {confirmingPlan.apartmentLimit}</Text>
+                    <Text style={styles.quotaText}>房间 {confirmingPlan.roomLimit}</Text>
+                    <Text style={styles.quotaText}>成员 {confirmingPlan.memberLimit}</Text>
+                  </View>
+                </View>
+                {overview?.subscription ? <Text style={styles.muted}>当前套餐将更新为所选套餐。</Text> : null}
+                <View style={styles.roomActions}>
+                  <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => setConfirmingPlanId(undefined)}>
+                    <Text style={styles.secondaryButtonText}>取消</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.actionButton, buyingPlanId === confirmingPlan.id && styles.buttonDisabled]} disabled={buyingPlanId === confirmingPlan.id} onPress={() => buy(confirmingPlan.id)}>
+                    <Text style={styles.buttonText}>{buyingPlanId === confirmingPlan.id ? "购买中" : "确认购买"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }

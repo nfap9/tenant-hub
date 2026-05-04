@@ -148,6 +148,9 @@ export const styles = StyleSheet.create({
   actionButton: { flex: 1 },
   feeItem: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", backgroundColor: "#fffdf7", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   feeItemActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
+  modalOverlay: { flex: 1, padding: 16, backgroundColor: "rgba(16, 37, 34, 0.42)", justifyContent: "center" },
+  modalCard: { maxHeight: "88%", padding: 14, borderRadius: 8, backgroundColor: "white", gap: 10 },
+  modalScrollContent: { gap: 10 },
 
   // 新增：设置与子页面
   settingItem: { padding: 14, backgroundColor: "white", borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },

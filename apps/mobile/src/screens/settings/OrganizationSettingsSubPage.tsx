@@ -37,6 +37,7 @@ export default function OrganizationSettingsSubPage({
 }: OrganizationSettingsSubPageProps) {
   const [orgDescription, setOrgDescription] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  const [onboardingAction, setOnboardingAction] = useState<"create" | "join">();
   const [editingOrg, setEditingOrg] = useState(false);
   const [activeRoleMemberId, setActiveRoleMemberId] = useState<string>();
   const [editName, setEditName] = useState(currentMembership?.organization.name ?? "");
@@ -51,6 +52,7 @@ export default function OrganizationSettingsSubPage({
     setEditDescription(currentMembership?.organization.description ?? "");
     setEditingOrg(false);
     setActiveRoleMemberId(undefined);
+    setOnboardingAction(undefined);
   }, [currentMembership?.organization.id]);
 
   const run = async (fn: () => Promise<void>, success: string) => {
@@ -74,45 +76,76 @@ export default function OrganizationSettingsSubPage({
       {memberships.length === 0 ? (
         <>
           <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>创建组织</Text>
+            <Text style={styles.sectionTitle}>团队管理</Text>
             <Text style={styles.muted}>首次使用需要先创建组织，或输入组织编码加入已有团队。</Text>
-            <TextInput value={orgName} onChangeText={setOrgName} style={styles.input} placeholder="组织名称" />
-            <TextInput value={orgDescription} onChangeText={setOrgDescription} style={[styles.input, styles.textarea]} multiline placeholder="组织描述" />
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() =>
-                run(async () => {
-                  const org = await mobileApi<{ id: string }>("/organizations", token, {
-                    method: "POST",
-                    body: JSON.stringify({ name: orgName, description: orgDescription })
-                  });
-                  setCurrentOrgId(org.id);
-                  setOrgName("");
-                  setOrgDescription("");
-                }, "组织已创建")
-              }
-            >
-              <Text style={styles.buttonText}>创建组织</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>加入组织</Text>
-            <TextInput value={joinCode} onChangeText={setJoinCode} style={styles.input} placeholder="输入组织编码" />
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() =>
-                run(async () => {
-                  const result = await mobileApi<{ organization: { id: string } }>("/organizations/join", token, {
-                    method: "POST",
-                    body: JSON.stringify({ code: joinCode })
-                  });
-                  setCurrentOrgId(result.organization.id);
-                  setJoinCode("");
-                }, "已加入组织")
-              }
-            >
-              <Text style={styles.secondaryButtonText}>加入组织</Text>
-            </TouchableOpacity>
+            {!onboardingAction ? (
+              <>
+                <TouchableOpacity style={styles.settingItem} onPress={() => setOnboardingAction("create")}>
+                  <Text style={styles.settingItemText}>创建团队</Text>
+                  <Text style={styles.link}>进入</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.settingItem} onPress={() => setOnboardingAction("join")}>
+                  <Text style={styles.settingItemText}>加入团队</Text>
+                  <Text style={styles.link}>进入</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+            {onboardingAction === "create" ? (
+              <View style={styles.detailPanel}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>创建团队</Text>
+                  <TouchableOpacity style={styles.smallButton} onPress={() => setOnboardingAction(undefined)}>
+                    <Text style={styles.smallButtonText}>返回</Text>
+                  </TouchableOpacity>
+                </View>
+                <TextInput value={orgName} onChangeText={setOrgName} style={styles.input} placeholder="组织名称" />
+                <TextInput value={orgDescription} onChangeText={setOrgDescription} style={[styles.input, styles.textarea]} multiline placeholder="组织描述" />
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() =>
+                    run(async () => {
+                      const org = await mobileApi<{ id: string }>("/organizations", token, {
+                        method: "POST",
+                        body: JSON.stringify({ name: orgName, description: orgDescription })
+                      });
+                      setCurrentOrgId(org.id);
+                      setOrgName("");
+                      setOrgDescription("");
+                      setOnboardingAction(undefined);
+                    }, "组织已创建")
+                  }
+                >
+                  <Text style={styles.buttonText}>创建组织</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            {onboardingAction === "join" ? (
+              <View style={styles.detailPanel}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>加入团队</Text>
+                  <TouchableOpacity style={styles.smallButton} onPress={() => setOnboardingAction(undefined)}>
+                    <Text style={styles.smallButtonText}>返回</Text>
+                  </TouchableOpacity>
+                </View>
+                <TextInput value={joinCode} onChangeText={setJoinCode} style={styles.input} placeholder="输入组织编码" />
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={() =>
+                    run(async () => {
+                      const result = await mobileApi<{ organization: { id: string } }>("/organizations/join", token, {
+                        method: "POST",
+                        body: JSON.stringify({ code: joinCode })
+                      });
+                      setCurrentOrgId(result.organization.id);
+                      setJoinCode("");
+                      setOnboardingAction(undefined);
+                    }, "已加入组织")
+                  }
+                >
+                  <Text style={styles.secondaryButtonText}>加入组织</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         </>
       ) : null}

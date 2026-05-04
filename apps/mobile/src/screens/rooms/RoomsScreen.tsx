@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { ApartmentFeeItem, RentCycle, Room, RoomStatus } from "../../types";
@@ -62,7 +62,8 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filter, setFilter] = useState<RoomStatus | "ALL">("ALL");
   const [selectedId, setSelectedId] = useState<string>();
-  const [activeRoomForm, setActiveRoomForm] = useState<"edit" | "lease">();
+  const [activeRoomForm, setActiveRoomForm] = useState<"edit">();
+  const [leaseRoomId, setLeaseRoomId] = useState<string>();
   const [roomForm, setRoomForm] = useState<RoomForm>({ roomNo: "", layout: "", area: "", facilities: "", status: "VACANT" });
   const [leaseForm, setLeaseForm] = useState<LeaseForm>({
     tenantName: "",
@@ -78,6 +79,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
   const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
 
   const selectedRoom = useMemo(() => rooms.find((item) => item.id === selectedId), [rooms, selectedId]);
+  const leaseRoom = useMemo(() => rooms.find((item) => item.id === leaseRoomId), [rooms, leaseRoomId]);
   const activeLease = selectedRoom?.leases?.find((item) => item.status === "ACTIVE");
   const visibleRooms = useMemo(() => (filter === "ALL" ? rooms : rooms.filter((item) => item.status === filter)), [filter, rooms]);
   const vacantCount = rooms.filter((item) => item.status === "VACANT").length;
@@ -161,6 +163,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
     setNotice("签约完成，水电单价和费用项已带入租约");
     setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "" }));
     setActiveRoomForm(undefined);
+    setLeaseRoomId(undefined);
     await loadRooms();
   };
 
@@ -213,6 +216,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
               setFilter(item);
               setSelectedId(undefined);
               setActiveRoomForm(undefined);
+              setLeaseRoomId(undefined);
             }}
           >
             <Text style={[styles.filterButtonText, filter === item && styles.filterButtonTextActive]}>
@@ -263,8 +267,15 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                       <Text style={styles.secondaryButtonText}>{activeRoomForm === "edit" ? "收起编辑" : "编辑房间"}</Text>
                     </TouchableOpacity>
                     {room.status === "VACANT" ? (
-                      <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => setActiveRoomForm((old) => (old === "lease" ? undefined : "lease"))}>
-                        <Text style={styles.buttonText}>{activeRoomForm === "lease" ? "收起签约" : "签约入住"}</Text>
+                      <TouchableOpacity
+                        style={[styles.button, styles.actionButton]}
+                        onPress={() => {
+                          setSelectedId(room.id);
+                          setLeaseRoomId(room.id);
+                          setActiveRoomForm(undefined);
+                        }}
+                      >
+                        <Text style={styles.buttonText}>签约入住</Text>
                       </TouchableOpacity>
                     ) : null}
                     <TouchableOpacity style={[styles.smallDangerButton, styles.actionButton]} onPress={deleteRoom}>
@@ -304,69 +315,6 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                     </View>
                   ) : null}
 
-                  {activeRoomForm === "lease" && room.status === "VACANT" ? (
-                    <View style={styles.detailPanel}>
-                      <Text style={styles.sectionTitle}>空闲房签约</Text>
-                      <TextInput style={styles.input} placeholder="租客姓名" value={leaseForm.tenantName} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
-                      <TextInput style={styles.input} placeholder="租客电话" value={leaseForm.tenantPhone} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantPhone: value }))} />
-                      <View style={styles.formGrid}>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>开始日期</Text>
-                          <TextInput style={styles.input} placeholder="2026-05-01" value={leaseForm.startDate} onChangeText={(value) => setLeaseForm((old) => ({ ...old, startDate: value }))} />
-                        </View>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>结束日期</Text>
-                          <TextInput style={styles.input} placeholder="2027-04-30" value={leaseForm.endDate} onChangeText={(value) => setLeaseForm((old) => ({ ...old, endDate: value }))} />
-                        </View>
-                      </View>
-                      <View style={styles.formGrid}>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>租金</Text>
-                          <TextInput style={styles.input} placeholder="每期金额" value={leaseForm.rentAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, rentAmount: value }))} />
-                        </View>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>押金</Text>
-                          <TextInput style={styles.input} placeholder="押金金额" value={leaseForm.depositAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, depositAmount: value }))} />
-                        </View>
-                      </View>
-                      <View style={styles.segment}>
-                        {(["MONTHLY", "QUARTERLY", "YEARLY"] as RentCycle[]).map((item) => (
-                          <TouchableOpacity
-                            key={item}
-                            style={[styles.segmentItem, leaseForm.cycle === item && styles.segmentItemActive]}
-                            onPress={() => setLeaseForm((old) => ({ ...old, cycle: item }))}
-                          >
-                            <Text style={[styles.segmentText, leaseForm.cycle === item && styles.segmentTextActive]}>{item === "MONTHLY" ? "月付" : item === "QUARTERLY" ? "季付" : "年付"}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                      <View style={styles.formGrid}>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>水费单价</Text>
-                          <TextInput style={styles.input} placeholder="元/吨" value={leaseForm.waterUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, waterUnitPrice: value }))} />
-                        </View>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>电费单价</Text>
-                          <TextInput style={styles.input} placeholder="元/度" value={leaseForm.powerUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
-                        </View>
-                      </View>
-                      {(room.apartment?.feeItems ?? []).length ? <Text style={styles.label}>选择费用</Text> : null}
-                      {(room.apartment?.feeItems ?? []).map((item) => (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={[styles.feeItem, selectedFeeIds.includes(item.id) && styles.feeItemActive]}
-                          onPress={() => toggleFee(item)}
-                        >
-                          <Text style={styles.cardTitle}>{item.name}{item.spec ? ` · ${item.spec}` : ""}</Text>
-                          <Text style={styles.cardStat}>¥{money(item.amount)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                      <TouchableOpacity style={styles.button} onPress={createLease}>
-                        <Text style={styles.buttonText}>签约入住</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-
                   {room.status === "OCCUPIED" && roomActiveLease ? (
                     <View style={styles.detailPanel}>
                       <Text style={styles.sectionTitle}>在租信息</Text>
@@ -393,6 +341,80 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
           );
         })}
       </View>
+      <Modal visible={Boolean(leaseRoom)} transparent animationType="slide" onRequestClose={() => setLeaseRoomId(undefined)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionTitle}>签约入住</Text>
+                  <Text style={styles.muted}>{leaseRoom?.apartment?.name} · {leaseRoom?.roomNo}</Text>
+                </View>
+                <TouchableOpacity style={styles.smallButton} onPress={() => setLeaseRoomId(undefined)}>
+                  <Text style={styles.smallButtonText}>关闭</Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput style={styles.input} placeholder="租客姓名" value={leaseForm.tenantName} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
+              <TextInput style={styles.input} placeholder="租客电话" value={leaseForm.tenantPhone} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantPhone: value }))} />
+              <View style={styles.formGrid}>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>开始日期</Text>
+                  <TextInput style={styles.input} placeholder="2026-05-01" value={leaseForm.startDate} onChangeText={(value) => setLeaseForm((old) => ({ ...old, startDate: value }))} />
+                </View>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>结束日期</Text>
+                  <TextInput style={styles.input} placeholder="2027-04-30" value={leaseForm.endDate} onChangeText={(value) => setLeaseForm((old) => ({ ...old, endDate: value }))} />
+                </View>
+              </View>
+              <View style={styles.formGrid}>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>租金</Text>
+                  <TextInput style={styles.input} placeholder="每期金额" value={leaseForm.rentAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, rentAmount: value }))} />
+                </View>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>押金</Text>
+                  <TextInput style={styles.input} placeholder="押金金额" value={leaseForm.depositAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, depositAmount: value }))} />
+                </View>
+              </View>
+              <View style={styles.segment}>
+                {(["MONTHLY", "QUARTERLY", "YEARLY"] as RentCycle[]).map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.segmentItem, leaseForm.cycle === item && styles.segmentItemActive]}
+                    onPress={() => setLeaseForm((old) => ({ ...old, cycle: item }))}
+                  >
+                    <Text style={[styles.segmentText, leaseForm.cycle === item && styles.segmentTextActive]}>{item === "MONTHLY" ? "月付" : item === "QUARTERLY" ? "季付" : "年付"}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.formGrid}>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>水费单价</Text>
+                  <TextInput style={styles.input} placeholder="元/吨" value={leaseForm.waterUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, waterUnitPrice: value }))} />
+                </View>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>电费单价</Text>
+                  <TextInput style={styles.input} placeholder="元/度" value={leaseForm.powerUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
+                </View>
+              </View>
+              {(leaseRoom?.apartment?.feeItems ?? []).length ? <Text style={styles.label}>选择费用</Text> : null}
+              {(leaseRoom?.apartment?.feeItems ?? []).map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.feeItem, selectedFeeIds.includes(item.id) && styles.feeItemActive]}
+                  onPress={() => toggleFee(item)}
+                >
+                  <Text style={styles.cardTitle}>{item.name}{item.spec ? ` · ${item.spec}` : ""}</Text>
+                  <Text style={styles.cardStat}>¥{money(item.amount)}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.button} onPress={createLease}>
+                <Text style={styles.buttonText}>确认签约</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
