@@ -37,15 +37,20 @@ export default function OrganizationSettingsSubPage({
 }: OrganizationSettingsSubPageProps) {
   const [orgDescription, setOrgDescription] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  const [editingOrg, setEditingOrg] = useState(false);
+  const [activeRoleMemberId, setActiveRoleMemberId] = useState<string>();
   const [editName, setEditName] = useState(currentMembership?.organization.name ?? "");
   const [editDescription, setEditDescription] = useState(currentMembership?.organization.description ?? "");
   const canManageMembers = currentMembership?.role.permissions.includes("*") || currentMembership?.role.permissions.includes("member:manage");
   const canManageOrg = currentMembership?.role.permissions.includes("*") || currentMembership?.role.permissions.includes("org:manage");
   const managerRoles = roles.filter((role) => role.code !== "owner");
+  const roleEditingMember = members.find((member) => member.id === activeRoleMemberId);
 
   useEffect(() => {
     setEditName(currentMembership?.organization.name ?? "");
     setEditDescription(currentMembership?.organization.description ?? "");
+    setEditingOrg(false);
+    setActiveRoleMemberId(undefined);
   }, [currentMembership?.organization.id]);
 
   const run = async (fn: () => Promise<void>, success: string) => {
@@ -111,28 +116,98 @@ export default function OrganizationSettingsSubPage({
           </View>
         </>
       ) : null}
-      {currentMembership ? (
+      {currentMembership && roleEditingMember ? (
         <>
+          <View style={styles.subPageHeader}>
+            <TouchableOpacity style={styles.backButton} onPress={() => setActiveRoleMemberId(undefined)}>
+              <Text style={styles.backButtonText}>返回成员管理</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>组织信息</Text>
-            <Text style={styles.muted}>组织编码 {currentMembership.organization.code}</Text>
-            <TextInput value={editName} onChangeText={setEditName} editable={canManageOrg} style={styles.input} placeholder="组织名称" />
-            <TextInput value={editDescription} onChangeText={setEditDescription} editable={canManageOrg} style={[styles.input, styles.textarea]} multiline placeholder="组织描述" />
-            {canManageOrg ? (
+            <Text style={styles.sectionTitle}>调整成员角色</Text>
+            <View style={styles.detailPanel}>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>成员</Text>
+                <Text style={styles.cardTitle}>{roleEditingMember.user.username}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>手机号</Text>
+                <Text style={styles.muted}>{roleEditingMember.user.phone}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>当前角色</Text>
+                <Text style={styles.roleBadge}>{roleEditingMember.role.name}</Text>
+              </View>
+            </View>
+            {managerRoles.map((role) => (
               <TouchableOpacity
-                style={styles.button}
+                key={role.id}
+                style={[styles.feeItem, roleEditingMember.roleId === role.id && styles.feeItemActive]}
                 onPress={() =>
                   run(async () => {
-                    await mobileApi(`/organizations/${currentMembership.organization.id}`, token, {
+                    await mobileApi(`/organizations/${currentOrgId}/members/${roleEditingMember.id}/role`, token, {
                       method: "PUT",
-                      headers: { "x-organization-id": currentMembership.organization.id },
-                      body: JSON.stringify({ name: editName, description: editDescription })
+                      headers: { "x-organization-id": currentOrgId! },
+                      body: JSON.stringify({ roleId: role.id })
                     });
-                  }, "组织信息已更新")
+                    setActiveRoleMemberId(undefined);
+                  }, "成员角色已更新")
                 }
               >
-                <Text style={styles.buttonText}>保存组织信息</Text>
+                <Text style={styles.cardTitle}>{role.name}</Text>
+                <Text style={roleEditingMember.roleId === role.id ? styles.cardStat : styles.muted}>
+                  {roleEditingMember.roleId === role.id ? "当前" : "选择"}
+                </Text>
               </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      ) : currentMembership ? (
+        <>
+          <View style={styles.panel}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>组织信息</Text>
+              {canManageOrg ? (
+                <TouchableOpacity style={styles.smallButton} onPress={() => setEditingOrg((old) => !old)}>
+                  <Text style={styles.smallButtonText}>{editingOrg ? "收起" : "编辑"}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <View style={styles.detailPanel}>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>组织名称</Text>
+                <Text style={styles.cardTitle}>{currentMembership.organization.name}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>组织编码</Text>
+                <Text style={styles.cardStat}>{currentMembership.organization.code}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>组织描述</Text>
+                <Text style={styles.muted}>{currentMembership.organization.description || "未填写"}</Text>
+              </View>
+            </View>
+            {editingOrg ? (
+              <View style={styles.detailPanel}>
+                <Text style={styles.sectionTitle}>编辑组织信息</Text>
+                <TextInput value={editName} onChangeText={setEditName} style={styles.input} placeholder="组织名称" />
+                <TextInput value={editDescription} onChangeText={setEditDescription} style={[styles.input, styles.textarea]} multiline placeholder="组织描述" />
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() =>
+                    run(async () => {
+                      await mobileApi(`/organizations/${currentMembership.organization.id}`, token, {
+                        method: "PUT",
+                        headers: { "x-organization-id": currentMembership.organization.id },
+                        body: JSON.stringify({ name: editName, description: editDescription })
+                      });
+                      setEditingOrg(false);
+                    }, "组织信息已更新")
+                  }
+                >
+                  <Text style={styles.buttonText}>保存组织信息</Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
           </View>
           <View style={styles.panel}>
@@ -148,23 +223,9 @@ export default function OrganizationSettingsSubPage({
                 </View>
                 {canManageMembers && member.role.code !== "owner" ? (
                   <View style={styles.roleActions}>
-                    {managerRoles.map((role) => (
-                      <TouchableOpacity
-                        key={role.id}
-                        style={[styles.smallButton, member.roleId === role.id && styles.smallButtonActive]}
-                        onPress={() =>
-                          run(async () => {
-                            await mobileApi(`/organizations/${currentOrgId}/members/${member.id}/role`, token, {
-                              method: "PUT",
-                              headers: { "x-organization-id": currentOrgId! },
-                              body: JSON.stringify({ roleId: role.id })
-                            });
-                          }, "成员角色已更新")
-                        }
-                      >
-                        <Text style={[styles.smallButtonText, member.roleId === role.id && styles.smallButtonTextActive]}>{role.name}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    <TouchableOpacity style={styles.smallButton} onPress={() => setActiveRoleMemberId(member.id)}>
+                      <Text style={styles.smallButtonText}>调整角色</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.smallDangerButton}
                       onPress={() =>
