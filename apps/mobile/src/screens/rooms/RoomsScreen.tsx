@@ -1,5 +1,5 @@
 import { Text, View } from "react-native";
-import { styles } from "../styles";
+import { styles } from "../../theme/styles";
 
 export default function RoomsScreen() {
   return (

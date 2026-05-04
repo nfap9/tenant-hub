@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { styles } from "../styles";
-import { mobileApi, type MobileSession } from "../api";
+import { mobileApi } from "../../services";
+import { styles } from "../../theme/styles";
+import type { MobileSession } from "../../types";
 
 export default function LoginScreen({
   phone,

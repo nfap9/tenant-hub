@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { styles } from "../styles";
-import { mobileApi } from "../api";
-import type { Membership, OrgMember, OrgRole } from "../types";
+import { mobileApi } from "../../services";
+import { styles } from "../../theme/styles";
+import type { Membership, OrgMember, OrgRole } from "../../types";
 
 export default function SettingsScreen({
   token,

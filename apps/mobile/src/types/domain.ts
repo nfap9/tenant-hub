@@ -1,10 +1,3 @@
-export type MobileSession = {
-  token: string;
-  user: { id: string; phone: string; username: string };
-};
-
-export type TabKey = "home" | "rooms" | "bills" | "apartments" | "settings";
-
 export type Membership = {
   organization: { id: string; name: string; code: string; description?: string; ownerId: string };
   role: { id: string; code: string; name: string; permissions: string[] };

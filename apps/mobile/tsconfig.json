@@ -5,5 +5,5 @@
     "module": "ESNext",
     "lib": ["ES2022"]
   },
-  "include": ["src"]
+  "include": ["App.tsx", "index.js", "src"]
 }

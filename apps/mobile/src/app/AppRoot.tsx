@@ -1,70 +1,39 @@
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { useEffect, useMemo, useState } from "react";
-import { clearMobileSession, mobileApi, readMobileSession, writeMobileSession, type MobileSession } from "./api";
-import { styles } from "./styles";
-import type { TabKey, Membership, OrgMember, OrgRole } from "./types";
-import LoginScreen from "./screens/LoginScreen";
-import HomeScreen from "./screens/HomeScreen";
-import RoomsScreen from "./screens/RoomsScreen";
-import BillsScreen from "./screens/BillsScreen";
-import ApartmentsScreen from "./screens/ApartmentsScreen";
-import SettingsScreen from "./screens/SettingsScreen";
+import { useMemo, useState } from "react";
+import MainTabBar from "../navigation/MainTabBar";
+import { tabItems } from "../navigation/tabs";
+import ApartmentsScreen from "../screens/apartments/ApartmentsScreen";
+import LoginScreen from "../screens/auth/LoginScreen";
+import BillsScreen from "../screens/bills/BillsScreen";
+import HomeScreen from "../screens/home/HomeScreen";
+import RoomsScreen from "../screens/rooms/RoomsScreen";
+import SettingsScreen from "../screens/settings/SettingsScreen";
+import { styles } from "../theme/styles";
+import type { TabKey } from "../types";
+import { useAppSession } from "./useAppSession";
 
-const tabs: Array<{ key: TabKey; label: string }> = [
-  { key: "home", label: "首页" },
-  { key: "rooms", label: "房间" },
-  { key: "bills", label: "账单" },
-  { key: "apartments", label: "公寓" },
-  { key: "settings", label: "设置" }
-];
-
-export default function App() {
-  const [session, setSession] = useState<MobileSession | undefined>(() => readMobileSession());
-  const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [currentOrgId, setCurrentOrgId] = useState<string>();
-  const [members, setMembers] = useState<OrgMember[]>([]);
-  const [roles, setRoles] = useState<OrgRole[]>([]);
-  const [notice, setNotice] = useState("");
+export default function AppRoot() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [active, setActive] = useState<TabKey>("home");
   const [phone, setPhone] = useState("");
   const [loginMode, setLoginMode] = useState<"password" | "code">("code");
   const [orgName, setOrgName] = useState("");
+  const {
+    session,
+    memberships,
+    currentMembership,
+    currentOrgId,
+    setCurrentOrgId,
+    members,
+    roles,
+    notice,
+    setNotice,
+    signIn,
+    signOut,
+    reload
+  } = useAppSession();
 
-  const title = useMemo(() => tabs.find((tab) => tab.key === active)?.label ?? "首页", [active]);
-  const currentMembership = useMemo(() => memberships.find((item) => item.organization.id === currentOrgId), [currentOrgId, memberships]);
-  const token = session?.token;
-
-  const loadMe = async (nextToken = token) => {
-    if (!nextToken) return;
-    const me = await mobileApi<{ user: MobileSession["user"]; memberships: Membership[] }>("/auth/me", nextToken);
-    setMemberships(me.memberships);
-    setCurrentOrgId((old) => (old && me.memberships.some((item) => item.organization.id === old) ? old : me.memberships[0]?.organization.id));
-  };
-
-  const loadOrgData = async (organizationId = currentOrgId) => {
-    if (!token || !organizationId) {
-      setMembers([]);
-      setRoles([]);
-      return;
-    }
-    const [nextMembers, nextRoles] = await Promise.all([
-      mobileApi<OrgMember[]>(`/organizations/${organizationId}/members`, token, { headers: { "x-organization-id": organizationId } }),
-      mobileApi<OrgRole[]>(`/organizations/${organizationId}/roles`, token, { headers: { "x-organization-id": organizationId } })
-    ]);
-    setMembers(nextMembers);
-    setRoles(nextRoles);
-  };
-
-  useEffect(() => {
-    if (session?.token) {
-      loadMe(session.token).catch((error) => setNotice(error.message));
-    }
-  }, []);
-
-  useEffect(() => {
-    loadOrgData().catch((error) => setNotice(error.message));
-  }, [currentOrgId, token]);
+  const title = useMemo(() => tabItems.find((tab) => tab.key === active)?.label ?? "首页", [active]);
 
   if (!session) {
     return (
@@ -73,11 +42,7 @@ export default function App() {
         setPhone={setPhone}
         mode={loginMode}
         setMode={setLoginMode}
-        onSignedIn={(nextSession) => {
-          writeMobileSession(nextSession);
-          setSession(nextSession);
-          loadMe(nextSession.token).catch((error) => setNotice(error.message));
-        }}
+        onSignedIn={signIn}
       />
     );
   }
@@ -123,10 +88,7 @@ export default function App() {
           <View style={styles.menuDivider} />
           <TouchableOpacity
             style={styles.menuLogout}
-            onPress={() => {
-              clearMobileSession();
-              setSession(undefined);
-            }}
+            onPress={signOut}
           >
             <Text style={styles.smallDangerText}>退出登录</Text>
           </TouchableOpacity>
@@ -153,21 +115,12 @@ export default function App() {
             orgName={orgName}
             setOrgName={setOrgName}
             setNotice={setNotice}
-            reload={async () => {
-              await loadMe();
-              await loadOrgData();
-            }}
+            reload={reload}
           />
         ) : null}
       </ScrollView>
 
-      <View style={styles.tabbar}>
-        {tabs.map((tab) => (
-          <TouchableOpacity key={tab.key} style={[styles.tab, active === tab.key && styles.tabActive]} onPress={() => setActive(tab.key)}>
-            <Text style={[styles.tabText, active === tab.key && styles.tabTextActive]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <MainTabBar active={active} onChange={setActive} />
     </SafeAreaView>
   );
 }
