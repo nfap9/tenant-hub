@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+**/dist
+**/.expo
+**/.turbo
+**/tsconfig.tsbuildinfo
+.git
+.DS_Store
+*.log
+docker-data

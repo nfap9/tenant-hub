@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Tenant Hub",
+    "slug": "tenant-hub-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android", "web"],
+    "assetBundlePatterns": ["**/*"]
+  }
+}

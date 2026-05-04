@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OtpPurpose {
+  REGISTER
+  LOGIN
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum MemberStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum RoomStatus {
+  VACANT
+  RESERVED
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum LeaseStatus {
+  ACTIVE
+  TERMINATED
+  EXPIRED
+}
+
+enum RentCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum TerminationType {
+  EXPIRED
+  NEGOTIATED
+  BREACH
+}
+
+enum BillStatus {
+  DRAFT
+  BILLING
+  UNPAID
+  PARTIAL_PAID
+  PAID
+  FAILED
+  VOID
+}
+
+enum BillItemType {
+  RENT
+  UTILITY
+  OTHER
+}
+
+model User {
+  id           String       @id @default(cuid())
+  phone        String       @unique
+  username     String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  OrgMember[]
+  payments     Payment[]
+}
+
+model OtpCode {
+  id        String     @id @default(cuid())
+  phone     String
+  codeHash  String
+  purpose   OtpPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime   @default(now())
+
+  @@index([phone, purpose])
+}
+
+model Organization {
+  id            String             @id @default(cuid())
+  name          String
+  code          String             @unique
+  description   String?
+  status        OrgStatus          @default(ACTIVE)
+  ownerId       String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  members       OrgMember[]
+  apartments    Apartment[]
+  leases        Lease[]
+  bills         Bill[]
+  quotas        OrgQuotaPackage[]
+  subscriptions Subscription[]
+}
+
+model Role {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  description String?
+  system      Boolean     @default(false)
+  permissions String[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  members     OrgMember[]
+}
+
+model OrgMember {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String
+  roleId         String
+  status         MemberStatus  @default(ACTIVE)
+  joinedAt       DateTime      @default(now())
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  role           Role          @relation(fields: [roleId], references: [id])
+
+  @@unique([organizationId, userId])
+}
+
+model Apartment {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  location       String
+  floors         Int
+  landArea       Decimal?     @db.Decimal(12, 2)
+  totalArea      Decimal?     @db.Decimal(12, 2)
+  landlordName   String?
+  landlordPhone  String?
+  contractStart  DateTime?
+  contractEnd    DateTime?
+  rentAmount     Decimal?     @db.Decimal(12, 2)
+  waterUnitPrice  Decimal      @default(0) @db.Decimal(10, 2)
+  powerUnitPrice  Decimal      @default(0) @db.Decimal(10, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  rooms          Room[]
+  expenses       ApartmentExpense[]
+  feeItems       ApartmentFeeItem[]
+}
+
+model ApartmentExpense {
+  id          String    @id @default(cuid())
+  apartmentId String
+  name        String
+  amount      Decimal   @db.Decimal(12, 2)
+  spentAt     DateTime
+  note        String?
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+}
+
+model ApartmentFeeItem {
+  id          String    @id @default(cuid())
+  apartmentId String
+  name        String
+  spec        String?
+  amount      Decimal   @db.Decimal(10, 2)
+  enabled     Boolean   @default(true)
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  leaseFees   LeaseFee[]
+}
+
+model Room {
+  id          String     @id @default(cuid())
+  apartmentId String
+  roomNo      String
+  layout      String
+  area        Decimal?   @db.Decimal(10, 2)
+  facilities  String[]
+  status      RoomStatus @default(VACANT)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  apartment   Apartment  @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  leases      Lease[]
+
+  @@unique([apartmentId, roomNo])
+}
+
+model Lease {
+  id                String           @id @default(cuid())
+  organizationId    String
+  roomId            String
+  tenantName        String
+  tenantPhone       String
+  startDate         DateTime
+  endDate           DateTime
+  graceDays         Int              @default(0)
+  cycle             RentCycle
+  rentAmount        Decimal          @db.Decimal(12, 2)
+  depositAmount     Decimal          @default(0) @db.Decimal(12, 2)
+  waterUnitPrice     Decimal          @db.Decimal(10, 2)
+  powerUnitPrice     Decimal          @db.Decimal(10, 2)
+  autoRenew          Boolean          @default(false)
+  status            LeaseStatus      @default(ACTIVE)
+  terminationType   TerminationType?
+  terminationReason String?
+  terminatedAt      DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  organization      Organization     @relation(fields: [organizationId], references: [id])
+  room              Room             @relation(fields: [roomId], references: [id])
+  fees              LeaseFee[]
+  bills             Bill[]
+}
+
+model LeaseFee {
+  id        String            @id @default(cuid())
+  leaseId   String
+  feeItemId String?
+  name      String
+  amount    Decimal           @db.Decimal(10, 2)
+  lease     Lease             @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  feeItem   ApartmentFeeItem? @relation(fields: [feeItemId], references: [id])
+}
+
+model Bill {
+  id             String       @id @default(cuid())
+  organizationId String
+  leaseId        String
+  periodStart    DateTime
+  periodEnd      DateTime
+  dueDate        DateTime
+  status         BillStatus   @default(UNPAID)
+  totalAmount    Decimal      @default(0) @db.Decimal(12, 2)
+  paidAmount     Decimal      @default(0) @db.Decimal(12, 2)
+  failureReason  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  lease          Lease        @relation(fields: [leaseId], references: [id])
+  items          BillItem[]
+  payments       Payment[]
+
+  @@unique([leaseId, periodStart])
+}
+
+model BillItem {
+  id             String       @id @default(cuid())
+  billId         String
+  type           BillItemType
+  name           String
+  amount         Decimal      @default(0) @db.Decimal(12, 2)
+  status         BillStatus   @default(UNPAID)
+  previousWater  Decimal?     @db.Decimal(12, 2)
+  currentWater   Decimal?     @db.Decimal(12, 2)
+  previousPower  Decimal?     @db.Decimal(12, 2)
+  currentPower   Decimal?     @db.Decimal(12, 2)
+  waterUnitPrice Decimal?     @db.Decimal(10, 2)
+  powerUnitPrice Decimal?     @db.Decimal(10, 2)
+  note           String?
+  bill           Bill         @relation(fields: [billId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  billId    String
+  userId    String
+  amount    Decimal  @db.Decimal(12, 2)
+  paidAt    DateTime @default(now())
+  method    String
+  note      String?
+  bill      Bill     @relation(fields: [billId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Plan {
+  id             String         @id @default(cuid())
+  name           String
+  apartmentLimit Int
+  roomLimit      Int
+  memberLimit    Int
+  price          Decimal        @db.Decimal(12, 2)
+  enabled        Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  subscriptions  Subscription[]
+}
+
+model Subscription {
+  id             String       @id @default(cuid())
+  organizationId String
+  planId         String
+  startsAt       DateTime     @default(now())
+  endsAt         DateTime?
+  active         Boolean      @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  plan           Plan         @relation(fields: [planId], references: [id])
+}
+
+model OrgQuotaPackage {
+  id             String       @id @default(cuid())
+  organizationId String
+  apartmentQuota Int          @default(0)
+  roomQuota      Int          @default(0)
+  memberQuota    Int          @default(0)
+  reason         String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+}

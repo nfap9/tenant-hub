@@ -1,0 +1,26 @@
+services:
+  api:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
+
+  ops-web:
+    build:
+      target: development
+    command: pnpm --filter @tenant-hub/ops-web dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/ops-web/src:/app/apps/ops-web/src
+      - ./apps/ops-web/index.html:/app/apps/ops-web/index.html
+      - ./apps/ops-web/vite.config.ts:/app/apps/ops-web/vite.config.ts
+
+  mobile:
+    volumes:
+      - ./apps/mobile/src:/app/apps/mobile/src
+      - ./apps/mobile/App.tsx:/app/apps/mobile/App.tsx
+      - ./apps/mobile/app.json:/app/apps/mobile/app.json
