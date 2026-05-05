@@ -25,6 +25,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Local brainstorming companion
+.superpowers/
+
 # Prisma and database local artifacts
 *.db
 *.db-journal
