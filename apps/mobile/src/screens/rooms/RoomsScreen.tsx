@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { DateField } from "../../components/DateField";
+import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { ApartmentFeeItem, Lease, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
@@ -74,7 +75,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filter, setFilter] = useState<RoomStatus | "ALL">("ALL");
   const [selectedId, setSelectedId] = useState<string>();
-  const [activeRoomForm, setActiveRoomForm] = useState<"edit">();
+  const [editingRoomId, setEditingRoomId] = useState<string>();
   const [leaseRoomId, setLeaseRoomId] = useState<string>();
   const [roomForm, setRoomForm] = useState<RoomForm>({ roomNo: "", layout: "", area: "", facilities: "", status: "VACANT" });
   const [leaseForm, setLeaseForm] = useState<LeaseForm>({
@@ -95,6 +96,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
   const [terminationForm, setTerminationForm] = useState<TerminationForm>({ type: "NEGOTIATED", terminatedAt: today(), reason: "" });
 
   const selectedRoom = useMemo(() => rooms.find((item) => item.id === selectedId), [rooms, selectedId]);
+  const editingRoom = useMemo(() => rooms.find((item) => item.id === editingRoomId), [rooms, editingRoomId]);
   const leaseRoom = useMemo(() => rooms.find((item) => item.id === leaseRoomId), [rooms, leaseRoomId]);
   const visibleRooms = useMemo(() => (filter === "ALL" ? rooms : rooms.filter((item) => item.status === filter)), [filter, rooms]);
   const vacantCount = rooms.filter((item) => item.status === "VACANT").length;
@@ -129,8 +131,8 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
   }, [selectedRoom]);
 
   const updateRoom = async () => {
-    if (!organizationId || !selectedRoom) return;
-    await mobileApi(`/apartments/rooms/${selectedRoom.id}`, token, apiOptions(organizationId, "PUT", {
+    if (!organizationId || !editingRoom) return;
+    await mobileApi(`/apartments/rooms/${editingRoom.id}`, token, apiOptions(organizationId, "PUT", {
       roomNo: roomForm.roomNo.trim(),
       layout: roomForm.layout.trim(),
       area: roomForm.area.trim() ? Number(roomForm.area) : undefined,
@@ -138,7 +140,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
       status: roomForm.status
     }));
     setNotice("房间信息已更新");
-    setActiveRoomForm(undefined);
+    setEditingRoomId(undefined);
     await loadRooms();
   };
 
@@ -148,7 +150,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
     await mobileApi(`/apartments/rooms/${selectedRoom.id}`, token, apiOptions(organizationId, "DELETE"));
     setNotice("房间已删除");
     setSelectedId(undefined);
-    setActiveRoomForm(undefined);
+    setEditingRoomId(undefined);
     await loadRooms();
   };
 
@@ -179,9 +181,21 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
     }));
     setNotice("签约完成，水电单价和费用项已带入租约");
     setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true }));
-    setActiveRoomForm(undefined);
+    setEditingRoomId(undefined);
     setLeaseRoomId(undefined);
     await loadRooms();
+  };
+
+  const startEditRoom = (room: Room) => {
+    setSelectedId(room.id);
+    setRoomForm({
+      roomNo: room.roomNo,
+      layout: room.layout,
+      area: room.area ? String(room.area) : "",
+      facilities: room.facilities.join(","),
+      status: room.status
+    });
+    setEditingRoomId(room.id);
   };
 
   const openTermination = (lease: Lease) => {
@@ -238,7 +252,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
             onPress={() => {
               setFilter(item);
               setSelectedId(undefined);
-              setActiveRoomForm(undefined);
+              setEditingRoomId(undefined);
               setLeaseRoomId(undefined);
             }}
           >
@@ -260,7 +274,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
               <TouchableOpacity
                 onPress={() => {
                   setSelectedId(expanded ? undefined : room.id);
-                  setActiveRoomForm(undefined);
+                  setEditingRoomId(undefined);
                 }}
               >
                 <View style={styles.roomHeader}>
@@ -286,8 +300,8 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                     </View>
                   </View>
                   <View style={styles.roomActions}>
-                    <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => setActiveRoomForm((old) => (old === "edit" ? undefined : "edit"))}>
-                      <Text style={styles.secondaryButtonText}>{activeRoomForm === "edit" ? "收起编辑" : "编辑房间"}</Text>
+                    <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => startEditRoom(room)}>
+                      <Text style={styles.secondaryButtonText}>编辑房间</Text>
                     </TouchableOpacity>
                     {room.status === "VACANT" ? (
                       <TouchableOpacity
@@ -295,7 +309,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                         onPress={() => {
                           setSelectedId(room.id);
                           setLeaseRoomId(room.id);
-                          setActiveRoomForm(undefined);
+                          setEditingRoomId(undefined);
                         }}
                       >
                         <Text style={styles.buttonText}>签约入住</Text>
@@ -305,38 +319,6 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                       <Text style={styles.smallDangerText}>删除房间</Text>
                     </TouchableOpacity>
                   </View>
-
-                  {activeRoomForm === "edit" ? (
-                    <View style={styles.detailPanel}>
-                      <Text style={styles.sectionTitle}>编辑房间</Text>
-                      <TextInput style={styles.input} placeholder="房间号" value={roomForm.roomNo} onChangeText={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
-                      <View style={styles.formGrid}>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>户型</Text>
-                          <TextInput style={styles.input} placeholder="例如 一室一卫" value={roomForm.layout} onChangeText={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
-                        </View>
-                        <View style={styles.formField}>
-                          <Text style={styles.fieldLabel}>面积</Text>
-                          <TextInput style={styles.input} placeholder="平方米" value={roomForm.area} keyboardType="numeric" onChangeText={(value) => setRoomForm((old) => ({ ...old, area: value }))} />
-                        </View>
-                      </View>
-                      <TextInput style={styles.input} placeholder="设施，用逗号分隔" value={roomForm.facilities} onChangeText={(value) => setRoomForm((old) => ({ ...old, facilities: value }))} />
-                      <View style={styles.segment}>
-                        {(Object.keys(statusLabels) as RoomStatus[]).map((item) => (
-                          <TouchableOpacity
-                            key={item}
-                            style={[styles.segmentItem, roomForm.status === item && styles.segmentItemActive]}
-                            onPress={() => setRoomForm((old) => ({ ...old, status: item }))}
-                          >
-                            <Text style={[styles.segmentText, roomForm.status === item && styles.segmentTextActive]}>{statusLabels[item]}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                      <TouchableOpacity style={styles.secondaryButton} onPress={updateRoom}>
-                        <Text style={styles.secondaryButtonText}>保存房间信息</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
 
                   {room.status === "OCCUPIED" && roomActiveLease ? (
                     <View style={styles.detailPanel}>
@@ -372,6 +354,42 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
           );
         })}
       </View>
+      <TaskSheet
+        visible={Boolean(editingRoom)}
+        variant="drawer"
+        title="编辑房间"
+        subtitle={editingRoom ? `${editingRoom.apartment?.name} · ${editingRoom.roomNo}` : undefined}
+        onClose={() => setEditingRoomId(undefined)}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={updateRoom}>
+            <Text style={styles.buttonText}>保存房间信息</Text>
+          </TouchableOpacity>
+        )}
+      >
+        <TextInput style={styles.input} placeholder="房间号" value={roomForm.roomNo} onChangeText={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>户型</Text>
+            <TextInput style={styles.input} placeholder="例如 一室一卫" value={roomForm.layout} onChangeText={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>面积</Text>
+            <TextInput style={styles.input} placeholder="平方米" value={roomForm.area} keyboardType="numeric" onChangeText={(value) => setRoomForm((old) => ({ ...old, area: value }))} />
+          </View>
+        </View>
+        <TextInput style={styles.input} placeholder="设施，用逗号分隔" value={roomForm.facilities} onChangeText={(value) => setRoomForm((old) => ({ ...old, facilities: value }))} />
+        <View style={styles.segment}>
+          {(Object.keys(statusLabels) as RoomStatus[]).map((item) => (
+            <TouchableOpacity
+              key={item}
+              style={[styles.segmentItem, roomForm.status === item && styles.segmentItemActive]}
+              onPress={() => setRoomForm((old) => ({ ...old, status: item }))}
+            >
+              <Text style={[styles.segmentText, roomForm.status === item && styles.segmentTextActive]}>{statusLabels[item]}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </TaskSheet>
       <Modal visible={Boolean(leaseRoom)} transparent animationType="slide" onRequestClose={() => setLeaseRoomId(undefined)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>

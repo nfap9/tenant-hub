@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { DateField } from "../../components/DateField";
+import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Apartment, ApartmentFeeItem, Room, RoomStatus } from "../../types";
@@ -33,6 +34,8 @@ type RoomForm = {
   facilities: string;
   status: RoomStatus;
 };
+
+type ApartmentLayer = "expense" | "fee" | "roomSingle" | "roomBatch" | "roomEdit" | "roomDelete";
 
 const emptyApartmentForm: ApartmentForm = {
   name: "",
@@ -119,10 +122,8 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
   const [selectedId, setSelectedId] = useState<string>();
   const [mode, setMode] = useState<"list" | "detail" | "edit" | "create">("list");
   const [detailTab, setDetailTab] = useState<"expenses" | "rooms">("expenses");
-  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
-  const [listExpenseApartmentId, setListExpenseApartmentId] = useState<string>();
-  const [feeFormOpen, setFeeFormOpen] = useState(false);
-  const [roomFormMode, setRoomFormMode] = useState<"single" | "batch">();
+  const [activeLayer, setActiveLayer] = useState<ApartmentLayer>();
+  const [expenseApartmentId, setExpenseApartmentId] = useState<string>();
   const [editingRoomId, setEditingRoomId] = useState<string>();
   const [deleteRoomId, setDeleteRoomId] = useState<string>();
   const [form, setForm] = useState<ApartmentForm>(emptyApartmentForm);
@@ -140,6 +141,9 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
     () => [...(selectedApartment?.rooms ?? [])].sort((left, right) => left.roomNo.localeCompare(right.roomNo, "zh-Hans-CN")),
     [selectedApartment]
   );
+  const editingRoom = useMemo(() => apartmentRooms.find((room) => room.id === editingRoomId), [apartmentRooms, editingRoomId]);
+  const deletingRoom = useMemo(() => apartmentRooms.find((room) => room.id === deleteRoomId), [apartmentRooms, deleteRoomId]);
+  const expenseApartment = useMemo(() => apartments.find((item) => item.id === expenseApartmentId) ?? selectedApartment, [apartments, expenseApartmentId, selectedApartment]);
   const apartmentVacantRooms = apartmentRooms.filter((room) => room.status === "VACANT").length;
   const apartmentOccupiedRooms = apartmentRooms.filter((room) => room.status === "OCCUPIED").length;
 
@@ -179,24 +183,29 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
   const updateRoomForm = (key: keyof RoomForm, value: string | RoomStatus) => setRoomForm((old) => ({ ...old, [key]: value }));
 
   const resetRoomWork = () => {
-    setRoomFormMode(undefined);
+    setActiveLayer(undefined);
     setEditingRoomId(undefined);
     setDeleteRoomId(undefined);
     setRoomForm(emptyRoomForm);
+  };
+
+  const openExpense = (apartmentId: string) => {
+    setExpenseApartmentId(apartmentId);
+    setActiveLayer("expense");
   };
 
   const startCreateRoom = () => {
     setRoomForm(emptyRoomForm);
     setEditingRoomId(undefined);
     setDeleteRoomId(undefined);
-    setRoomFormMode((old) => (old === "single" ? undefined : "single"));
+    setActiveLayer("roomSingle");
   };
 
   const startBatchRooms = () => {
     setRoomForm(emptyRoomForm);
     setEditingRoomId(undefined);
     setDeleteRoomId(undefined);
-    setRoomFormMode((old) => (old === "batch" ? undefined : "batch"));
+    setActiveLayer("roomBatch");
   };
 
   const startEditRoom = (room: Room) => {
@@ -207,9 +216,9 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
       facilities: room.facilities?.join(",") ?? "",
       status: room.status
     });
-    setRoomFormMode(undefined);
     setDeleteRoomId(undefined);
-    setEditingRoomId((old) => (old === room.id ? undefined : room.id));
+    setEditingRoomId(room.id);
+    setActiveLayer("roomEdit");
   };
 
   const saveApartment = async () => {
@@ -253,9 +262,8 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
 
   const openDetail = (apartmentId: string) => {
     setSelectedId(apartmentId);
-    setExpenseFormOpen(false);
-    setListExpenseApartmentId(undefined);
-    setFeeFormOpen(false);
+    setActiveLayer(undefined);
+    setExpenseApartmentId(undefined);
     resetRoomWork();
     setDetailTab("expenses");
     setMode("detail");
@@ -263,15 +271,14 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
 
   const backToList = () => {
     setSelectedId(undefined);
-    setExpenseFormOpen(false);
-    setListExpenseApartmentId(undefined);
-    setFeeFormOpen(false);
+    setActiveLayer(undefined);
+    setExpenseApartmentId(undefined);
     resetRoomWork();
     setDetailTab("expenses");
     setMode("list");
   };
 
-  const addExpense = async (apartmentId = selectedApartment?.id) => {
+  const addExpense = async (apartmentId = expenseApartmentId ?? selectedApartment?.id) => {
     if (!organizationId || !apartmentId) return;
     if (!expense.name.trim() || !expense.amount.trim()) return setNotice("请填写花费名称和金额");
     await mobileApi(`/apartments/${apartmentId}/expenses`, token, apiOptions(organizationId, "POST", {
@@ -281,8 +288,8 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
       note: optionalText(expense.note)
     }));
     setExpense({ name: "", amount: "", spentAt: new Date().toISOString().slice(0, 10), note: "" });
-    setExpenseFormOpen(false);
-    setListExpenseApartmentId(undefined);
+    setActiveLayer(undefined);
+    setExpenseApartmentId(undefined);
     setNotice("经营花费已记录");
     await loadApartments();
   };
@@ -297,7 +304,7 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
       enabled: true
     }));
     setFee({ name: "", spec: "", amount: "" });
-    setFeeFormOpen(false);
+    setActiveLayer(undefined);
     setNotice("费用项目已添加");
     await loadApartments();
   };
@@ -366,6 +373,12 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
     await loadApartments();
   };
 
+  const startDeleteRoom = (room: Room) => {
+    setEditingRoomId(undefined);
+    setDeleteRoomId(room.id);
+    setActiveLayer("roomDelete");
+  };
+
   const renderRoomFields = (showStatus = false) => (
     <>
       <View style={styles.formGrid}>
@@ -423,7 +436,6 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
             const occupied = rooms.filter((room) => room.status === "OCCUPIED").length;
             const monthlyIncome = apartmentMonthlyIncome(item);
             const monthlyExpense = apartmentMonthlyExpense(item);
-            const isRecordingExpense = listExpenseApartmentId === item.id;
             return (
               <View key={item.id} style={styles.apartmentListCard}>
                 <TouchableOpacity onPress={() => openDetail(item.id)}>
@@ -445,28 +457,12 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 </View>
                 <View style={styles.roomActions}>
                   <TouchableOpacity
-                    style={[styles.smallButton, isRecordingExpense && styles.smallButtonActive]}
-                    onPress={() => {
-                      setExpenseFormOpen(false);
-                      setListExpenseApartmentId((old) => (old === item.id ? undefined : item.id));
-                    }}
+                    style={styles.smallButton}
+                    onPress={() => openExpense(item.id)}
                   >
-                    <Text style={[styles.smallButtonText, isRecordingExpense && styles.smallButtonTextActive]}>{isRecordingExpense ? "收起" : "记录花费"}</Text>
+                    <Text style={styles.smallButtonText}>记录花费</Text>
                   </TouchableOpacity>
                 </View>
-                {isRecordingExpense ? (
-                  <>
-                    <View style={styles.formGrid}>
-                      <TextInput style={[styles.input, styles.gridInput]} placeholder="花费名称" value={expense.name} onChangeText={(value) => setExpense((old) => ({ ...old, name: value }))} />
-                      <TextInput style={[styles.input, styles.gridInput]} placeholder="金额" value={expense.amount} keyboardType="numeric" onChangeText={(value) => setExpense((old) => ({ ...old, amount: value }))} />
-                      <DateField style={styles.gridInput} value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
-                    </View>
-                    <TextInput style={styles.input} placeholder="备注" value={expense.note} onChangeText={(value) => setExpense((old) => ({ ...old, note: value }))} />
-                    <TouchableOpacity style={styles.secondaryButton} onPress={() => addExpense(item.id)}>
-                      <Text style={styles.secondaryButtonText}>保存花费</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : null}
               </View>
             );
           })}
@@ -538,24 +534,12 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <Text style={styles.muted}>签约时可选择的网费、管理费、服务费等项目</Text>
               </View>
               <TouchableOpacity
-                style={[styles.smallButton, feeFormOpen && styles.smallButtonActive]}
-                onPress={() => setFeeFormOpen((old) => !old)}
+                style={styles.smallButton}
+                onPress={() => setActiveLayer("fee")}
               >
-                <Text style={[styles.smallButtonText, feeFormOpen && styles.smallButtonTextActive]}>{feeFormOpen ? "收起" : "添加费用项"}</Text>
+                <Text style={styles.smallButtonText}>添加费用项</Text>
               </TouchableOpacity>
             </View>
-            {feeFormOpen ? (
-              <>
-                <View style={styles.formGrid}>
-                  <TextInput style={[styles.input, styles.gridInput]} placeholder="费用名称" value={fee.name} onChangeText={(value) => setFee((old) => ({ ...old, name: value }))} />
-                  <TextInput style={[styles.input, styles.gridInput]} placeholder="规格" value={fee.spec} onChangeText={(value) => setFee((old) => ({ ...old, spec: value }))} />
-                  <TextInput style={[styles.input, styles.gridInput]} placeholder="金额" value={fee.amount} keyboardType="numeric" onChangeText={(value) => setFee((old) => ({ ...old, amount: value }))} />
-                </View>
-                <TouchableOpacity style={styles.secondaryButton} onPress={addFee}>
-                  <Text style={styles.secondaryButtonText}>保存费用项</Text>
-                </TouchableOpacity>
-              </>
-            ) : null}
             {(selectedApartment.feeItems ?? []).map((item) => (
               <TouchableOpacity style={[styles.feeItem, item.enabled && styles.feeItemActive]} key={item.id} onPress={() => toggleFee(item)}>
                 <Text style={styles.cardTitle}>{item.name}{item.spec ? ` · ${item.spec}` : ""}</Text>
@@ -601,7 +585,8 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
               <TouchableOpacity
                 style={[styles.segmentItem, detailTab === "rooms" && styles.segmentItemActive]}
                 onPress={() => {
-                  setExpenseFormOpen(false);
+                  setActiveLayer(undefined);
+                  setExpenseApartmentId(undefined);
                   setDetailTab("rooms");
                 }}
               >
@@ -648,10 +633,10 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <Text style={styles.muted}>每月经营支出从这里快速记录</Text>
               </View>
               <TouchableOpacity
-                style={[styles.smallButton, expenseFormOpen && styles.smallButtonActive]}
-                onPress={() => setExpenseFormOpen((old) => !old)}
+                style={styles.smallButton}
+                onPress={() => openExpense(selectedApartment.id)}
               >
-                <Text style={[styles.smallButtonText, expenseFormOpen && styles.smallButtonTextActive]}>{expenseFormOpen ? "收起" : "记录花费"}</Text>
+                <Text style={styles.smallButtonText}>记录花费</Text>
               </TouchableOpacity>
             </View>
             {(selectedApartment.expenses ?? []).slice(0, 4).map((item) => (
@@ -661,19 +646,6 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
               </View>
             ))}
             {(selectedApartment.expenses ?? []).length === 0 ? <Text style={styles.muted}>暂无经营花费记录</Text> : null}
-            {expenseFormOpen ? (
-              <>
-                <View style={styles.formGrid}>
-                  <TextInput style={[styles.input, styles.gridInput]} placeholder="花费名称" value={expense.name} onChangeText={(value) => setExpense((old) => ({ ...old, name: value }))} />
-                  <TextInput style={[styles.input, styles.gridInput]} placeholder="金额" value={expense.amount} keyboardType="numeric" onChangeText={(value) => setExpense((old) => ({ ...old, amount: value }))} />
-                  <DateField style={styles.gridInput} value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
-                </View>
-                <TextInput style={styles.input} placeholder="备注" value={expense.note} onChangeText={(value) => setExpense((old) => ({ ...old, note: value }))} />
-                <TouchableOpacity style={styles.secondaryButton} onPress={() => addExpense()}>
-                  <Text style={styles.secondaryButtonText}>保存花费</Text>
-                </TouchableOpacity>
-              </>
-            ) : null}
           </View>
             </>
           ) : null}
@@ -690,51 +662,22 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
               </View>
               <View style={styles.roomActions}>
                 <TouchableOpacity
-                  style={[styles.smallButton, roomFormMode === "single" && styles.smallButtonActive]}
+                  style={styles.smallButton}
                   onPress={startCreateRoom}
                 >
-                  <Text style={[styles.smallButtonText, roomFormMode === "single" && styles.smallButtonTextActive]}>{roomFormMode === "single" ? "收起" : "新增房间"}</Text>
+                  <Text style={styles.smallButtonText}>新增房间</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.smallButton, roomFormMode === "batch" && styles.smallButtonActive]}
+                  style={styles.smallButton}
                   onPress={startBatchRooms}
                 >
-                  <Text style={[styles.smallButtonText, roomFormMode === "batch" && styles.smallButtonTextActive]}>{roomFormMode === "batch" ? "收起批量" : "批量添加"}</Text>
+                  <Text style={styles.smallButtonText}>批量添加</Text>
                 </TouchableOpacity>
               </View>
             </View>
-            {roomFormMode === "single" ? (
-              <>
-                <Text style={styles.label}>新增单个房间</Text>
-                {renderRoomFields(false)}
-                <TouchableOpacity style={styles.button} onPress={createRoom}>
-                  <Text style={styles.buttonText}>保存房间</Text>
-                </TouchableOpacity>
-              </>
-            ) : null}
-            {roomFormMode === "batch" ? (
-              <>
-                <Text style={styles.label}>批量添加房间</Text>
-                <TextInput style={[styles.input, styles.textarea]} multiline placeholder="房间号，用逗号、空格或换行分隔" value={batchRooms} onChangeText={setBatchRooms} />
-                <View style={styles.formGrid}>
-                  <View style={styles.formField}>
-                    <Text style={styles.fieldLabel}>户型</Text>
-                    <TextInput style={styles.input} placeholder="一室一卫" value={batchLayout} onChangeText={setBatchLayout} />
-                  </View>
-                  <View style={styles.formField}>
-                    <Text style={styles.fieldLabel}>面积</Text>
-                    <TextInput style={styles.input} placeholder="平方米" value={batchArea} keyboardType="numeric" onChangeText={setBatchArea} />
-                  </View>
-                </View>
-                <TextInput style={styles.input} placeholder="设施，用逗号分隔" value={batchFacilities} onChangeText={setBatchFacilities} />
-                <TouchableOpacity style={styles.button} onPress={addBatchRooms}>
-                  <Text style={styles.buttonText}>确认添加房间</Text>
-                </TouchableOpacity>
-              </>
-            ) : null}
 
             {apartmentRooms.map((room) => (
-              <View style={[styles.apartmentListCard, editingRoomId === room.id && styles.roomCardActive]} key={room.id}>
+              <View style={[styles.apartmentListCard, (editingRoomId === room.id || deleteRoomId === room.id) && styles.roomCardActive]} key={room.id}>
                 <View style={styles.sectionHeader}>
                   <View>
                     <Text style={styles.cardTitle}>{room.roomNo}</Text>
@@ -745,47 +688,140 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <Text style={styles.muted}>{facilitiesText(room.facilities)}</Text>
                 <View style={styles.roomActions}>
                   <TouchableOpacity style={styles.smallButton} onPress={() => startEditRoom(room)}>
-                    <Text style={styles.smallButtonText}>{editingRoomId === room.id ? "收起" : "编辑"}</Text>
+                    <Text style={styles.smallButtonText}>编辑</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={room.status === "OCCUPIED" ? [styles.smallDangerButton, styles.buttonDisabled] : styles.smallDangerButton}
                     disabled={room.status === "OCCUPIED"}
-                    onPress={() => {
-                      setEditingRoomId(undefined);
-                      setRoomFormMode(undefined);
-                      setDeleteRoomId((old) => (old === room.id ? undefined : room.id));
-                    }}
+                    onPress={() => startDeleteRoom(room)}
                   >
                     <Text style={styles.smallDangerText}>删除</Text>
                   </TouchableOpacity>
                 </View>
-                {editingRoomId === room.id ? (
-                  <>
-                    {renderRoomFields(true)}
-                    <TouchableOpacity style={styles.secondaryButton} onPress={updateRoom}>
-                      <Text style={styles.secondaryButtonText}>保存修改</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : null}
-                {deleteRoomId === room.id ? (
-                  <View style={styles.detailPanel}>
-                    <Text style={styles.muted}>删除后房间资料不可恢复，请确认当前房间没有有效租约。</Text>
-                    <View style={styles.roomActions}>
-                      <TouchableOpacity style={styles.smallDangerButton} onPress={() => deleteRoom(room)}>
-                        <Text style={styles.smallDangerText}>确认删除</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.smallButton} onPress={() => setDeleteRoomId(undefined)}>
-                        <Text style={styles.smallButtonText}>取消</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : null}
               </View>
             ))}
             {apartmentRooms.length === 0 ? <Text style={styles.muted}>暂无房间，可以新增单个房间或批量添加</Text> : null}
           </View>
         </>
       ) : null}
+
+      <TaskSheet
+        visible={activeLayer === "expense"}
+        variant="bottom"
+        title="记录花费"
+        subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : "经营支出"}
+        onClose={() => {
+          setActiveLayer(undefined);
+          setExpenseApartmentId(undefined);
+        }}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={() => addExpense()}>
+            <Text style={styles.buttonText}>保存花费</Text>
+          </TouchableOpacity>
+        )}
+      >
+        <View style={styles.formGrid}>
+          <TextInput style={[styles.input, styles.gridInput]} placeholder="花费名称" value={expense.name} onChangeText={(value) => setExpense((old) => ({ ...old, name: value }))} />
+          <TextInput style={[styles.input, styles.gridInput]} placeholder="金额" value={expense.amount} keyboardType="numeric" onChangeText={(value) => setExpense((old) => ({ ...old, amount: value }))} />
+          <DateField style={styles.gridInput} value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
+        </View>
+        <TextInput style={styles.input} placeholder="备注" value={expense.note} onChangeText={(value) => setExpense((old) => ({ ...old, note: value }))} />
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "fee"}
+        variant="bottom"
+        title="添加费用项"
+        subtitle={selectedApartment ? `${selectedApartment.name} · 签约可选费用` : undefined}
+        onClose={() => setActiveLayer(undefined)}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={addFee}>
+            <Text style={styles.buttonText}>保存费用项</Text>
+          </TouchableOpacity>
+        )}
+      >
+        <View style={styles.formGrid}>
+          <TextInput style={[styles.input, styles.gridInput]} placeholder="费用名称" value={fee.name} onChangeText={(value) => setFee((old) => ({ ...old, name: value }))} />
+          <TextInput style={[styles.input, styles.gridInput]} placeholder="规格" value={fee.spec} onChangeText={(value) => setFee((old) => ({ ...old, spec: value }))} />
+          <TextInput style={[styles.input, styles.gridInput]} placeholder="金额" value={fee.amount} keyboardType="numeric" onChangeText={(value) => setFee((old) => ({ ...old, amount: value }))} />
+        </View>
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "roomSingle"}
+        variant="drawer"
+        title="新增房间"
+        subtitle={selectedApartment ? selectedApartment.name : undefined}
+        onClose={resetRoomWork}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={createRoom}>
+            <Text style={styles.buttonText}>保存房间</Text>
+          </TouchableOpacity>
+        )}
+      >
+        {renderRoomFields(false)}
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "roomBatch"}
+        variant="drawer"
+        title="批量添加房间"
+        subtitle={selectedApartment ? selectedApartment.name : undefined}
+        onClose={resetRoomWork}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={addBatchRooms}>
+            <Text style={styles.buttonText}>确认添加房间</Text>
+          </TouchableOpacity>
+        )}
+      >
+        <TextInput style={[styles.input, styles.textarea]} multiline placeholder="房间号，用逗号、空格或换行分隔" value={batchRooms} onChangeText={setBatchRooms} />
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>户型</Text>
+            <TextInput style={styles.input} placeholder="一室一卫" value={batchLayout} onChangeText={setBatchLayout} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>面积</Text>
+            <TextInput style={styles.input} placeholder="平方米" value={batchArea} keyboardType="numeric" onChangeText={setBatchArea} />
+          </View>
+        </View>
+        <TextInput style={styles.input} placeholder="设施，用逗号分隔" value={batchFacilities} onChangeText={setBatchFacilities} />
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "roomEdit"}
+        variant="drawer"
+        title="编辑房间"
+        subtitle={editingRoom ? `${editingRoom.roomNo} · ${editingRoom.layout}` : undefined}
+        onClose={resetRoomWork}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={updateRoom}>
+            <Text style={styles.buttonText}>保存修改</Text>
+          </TouchableOpacity>
+        )}
+      >
+        {renderRoomFields(true)}
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "roomDelete"}
+        variant="dialog"
+        title="删除房间"
+        subtitle={deletingRoom ? `${deletingRoom.roomNo} · ${deletingRoom.layout}` : undefined}
+        onClose={resetRoomWork}
+        footer={deletingRoom ? (
+          <View style={styles.roomActions}>
+            <TouchableOpacity style={[styles.smallDangerButton, styles.actionButton]} onPress={() => deleteRoom(deletingRoom)}>
+              <Text style={styles.smallDangerText}>确认删除</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.smallButton, styles.actionButton]} onPress={resetRoomWork}>
+              <Text style={styles.smallButtonText}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      >
+        <Text style={styles.muted}>删除后房间资料不可恢复，请确认当前房间没有有效租约。</Text>
+      </TaskSheet>
     </>
   );
 }

@@ -203,4 +203,18 @@ export const styles = StyleSheet.create({
   billLine: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: "#eee8da", flexDirection: "row", justifyContent: "space-between", gap: 10 },
   billChoiceList: { gap: 8 },
   readingRow: { padding: 12, backgroundColor: "white", borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }
+  ,
+
+  // 新增：任务表单层
+  taskSheetOverlay: { flex: 1, backgroundColor: "rgba(16, 37, 34, 0.42)" },
+  taskSheetOverlay_bottom: { justifyContent: "flex-end" },
+  taskSheetOverlay_drawer: { justifyContent: "flex-end" },
+  taskSheetOverlay_dialog: { justifyContent: "center", padding: 18 },
+  taskSheetCard: { backgroundColor: "white", gap: 10, padding: 14 },
+  taskSheetCard_bottom: { maxHeight: "78%", borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  taskSheetCard_drawer: { maxHeight: "90%", minHeight: "62%", borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  taskSheetCard_dialog: { maxHeight: "78%", borderRadius: 8 },
+  taskSheetTitleBlock: { flex: 1, gap: 2 },
+  taskSheetContent: { gap: 10, paddingBottom: 2 },
+  taskSheetFooter: { gap: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#eee8da" }
 });
