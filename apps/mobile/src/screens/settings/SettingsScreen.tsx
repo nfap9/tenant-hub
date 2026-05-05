@@ -3,10 +3,11 @@ import { Text, TouchableOpacity } from "react-native";
 import { styles } from "../../theme/styles";
 import type { Membership, OrgMember, OrgRole } from "../../types";
 import AccountSettingsSubPage from "./AccountSettingsSubPage";
+import LeasesSubPage from "./LeasesSubPage";
 import OrganizationSettingsSubPage from "./OrganizationSettingsSubPage";
 import PlanPurchaseSubPage from "./PlanPurchaseSubPage";
 
-type SettingsSubPage = "menu" | "team" | "account" | "plan";
+type SettingsSubPage = "menu" | "leases" | "team" | "account" | "plan";
 
 type SettingsScreenProps = {
   token: string;
@@ -60,6 +61,10 @@ export default function SettingsScreen({
     );
   }
 
+  if (subPage === "leases") {
+    return <LeasesSubPage token={token} currentOrgId={currentOrgId} setNotice={setNotice} onBack={backToMenu} />;
+  }
+
   if (subPage === "account") {
     return <AccountSettingsSubPage token={token} setNotice={setNotice} onBack={backToMenu} />;
   }
@@ -79,6 +84,10 @@ export default function SettingsScreen({
 
   return (
     <>
+      <TouchableOpacity style={styles.settingItem} onPress={() => setSubPage("leases")}>
+        <Text style={styles.settingItemText}>所有租约</Text>
+        <Text style={styles.link}>进入</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.settingItem} onPress={() => setSubPage("team")}>
         <Text style={styles.settingItemText}>团队管理</Text>
         <Text style={styles.link}>进入</Text>

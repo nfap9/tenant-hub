@@ -5,5 +5,5 @@ export const tabItems: Array<{ key: TabKey; label: string }> = [
   { key: "rooms", label: "房间" },
   { key: "bills", label: "账单" },
   { key: "apartments", label: "公寓" },
-  { key: "settings", label: "设置" }
+  { key: "settings", label: "更多" }
 ];

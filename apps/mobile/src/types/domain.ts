@@ -111,6 +111,7 @@ export type Lease = {
   terminationReason?: string;
   terminatedAt?: string;
   fees?: LeaseFee[];
+  room?: Room;
 };
 
 export type Room = {
