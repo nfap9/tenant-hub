@@ -2,7 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
-import { generateLeaseBills } from "../services/billing.js";
+import { generateActiveAutoRenewBills, generateLeaseBills } from "../services/billing.js";
+import { assertExpiredTerminationAllowed, withLeaseLifecycle } from "../services/leaseLifecycle.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
@@ -10,17 +11,23 @@ import { HttpError, ok } from "../utils/http.js";
 export const leaseRouter = Router();
 leaseRouter.use(requireAuth, requireOrg);
 
+const leaseInclude = { room: { include: { apartment: true } }, fees: true } as const;
+const amountSchema = z.coerce.number().nonnegative();
+
 leaseRouter.get(
   "/",
   requirePermission(PERMISSIONS.LEASE_VIEW),
   asyncHandler(async (req, res) => {
+    await generateActiveAutoRenewBills(req.organizationId!);
     ok(
       res,
-      await prisma.lease.findMany({
-        where: { organizationId: req.organizationId! },
-        include: { room: { include: { apartment: true } }, fees: true },
-        orderBy: { createdAt: "desc" }
-      })
+      (
+        await prisma.lease.findMany({
+          where: { organizationId: req.organizationId! },
+          include: leaseInclude,
+          orderBy: { createdAt: "desc" }
+        })
+      ).map((lease) => withLeaseLifecycle(lease))
     );
   })
 );
@@ -38,13 +45,14 @@ leaseRouter.post(
         endDate: z.coerce.date(),
         graceDays: z.coerce.number().int().min(0).default(0),
         cycle: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]),
-        rentAmount: z.coerce.number(),
-        depositAmount: z.coerce.number().default(0),
-        waterUnitPrice: z.coerce.number(),
-        powerUnitPrice: z.coerce.number(),
+        rentAmount: amountSchema,
+        depositAmount: amountSchema.default(0),
+        waterUnitPrice: amountSchema,
+        powerUnitPrice: amountSchema,
         autoRenew: z.boolean().default(false),
-        fees: z.array(z.object({ feeItemId: z.string().optional(), name: z.string(), amount: z.coerce.number() })).default([])
+        fees: z.array(z.object({ feeItemId: z.string().optional(), name: z.string().min(1), amount: amountSchema })).default([])
       })
+      .refine((data) => data.endDate >= data.startDate, { path: ["endDate"], message: "租约结束日期不能早于开始日期" })
       .parse(req.body);
 
     const { fees, roomId, ...leaseData } = input;
@@ -69,11 +77,12 @@ leaseRouter.post(
         organizationId: req.organizationId!,
         roomId,
         fees: { create: fees }
-      }
+      },
+      include: leaseInclude
     });
     await prisma.room.update({ where: { id: roomId }, data: { status: "OCCUPIED" } });
     await generateLeaseBills(lease.id);
-    ok(res, lease);
+    ok(res, withLeaseLifecycle(lease));
   })
 );
 
@@ -86,14 +95,22 @@ leaseRouter.post(
       .parse(req.body);
     const current = await prisma.lease.findFirst({
       where: { id: req.params.id, organizationId: req.organizationId! },
-      select: { id: true }
+      select: { id: true, endDate: true }
     });
     if (!current) throw new HttpError(404, "租约不存在");
+    if (input.type === "EXPIRED") {
+      try {
+        assertExpiredTerminationAllowed(current.endDate, input.terminatedAt);
+      } catch (error) {
+        throw new HttpError(400, error instanceof Error ? error.message : "到期解约的退租日期不能早于原租约结束日期");
+      }
+    }
     const lease = await prisma.lease.update({
       where: { id: req.params.id },
-      data: { status: "TERMINATED", terminationType: input.type, terminationReason: input.reason, terminatedAt: input.terminatedAt }
+      data: { status: "TERMINATED", terminationType: input.type, terminationReason: input.reason, terminatedAt: input.terminatedAt },
+      include: leaseInclude
     });
     await prisma.room.update({ where: { id: lease.roomId }, data: { status: "VACANT" } });
-    ok(res, lease);
+    ok(res, withLeaseLifecycle(lease));
   })
 );

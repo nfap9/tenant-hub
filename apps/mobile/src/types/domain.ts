@@ -42,6 +42,7 @@ export type SubscriptionOverview = {
 export type RoomStatus = "VACANT" | "RESERVED" | "OCCUPIED" | "MAINTENANCE";
 export type RentCycle = "MONTHLY" | "QUARTERLY" | "YEARLY";
 export type LeaseStatus = "ACTIVE" | "TERMINATED" | "EXPIRED";
+export type TerminationType = "EXPIRED" | "NEGOTIATED" | "BREACH";
 
 export type ApartmentExpense = {
   id: string;
@@ -97,12 +98,18 @@ export type Lease = {
   tenantPhone: string;
   startDate: string;
   endDate: string;
+  graceDays: number;
   cycle: RentCycle;
   rentAmount: string | number;
   depositAmount: string | number;
   waterUnitPrice: string | number;
   powerUnitPrice: string | number;
+  autoRenew: boolean;
+  isAutoRenewalPeriod?: boolean;
   status: LeaseStatus;
+  terminationType?: TerminationType;
+  terminationReason?: string;
+  terminatedAt?: string;
   fees?: LeaseFee[];
 };
 

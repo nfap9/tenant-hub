@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
-import type { ApartmentFeeItem, RentCycle, Room, RoomStatus } from "../../types";
+import type { ApartmentFeeItem, Lease, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
 
 type Props = {
   token: string;
@@ -23,11 +23,19 @@ type LeaseForm = {
   tenantPhone: string;
   startDate: string;
   endDate: string;
+  graceDays: string;
   cycle: RentCycle;
   rentAmount: string;
   depositAmount: string;
   waterUnitPrice: string;
   powerUnitPrice: string;
+  autoRenew: boolean;
+};
+
+type TerminationForm = {
+  type: TerminationType;
+  terminatedAt: string;
+  reason: string;
 };
 
 const statusLabels: Record<RoomStatus, string> = {
@@ -45,6 +53,8 @@ const statusStyles: Record<RoomStatus, object> = {
 };
 
 const filters: Array<RoomStatus | "ALL"> = ["ALL", "VACANT", "OCCUPIED", "RESERVED", "MAINTENANCE"];
+const cycleLabels: Record<RentCycle, string> = { MONTHLY: "月付", QUARTERLY: "季付", YEARLY: "年付" };
+const terminationLabels: Record<TerminationType, string> = { EXPIRED: "到期解约", NEGOTIATED: "协商解约", BREACH: "违约退租" };
 const today = () => new Date().toISOString().slice(0, 10);
 const nextYear = () => {
   const date = new Date();
@@ -57,6 +67,7 @@ const apiOptions = (organizationId: string, method = "GET", body?: unknown): Req
   ...(body ? { body: JSON.stringify(body) } : {})
 });
 const money = (value?: string | number) => Number(value ?? 0).toFixed(2);
+const defaultTerminationType = (lease: Lease): TerminationType => (today() > lease.endDate.slice(0, 10) ? "EXPIRED" : "NEGOTIATED");
 
 export default function RoomsScreen({ token, organizationId, setNotice }: Props) {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -70,17 +81,20 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
     tenantPhone: "",
     startDate: today(),
     endDate: nextYear(),
+    graceDays: "0",
     cycle: "MONTHLY",
     rentAmount: "",
     depositAmount: "",
     waterUnitPrice: "0",
-    powerUnitPrice: "0"
+    powerUnitPrice: "0",
+    autoRenew: true
   });
   const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
+  const [terminatingLease, setTerminatingLease] = useState<Lease>();
+  const [terminationForm, setTerminationForm] = useState<TerminationForm>({ type: "NEGOTIATED", terminatedAt: today(), reason: "" });
 
   const selectedRoom = useMemo(() => rooms.find((item) => item.id === selectedId), [rooms, selectedId]);
   const leaseRoom = useMemo(() => rooms.find((item) => item.id === leaseRoomId), [rooms, leaseRoomId]);
-  const activeLease = selectedRoom?.leases?.find((item) => item.status === "ACTIVE");
   const visibleRooms = useMemo(() => (filter === "ALL" ? rooms : rooms.filter((item) => item.status === filter)), [filter, rooms]);
   const vacantCount = rooms.filter((item) => item.status === "VACANT").length;
   const occupiedCount = rooms.filter((item) => item.status === "OCCUPIED").length;
@@ -153,28 +167,36 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
       tenantPhone: leaseForm.tenantPhone.trim(),
       startDate: leaseForm.startDate,
       endDate: leaseForm.endDate,
+      graceDays: Number(leaseForm.graceDays || 0),
       cycle: leaseForm.cycle,
       rentAmount: Number(leaseForm.rentAmount),
       depositAmount: Number(leaseForm.depositAmount || 0),
       waterUnitPrice: Number(leaseForm.waterUnitPrice || 0),
       powerUnitPrice: Number(leaseForm.powerUnitPrice || 0),
+      autoRenew: leaseForm.autoRenew,
       fees
     }));
     setNotice("签约完成，水电单价和费用项已带入租约");
-    setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "" }));
+    setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true }));
     setActiveRoomForm(undefined);
     setLeaseRoomId(undefined);
     await loadRooms();
   };
 
+  const openTermination = (lease: Lease) => {
+    setTerminatingLease(lease);
+    setTerminationForm({ type: defaultTerminationType(lease), terminatedAt: today(), reason: "" });
+  };
+
   const terminateLease = async () => {
-    if (!organizationId || !activeLease) return;
-    await mobileApi(`/leases/${activeLease.id}/terminate`, token, apiOptions(organizationId, "POST", {
-      type: "NEGOTIATED",
-      reason: "移动端退租",
-      terminatedAt: today()
+    if (!organizationId || !terminatingLease) return;
+    await mobileApi(`/leases/${terminatingLease.id}/terminate`, token, apiOptions(organizationId, "POST", {
+      type: terminationForm.type,
+      reason: terminationForm.reason.trim() || terminationLabels[terminationForm.type],
+      terminatedAt: terminationForm.terminatedAt
     }));
     setNotice("退租完成，房间已转为空闲");
+    setTerminatingLease(undefined);
     await loadRooms();
   };
 
@@ -330,7 +352,15 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                         <Text style={styles.muted}>合同期</Text>
                         <Text style={styles.muted}>{roomActiveLease.startDate.slice(0, 10)} 至 {roomActiveLease.endDate.slice(0, 10)}</Text>
                       </View>
-                      <TouchableOpacity style={styles.smallDangerButton} onPress={terminateLease}>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.muted}>交租周期</Text>
+                        <Text style={styles.muted}>{cycleLabels[roomActiveLease.cycle]} · 宽限 {roomActiveLease.graceDays ?? 0} 天</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.muted}>自动续约</Text>
+                        <Text style={styles.muted}>{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text>
+                      </View>
+                      <TouchableOpacity style={styles.smallDangerButton} onPress={() => openTermination(roomActiveLease)}>
                         <Text style={styles.smallDangerText}>退租</Text>
                       </TouchableOpacity>
                     </View>
@@ -376,6 +406,26 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                   <TextInput style={styles.input} placeholder="押金金额" value={leaseForm.depositAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, depositAmount: value }))} />
                 </View>
               </View>
+              <View style={styles.formGrid}>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>交租期限</Text>
+                  <TextInput style={styles.input} placeholder="交租日后几日内" value={leaseForm.graceDays} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, graceDays: value }))} />
+                </View>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>自动续约</Text>
+                  <View style={styles.segment}>
+                    {[true, false].map((item) => (
+                      <TouchableOpacity
+                        key={String(item)}
+                        style={[styles.segmentItem, leaseForm.autoRenew === item && styles.segmentItemActive]}
+                        onPress={() => setLeaseForm((old) => ({ ...old, autoRenew: item }))}
+                      >
+                        <Text style={[styles.segmentText, leaseForm.autoRenew === item && styles.segmentTextActive]}>{item ? "开启" : "关闭"}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
               <View style={styles.segment}>
                 {(["MONTHLY", "QUARTERLY", "YEARLY"] as RentCycle[]).map((item) => (
                   <TouchableOpacity
@@ -383,7 +433,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                     style={[styles.segmentItem, leaseForm.cycle === item && styles.segmentItemActive]}
                     onPress={() => setLeaseForm((old) => ({ ...old, cycle: item }))}
                   >
-                    <Text style={[styles.segmentText, leaseForm.cycle === item && styles.segmentTextActive]}>{item === "MONTHLY" ? "月付" : item === "QUARTERLY" ? "季付" : "年付"}</Text>
+                    <Text style={[styles.segmentText, leaseForm.cycle === item && styles.segmentTextActive]}>{cycleLabels[item]}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -410,6 +460,42 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
               ))}
               <TouchableOpacity style={styles.button} onPress={createLease}>
                 <Text style={styles.buttonText}>确认签约</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={Boolean(terminatingLease)} transparent animationType="fade" onRequestClose={() => setTerminatingLease(undefined)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionTitle}>合约终止</Text>
+                  <Text style={styles.muted}>{terminatingLease?.tenantName} · {terminatingLease?.startDate.slice(0, 10)} 至 {terminatingLease?.endDate.slice(0, 10)}</Text>
+                </View>
+                <TouchableOpacity style={styles.smallButton} onPress={() => setTerminatingLease(undefined)}>
+                  <Text style={styles.smallButtonText}>关闭</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.segment}>
+                {(Object.keys(terminationLabels) as TerminationType[]).map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.segmentItem, terminationForm.type === item && styles.segmentItemActive]}
+                    onPress={() => setTerminationForm((old) => ({ ...old, type: item }))}
+                  >
+                    <Text style={[styles.segmentText, terminationForm.type === item && styles.segmentTextActive]}>{terminationLabels[item]}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.fieldLabel}>退租日期</Text>
+              <TextInput style={styles.input} placeholder="2026-05-01" value={terminationForm.terminatedAt} onChangeText={(value) => setTerminationForm((old) => ({ ...old, terminatedAt: value }))} />
+              <Text style={styles.fieldLabel}>原因</Text>
+              <TextInput style={[styles.input, styles.textarea]} multiline placeholder="可选，默认使用解约类型" value={terminationForm.reason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
+              {terminatingLease?.isAutoRenewalPeriod ? <Text style={styles.muted}>当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}
+              <TouchableOpacity style={styles.smallDangerButton} onPress={terminateLease}>
+                <Text style={styles.smallDangerText}>确认终止合约</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

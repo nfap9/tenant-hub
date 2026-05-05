@@ -5,6 +5,8 @@ import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.j
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
+import { generateActiveAutoRenewBills } from "../services/billing.js";
+import { withLeaseLifecycle } from "../services/leaseLifecycle.js";
 
 export const apartmentRouter = Router();
 apartmentRouter.use(requireAuth, requireOrg);
@@ -38,6 +40,7 @@ apartmentRouter.get(
   "/",
   requirePermission(PERMISSIONS.APARTMENT_VIEW),
   asyncHandler(async (req, res) => {
+    await generateActiveAutoRenewBills(req.organizationId!);
     const apartments = await prisma.apartment.findMany({
       where: { organizationId: req.organizationId! },
       include: {
@@ -47,7 +50,16 @@ apartmentRouter.get(
       },
       orderBy: { createdAt: "desc" }
     });
-    ok(res, apartments);
+    ok(
+      res,
+      apartments.map((apartment) => ({
+        ...apartment,
+        rooms: apartment.rooms.map((room) => ({
+          ...room,
+          leases: room.leases.map((lease) => withLeaseLifecycle(lease))
+        }))
+      }))
+    );
   })
 );
 
@@ -55,6 +67,7 @@ apartmentRouter.get(
   "/rooms",
   requirePermission(PERMISSIONS.ROOM_VIEW),
   asyncHandler(async (req, res) => {
+    await generateActiveAutoRenewBills(req.organizationId!);
     const rooms = await prisma.room.findMany({
       where: { apartment: { organizationId: req.organizationId! } },
       include: {
@@ -63,7 +76,13 @@ apartmentRouter.get(
       },
       orderBy: [{ apartment: { createdAt: "desc" } }, { roomNo: "asc" }]
     });
-    ok(res, rooms);
+    ok(
+      res,
+      rooms.map((room) => ({
+        ...room,
+        leases: room.leases.map((lease) => withLeaseLifecycle(lease))
+      }))
+    );
   })
 );
 

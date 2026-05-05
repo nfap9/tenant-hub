@@ -1,12 +1,10 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
+import { cycleMonths, getLeaseBillGenerationEnd } from "./leaseLifecycle.js";
 
-const cycleMonths = {
-  MONTHLY: 1,
-  QUARTERLY: 3,
-  YEARLY: 12
-} as const;
+dayjs.extend(utc);
 
 export const generateLeaseBills = async (leaseId: string) => {
   const lease = await prisma.lease.findUnique({
@@ -15,11 +13,11 @@ export const generateLeaseBills = async (leaseId: string) => {
   });
   if (!lease) return;
 
-  const existingStarts = new Set(lease.bills.map((bill) => bill.periodStart.toISOString()));
+  const existingStarts = new Set(lease.bills.map((bill) => dayjs.utc(bill.periodStart).format("YYYY-MM-DD")));
   const months = cycleMonths[lease.cycle];
   const bills: string[] = [];
-  let cursor = dayjs(lease.startDate);
-  const leaseEnd = dayjs(lease.endDate);
+  let cursor = dayjs.utc(lease.startDate).startOf("day");
+  const leaseEnd = dayjs.utc(getLeaseBillGenerationEnd(lease)).startOf("day");
 
   while (cursor.isBefore(leaseEnd) || cursor.isSame(leaseEnd, "day")) {
     const periodStart = cursor.startOf("day");
@@ -28,7 +26,7 @@ export const generateLeaseBills = async (leaseId: string) => {
       : cursor.add(months, "month").subtract(1, "day");
     const dueDate = periodStart.add(lease.graceDays, "day");
 
-    if (!existingStarts.has(periodStart.toDate().toISOString())) {
+    if (!existingStarts.has(periodStart.format("YYYY-MM-DD"))) {
       const otherTotal = lease.fees.reduce((sum, fee) => sum.plus(fee.amount), new Prisma.Decimal(0));
       const totalAmount = new Prisma.Decimal(lease.rentAmount).plus(otherTotal);
 
@@ -69,6 +67,15 @@ export const generateLeaseBills = async (leaseId: string) => {
   }
 
   return bills;
+};
+
+export const generateActiveAutoRenewBills = async (organizationId: string) => {
+  const leases = await prisma.lease.findMany({
+    where: { organizationId, status: "ACTIVE", autoRenew: true },
+    select: { id: true }
+  });
+
+  await Promise.all(leases.map((lease) => generateLeaseBills(lease.id)));
 };
 
 export const refreshBillTotals = async (billId: string) => {

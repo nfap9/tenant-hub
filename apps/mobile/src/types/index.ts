@@ -14,6 +14,7 @@ export type {
   Room,
   RoomStatus,
   Subscription,
-  SubscriptionOverview
+  SubscriptionOverview,
+  TerminationType
 } from "./domain";
 export type { TabKey } from "./navigation";
