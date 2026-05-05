@@ -6,6 +6,7 @@ import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.j
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
+import { assertOrganizationQuota } from "../services/quotas.js";
 
 export const orgRouter = Router();
 const orgCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 8);
@@ -47,6 +48,8 @@ orgRouter.post(
     const input = z.object({ code: z.string().min(4) }).parse(req.body);
     const organization = await prisma.organization.findUnique({ where: { code: input.code } });
     if (!organization || organization.status !== "ACTIVE") throw new HttpError(404, "组织不存在");
+    const activeMemberCount = await prisma.orgMember.count({ where: { organizationId: organization.id, status: "ACTIVE" } });
+    await assertOrganizationQuota(organization.id, "member", activeMemberCount + 1);
     const role = await prisma.role.findUniqueOrThrow({ where: { code: "readonly" } });
     const member = await prisma.orgMember.upsert({
       where: { organizationId_userId: { organizationId: organization.id, userId: req.user!.id } },

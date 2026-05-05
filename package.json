@@ -7,6 +7,7 @@
     "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/ops-web dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter @tenant-hub/api prisma generate",
     "db:migrate": "pnpm --filter @tenant-hub/api prisma migrate dev"
@@ -14,5 +15,10 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@10.33.0",
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "globals": "^17.6.0",
+    "typescript-eslint": "^8.59.2"
+  }
 }

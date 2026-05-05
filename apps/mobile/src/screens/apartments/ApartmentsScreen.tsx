@@ -4,12 +4,13 @@ import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
-import type { Apartment, ApartmentFeeItem, Room, RoomStatus } from "../../types";
+import type { Apartment, ApartmentFeeItem, Membership, Room, RoomStatus } from "../../types";
 import { buildBatchRoomNos, toggleBatchRoomSelection } from "./batchRooms";
 
 type Props = {
   token: string;
   organizationId?: string;
+  currentMembership?: Membership;
   setNotice: (notice: string) => void;
 };
 
@@ -119,7 +120,10 @@ const contractText = (apartment: Apartment) => {
   return `${start || "未填"} 至 ${end || "未填"}`;
 };
 
-export default function ApartmentsScreen({ token, organizationId, setNotice }: Props) {
+const hasPermission = (membership: Membership | undefined, permission: string) =>
+  Boolean(membership?.role.permissions.includes("*") || membership?.role.permissions.includes(permission));
+
+export default function ApartmentsScreen({ token, organizationId, currentMembership, setNotice }: Props) {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [mode, setMode] = useState<"list" | "detail" | "edit" | "create">("list");
@@ -155,6 +159,8 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
   );
   const apartmentVacantRooms = apartmentRooms.filter((room) => room.status === "VACANT").length;
   const apartmentOccupiedRooms = apartmentRooms.filter((room) => room.status === "OCCUPIED").length;
+  const canManageApartment = hasPermission(currentMembership, "apartment:manage");
+  const canManageRoom = hasPermission(currentMembership, "room:manage");
 
   const loadApartments = useCallback(async () => {
     if (!organizationId) return;
@@ -237,6 +243,7 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
 
   const saveApartment = async () => {
     if (!organizationId) return setNotice("请先选择组织");
+    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
     if (!form.name.trim() || !form.location.trim()) return setNotice("请填写公寓名称和位置");
     setSaving(true);
     try {
@@ -269,6 +276,7 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
   };
 
   const resetForCreate = () => {
+    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
     setSelectedId(undefined);
     setForm(emptyApartmentForm);
     setMode("create");
@@ -294,98 +302,133 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
 
   const addExpense = async (apartmentId = expenseApartmentId ?? selectedApartment?.id) => {
     if (!organizationId || !apartmentId) return;
+    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
     if (!expense.name.trim() || !expense.amount.trim()) return setNotice("请填写花费名称和金额");
-    await mobileApi(`/apartments/${apartmentId}/expenses`, token, apiOptions(organizationId, "POST", {
-      name: expense.name.trim(),
-      amount: Number(expense.amount),
-      spentAt: expense.spentAt,
-      note: optionalText(expense.note)
-    }));
-    setExpense({ name: "", amount: "", spentAt: new Date().toISOString().slice(0, 10), note: "" });
-    setActiveLayer(undefined);
-    setExpenseApartmentId(undefined);
-    setNotice("经营花费已记录");
-    await loadApartments();
+    try {
+      await mobileApi(`/apartments/${apartmentId}/expenses`, token, apiOptions(organizationId, "POST", {
+        name: expense.name.trim(),
+        amount: Number(expense.amount),
+        spentAt: expense.spentAt,
+        note: optionalText(expense.note)
+      }));
+      setExpense({ name: "", amount: "", spentAt: new Date().toISOString().slice(0, 10), note: "" });
+      setActiveLayer(undefined);
+      setExpenseApartmentId(undefined);
+      setNotice("经营花费已记录");
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "记录花费失败");
+    }
   };
 
   const addFee = async () => {
     if (!organizationId || !selectedApartment) return;
+    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
     if (!fee.name.trim() || !fee.amount.trim()) return setNotice("请填写费用名称和金额");
-    await mobileApi(`/apartments/${selectedApartment.id}/fees`, token, apiOptions(organizationId, "POST", {
-      name: fee.name.trim(),
-      spec: optionalText(fee.spec),
-      amount: Number(fee.amount),
-      enabled: true
-    }));
-    setFee({ name: "", spec: "", amount: "" });
-    setActiveLayer(undefined);
-    setNotice("费用项目已添加");
-    await loadApartments();
+    try {
+      await mobileApi(`/apartments/${selectedApartment.id}/fees`, token, apiOptions(organizationId, "POST", {
+        name: fee.name.trim(),
+        spec: optionalText(fee.spec),
+        amount: Number(fee.amount),
+        enabled: true
+      }));
+      setFee({ name: "", spec: "", amount: "" });
+      setActiveLayer(undefined);
+      setNotice("费用项目已添加");
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "添加费用项失败");
+    }
   };
 
   const toggleFee = async (item: ApartmentFeeItem) => {
     if (!organizationId) return;
-    await mobileApi(`/apartments/fees/${item.id}`, token, apiOptions(organizationId, "PUT", { enabled: !item.enabled }));
-    await loadApartments();
+    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
+    try {
+      await mobileApi(`/apartments/fees/${item.id}`, token, apiOptions(organizationId, "PUT", { enabled: !item.enabled }));
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "更新费用项失败");
+    }
   };
 
   const createRoom = async () => {
     if (!organizationId || !selectedApartment) return;
+    if (!canManageRoom) return setNotice("当前角色没有管理房间权限");
     if (!roomForm.roomNo.trim() || !roomForm.layout.trim()) return setNotice("请填写房间号和户型");
-    await mobileApi(`/apartments/${selectedApartment.id}/rooms/batch`, token, apiOptions(organizationId, "POST", {
-      rooms: [{
-        roomNo: roomForm.roomNo.trim(),
-        layout: roomForm.layout.trim(),
-        area: optionalNumber(roomForm.area),
-        facilities: toFacilityArray(roomForm.facilities)
-      }]
-    }));
-    setNotice("房间已添加");
-    resetRoomWork();
-    await loadApartments();
+    try {
+      await mobileApi(`/apartments/${selectedApartment.id}/rooms/batch`, token, apiOptions(organizationId, "POST", {
+        rooms: [{
+          roomNo: roomForm.roomNo.trim(),
+          layout: roomForm.layout.trim(),
+          area: optionalNumber(roomForm.area),
+          facilities: toFacilityArray(roomForm.facilities)
+        }]
+      }));
+      setNotice("房间已添加");
+      resetRoomWork();
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "添加房间失败");
+    }
   };
 
   const updateRoom = async () => {
     if (!organizationId || !editingRoomId) return;
+    if (!canManageRoom) return setNotice("当前角色没有管理房间权限");
     if (!roomForm.roomNo.trim() || !roomForm.layout.trim()) return setNotice("请填写房间号和户型");
-    await mobileApi(`/apartments/rooms/${editingRoomId}`, token, apiOptions(organizationId, "PUT", {
-      roomNo: roomForm.roomNo.trim(),
-      layout: roomForm.layout.trim(),
-      area: optionalNumber(roomForm.area),
-      facilities: toFacilityArray(roomForm.facilities),
-      status: roomForm.status
-    }));
-    setNotice("房间信息已更新");
-    resetRoomWork();
-    await loadApartments();
+    try {
+      await mobileApi(`/apartments/rooms/${editingRoomId}`, token, apiOptions(organizationId, "PUT", {
+        roomNo: roomForm.roomNo.trim(),
+        layout: roomForm.layout.trim(),
+        area: optionalNumber(roomForm.area),
+        facilities: toFacilityArray(roomForm.facilities),
+        status: roomForm.status
+      }));
+      setNotice("房间信息已更新");
+      resetRoomWork();
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "更新房间失败");
+    }
   };
 
   const deleteRoom = async (room: Room) => {
     if (!organizationId) return;
+    if (!canManageRoom) return setNotice("当前角色没有管理房间权限");
     if (room.status === "OCCUPIED") return setNotice("已租房间不能删除，请先退租");
-    await mobileApi(`/apartments/rooms/${room.id}`, token, apiOptions(organizationId, "DELETE"));
-    setNotice("房间已删除");
-    resetRoomWork();
-    await loadApartments();
+    try {
+      await mobileApi(`/apartments/rooms/${room.id}`, token, apiOptions(organizationId, "DELETE"));
+      setNotice("房间已删除");
+      resetRoomWork();
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "删除房间失败");
+    }
   };
 
   const addBatchRooms = async () => {
     if (!organizationId || !selectedApartment) return;
+    if (!canManageRoom) return setNotice("当前角色没有管理房间权限");
     const selectedRoomNos = generatedBatchRoomNos.filter((roomNo) => selectedBatchRoomNos.includes(roomNo));
     if (generatedBatchRoomNos.length === 0) return setNotice("请输入有效的楼层范围和房间数量");
     if (selectedRoomNos.length === 0) return setNotice("请至少选择一个房间号");
     const facilities = toFacilityArray(batchFacilities);
-    await mobileApi(`/apartments/${selectedApartment.id}/rooms/batch`, token, apiOptions(organizationId, "POST", {
-      rooms: selectedRoomNos.map((roomNo) => ({
-        roomNo,
-        layout: batchLayout.trim() || "未配置",
-        area: optionalNumber(batchArea),
-        facilities
-      }))
-    }));
-    resetRoomWork();
-    setNotice(`已提交 ${selectedRoomNos.length} 间房间，重复房间会自动跳过`);
-    await loadApartments();
+    try {
+      await mobileApi(`/apartments/${selectedApartment.id}/rooms/batch`, token, apiOptions(organizationId, "POST", {
+        rooms: selectedRoomNos.map((roomNo) => ({
+          roomNo,
+          layout: batchLayout.trim() || "未配置",
+          area: optionalNumber(batchArea),
+          facilities
+        }))
+      }));
+      resetRoomWork();
+      setNotice(`已提交 ${selectedRoomNos.length} 间房间，重复房间会自动跳过`);
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "批量添加房间失败");
+    }
   };
 
   const startDeleteRoom = (room: Room) => {
@@ -458,9 +501,11 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
         <View style={styles.panel}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>公寓列表</Text>
-            <TouchableOpacity style={styles.smallButton} onPress={resetForCreate}>
-              <Text style={styles.smallButtonText}>新建</Text>
-            </TouchableOpacity>
+            {canManageApartment ? (
+              <TouchableOpacity style={styles.smallButton} onPress={resetForCreate}>
+                <Text style={styles.smallButtonText}>新建</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
           {apartments.length === 0 ? <Text style={styles.emptyText}>暂无公寓，点击新建开始维护</Text> : null}
           {apartments.map((item) => {
@@ -488,12 +533,14 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                   <Text style={styles.muted}>本月花费 ¥{money(monthlyExpense)}</Text>
                 </View>
                 <View style={styles.roomActions}>
-                  <TouchableOpacity
-                    style={styles.smallButton}
-                    onPress={() => openExpense(item.id)}
-                  >
-                    <Text style={styles.smallButtonText}>记录花费</Text>
-                  </TouchableOpacity>
+                  {canManageApartment ? (
+                    <TouchableOpacity
+                      style={styles.smallButton}
+                      onPress={() => openExpense(item.id)}
+                    >
+                      <Text style={styles.smallButtonText}>记录花费</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
             );
@@ -565,12 +612,14 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <Text style={styles.sectionTitle}>费用配置</Text>
                 <Text style={styles.muted}>签约时可选择的网费、管理费、服务费等项目</Text>
               </View>
-              <TouchableOpacity
-                style={styles.smallButton}
-                onPress={() => setActiveLayer("fee")}
-              >
-                <Text style={styles.smallButtonText}>添加费用项</Text>
-              </TouchableOpacity>
+              {canManageApartment ? (
+                <TouchableOpacity
+                  style={styles.smallButton}
+                  onPress={() => setActiveLayer("fee")}
+                >
+                  <Text style={styles.smallButtonText}>添加费用项</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             {(selectedApartment.feeItems ?? []).map((item) => (
               <TouchableOpacity style={[styles.feeItem, item.enabled && styles.feeItemActive]} key={item.id} onPress={() => toggleFee(item)}>
@@ -599,9 +648,11 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <Text style={styles.muted}>{selectedApartment.location}</Text>
               </View>
               <View style={styles.roomActions}>
-                <TouchableOpacity style={styles.smallButton} onPress={() => setMode("edit")}>
-                  <Text style={styles.smallButtonText}>编辑</Text>
-                </TouchableOpacity>
+                {canManageApartment ? (
+                  <TouchableOpacity style={styles.smallButton} onPress={() => setMode("edit")}>
+                    <Text style={styles.smallButtonText}>编辑</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             </View>
             <View style={styles.segment}>
@@ -664,12 +715,14 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <Text style={styles.sectionTitle}>经营花费</Text>
                 <Text style={styles.muted}>每月经营支出从这里快速记录</Text>
               </View>
-              <TouchableOpacity
-                style={styles.smallButton}
-                onPress={() => openExpense(selectedApartment.id)}
-              >
-                <Text style={styles.smallButtonText}>记录花费</Text>
-              </TouchableOpacity>
+              {canManageApartment ? (
+                <TouchableOpacity
+                  style={styles.smallButton}
+                  onPress={() => openExpense(selectedApartment.id)}
+                >
+                  <Text style={styles.smallButtonText}>记录花费</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             {(selectedApartment.expenses ?? []).slice(0, 4).map((item) => (
               <View style={styles.detailRow} key={item.id}>
@@ -692,20 +745,22 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <Text style={styles.sectionTitle}>房间列表</Text>
                 <Text style={styles.muted}>共 {apartmentRooms.length} 间 · 空闲 {apartmentVacantRooms} 间 · 已租 {apartmentOccupiedRooms} 间</Text>
               </View>
-              <View style={styles.roomActions}>
-                <TouchableOpacity
-                  style={styles.smallButton}
-                  onPress={startCreateRoom}
-                >
-                  <Text style={styles.smallButtonText}>新增房间</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.smallButton}
-                  onPress={startBatchRooms}
-                >
-                  <Text style={styles.smallButtonText}>批量添加</Text>
-                </TouchableOpacity>
-              </View>
+              {canManageRoom ? (
+                <View style={styles.roomActions}>
+                  <TouchableOpacity
+                    style={styles.smallButton}
+                    onPress={startCreateRoom}
+                  >
+                    <Text style={styles.smallButtonText}>新增房间</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.smallButton}
+                    onPress={startBatchRooms}
+                  >
+                    <Text style={styles.smallButtonText}>批量添加</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
 
             {apartmentRooms.map((room) => (
@@ -718,18 +773,20 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                   <Text style={[styles.statusBadge, statusStyles[room.status]]}>{statusLabels[room.status]}</Text>
                 </View>
                 <Text style={styles.muted}>{facilitiesText(room.facilities)}</Text>
-                <View style={styles.roomActions}>
-                  <TouchableOpacity style={styles.smallButton} onPress={() => startEditRoom(room)}>
-                    <Text style={styles.smallButtonText}>编辑</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={room.status === "OCCUPIED" ? [styles.smallDangerButton, styles.buttonDisabled] : styles.smallDangerButton}
-                    disabled={room.status === "OCCUPIED"}
-                    onPress={() => startDeleteRoom(room)}
-                  >
-                    <Text style={styles.smallDangerText}>删除</Text>
-                  </TouchableOpacity>
-                </View>
+                {canManageRoom ? (
+                  <View style={styles.roomActions}>
+                    <TouchableOpacity style={styles.smallButton} onPress={() => startEditRoom(room)}>
+                      <Text style={styles.smallButtonText}>编辑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={room.status === "OCCUPIED" ? [styles.smallDangerButton, styles.buttonDisabled] : styles.smallDangerButton}
+                      disabled={room.status === "OCCUPIED"}
+                      onPress={() => startDeleteRoom(room)}
+                    >
+                      <Text style={styles.smallDangerText}>删除</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
               </View>
             ))}
             {apartmentRooms.length === 0 ? <Text style={styles.muted}>暂无房间，可以新增单个房间或批量添加</Text> : null}

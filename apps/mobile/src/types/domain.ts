@@ -165,6 +165,17 @@ export type Bill = {
   items?: BillItem[];
 };
 
+export type Payment = {
+  id: string;
+  billId?: string;
+  monthlyBillId?: string;
+  amount: string | number;
+  paidAt: string;
+  method: string;
+  note?: string;
+  user?: { id: string; username: string; phone: string };
+};
+
 export type MonthlyBill = {
   id: string;
   organizationId: string;
@@ -178,6 +189,7 @@ export type MonthlyBill = {
   paidAmount: string | number;
   lease?: Lease;
   bills?: Bill[];
+  payments?: Payment[];
 };
 
 export type MeterReading = {

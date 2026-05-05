@@ -42,6 +42,7 @@ export default function OrganizationSettingsSubPage({
   const [activeRoleMemberId, setActiveRoleMemberId] = useState<string>();
   const [editName, setEditName] = useState(currentMembership?.organization.name ?? "");
   const [editDescription, setEditDescription] = useState(currentMembership?.organization.description ?? "");
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const canManageMembers = currentMembership?.role.permissions.includes("*") || currentMembership?.role.permissions.includes("member:manage");
   const canManageOrg = currentMembership?.role.permissions.includes("*") || currentMembership?.role.permissions.includes("org:manage");
   const managerRoles = roles.filter((role) => role.code !== "owner");
@@ -53,6 +54,7 @@ export default function OrganizationSettingsSubPage({
     setEditingOrg(false);
     setActiveRoleMemberId(undefined);
     setOnboardingAction(undefined);
+    setDeleteConfirmName("");
   }, [currentMembership?.organization.id]);
 
   const run = async (fn: () => Promise<void>, success: string) => {
@@ -239,6 +241,28 @@ export default function OrganizationSettingsSubPage({
                   }
                 >
                   <Text style={styles.buttonText}>保存组织信息</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            {currentMembership.organization.ownerId === currentUserId ? (
+              <View style={styles.detailPanel}>
+                <Text style={styles.sectionTitle}>删除组织</Text>
+                <Text style={styles.muted}>仅所有者可删除。请输入组织名称确认，存在有效订阅时不能删除。</Text>
+                <TextInput value={deleteConfirmName} onChangeText={setDeleteConfirmName} style={styles.input} placeholder={currentMembership.organization.name} />
+                <TouchableOpacity
+                  style={styles.smallDangerButton}
+                  onPress={() =>
+                    run(async () => {
+                      await mobileApi(`/organizations/${currentMembership.organization.id}`, token, {
+                        method: "DELETE",
+                        headers: { "x-organization-id": currentMembership.organization.id },
+                        body: JSON.stringify({ confirmName: deleteConfirmName })
+                      });
+                      setDeleteConfirmName("");
+                    }, "组织已删除")
+                  }
+                >
+                  <Text style={styles.smallDangerText}>确认删除组织</Text>
                 </TouchableOpacity>
               </View>
             ) : null}

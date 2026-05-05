@@ -54,9 +54,26 @@ adminRouter.put(
   "/users/:id/platform-role",
   asyncHandler(async (req, res) => {
     const input = z.object({ platformRole: z.enum(["NONE", "OPERATOR", "ADMIN", "SUPER_ADMIN"]) }).parse(req.body);
-    if (req.params.id === req.user!.id && input.platformRole === "NONE" && !platformAdminPhones.includes(req.user!.phone)) {
-      throw new HttpError(400, "不能移除自己的运营权限");
+    const [currentUser, platformAdminCount] = await Promise.all([
+      prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { platformRole: true, phone: true } }),
+      prisma.user.count({ where: { platformRole: { not: "NONE" } } })
+    ]);
+    const bootstrapAdmin = platformAdminPhones.includes(currentUser.phone) || platformAdminCount === 0;
+    const effectiveRole = currentUser.platformRole !== "NONE" ? currentUser.platformRole : bootstrapAdmin ? "SUPER_ADMIN" : "NONE";
+
+    if (effectiveRole !== "SUPER_ADMIN") {
+      throw new HttpError(403, "仅超级管理员可修改运营权限");
     }
+
+    if (bootstrapAdmin && currentUser.platformRole === "NONE") {
+      await prisma.user.update({ where: { id: req.user!.id }, data: { platformRole: "SUPER_ADMIN" } });
+    }
+
+    if (req.params.id === req.user!.id && input.platformRole !== "SUPER_ADMIN" && !platformAdminPhones.includes(req.user!.phone)) {
+      const superAdminCount = await prisma.user.count({ where: { platformRole: "SUPER_ADMIN" } });
+      if (superAdminCount <= 1) throw new HttpError(400, "不能移除最后一个超级管理员权限");
+    }
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: { platformRole: input.platformRole },

@@ -3,6 +3,7 @@ import utc from "dayjs/plugin/utc.js";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { cycleMonths, getLeaseBillGenerationEnd, type LeaseCycle } from "./leaseLifecycle.js";
+import { HttpError } from "../utils/http.js";
 
 dayjs.extend(utc);
 
@@ -381,6 +382,13 @@ export const recordMonthlyBillPayment = async ({
   method: string;
   note?: string;
 }) => {
+  const current = await prisma.monthlyBill.findUnique({ where: { id: monthlyBillId } });
+  if (!current) throw new HttpError(404, "月度账单不存在");
+  if (current.status === "PAID" || current.status === "VOID") throw new HttpError(400, "该账单已结清或作废，不能继续收款");
+  const paymentAmount = new Prisma.Decimal(amount);
+  const remaining = new Prisma.Decimal(current.totalAmount).minus(current.paidAmount);
+  if (paymentAmount.greaterThan(remaining)) throw new HttpError(400, `收款金额不能超过剩余应收 ¥${remaining.toFixed(2)}`);
+
   const payment = await prisma.payment.create({ data: { monthlyBillId, userId, amount, method, note } });
   await refreshMonthlyBillTotals(monthlyBillId);
   const monthlyBill = await prisma.monthlyBill.findUnique({ where: { id: monthlyBillId }, include: { bills: true } });

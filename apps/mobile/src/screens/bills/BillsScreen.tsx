@@ -58,6 +58,7 @@ const statusStyle = (status: BillStatus) => {
 };
 
 const billModeText = (bill: Bill) => (bill.mode === "PREPAID" ? "预付" : "后付");
+const remainingAmount = (bill: MonthlyBill) => Number(bill.totalAmount) - Number(bill.paidAmount);
 
 export default function BillsScreen({ token, organizationId, setNotice }: Props) {
   const [tab, setTab] = useState<TabKey>("monthly");
@@ -71,11 +72,26 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
 
   const unpaidTotal = useMemo(
-    () => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID").reduce((sum, bill) => sum + Number(bill.totalAmount), 0),
+    () => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID").reduce((sum, bill) => sum + remainingAmount(bill), 0),
     [monthlyBills]
   );
   const selectedPaymentBill = useMemo(() => monthlyBills.find((bill) => bill.id === paymentForm.monthlyBillId), [monthlyBills, paymentForm.monthlyBillId]);
   const unpaidBills = useMemo(() => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID"), [monthlyBills]);
+
+  const openPayment = () => {
+    const firstUnpaid = unpaidBills[0];
+    if (!firstUnpaid) {
+      setPaymentForm((old) => ({ ...old, monthlyBillId: "", amount: "" }));
+      setNotice("暂无待收账单");
+      return;
+    }
+    setPaymentForm((old) => ({
+      ...old,
+      monthlyBillId: firstUnpaid.id,
+      amount: String(remainingAmount(firstUnpaid))
+    }));
+    setActiveLayer("payment");
+  };
 
   const loadData = useCallback(async () => {
     if (!organizationId) return;
@@ -141,15 +157,22 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
   const submitPayment = async () => {
     if (!organizationId) return;
     if (!paymentForm.monthlyBillId || !paymentForm.amount.trim()) return setNotice("请选择月度账单并填写收款金额");
-    await mobileApi(`/bills/monthly/${paymentForm.monthlyBillId}/payments`, token, apiOptions(organizationId, "POST", {
-      amount: Number(paymentForm.amount),
-      method: paymentForm.method.trim() || "线下收款",
-      note: paymentForm.note.trim() || undefined
-    }));
-    setNotice("收款已登记");
-    setPaymentForm((old) => ({ ...old, amount: "", note: "" }));
-    setActiveLayer(undefined);
-    await loadData();
+    const bill = monthlyBills.find((item) => item.id === paymentForm.monthlyBillId);
+    if (!bill || bill.status === "PAID" || bill.status === "VOID") return setNotice("请选择一张未结清账单");
+    if (Number(paymentForm.amount) > remainingAmount(bill)) return setNotice(`收款金额不能超过剩余应收 ¥${money(remainingAmount(bill))}`);
+    try {
+      await mobileApi(`/bills/monthly/${paymentForm.monthlyBillId}/payments`, token, apiOptions(organizationId, "POST", {
+        amount: Number(paymentForm.amount),
+        method: paymentForm.method.trim() || "线下收款",
+        note: paymentForm.note.trim() || undefined
+      }));
+      setNotice("收款已登记");
+      setPaymentForm((old) => ({ ...old, monthlyBillId: "", amount: "", note: "" }));
+      setActiveLayer(undefined);
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "收款失败");
+    }
   };
 
   if (!organizationId) {
@@ -200,7 +223,7 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
           <Text style={styles.secondaryButtonText}>生成当前租约账单</Text>
         </TouchableOpacity>
         {tab === "monthly" ? (
-          <TouchableOpacity style={styles.button} onPress={() => setActiveLayer("payment")}>
+          <TouchableOpacity style={styles.button} onPress={openPayment}>
             <Text style={styles.buttonText}>登记收款</Text>
           </TouchableOpacity>
         ) : null}
@@ -228,11 +251,30 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
                 <Text style={styles.muted}>已收 ¥{money(bill.paidAmount)}</Text>
               </View>
               {(bill.bills ?? []).map((child) => (
-                <View key={child.id} style={styles.billLine}>
-                  <Text style={styles.muted}>{billModeText(child)} · {day(child.periodStart)} 至 {day(child.periodEnd)}</Text>
-                  <Text style={styles.cardStat}>¥{money(child.totalAmount)}</Text>
+                <View key={child.id} style={styles.billDetailBlock}>
+                  <View style={styles.billLine}>
+                    <Text style={styles.muted}>{billModeText(child)} · {day(child.periodStart)} 至 {day(child.periodEnd)}</Text>
+                    <Text style={styles.cardStat}>¥{money(child.totalAmount)}</Text>
+                  </View>
+                  {(child.items ?? []).map((item) => (
+                    <View key={item.id} style={styles.billItemLine}>
+                      <Text style={styles.muted}>{item.name}</Text>
+                      <Text style={styles.muted}>¥{money(item.amount)}</Text>
+                    </View>
+                  ))}
                 </View>
               ))}
+              {(bill.payments ?? []).length ? (
+                <View style={styles.billDetailBlock}>
+                  <Text style={styles.fieldLabel}>收款记录</Text>
+                  {(bill.payments ?? []).map((payment) => (
+                    <View key={payment.id} style={styles.billItemLine}>
+                      <Text style={styles.muted}>{day(payment.paidAt)} · {payment.method}</Text>
+                      <Text style={styles.cardStat}>¥{money(payment.amount)}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
           ))}
         </>

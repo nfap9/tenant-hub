@@ -8,7 +8,8 @@
     "web": "expo start --web --host lan --port 19006",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo mobile lint pending"
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx tests/batchRooms.test.ts"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/react": "^18.3.18",
     "@types/react-native": "^0.73.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }

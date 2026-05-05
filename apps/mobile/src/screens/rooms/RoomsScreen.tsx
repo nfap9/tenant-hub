@@ -4,11 +4,12 @@ import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
-import type { ApartmentFeeItem, Lease, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
+import type { ApartmentFeeItem, Lease, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
 
 type Props = {
   token: string;
   organizationId?: string;
+  currentMembership?: Membership;
   setNotice: (notice: string) => void;
 };
 
@@ -70,8 +71,10 @@ const apiOptions = (organizationId: string, method = "GET", body?: unknown): Req
 });
 const money = (value?: string | number) => Number(value ?? 0).toFixed(2);
 const defaultTerminationType = (lease: Lease): TerminationType => (today() > lease.endDate.slice(0, 10) ? "EXPIRED" : "NEGOTIATED");
+const hasPermission = (membership: Membership | undefined, permission: string) =>
+  Boolean(membership?.role.permissions.includes("*") || membership?.role.permissions.includes(permission));
 
-export default function RoomsScreen({ token, organizationId, setNotice }: Props) {
+export default function RoomsScreen({ token, organizationId, currentMembership, setNotice }: Props) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filter, setFilter] = useState<RoomStatus | "ALL">("ALL");
   const [selectedId, setSelectedId] = useState<string>();
@@ -101,6 +104,8 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
   const visibleRooms = useMemo(() => (filter === "ALL" ? rooms : rooms.filter((item) => item.status === filter)), [filter, rooms]);
   const vacantCount = rooms.filter((item) => item.status === "VACANT").length;
   const occupiedCount = rooms.filter((item) => item.status === "OCCUPIED").length;
+  const canManageRoom = hasPermission(currentMembership, "room:manage");
+  const canManageLease = hasPermission(currentMembership, "lease:manage");
 
   const loadRooms = useCallback(async () => {
     if (!organizationId) return;
@@ -132,30 +137,41 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
 
   const updateRoom = async () => {
     if (!organizationId || !editingRoom) return;
-    await mobileApi(`/apartments/rooms/${editingRoom.id}`, token, apiOptions(organizationId, "PUT", {
-      roomNo: roomForm.roomNo.trim(),
-      layout: roomForm.layout.trim(),
-      area: roomForm.area.trim() ? Number(roomForm.area) : undefined,
-      facilities: roomForm.facilities.split(/[,，]/).map((item) => item.trim()).filter(Boolean),
-      status: roomForm.status
-    }));
-    setNotice("房间信息已更新");
-    setEditingRoomId(undefined);
-    await loadRooms();
+    if (!canManageRoom) return setNotice("当前角色没有管理房间权限");
+    try {
+      await mobileApi(`/apartments/rooms/${editingRoom.id}`, token, apiOptions(organizationId, "PUT", {
+        roomNo: roomForm.roomNo.trim(),
+        layout: roomForm.layout.trim(),
+        area: roomForm.area.trim() ? Number(roomForm.area) : undefined,
+        facilities: roomForm.facilities.split(/[,，]/).map((item) => item.trim()).filter(Boolean),
+        status: roomForm.status
+      }));
+      setNotice("房间信息已更新");
+      setEditingRoomId(undefined);
+      await loadRooms();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "保存房间失败");
+    }
   };
 
   const deleteRoom = async () => {
     if (!organizationId || !selectedRoom) return;
+    if (!canManageRoom) return setNotice("当前角色没有管理房间权限");
     if (selectedRoom.status === "OCCUPIED") return setNotice("已租房间不能删除，请先退租");
-    await mobileApi(`/apartments/rooms/${selectedRoom.id}`, token, apiOptions(organizationId, "DELETE"));
-    setNotice("房间已删除");
-    setSelectedId(undefined);
-    setEditingRoomId(undefined);
-    await loadRooms();
+    try {
+      await mobileApi(`/apartments/rooms/${selectedRoom.id}`, token, apiOptions(organizationId, "DELETE"));
+      setNotice("房间已删除");
+      setSelectedId(undefined);
+      setEditingRoomId(undefined);
+      await loadRooms();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "删除房间失败");
+    }
   };
 
   const createLease = async () => {
     if (!organizationId || !selectedRoom) return;
+    if (!canManageLease) return setNotice("当前角色没有管理租约权限");
     if (selectedRoom.status !== "VACANT") return setNotice("仅空闲房间可以签约");
     if (!leaseForm.tenantName.trim() || !leaseForm.tenantPhone.trim() || !leaseForm.rentAmount.trim()) {
       return setNotice("请填写租客、电话和租金");
@@ -164,26 +180,30 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
     const fees = feeItems
       .filter((item) => selectedFeeIds.includes(item.id))
       .map((item) => ({ feeItemId: item.id, name: item.spec ? `${item.name} ${item.spec}` : item.name, amount: Number(item.amount) }));
-    await mobileApi("/leases", token, apiOptions(organizationId, "POST", {
-      roomId: selectedRoom.id,
-      tenantName: leaseForm.tenantName.trim(),
-      tenantPhone: leaseForm.tenantPhone.trim(),
-      startDate: leaseForm.startDate,
-      endDate: leaseForm.endDate,
-      graceDays: Number(leaseForm.graceDays || 0),
-      cycle: leaseForm.cycle,
-      rentAmount: Number(leaseForm.rentAmount),
-      depositAmount: Number(leaseForm.depositAmount || 0),
-      waterUnitPrice: Number(leaseForm.waterUnitPrice || 0),
-      powerUnitPrice: Number(leaseForm.powerUnitPrice || 0),
-      autoRenew: leaseForm.autoRenew,
-      fees
-    }));
-    setNotice("签约完成，水电单价和费用项已带入租约");
-    setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true }));
-    setEditingRoomId(undefined);
-    setLeaseRoomId(undefined);
-    await loadRooms();
+    try {
+      await mobileApi("/leases", token, apiOptions(organizationId, "POST", {
+        roomId: selectedRoom.id,
+        tenantName: leaseForm.tenantName.trim(),
+        tenantPhone: leaseForm.tenantPhone.trim(),
+        startDate: leaseForm.startDate,
+        endDate: leaseForm.endDate,
+        graceDays: Number(leaseForm.graceDays || 0),
+        cycle: leaseForm.cycle,
+        rentAmount: Number(leaseForm.rentAmount),
+        depositAmount: Number(leaseForm.depositAmount || 0),
+        waterUnitPrice: Number(leaseForm.waterUnitPrice || 0),
+        powerUnitPrice: Number(leaseForm.powerUnitPrice || 0),
+        autoRenew: leaseForm.autoRenew,
+        fees
+      }));
+      setNotice("签约完成，水电单价和费用项已带入租约");
+      setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true }));
+      setEditingRoomId(undefined);
+      setLeaseRoomId(undefined);
+      await loadRooms();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "签约失败");
+    }
   };
 
   const startEditRoom = (room: Room) => {
@@ -205,14 +225,19 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
 
   const terminateLease = async () => {
     if (!organizationId || !terminatingLease) return;
-    await mobileApi(`/leases/${terminatingLease.id}/terminate`, token, apiOptions(organizationId, "POST", {
-      type: terminationForm.type,
-      reason: terminationForm.reason.trim() || terminationLabels[terminationForm.type],
-      terminatedAt: terminationForm.terminatedAt
-    }));
-    setNotice("退租完成，房间已转为空闲");
-    setTerminatingLease(undefined);
-    await loadRooms();
+    if (!canManageLease) return setNotice("当前角色没有管理租约权限");
+    try {
+      await mobileApi(`/leases/${terminatingLease.id}/terminate`, token, apiOptions(organizationId, "POST", {
+        type: terminationForm.type,
+        reason: terminationForm.reason.trim() || terminationLabels[terminationForm.type],
+        terminatedAt: terminationForm.terminatedAt
+      }));
+      setNotice("退租完成，房间已转为空闲");
+      setTerminatingLease(undefined);
+      await loadRooms();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "退租失败");
+    }
   };
 
   const toggleFee = (item: ApartmentFeeItem) => {
@@ -300,10 +325,12 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                     </View>
                   </View>
                   <View style={styles.roomActions}>
-                    <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => startEditRoom(room)}>
-                      <Text style={styles.secondaryButtonText}>编辑房间</Text>
-                    </TouchableOpacity>
-                    {room.status === "VACANT" ? (
+                    {canManageRoom ? (
+                      <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => startEditRoom(room)}>
+                        <Text style={styles.secondaryButtonText}>编辑房间</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    {room.status === "VACANT" && canManageLease ? (
                       <TouchableOpacity
                         style={[styles.button, styles.actionButton]}
                         onPress={() => {
@@ -315,9 +342,11 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                         <Text style={styles.buttonText}>签约入住</Text>
                       </TouchableOpacity>
                     ) : null}
-                    <TouchableOpacity style={[styles.smallDangerButton, styles.actionButton]} onPress={deleteRoom}>
-                      <Text style={styles.smallDangerText}>删除房间</Text>
-                    </TouchableOpacity>
+                    {canManageRoom ? (
+                      <TouchableOpacity style={[styles.smallDangerButton, styles.actionButton]} onPress={deleteRoom}>
+                        <Text style={styles.smallDangerText}>删除房间</Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
 
                   {room.status === "OCCUPIED" && roomActiveLease ? (
@@ -343,9 +372,11 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                         <Text style={styles.muted}>自动续约</Text>
                         <Text style={styles.muted}>{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text>
                       </View>
-                      <TouchableOpacity style={styles.smallDangerButton} onPress={() => openTermination(roomActiveLease)}>
-                        <Text style={styles.smallDangerText}>退租</Text>
-                      </TouchableOpacity>
+                      {canManageLease ? (
+                        <TouchableOpacity style={styles.smallDangerButton} onPress={() => openTermination(roomActiveLease)}>
+                          <Text style={styles.smallDangerText}>退租</Text>
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
                   ) : null}
                 </>

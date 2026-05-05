@@ -98,13 +98,24 @@ export default function AppRoot() {
       <ScrollView contentContainerStyle={styles.content}>
         {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
         <Text style={styles.title}>{title}</Text>
+        {memberships.length === 0 ? (
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>开始使用 Tenant Hub</Text>
+            <Text style={styles.muted}>你还没有加入组织。先创建自己的组织，或输入组织编码加入已有团队。</Text>
+            <View style={styles.roomActions}>
+              <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => setActive("settings")}>
+                <Text style={styles.buttonText}>创建或加入组织</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
         {active === "home" ? <HomeScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} /> : null}
         {active === "rooms" ? (
-          <RoomsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} />
+          <RoomsScreen token={session.token} organizationId={currentOrgId} currentMembership={currentMembership} setNotice={setNotice} />
         ) : null}
         {active === "bills" ? <BillsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} /> : null}
         {active === "apartments" ? (
-          <ApartmentsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} />
+          <ApartmentsScreen token={session.token} organizationId={currentOrgId} currentMembership={currentMembership} setNotice={setNotice} />
         ) : null}
         {active === "settings" ? (
           <SettingsScreen

@@ -115,9 +115,14 @@ export function AdminPage({ section }: { section: AdminSection }) {
                     options={platformRoleOptions}
                     disabled={row.bootstrapAdmin}
                     onChange={async (platformRole) => {
-                      await api(`/admin/users/${row.id}/platform-role`, { method: "PUT", body: JSON.stringify({ platformRole }) });
-                      messageApi.success("运营权限已更新");
-                      load();
+                      try {
+                        await api(`/admin/users/${row.id}/platform-role`, { method: "PUT", body: JSON.stringify({ platformRole }) });
+                        messageApi.success("运营权限已更新");
+                        load();
+                      } catch (error) {
+                        messageApi.error(error instanceof Error ? error.message : "运营权限更新失败");
+                        load();
+                      }
                     }}
                   />
                 )

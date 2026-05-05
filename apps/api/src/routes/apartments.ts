@@ -7,6 +7,7 @@ import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { generateActiveAutoRenewBills } from "../services/billing.js";
 import { withLeaseLifecycle } from "../services/leaseLifecycle.js";
+import { assertOrganizationQuota } from "../services/quotas.js";
 
 export const apartmentRouter = Router();
 apartmentRouter.use(requireAuth, requireOrg);
@@ -91,6 +92,8 @@ apartmentRouter.post(
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
     const input = apartmentInput.parse(req.body);
+    const apartmentCount = await prisma.apartment.count({ where: { organizationId: req.organizationId! } });
+    await assertOrganizationQuota(req.organizationId!, "apartment", apartmentCount + 1);
     ok(res, await prisma.apartment.create({ data: { ...input, organizationId: req.organizationId! } }));
   })
 );
@@ -171,6 +174,13 @@ apartmentRouter.post(
       })
       .parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const existingRooms = await prisma.room.findMany({
+      where: { apartment: { organizationId: req.organizationId! } },
+      select: { apartmentId: true, roomNo: true }
+    });
+    const existingKeys = new Set(existingRooms.map((room) => `${room.apartmentId}:${room.roomNo}`));
+    const newRoomCount = input.rooms.filter((room) => !existingKeys.has(`${req.params.id}:${room.roomNo}`)).length;
+    await assertOrganizationQuota(req.organizationId!, "room", existingRooms.length + newRoomCount);
     const result = await prisma.room.createMany({
       data: input.rooms.map((room) => ({ ...room, apartmentId: req.params.id })),
       skipDuplicates: true

@@ -7,8 +7,12 @@ export function AuthPage({ onAuthed }: { onAuthed: (session: Session) => void })
   const [messageApi, contextHolder] = message.useMessage();
 
   const sendOtp = async (phone: string, purpose: "REGISTER" | "LOGIN") => {
-    await api("/auth/otp", { method: "POST", body: JSON.stringify({ phone, purpose }) });
-    messageApi.success("验证码已发送，请查看后端控制台");
+    try {
+      await api("/auth/otp", { method: "POST", body: JSON.stringify({ phone, purpose }) });
+      messageApi.success("验证码已发送，请查看后端控制台");
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : "验证码发送失败");
+    }
   };
 
   return (
@@ -28,11 +32,15 @@ export function AuthPage({ onAuthed }: { onAuthed: (session: Session) => void })
                     layout="vertical"
                     style={{ marginTop: 18 }}
                     onFinish={async (values) => {
-                      const result = await api<Session>(mode === "password" ? "/auth/login/password" : "/auth/login/otp", {
-                        method: "POST",
-                        body: JSON.stringify(values)
-                      });
-                      onAuthed(result);
+                      try {
+                        const result = await api<Session>(mode === "password" ? "/auth/login/password" : "/auth/login/otp", {
+                          method: "POST",
+                          body: JSON.stringify(values)
+                        });
+                        onAuthed(result);
+                      } catch (error) {
+                        messageApi.error(error instanceof Error ? error.message : "登录失败");
+                      }
                     }}
                   >
                     <Form.Item name="phone" label="手机号" rules={[{ required: true }]}>
@@ -70,8 +78,12 @@ export function AuthPage({ onAuthed }: { onAuthed: (session: Session) => void })
                 <Form
                   layout="vertical"
                   onFinish={async (values) => {
-                    const result = await api<Session>("/auth/register", { method: "POST", body: JSON.stringify(values) });
-                    onAuthed(result);
+                    try {
+                      const result = await api<Session>("/auth/register", { method: "POST", body: JSON.stringify(values) });
+                      onAuthed(result);
+                    } catch (error) {
+                      messageApi.error(error instanceof Error ? error.message : "注册失败");
+                    }
                   }}
                 >
                   <Form.Item name="phone" label="手机号" rules={[{ required: true }]}>

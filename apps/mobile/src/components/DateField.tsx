@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { Platform, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
+import { Modal, Platform, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
 import { styles } from "../theme/styles";
 
 type Props = {
@@ -60,36 +60,40 @@ export function DateField({ value, onChange, placeholder = "选择日期", style
           <Text style={value ? styles.dateFieldText : styles.dateFieldPlaceholder}>{value || placeholder}</Text>
         </TouchableOpacity>
         {open ? (
-          <View style={styles.datePickerPanel}>
-            <View style={styles.datePickerHeader}>
-              <TouchableOpacity style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
-                <Text style={styles.datePickerNavText}>‹</Text>
+          <Modal transparent animationType="fade" visible={open} onRequestClose={() => setOpen(false)}>
+            <TouchableOpacity style={styles.datePickerModalOverlay} activeOpacity={1} onPress={() => setOpen(false)}>
+              <TouchableOpacity style={styles.datePickerModalPanel} activeOpacity={1}>
+                <View style={styles.datePickerHeader}>
+                  <TouchableOpacity style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
+                    <Text style={styles.datePickerNavText}>‹</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.datePickerTitle}>{monthTitle(visibleMonth)}</Text>
+                  <TouchableOpacity style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}>
+                    <Text style={styles.datePickerNavText}>›</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.datePickerGrid}>
+                  {["日", "一", "二", "三", "四", "五", "六"].map((item) => (
+                    <Text key={item} style={styles.datePickerWeekday}>{item}</Text>
+                  ))}
+                  {days.map((day, index) => (
+                    <TouchableOpacity
+                      key={day ? toDateString(day) : `blank-${index}`}
+                      style={[styles.datePickerDay, day && sameDate(day, selectedDate) && styles.datePickerDayActive]}
+                      disabled={!day}
+                      onPress={() => {
+                        if (!day) return;
+                        onChange(toDateString(day));
+                        setOpen(false);
+                      }}
+                    >
+                      <Text style={[styles.datePickerDayText, day && sameDate(day, selectedDate) && styles.datePickerDayTextActive]}>{day?.getDate() ?? ""}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </TouchableOpacity>
-              <Text style={styles.datePickerTitle}>{monthTitle(visibleMonth)}</Text>
-              <TouchableOpacity style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}>
-                <Text style={styles.datePickerNavText}>›</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.datePickerGrid}>
-              {["日", "一", "二", "三", "四", "五", "六"].map((item) => (
-                <Text key={item} style={styles.datePickerWeekday}>{item}</Text>
-              ))}
-              {days.map((day, index) => (
-                <TouchableOpacity
-                  key={day ? toDateString(day) : `blank-${index}`}
-                  style={[styles.datePickerDay, day && sameDate(day, selectedDate) && styles.datePickerDayActive]}
-                  disabled={!day}
-                  onPress={() => {
-                    if (!day) return;
-                    onChange(toDateString(day));
-                    setOpen(false);
-                  }}
-                >
-                  <Text style={[styles.datePickerDayText, day && sameDate(day, selectedDate) && styles.datePickerDayTextActive]}>{day?.getDate() ?? ""}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+            </TouchableOpacity>
+          </Modal>
         ) : null}
       </View>
     );
