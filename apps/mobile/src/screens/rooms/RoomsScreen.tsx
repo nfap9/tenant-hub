@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { DateField } from "../../components/DateField";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { ApartmentFeeItem, Lease, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
@@ -389,11 +390,11 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
               <View style={styles.formGrid}>
                 <View style={styles.formField}>
                   <Text style={styles.fieldLabel}>开始日期</Text>
-                  <TextInput style={styles.input} placeholder="2026-05-01" value={leaseForm.startDate} onChangeText={(value) => setLeaseForm((old) => ({ ...old, startDate: value }))} />
+                  <DateField value={leaseForm.startDate} onChange={(value) => setLeaseForm((old) => ({ ...old, startDate: value }))} />
                 </View>
                 <View style={styles.formField}>
                   <Text style={styles.fieldLabel}>结束日期</Text>
-                  <TextInput style={styles.input} placeholder="2027-04-30" value={leaseForm.endDate} onChangeText={(value) => setLeaseForm((old) => ({ ...old, endDate: value }))} />
+                  <DateField value={leaseForm.endDate} onChange={(value) => setLeaseForm((old) => ({ ...old, endDate: value }))} />
                 </View>
               </View>
               <View style={styles.formGrid}>
@@ -490,7 +491,7 @@ export default function RoomsScreen({ token, organizationId, setNotice }: Props)
                 ))}
               </View>
               <Text style={styles.fieldLabel}>退租日期</Text>
-              <TextInput style={styles.input} placeholder="2026-05-01" value={terminationForm.terminatedAt} onChangeText={(value) => setTerminationForm((old) => ({ ...old, terminatedAt: value }))} />
+              <DateField value={terminationForm.terminatedAt} onChange={(value) => setTerminationForm((old) => ({ ...old, terminatedAt: value }))} />
               <Text style={styles.fieldLabel}>原因</Text>
               <TextInput style={[styles.input, styles.textarea]} multiline placeholder="可选，默认使用解约类型" value={terminationForm.reason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
               {terminatingLease?.isAutoRenewalPeriod ? <Text style={styles.muted}>当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}

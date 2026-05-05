@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { DateField } from "../../components/DateField";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Apartment, ApartmentFeeItem, Room, RoomStatus } from "../../types";
@@ -458,7 +459,7 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                     <View style={styles.formGrid}>
                       <TextInput style={[styles.input, styles.gridInput]} placeholder="花费名称" value={expense.name} onChangeText={(value) => setExpense((old) => ({ ...old, name: value }))} />
                       <TextInput style={[styles.input, styles.gridInput]} placeholder="金额" value={expense.amount} keyboardType="numeric" onChangeText={(value) => setExpense((old) => ({ ...old, amount: value }))} />
-                      <TextInput style={[styles.input, styles.gridInput]} placeholder="日期" value={expense.spentAt} onChangeText={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
+                      <DateField style={styles.gridInput} value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
                     </View>
                     <TextInput style={styles.input} placeholder="备注" value={expense.note} onChangeText={(value) => setExpense((old) => ({ ...old, note: value }))} />
                     <TouchableOpacity style={styles.secondaryButton} onPress={() => addExpense(item.id)}>
@@ -503,11 +504,11 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
           <View style={styles.formGrid}>
             <View style={styles.formField}>
               <Text style={styles.fieldLabel}>合同开始</Text>
-              <TextInput style={styles.input} placeholder="2026-05-01" value={form.contractStart} onChangeText={(value) => updateForm("contractStart", value)} />
+              <DateField value={form.contractStart} onChange={(value) => updateForm("contractStart", value)} />
             </View>
             <View style={styles.formField}>
               <Text style={styles.fieldLabel}>合同结束</Text>
-              <TextInput style={styles.input} placeholder="2027-04-30" value={form.contractEnd} onChangeText={(value) => updateForm("contractEnd", value)} />
+              <DateField value={form.contractEnd} onChange={(value) => updateForm("contractEnd", value)} />
             </View>
             <View style={styles.formField}>
               <Text style={styles.fieldLabel}>上游租金</Text>
@@ -665,7 +666,7 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
                 <View style={styles.formGrid}>
                   <TextInput style={[styles.input, styles.gridInput]} placeholder="花费名称" value={expense.name} onChangeText={(value) => setExpense((old) => ({ ...old, name: value }))} />
                   <TextInput style={[styles.input, styles.gridInput]} placeholder="金额" value={expense.amount} keyboardType="numeric" onChangeText={(value) => setExpense((old) => ({ ...old, amount: value }))} />
-                  <TextInput style={[styles.input, styles.gridInput]} placeholder="日期" value={expense.spentAt} onChangeText={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
+                  <DateField style={styles.gridInput} value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
                 </View>
                 <TextInput style={styles.input} placeholder="备注" value={expense.note} onChangeText={(value) => setExpense((old) => ({ ...old, note: value }))} />
                 <TouchableOpacity style={styles.secondaryButton} onPress={() => addExpense()}>

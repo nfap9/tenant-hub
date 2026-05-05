@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { DateField } from "../../components/DateField";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Bill, BillStatus, MeterReading, MeterType, MonthlyBill, Room } from "../../types";
@@ -262,7 +263,7 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
             <View style={styles.formGrid}>
               <View style={styles.formField}>
                 <Text style={styles.fieldLabel}>日期</Text>
-                <TextInput style={styles.input} value={readingForm.readingDate} onChangeText={(value) => setReadingForm((old) => ({ ...old, readingDate: value }))} />
+                <DateField value={readingForm.readingDate} onChange={(value) => setReadingForm((old) => ({ ...old, readingDate: value }))} />
               </View>
               <View style={styles.formField}>
                 <Text style={styles.fieldLabel}>读数</Text>
