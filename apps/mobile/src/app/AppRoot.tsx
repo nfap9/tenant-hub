@@ -98,7 +98,7 @@ export default function AppRoot() {
       <ScrollView contentContainerStyle={styles.content}>
         {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
         <Text style={styles.title}>{title}</Text>
-        {active === "home" ? <HomeScreen /> : null}
+        {active === "home" ? <HomeScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} /> : null}
         {active === "rooms" ? (
           <RoomsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} />
         ) : null}
