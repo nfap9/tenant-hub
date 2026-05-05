@@ -5,6 +5,7 @@ import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Apartment, ApartmentFeeItem, Room, RoomStatus } from "../../types";
+import { buildBatchRoomNos, toggleBatchRoomSelection } from "./batchRooms";
 
 type Props = {
   token: string;
@@ -54,7 +55,7 @@ const emptyApartmentForm: ApartmentForm = {
 
 const emptyRoomForm: RoomForm = {
   roomNo: "",
-  layout: "",
+  layout: "单间",
   area: "",
   facilities: "",
   status: "VACANT"
@@ -75,6 +76,7 @@ const statusStyles: Record<RoomStatus, object> = {
 };
 
 const roomStatuses: RoomStatus[] = ["VACANT", "RESERVED", "OCCUPIED", "MAINTENANCE"];
+const roomLayoutOptions = ["单间", "一房一厅", "两房一厅", "三房一厅", "四房一厅", "五房一厅", "六房一厅"];
 
 const money = (value?: string | number) => Number(value ?? 0).toFixed(2);
 const optionalNumber = (value: string) => (value.trim() ? Number(value) : undefined);
@@ -130,8 +132,11 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
   const [roomForm, setRoomForm] = useState<RoomForm>(emptyRoomForm);
   const [expense, setExpense] = useState({ name: "", amount: "", spentAt: new Date().toISOString().slice(0, 10), note: "" });
   const [fee, setFee] = useState({ name: "", spec: "", amount: "" });
-  const [batchRooms, setBatchRooms] = useState("101,102,103\n201,202,203");
-  const [batchLayout, setBatchLayout] = useState("一室一卫");
+  const [batchStartFloor, setBatchStartFloor] = useState("2");
+  const [batchEndFloor, setBatchEndFloor] = useState("4");
+  const [batchRoomCount, setBatchRoomCount] = useState("4");
+  const [selectedBatchRoomNos, setSelectedBatchRoomNos] = useState<string[]>([]);
+  const [batchLayout, setBatchLayout] = useState("单间");
   const [batchArea, setBatchArea] = useState("");
   const [batchFacilities, setBatchFacilities] = useState("床,衣柜,空调,热水器");
   const [saving, setSaving] = useState(false);
@@ -144,6 +149,10 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
   const editingRoom = useMemo(() => apartmentRooms.find((room) => room.id === editingRoomId), [apartmentRooms, editingRoomId]);
   const deletingRoom = useMemo(() => apartmentRooms.find((room) => room.id === deleteRoomId), [apartmentRooms, deleteRoomId]);
   const expenseApartment = useMemo(() => apartments.find((item) => item.id === expenseApartmentId) ?? selectedApartment, [apartments, expenseApartmentId, selectedApartment]);
+  const generatedBatchRoomNos = useMemo(
+    () => buildBatchRoomNos({ startFloor: batchStartFloor, endFloor: batchEndFloor, roomCount: batchRoomCount }),
+    [batchStartFloor, batchEndFloor, batchRoomCount]
+  );
   const apartmentVacantRooms = apartmentRooms.filter((room) => room.status === "VACANT").length;
   const apartmentOccupiedRooms = apartmentRooms.filter((room) => room.status === "OCCUPIED").length;
 
@@ -179,6 +188,10 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
     });
   }, [selectedApartment]);
 
+  useEffect(() => {
+    setSelectedBatchRoomNos(generatedBatchRoomNos);
+  }, [generatedBatchRoomNos]);
+
   const updateForm = (key: keyof ApartmentForm, value: string) => setForm((old) => ({ ...old, [key]: value }));
   const updateRoomForm = (key: keyof RoomForm, value: string | RoomStatus) => setRoomForm((old) => ({ ...old, [key]: value }));
 
@@ -205,6 +218,7 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
     setRoomForm(emptyRoomForm);
     setEditingRoomId(undefined);
     setDeleteRoomId(undefined);
+    setSelectedBatchRoomNos(generatedBatchRoomNos);
     setActiveLayer("roomBatch");
   };
 
@@ -357,11 +371,12 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
 
   const addBatchRooms = async () => {
     if (!organizationId || !selectedApartment) return;
-    const roomNos = batchRooms.split(/[\n,，\s]+/).map((item) => item.trim()).filter(Boolean);
-    if (roomNos.length === 0) return setNotice("请输入房间号");
+    const selectedRoomNos = generatedBatchRoomNos.filter((roomNo) => selectedBatchRoomNos.includes(roomNo));
+    if (generatedBatchRoomNos.length === 0) return setNotice("请输入有效的楼层范围和房间数量");
+    if (selectedRoomNos.length === 0) return setNotice("请至少选择一个房间号");
     const facilities = toFacilityArray(batchFacilities);
     await mobileApi(`/apartments/${selectedApartment.id}/rooms/batch`, token, apiOptions(organizationId, "POST", {
-      rooms: roomNos.map((roomNo) => ({
+      rooms: selectedRoomNos.map((roomNo) => ({
         roomNo,
         layout: batchLayout.trim() || "未配置",
         area: optionalNumber(batchArea),
@@ -369,7 +384,7 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
       }))
     }));
     resetRoomWork();
-    setNotice(`已提交 ${roomNos.length} 间房间，重复房间会自动跳过`);
+    setNotice(`已提交 ${selectedRoomNos.length} 间房间，重复房间会自动跳过`);
     await loadApartments();
   };
 
@@ -377,6 +392,23 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
     setEditingRoomId(undefined);
     setDeleteRoomId(room.id);
     setActiveLayer("roomDelete");
+  };
+
+  const renderLayoutSelector = (value: string, onChange: (layout: string) => void) => {
+    const choices = value && !roomLayoutOptions.includes(value) ? [value, ...roomLayoutOptions] : roomLayoutOptions;
+    return (
+      <View style={styles.roleActions}>
+        {choices.map((layout) => (
+          <TouchableOpacity
+            key={layout}
+            style={[styles.smallButton, value === layout && styles.smallButtonActive]}
+            onPress={() => onChange(layout)}
+          >
+            <Text style={[styles.smallButtonText, value === layout && styles.smallButtonTextActive]}>{layout}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
   };
 
   const renderRoomFields = (showStatus = false) => (
@@ -387,13 +419,13 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
           <TextInput style={styles.input} placeholder="101" value={roomForm.roomNo} onChangeText={(value) => updateRoomForm("roomNo", value)} />
         </View>
         <View style={styles.formField}>
-          <Text style={styles.fieldLabel}>户型</Text>
-          <TextInput style={styles.input} placeholder="一室一卫" value={roomForm.layout} onChangeText={(value) => updateRoomForm("layout", value)} />
-        </View>
-        <View style={styles.formField}>
           <Text style={styles.fieldLabel}>面积</Text>
           <TextInput style={styles.input} placeholder="平方米" value={roomForm.area} keyboardType="numeric" onChangeText={(value) => updateRoomForm("area", value)} />
         </View>
+      </View>
+      <View style={styles.formField}>
+        <Text style={styles.fieldLabel}>户型</Text>
+        {renderLayoutSelector(roomForm.layout, (layout) => updateRoomForm("layout", layout))}
       </View>
       <TextInput style={styles.input} placeholder="设施，用逗号分隔" value={roomForm.facilities} onChangeText={(value) => updateRoomForm("facilities", value)} />
       {showStatus ? (
@@ -774,11 +806,48 @@ export default function ApartmentsScreen({ token, organizationId, setNotice }: P
           </TouchableOpacity>
         )}
       >
-        <TextInput style={[styles.input, styles.textarea]} multiline placeholder="房间号，用逗号、空格或换行分隔" value={batchRooms} onChangeText={setBatchRooms} />
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>开始楼层</Text>
+            <TextInput style={styles.input} placeholder="2" value={batchStartFloor} keyboardType="numeric" onChangeText={setBatchStartFloor} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>结束楼层</Text>
+            <TextInput style={styles.input} placeholder="4" value={batchEndFloor} keyboardType="numeric" onChangeText={setBatchEndFloor} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>每层房间数</Text>
+            <TextInput style={styles.input} placeholder="4" value={batchRoomCount} keyboardType="numeric" onChangeText={setBatchRoomCount} />
+          </View>
+        </View>
+        <View style={styles.batchRoomPanel}>
+          <View style={styles.detailRow}>
+            <Text style={styles.fieldLabel}>生成房间号</Text>
+            <Text style={styles.muted}>已选 {selectedBatchRoomNos.length}/{generatedBatchRoomNos.length}</Text>
+          </View>
+          {generatedBatchRoomNos.length > 0 ? (
+            <View style={styles.batchRoomGrid}>
+              {generatedBatchRoomNos.map((roomNo) => {
+                const selected = selectedBatchRoomNos.includes(roomNo);
+                return (
+                  <TouchableOpacity
+                    key={roomNo}
+                    style={[styles.batchRoomButton, selected && styles.batchRoomButtonActive]}
+                    onPress={() => setSelectedBatchRoomNos((old) => toggleBatchRoomSelection(old, roomNo))}
+                  >
+                    <Text style={[styles.batchRoomButtonText, selected && styles.batchRoomButtonTextActive]}>{roomNo}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={styles.muted}>输入有效的楼层范围和每层房间数后会自动生成房间号</Text>
+          )}
+        </View>
         <View style={styles.formGrid}>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>户型</Text>
-            <TextInput style={styles.input} placeholder="一室一卫" value={batchLayout} onChangeText={setBatchLayout} />
+            {renderLayoutSelector(batchLayout, setBatchLayout)}
           </View>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>面积</Text>
