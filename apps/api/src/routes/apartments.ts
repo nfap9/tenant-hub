@@ -40,7 +40,11 @@ apartmentRouter.get(
   asyncHandler(async (req, res) => {
     const apartments = await prisma.apartment.findMany({
       where: { organizationId: req.organizationId! },
-      include: { rooms: true, expenses: { orderBy: { spentAt: "desc" } }, feeItems: true },
+      include: {
+        rooms: { include: { leases: { where: { status: "ACTIVE" }, include: { fees: true }, orderBy: { createdAt: "desc" } } } },
+        expenses: { orderBy: { spentAt: "desc" } },
+        feeItems: true
+      },
       orderBy: { createdAt: "desc" }
     });
     ok(res, apartments);
