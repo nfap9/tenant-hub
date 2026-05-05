@@ -43,6 +43,11 @@ export type RoomStatus = "VACANT" | "RESERVED" | "OCCUPIED" | "MAINTENANCE";
 export type RentCycle = "MONTHLY" | "QUARTERLY" | "YEARLY";
 export type LeaseStatus = "ACTIVE" | "TERMINATED" | "EXPIRED";
 export type TerminationType = "EXPIRED" | "NEGOTIATED" | "BREACH";
+export type BillStatus = "DRAFT" | "BILLING" | "UNPAID" | "PARTIAL_PAID" | "PAID" | "FAILED" | "VOID";
+export type BillMode = "PREPAID" | "POSTPAID";
+export type BillItemType = "RENT" | "UTILITY" | "WATER" | "POWER" | "DEPOSIT" | "MANAGEMENT" | "NETWORK" | "OTHER";
+export type MeterType = "WATER" | "POWER";
+export type MeterReadingStatus = "NORMAL" | "SUSPECTED" | "CONFIRMED" | "VOID";
 
 export type ApartmentExpense = {
   id: string;
@@ -124,4 +129,68 @@ export type Room = {
   status: RoomStatus;
   apartment?: Apartment;
   leases?: Lease[];
+};
+
+export type BillItem = {
+  id: string;
+  billId: string;
+  type: BillItemType;
+  name: string;
+  amount: string | number;
+  status: BillStatus;
+  previousWater?: string | number;
+  currentWater?: string | number;
+  previousPower?: string | number;
+  currentPower?: string | number;
+  waterUnitPrice?: string | number;
+  powerUnitPrice?: string | number;
+  note?: string;
+};
+
+export type Bill = {
+  id: string;
+  organizationId: string;
+  leaseId: string;
+  monthlyBillId?: string;
+  mode: BillMode;
+  billingDate: string;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+  status: BillStatus;
+  totalAmount: string | number;
+  paidAmount: string | number;
+  failureReason?: string;
+  lease?: Lease;
+  items?: BillItem[];
+};
+
+export type MonthlyBill = {
+  id: string;
+  organizationId: string;
+  leaseId: string;
+  tenantName: string;
+  tenantPhone: string;
+  billingDate: string;
+  dueDate: string;
+  status: BillStatus;
+  totalAmount: string | number;
+  paidAmount: string | number;
+  lease?: Lease;
+  bills?: Bill[];
+};
+
+export type MeterReading = {
+  id: string;
+  organizationId: string;
+  apartmentId: string;
+  roomId: string;
+  leaseId?: string;
+  meterType: MeterType;
+  readingDate: string;
+  value: string | number;
+  status: MeterReadingStatus;
+  note?: string;
+  room?: Room;
+  lease?: Lease;
 };

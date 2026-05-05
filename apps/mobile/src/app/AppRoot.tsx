@@ -102,7 +102,7 @@ export default function AppRoot() {
         {active === "rooms" ? (
           <RoomsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} />
         ) : null}
-        {active === "bills" ? <BillsScreen /> : null}
+        {active === "bills" ? <BillsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} /> : null}
         {active === "apartments" ? (
           <ApartmentsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} />
         ) : null}

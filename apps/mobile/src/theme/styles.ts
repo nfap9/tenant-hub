@@ -163,5 +163,13 @@ export const styles = StyleSheet.create({
   planHeader: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   planPrice: { marginTop: 4, color: "#146c5c", fontSize: 18, fontWeight: "700" },
   quotaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  quotaText: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: "#f4f2ec", color: "#394341", fontSize: 12, overflow: "hidden" }
+  quotaText: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: "#f4f2ec", color: "#394341", fontSize: 12, overflow: "hidden" },
+
+  // 新增：账单
+  billCard: { padding: 14, backgroundColor: "white", borderRadius: 8, gap: 10, borderWidth: 1, borderColor: "#e3dece" },
+  billAmountRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
+  billAmount: { color: "#102522", fontSize: 20, fontWeight: "700" },
+  billLine: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: "#eee8da", flexDirection: "row", justifyContent: "space-between", gap: 10 },
+  billChoiceList: { gap: 8 },
+  readingRow: { padding: 12, backgroundColor: "white", borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }
 });
