@@ -24,18 +24,20 @@ pnpm dev
 所有服务已 Docker 化：
 
 - `postgres`：PostgreSQL 16，宿主机端口 `5433`，容器内端口 `5432`
-- `api`：Express API，端口 `4000`，启动时自动执行 `prisma migrate deploy`
-- `ops-web`：平台运营端 nginx 静态服务，端口 `5173`
+- `api`：Express API，端口 `4000`
+- `ops-web`：平台运营端，端口 `5173`
 - `mobile`：最终用户 App 的 React Native/Expo Web 预览服务，端口 `19006`
 
-```bash
-docker compose up --build
-```
-
-开发热更新模式：
+日常开发请使用热更新模式，容器会挂载本地源码并运行 API、Vite 和 Expo 的开发服务器：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+需要验证生产镜像时再使用基础 Compose，API 会执行 `prisma migrate deploy`，运营端会以 nginx 静态服务启动：
+
+```bash
+docker compose up --build
 ```
 
 访问地址：

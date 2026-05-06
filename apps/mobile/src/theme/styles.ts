@@ -234,6 +234,8 @@ export const styles = StyleSheet.create({
   // 新增：账单
   billCard: { padding: 14, backgroundColor: "white", borderRadius: 8, gap: 10, borderWidth: 1, borderColor: "#e3dece" },
   billAmountRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
+  billSummaryAside: { alignItems: "flex-end", gap: 2 },
+  billCardFooter: { paddingTop: 8, borderTopWidth: 1, borderTopColor: "#eee8da", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   billAmount: { color: "#102522", fontSize: 20, fontWeight: "700" },
   billLine: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: "#eee8da", flexDirection: "row", justifyContent: "space-between", gap: 10 },
   billDetailBlock: { borderTopWidth: 1, borderTopColor: "#eee8da", paddingTop: 8, gap: 6 },

@@ -5,6 +5,7 @@ import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi, mobileText } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Bill, BillStatus, MeterReading, MeterType, MonthlyBill, Room } from "../../types";
+import { getMonthlyBillCardSummary } from "./billPresentation";
 
 type Props = {
   token: string;
@@ -13,7 +14,7 @@ type Props = {
 };
 
 type TabKey = "monthly" | "meter" | "review";
-type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport";
+type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail";
 
 type ReadingForm = {
   roomId: string;
@@ -76,6 +77,7 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeLayer, setActiveLayer] = useState<BillLayer>();
+  const [selectedMonthlyBillId, setSelectedMonthlyBillId] = useState("");
   const [readingForm, setReadingForm] = useState<ReadingForm>({ roomId: "", meterType: "WATER", readingDate: today(), value: "", note: "" });
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
   const [utilityForm, setUtilityForm] = useState<UtilityForm>({ billId: "", previousWater: "", currentWater: "", previousPower: "", currentPower: "" });
@@ -86,6 +88,7 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
     [monthlyBills]
   );
   const selectedPaymentBill = useMemo(() => monthlyBills.find((bill) => bill.id === paymentForm.monthlyBillId), [monthlyBills, paymentForm.monthlyBillId]);
+  const selectedMonthlyBill = useMemo(() => monthlyBills.find((bill) => bill.id === selectedMonthlyBillId), [monthlyBills, selectedMonthlyBillId]);
   const unpaidBills = useMemo(() => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID"), [monthlyBills]);
 
   const openPayment = () => {
@@ -101,6 +104,11 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
       amount: String(remainingAmount(firstUnpaid))
     }));
     setActiveLayer("payment");
+  };
+
+  const openMonthlyDetail = (bill: MonthlyBill) => {
+    setSelectedMonthlyBillId(bill.id);
+    setActiveLayer("monthlyDetail");
   };
 
   const loadData = useCallback(async () => {
@@ -311,53 +319,87 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
       {tab === "monthly" ? (
         <>
           {monthlyBills.length === 0 ? <Text style={styles.emptyText}>暂无月度账单。先录入水电读数，再生成账单。</Text> : null}
-          {monthlyBills.map((bill) => (
-            <View key={bill.id} style={styles.billCard}>
-              <View style={styles.sectionHeader}>
-                <View>
-                  <Text style={styles.cardTitle}>{bill.tenantName} · {day(bill.billingDate)}</Text>
-                  <Text style={styles.muted}>{bill.lease?.room?.roomNo ?? "房间"} · 到期 {day(bill.dueDate)}</Text>
-                </View>
-                <Text style={[styles.statusBadge, statusStyle(bill.status)]}>{statusLabels[bill.status]}</Text>
-              </View>
-              <View style={styles.billAmountRow}>
-                <Text style={styles.billAmount}>¥{money(bill.totalAmount)}</Text>
-                <Text style={styles.muted}>已收 ¥{money(bill.paidAmount)}</Text>
-              </View>
-              {(bill.bills ?? []).map((child) => (
-                <View key={child.id} style={styles.billDetailBlock}>
-                  <View style={styles.billLine}>
-                    <Text style={styles.muted}>{billModeText(child)} · {day(child.periodStart)} 至 {day(child.periodEnd)}</Text>
-                    <Text style={styles.cardStat}>¥{money(child.totalAmount)}</Text>
+          {monthlyBills.map((bill) => {
+            const summary = getMonthlyBillCardSummary(bill);
+            return (
+              <TouchableOpacity key={bill.id} style={styles.billCard} onPress={() => openMonthlyDetail(bill)}>
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <Text style={styles.cardTitle}>{summary.title}</Text>
+                    <Text style={styles.muted}>{summary.meta}</Text>
                   </View>
-                  {(child.items ?? []).map((item) => (
-                    <View key={item.id} style={styles.billItemLine}>
-                      <Text style={styles.muted}>{item.name}</Text>
-                      <Text style={styles.muted}>¥{money(item.amount)}</Text>
-                    </View>
-                  ))}
-                  {child.mode === "POSTPAID" ? (
-                    <TouchableOpacity style={styles.secondaryButton} onPress={() => openUtilityReading(child)}>
-                      <Text style={styles.secondaryButtonText}>录入本期水电</Text>
-                    </TouchableOpacity>
-                  ) : null}
+                  <Text style={[styles.statusBadge, statusStyle(bill.status)]}>{statusLabels[bill.status]}</Text>
                 </View>
-              ))}
-              {(bill.payments ?? []).length ? (
-                <View style={styles.billDetailBlock}>
-                  <Text style={styles.fieldLabel}>收款记录</Text>
-                  {(bill.payments ?? []).map((payment) => (
-                    <View key={payment.id} style={styles.billItemLine}>
-                      <Text style={styles.muted}>{day(payment.paidAt)} · {payment.method}</Text>
-                      <Text style={styles.cardStat}>¥{money(payment.amount)}</Text>
-                    </View>
-                  ))}
+                <View style={styles.billAmountRow}>
+                  <Text style={styles.billAmount}>¥{money(summary.totalAmount)}</Text>
+                  <View style={styles.billSummaryAside}>
+                    <Text style={styles.muted}>剩余 ¥{money(summary.remainingAmount)}</Text>
+                    <Text style={styles.muted}>已收 ¥{money(summary.paidAmount)}</Text>
+                  </View>
                 </View>
-              ) : null}
-            </View>
-          ))}
+                <View style={styles.billCardFooter}>
+                  <Text style={styles.fieldLabel}>{summary.detailCountText}</Text>
+                  <Text style={styles.link}>查看详情</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </>
       ) : null}
+
+      <TaskSheet
+        visible={activeLayer === "monthlyDetail" && !!selectedMonthlyBill}
+        variant="drawer"
+        title="账单详情"
+        subtitle={selectedMonthlyBill ? `${selectedMonthlyBill.tenantName} · ${day(selectedMonthlyBill.billingDate)}` : ""}
+        onClose={() => setActiveLayer(undefined)}
+      >
+        {selectedMonthlyBill ? (
+          <>
+            <View style={styles.detailPanel}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.cardTitle}>{selectedMonthlyBill.lease?.room?.roomNo ?? "房间"} · 到期 {day(selectedMonthlyBill.dueDate)}</Text>
+                  <Text style={styles.muted}>应收 ¥{money(selectedMonthlyBill.totalAmount)} · 已收 ¥{money(selectedMonthlyBill.paidAmount)}</Text>
+                </View>
+                <Text style={[styles.statusBadge, statusStyle(selectedMonthlyBill.status)]}>{statusLabels[selectedMonthlyBill.status]}</Text>
+              </View>
+            </View>
+            {(selectedMonthlyBill.bills ?? []).map((child) => (
+              <View key={child.id} style={styles.billDetailBlock}>
+                <View style={styles.billLine}>
+                  <Text style={styles.muted}>{billModeText(child)} · {day(child.periodStart)} 至 {day(child.periodEnd)}</Text>
+                  <Text style={styles.cardStat}>¥{money(child.totalAmount)}</Text>
+                </View>
+                {(child.items ?? []).map((item) => (
+                  <View key={item.id} style={styles.billItemLine}>
+                    <Text style={styles.muted}>{item.name}</Text>
+                    <Text style={styles.muted}>¥{money(item.amount)}</Text>
+                  </View>
+                ))}
+                {child.mode === "POSTPAID" ? (
+                  <TouchableOpacity style={styles.secondaryButton} onPress={() => openUtilityReading(child)}>
+                    <Text style={styles.secondaryButtonText}>录入本期水电</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ))}
+            {(selectedMonthlyBill.payments ?? []).length ? (
+              <View style={styles.billDetailBlock}>
+                <Text style={styles.fieldLabel}>收款记录</Text>
+                {(selectedMonthlyBill.payments ?? []).map((payment) => (
+                  <View key={payment.id} style={styles.billItemLine}>
+                    <Text style={styles.muted}>{day(payment.paidAt)} · {payment.method}</Text>
+                    <Text style={styles.cardStat}>¥{money(payment.amount)}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.muted}>暂无收款记录</Text>
+            )}
+          </>
+        ) : null}
+      </TaskSheet>
 
       {tab === "meter" ? (
         <>

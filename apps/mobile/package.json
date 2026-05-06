@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx tests/batchRooms.test.ts"
+    "test": "tsx tests/batchRooms.test.ts && tsx tests/billPresentation.test.ts"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
