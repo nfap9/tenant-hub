@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env, platformAdminPhones } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../utils/http.js";
@@ -10,29 +10,41 @@ export type AuthUser = {
   username: string;
 };
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthUser;
-      organizationId?: string;
-      permissions?: string[];
-    }
-  }
-}
-
 export const signToken = (user: AuthUser) =>
   jwt.sign(user, env.JWT_SECRET, { expiresIn: "7d" });
+
+export const isTokenStaleForPasswordChange = (issuedAt: Date | undefined, passwordChangedAt: Date | null) => {
+  if (!issuedAt || !passwordChangedAt) return false;
+  return issuedAt.getTime() + 1000 < passwordChangedAt.getTime();
+};
+
+const isJwtError = (error: unknown) =>
+  error instanceof Error && ["JsonWebTokenError", "TokenExpiredError", "NotBeforeError"].includes(error.name);
 
 export const requireAuth = (req: Request, _res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
   if (!token) throw new HttpError(401, "请先登录");
 
-  try {
-    req.user = jwt.verify(token, env.JWT_SECRET) as AuthUser;
-    next();
-  } catch {
-    throw new HttpError(401, "登录已过期");
-  }
+  Promise.resolve()
+    .then(async () => {
+      const payload = jwt.verify(token, env.JWT_SECRET) as AuthUser & JwtPayload;
+      const user = await prisma.user.findUnique({
+        where: { id: payload.id },
+        select: { id: true, phone: true, username: true, passwordChangedAt: true }
+      });
+      if (!user) throw new HttpError(401, "登录已过期");
+      const issuedAt = payload.iat ? new Date(payload.iat * 1000) : undefined;
+      if (isTokenStaleForPasswordChange(issuedAt, user.passwordChangedAt)) throw new HttpError(401, "登录已过期");
+      req.user = { id: user.id, phone: user.phone, username: user.username };
+      next();
+    })
+    .catch((error) => {
+      if (error instanceof HttpError || isJwtError(error)) {
+        next(new HttpError(401, "登录已过期"));
+        return;
+      }
+      next(error);
+    });
 };
 
 export const requireOrg = (req: Request, _res: Response, next: NextFunction) => {

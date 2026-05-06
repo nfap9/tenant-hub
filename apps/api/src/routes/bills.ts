@@ -1,9 +1,17 @@
 import { Router } from "express";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
-import { generateCurrentLeaseBills, generateLeaseBills, recordMonthlyBillPayment, refreshBillTotals, retryPostpaidBillAndMonthlyBill } from "../services/billing.js";
+import {
+  calculateUtilityLineAmounts,
+  generateCurrentLeaseBills,
+  generateLeaseBills,
+  recordBillPayment,
+  recordMonthlyBillPayment,
+  refreshBillTotals,
+  retryPostpaidBillAndMonthlyBill
+} from "../services/billing.js";
+import { toCsv } from "../services/csv.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { parseUtilityImportRows } from "../services/utilityImport.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -16,7 +24,6 @@ billRouter.get(
   "/",
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
-    await generateCurrentLeaseBills(req.organizationId!);
     const status = z.enum(["DRAFT", "BILLING", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"]).optional().parse(req.query.status);
     ok(
       res,
@@ -33,7 +40,6 @@ billRouter.get(
   "/monthly",
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
-    await generateCurrentLeaseBills(req.organizationId!);
     const status = z.enum(["DRAFT", "BILLING", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"]).optional().parse(req.query.status);
     ok(
       res,
@@ -164,8 +170,14 @@ const applyUtilityReadingToBill = async ({
   if (currentWater < previousWater) throw new HttpError(400, "水表本期读数不能小于上期读数");
   if (currentPower < previousPower) throw new HttpError(400, "电表本期读数不能小于上期读数");
 
-  const waterAmount = new Prisma.Decimal(currentWater).minus(previousWater).mul(waterItem.waterUnitPrice ?? 0);
-  const powerAmount = new Prisma.Decimal(currentPower).minus(previousPower).mul(powerItem.powerUnitPrice ?? 0);
+  const { waterAmount, powerAmount } = calculateUtilityLineAmounts({
+    previousWater,
+    currentWater,
+    waterUnitPrice: waterItem.waterUnitPrice ?? 0,
+    previousPower,
+    currentPower,
+    powerUnitPrice: powerItem.powerUnitPrice ?? 0
+  });
 
   await prisma.$transaction([
     prisma.billItem.update({
@@ -209,14 +221,22 @@ billRouter.get(
     });
     res.setHeader("content-type", "text/csv; charset=utf-8");
     res.send(
-      ["billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因"]
-        .concat(
-          bills.map(
-            (bill) =>
-              `${bill.id},${bill.lease.room.roomNo},${bill.lease.tenantName},${bill.billingDate.toISOString()},${bill.periodStart.toISOString()},${bill.periodEnd.toISOString()},,,,,${bill.failureReason ?? ""}`
-          )
-        )
-        .join("\n")
+      toCsv([
+        ["billId", "房间号", "租客", "交租日", "水电周期开始", "水电周期结束", "上月水表", "本月水表", "上月电表", "本月电表", "失败原因"],
+        ...bills.map((bill) => [
+          bill.id,
+          bill.lease.room.roomNo,
+          bill.lease.tenantName,
+          bill.billingDate.toISOString(),
+          bill.periodStart.toISOString(),
+          bill.periodEnd.toISOString(),
+          "",
+          "",
+          "",
+          "",
+          bill.failureReason ?? ""
+        ])
+      ])
     );
   })
 );
@@ -256,9 +276,7 @@ billRouter.post(
   "/:id/payments",
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ amount: z.coerce.number(), method: z.string().min(1), note: z.string().optional() }).parse(req.body);
-    const payment = await prisma.payment.create({ data: { ...input, billId: req.params.id, userId: req.user!.id } });
-    await refreshBillTotals(req.params.id);
-    ok(res, payment);
+    const input = z.object({ amount: z.coerce.number().positive(), method: z.string().min(1), note: z.string().optional() }).parse(req.body);
+    ok(res, await recordBillPayment({ billId: req.params.id, organizationId: req.organizationId!, userId: req.user!.id, ...input }));
   })
 );

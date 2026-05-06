@@ -46,6 +46,43 @@ docker compose up --build
 - 平台运营端：`http://localhost:5173`
 - 客户端 App 浏览器预览：`http://localhost:19006`
 
+### 修改 Prisma Schema 后
+
+如果修改了 `apps/api/prisma/schema.prisma`，需要同步数据库迁移并重新生成 Prisma Client。仅靠 Docker 热更新不会自动执行 migration。
+
+本地 pnpm 开发环境：
+
+```bash
+pnpm --filter @tenant-hub/api prisma migrate dev
+pnpm --filter @tenant-hub/api prisma generate
+```
+
+Docker 热更新环境：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api sh -c "pnpm --filter @tenant-hub/api prisma migrate deploy && pnpm --filter @tenant-hub/api prisma generate"
+docker compose -f docker-compose.yml -f docker-compose.dev.yml restart api
+```
+
+如果容器还没启动，先运行：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres api ops-web mobile
+```
+
+生产镜像环境：
+
+```bash
+docker compose up -d --build api
+```
+
+生产 API 容器启动时会执行 `prisma migrate deploy`。如果只想手动同步数据库，可运行：
+
+```bash
+docker compose exec api sh -c "pnpm prisma migrate deploy && pnpm prisma generate"
+docker compose restart api
+```
+
 生产部署前请修改 `docker-compose.yml` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL` 和 `JWT_SECRET`。
 
 运营端账号与客户端账号使用同一套手机号登录，但权限隔离。普通用户默认没有运营平台权限；在系统没有任何运营管理员时，首个已登录用户可临时进入运营端，在“用户管理”中给指定用户授予运营权限。也可以通过环境变量 `PLATFORM_ADMIN_PHONES` 配置初始化超级管理员手机号，多个手机号用英文逗号分隔。

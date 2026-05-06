@@ -114,6 +114,7 @@ model User {
   phone        String       @unique
   username     String
   passwordHash String
+  passwordChangedAt DateTime?
   platformRole PlatformRole @default(NONE)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -242,6 +243,7 @@ model ApartmentFeeItem {
   apartmentId String
   name        String
   spec        String?
+  type        BillItemType      @default(OTHER)
   amount      Decimal   @db.Decimal(10, 2)
   enabled     Boolean   @default(true)
   apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
@@ -352,6 +354,7 @@ model LeaseFee {
   id        String            @id @default(cuid())
   leaseId   String
   feeItemId String?
+  type      BillItemType       @default(OTHER)
   name      String
   amount    Decimal           @db.Decimal(10, 2)
   lease     Lease             @relation(fields: [leaseId], references: [id], onDelete: Cascade)

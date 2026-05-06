@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { platformAdminPhones } from "../config/env.js";
+import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -36,7 +37,9 @@ authRouter.post(
         expiresAt: new Date(Date.now() + 5 * 60 * 1000)
       }
     });
-    console.info(`[TenantHub] ${input.phone} ${input.purpose} 验证码：${code}`);
+    if (env.NODE_ENV !== "production") {
+      console.info(`[TenantHub] ${input.phone} ${input.purpose} 验证码：${code}`);
+    }
     ok(res, { message: "验证码已发送" });
   })
 );
@@ -142,7 +145,7 @@ authRouter.put(
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await bcrypt.hash(input.newPassword, 12) }
+      data: { passwordHash: await bcrypt.hash(input.newPassword, 12), passwordChangedAt: new Date() }
     });
 
     ok(res, { message: "密码已更新" });

@@ -13,6 +13,7 @@ adminRouter.get(
   "/users",
   asyncHandler(async (req, res) => {
     const keyword = z.string().optional().parse(req.query.keyword);
+    const take = z.coerce.number().int().min(1).max(100).default(50).parse(req.query.take);
     const platformAdminCount = await prisma.user.count({ where: { platformRole: { not: "NONE" } } });
     const users = await prisma.user.findMany({
       where: keyword
@@ -32,7 +33,7 @@ adminRouter.get(
         _count: { select: { memberships: true } }
       },
       orderBy: { createdAt: "desc" },
-      take: 100
+      take
     });
     ok(
       res,
@@ -141,12 +142,14 @@ adminRouter.put(
 
 adminRouter.get(
   "/organizations",
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const take = z.coerce.number().int().min(1).max(100).default(50).parse(req.query.take);
     ok(
       res,
       await prisma.organization.findMany({
         include: { subscriptions: { include: { plan: true } }, quotas: true, _count: { select: { apartments: true, members: true, bills: true } } },
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
+        take
       })
     );
   })
@@ -204,9 +207,9 @@ adminRouter.put(
     const input = z
       .object({
         code: z.string().min(2).regex(/^[a-z][a-z0-9_-]*$/).optional(),
-        name: z.string().min(1),
+        name: z.string().min(1).optional(),
         description: z.string().optional(),
-        permissions: z.array(z.string())
+        permissions: z.array(z.string()).optional()
       })
       .parse(req.body);
     ok(res, await prisma.role.update({ where: { id: role.id }, data: { ...input, code: role.system ? role.code : input.code ?? role.code } }));

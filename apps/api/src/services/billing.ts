@@ -27,6 +27,20 @@ type UtilityAmountInput = {
   powerUnitPrice: Prisma.Decimal.Value;
 };
 
+type PaymentTarget = {
+  status: string;
+  totalAmount: Prisma.Decimal.Value;
+  paidAmount: Prisma.Decimal.Value;
+};
+
+type BillPaymentTarget = PaymentTarget & {
+  amount: Prisma.Decimal.Value;
+};
+
+type MonthlyBillPaymentTarget = BillPaymentTarget & {
+  childBillPaymentsCount: number;
+};
+
 const startOfDay = (date: Date) => dayjs.utc(date).startOf("day");
 
 export const calculateBillingPeriods = ({ leaseStartDate, leaseEndDate, cycle, billingDate }: BillingPeriodInput) => {
@@ -90,6 +104,42 @@ export const calculateUtilityAmount = ({
   if (powerUsage.lessThan(0)) throw new Error("电表本期读数不能小于上期读数");
 
   return waterUsage.mul(waterUnitPrice).plus(powerUsage.mul(powerUnitPrice));
+};
+
+export const calculateUtilityLineAmounts = ({
+  previousWater,
+  currentWater,
+  waterUnitPrice,
+  previousPower,
+  currentPower,
+  powerUnitPrice
+}: UtilityAmountInput) => {
+  calculateUtilityAmount({ previousWater, currentWater, waterUnitPrice, previousPower, currentPower, powerUnitPrice });
+  return {
+    waterAmount: new Prisma.Decimal(currentWater).minus(previousWater).mul(waterUnitPrice),
+    powerAmount: new Prisma.Decimal(currentPower).minus(previousPower).mul(powerUnitPrice)
+  };
+};
+
+const remainingAmountFor = ({ totalAmount, paidAmount }: PaymentTarget) => new Prisma.Decimal(totalAmount).minus(paidAmount);
+
+export const assertBillPaymentAllowed = ({ status, totalAmount, paidAmount, amount }: BillPaymentTarget) => {
+  if (status === "PAID" || status === "VOID") throw new HttpError(400, "该账单已结清或作废，不能继续收款");
+  const paymentAmount = new Prisma.Decimal(amount);
+  if (paymentAmount.lessThanOrEqualTo(0)) throw new HttpError(400, "收款金额必须大于 0");
+  const remaining = remainingAmountFor({ status, totalAmount, paidAmount });
+  if (paymentAmount.greaterThan(remaining)) throw new HttpError(400, `收款金额不能超过剩余应收 ¥${remaining.toFixed(2)}`);
+};
+
+export const assertMonthlyBillPaymentAllowed = ({
+  status,
+  totalAmount,
+  paidAmount,
+  childBillPaymentsCount,
+  amount
+}: MonthlyBillPaymentTarget) => {
+  if (childBillPaymentsCount > 0) throw new HttpError(400, "子账单已有独立收款，请继续按子账单收款或先冲销原收款");
+  assertBillPaymentAllowed({ status, totalAmount, paidAmount, amount });
 };
 
 const classifyFeeItemType = (name: string) => {
@@ -206,8 +256,14 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
     return prisma.bill.findUnique({ where: { id: bill.id }, include: { items: true } });
   }
 
-  const waterAmount = new Prisma.Decimal(currentWater.value).minus(previousWater.value).mul(bill.lease.waterUnitPrice);
-  const powerAmount = new Prisma.Decimal(currentPower.value).minus(previousPower.value).mul(bill.lease.powerUnitPrice);
+  const { waterAmount, powerAmount } = calculateUtilityLineAmounts({
+    previousWater: previousWater.value,
+    currentWater: currentWater.value,
+    waterUnitPrice: bill.lease.waterUnitPrice,
+    previousPower: previousPower.value,
+    currentPower: currentPower.value,
+    powerUnitPrice: bill.lease.powerUnitPrice
+  });
 
   await prisma.$transaction([
     prisma.billItem.updateMany({
@@ -314,7 +370,7 @@ export const generateLeaseBills = async (leaseId: string, today = new Date()) =>
           create: [
             { type: "RENT", name: "房租", amount: lease.rentAmount, status: "UNPAID" },
             ...lease.fees.map((fee) => ({
-              type: classifyFeeItemType(fee.name),
+              type: fee.type === "OTHER" ? classifyFeeItemType(fee.name) : fee.type,
               name: fee.name,
               amount: fee.amount,
               status: "UNPAID" as const
@@ -415,20 +471,54 @@ export const recordMonthlyBillPayment = async ({
   method: string;
   note?: string;
 }) => {
-  const current = await prisma.monthlyBill.findUnique({ where: { id: monthlyBillId } });
+  const current = await prisma.monthlyBill.findUnique({
+    where: { id: monthlyBillId },
+    include: { bills: { include: { payments: { where: { monthlyBillId: null } } } } }
+  });
   if (!current) throw new HttpError(404, "月度账单不存在");
-  if (current.status === "PAID" || current.status === "VOID") throw new HttpError(400, "该账单已结清或作废，不能继续收款");
-  const paymentAmount = new Prisma.Decimal(amount);
-  const remaining = new Prisma.Decimal(current.totalAmount).minus(current.paidAmount);
-  if (paymentAmount.greaterThan(remaining)) throw new HttpError(400, `收款金额不能超过剩余应收 ¥${remaining.toFixed(2)}`);
+  const childBillPaymentsCount = current.bills.reduce((sum, bill) => sum + bill.payments.length, 0);
+  assertMonthlyBillPaymentAllowed({ ...current, childBillPaymentsCount, amount });
 
-  const payment = await prisma.payment.create({ data: { monthlyBillId, userId, amount, method, note } });
-  await refreshMonthlyBillTotals(monthlyBillId);
-  const monthlyBill = await prisma.monthlyBill.findUnique({ where: { id: monthlyBillId }, include: { bills: true } });
-  if (monthlyBill?.status === "PAID") {
-    await prisma.$transaction(
-      monthlyBill.bills.map((bill) => prisma.bill.update({ where: { id: bill.id }, data: { status: "PAID", paidAmount: bill.totalAmount } }))
-    );
+  let unapplied = new Prisma.Decimal(amount);
+  const payments = [];
+  for (const bill of current.bills) {
+    if (unapplied.lessThanOrEqualTo(0)) break;
+    const billRemaining = remainingAmountFor(bill);
+    if (billRemaining.lessThanOrEqualTo(0)) continue;
+    const billAmount = unapplied.greaterThan(billRemaining) ? billRemaining : unapplied;
+    payments.push(await prisma.payment.create({ data: { billId: bill.id, monthlyBillId, userId, amount: billAmount, method, note } }));
+    unapplied = unapplied.minus(billAmount);
   }
+
+  await Promise.all(current.bills.map((bill) => refreshBillTotals(bill.id)));
+  await refreshMonthlyBillTotals(monthlyBillId);
+  return payments[0];
+};
+
+export const recordBillPayment = async ({
+  billId,
+  organizationId,
+  userId,
+  amount,
+  method,
+  note
+}: {
+  billId: string;
+  organizationId: string;
+  userId: string;
+  amount: Prisma.Decimal.Value;
+  method: string;
+  note?: string;
+}) => {
+  const bill = await prisma.bill.findFirst({
+    where: { id: billId, organizationId },
+    include: { monthlyBill: { include: { payments: true } } }
+  });
+  if (!bill) throw new HttpError(404, "账单不存在");
+  if (bill.monthlyBill?.payments.length) throw new HttpError(400, "所属月度账单已有收款，请继续按月度账单收款");
+  assertBillPaymentAllowed({ ...bill, amount });
+
+  const payment = await prisma.payment.create({ data: { billId, userId, amount, method, note } });
+  await refreshBillTotals(billId);
   return payment;
 };

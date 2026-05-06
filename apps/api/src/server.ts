@@ -9,10 +9,19 @@ const server = app.listen(env.PORT, () => {
   console.info(`[TenantHub] API listening on http://localhost:${env.PORT}`);
 });
 
+let shuttingDown = false;
 const shutdown = async () => {
-  server.close();
+  if (shuttingDown) return;
+  shuttingDown = true;
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
   await prisma.$disconnect();
+  process.exit(0);
 };
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => void shutdown());
+process.on("SIGTERM", () => void shutdown());

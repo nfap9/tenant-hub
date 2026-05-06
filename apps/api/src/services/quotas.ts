@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../utils/http.js";
 
@@ -21,9 +22,15 @@ const limitLabel: Record<QuotaKind, string> = {
   member: "成员"
 };
 
-export const getOrganizationQuota = async (organizationId: string) => {
+type PrismaLike = typeof prisma | Prisma.TransactionClient;
+
+export const lockOrganizationQuota = async (db: Prisma.TransactionClient, organizationId: string) => {
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`quota:${organizationId}`}))`;
+};
+
+export const getOrganizationQuota = async (organizationId: string, db: PrismaLike = prisma) => {
   const [subscription, quotaPackages] = await Promise.all([
-    prisma.subscription.findFirst({
+    db.subscription.findFirst({
       where: {
         organizationId,
         active: true,
@@ -32,7 +39,7 @@ export const getOrganizationQuota = async (organizationId: string) => {
       include: { plan: true },
       orderBy: { startsAt: "desc" }
     }),
-    prisma.orgQuotaPackage.findMany({ where: { organizationId } })
+    db.orgQuotaPackage.findMany({ where: { organizationId } })
   ]);
 
   if (!subscription) return undefined;
@@ -49,8 +56,8 @@ export const getOrganizationQuota = async (organizationId: string) => {
   return { subscription, extraQuota };
 };
 
-export const assertOrganizationQuota = async (organizationId: string, kind: QuotaKind, nextCount: number) => {
-  const quota = await getOrganizationQuota(organizationId);
+export const assertOrganizationQuota = async (organizationId: string, kind: QuotaKind, nextCount: number, db: PrismaLike = prisma) => {
+  const quota = await getOrganizationQuota(organizationId, db);
   if (!quota) throw new HttpError(402, "请先购买套餐后再使用该功能");
 
   const baseLimit = quota.subscription.plan[quotaField[kind]];

@@ -6,7 +6,7 @@ import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.j
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
-import { assertOrganizationQuota } from "../services/quotas.js";
+import { assertOrganizationQuota, lockOrganizationQuota } from "../services/quotas.js";
 import { assertInviteJoinable, buildInviteExpiry, generateInviteCode, normalizeInviteCode } from "../services/orgInvites.js";
 
 export const orgRouter = Router();
@@ -54,19 +54,15 @@ orgRouter.post(
     if (!invite) throw new HttpError(404, "邀请码不存在");
     assertInviteJoinable({ invite });
 
-    const existingMember = await prisma.orgMember.findUnique({
-      where: { organizationId_userId: { organizationId: invite.organizationId, userId: req.user!.id } }
-    });
-    const activeMemberCount = await prisma.orgMember.count({ where: { organizationId: invite.organizationId, status: "ACTIVE" } });
-    if (!existingMember || existingMember.status !== "ACTIVE") {
-      await assertOrganizationQuota(invite.organizationId, "member", activeMemberCount + 1);
-    }
     const role = await prisma.role.findUniqueOrThrow({ where: { code: "readonly" } });
-    if (existingMember?.status === "ACTIVE") {
-      ok(res, { organization: invite.organization, member: existingMember });
-      return;
-    }
     const member = await prisma.$transaction(async (tx) => {
+      await lockOrganizationQuota(tx, invite.organizationId);
+      const existingMember = await tx.orgMember.findUnique({
+        where: { organizationId_userId: { organizationId: invite.organizationId, userId: req.user!.id } }
+      });
+      const activeMemberCount = await tx.orgMember.count({ where: { organizationId: invite.organizationId, status: "ACTIVE" } });
+      if (existingMember?.status === "ACTIVE") return existingMember;
+      await assertOrganizationQuota(invite.organizationId, "member", activeMemberCount + 1, tx);
       const consumed = await tx.orgInvite.updateMany({
         where: { id: invite.id, usedCount: { lt: invite.maxUses } },
         data: {

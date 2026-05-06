@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import { corsOrigins, env } from "./config/env.js";
 import { adminRouter } from "./routes/admin.js";
 import { apartmentRouter } from "./routes/apartments.js";
 import { authRouter } from "./routes/auth.js";
@@ -12,7 +13,17 @@ import { errorHandler } from "./middleware/error.js";
 export const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || env.NODE_ENV !== "production" || corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Not allowed by CORS"));
+    }
+  })
+);
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));

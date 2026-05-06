@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
-import { generateActiveAutoRenewBills, generateLeaseBills } from "../services/billing.js";
+import { generateLeaseBills } from "../services/billing.js";
 import { assertExpiredTerminationAllowed, withLeaseLifecycle } from "../services/leaseLifecycle.js";
 import { createLeaseSettlement, getLeaseSettlementPreview, recordSettlementPayment } from "../services/leaseSettlement.js";
 import { PERMISSIONS } from "../services/roles.js";
@@ -14,12 +14,12 @@ leaseRouter.use(requireAuth, requireOrg);
 
 const leaseInclude = { room: { include: { apartment: true } }, fees: true } as const;
 const amountSchema = z.coerce.number().nonnegative();
+const feeItemTypeSchema = z.enum(["MANAGEMENT", "NETWORK", "OTHER"]).default("OTHER");
 
 leaseRouter.get(
   "/",
   requirePermission(PERMISSIONS.LEASE_VIEW),
   asyncHandler(async (req, res) => {
-    await generateActiveAutoRenewBills(req.organizationId!);
     ok(
       res,
       (
@@ -51,7 +51,7 @@ leaseRouter.post(
         waterUnitPrice: amountSchema,
         powerUnitPrice: amountSchema,
         autoRenew: z.boolean().default(false),
-        fees: z.array(z.object({ feeItemId: z.string().optional(), name: z.string().min(1), amount: amountSchema })).default([])
+        fees: z.array(z.object({ feeItemId: z.string().optional(), type: feeItemTypeSchema, name: z.string().min(1), amount: amountSchema })).default([])
       })
       .refine((data) => data.endDate >= data.startDate, { path: ["endDate"], message: "租约结束日期不能早于开始日期" })
       .parse(req.body);
