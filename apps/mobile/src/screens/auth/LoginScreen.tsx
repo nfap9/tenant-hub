@@ -24,9 +24,12 @@ export default function LoginScreen({
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [otpBusy, setOtpBusy] = useState(false);
   const isRegister = authMode === "register";
 
   const sendOtp = async () => {
+    if (otpBusy || busy) return;
+    setOtpBusy(true);
     setError("");
     try {
       await mobileApi("/auth/otp", undefined, {
@@ -36,10 +39,13 @@ export default function LoginScreen({
       setError("验证码已发送，请查看后端控制台");
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setOtpBusy(false);
     }
   };
 
   const submit = async () => {
+    if (busy) return;
     setBusy(true);
     setError("");
     try {
@@ -106,14 +112,14 @@ export default function LoginScreen({
               <Text style={styles.label}>验证码</Text>
               <View style={styles.codeRow}>
                 <TextInput value={code} onChangeText={setCode} style={[styles.input, styles.codeInput]} placeholder="6 位验证码" placeholderTextColor="#9a9488" keyboardType="number-pad" />
-                <TouchableOpacity style={styles.codeButton} onPress={sendOtp}>
-                  <Text style={styles.secondaryButtonText}>获取验证码</Text>
+                <TouchableOpacity style={[styles.codeButton, (otpBusy || busy) && styles.buttonDisabled]} onPress={sendOtp} disabled={otpBusy || busy}>
+                  <Text style={styles.secondaryButtonText}>{otpBusy ? "发送中" : "获取验证码"}</Text>
                 </TouchableOpacity>
               </View>
             </>
           ) : null}
           {error ? <Text style={styles.formMessage}>{error}</Text> : null}
-          <TouchableOpacity style={styles.button} onPress={submit}>
+          <TouchableOpacity style={[styles.button, busy && styles.buttonDisabled]} onPress={submit} disabled={busy}>
             <Text style={styles.buttonText}>{busy ? "处理中" : isRegister ? "注册并登录" : "登录"}</Text>
           </TouchableOpacity>
           <TouchableOpacity
