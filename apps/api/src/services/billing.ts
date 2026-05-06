@@ -70,6 +70,11 @@ export const getCurrentMonthBillWindow = (today = new Date()) => ({
   end: startOfDay(today).add(1, "month").startOf("month").toDate()
 });
 
+export const getBillMonthLabel = (billingDate: Date) => {
+  const date = startOfDay(billingDate);
+  return `${date.year()}年${date.month() + 1}月`;
+};
+
 export const calculateUtilityAmount = ({
   previousWater,
   currentWater,

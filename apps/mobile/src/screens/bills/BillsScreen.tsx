@@ -115,8 +115,8 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
     if (!organizationId) return;
     setLoading(true);
     try {
-      const [nextMonthlyBills, failedBills, billingBills, nextReadings, nextRooms] = await Promise.all([
-        mobileApi<MonthlyBill[]>("/bills/monthly", token, apiOptions(organizationId)),
+      const nextMonthlyBills = await mobileApi<MonthlyBill[]>("/bills/monthly", token, apiOptions(organizationId));
+      const [failedBills, billingBills, nextReadings, nextRooms] = await Promise.all([
         mobileApi<Bill[]>("/bills?status=FAILED", token, apiOptions(organizationId)),
         mobileApi<Bill[]>("/bills?status=BILLING", token, apiOptions(organizationId)),
         mobileApi<MeterReading[]>("/bills/meter-readings", token, apiOptions(organizationId)),
@@ -153,13 +153,6 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
     setNotice("抄表记录已保存");
     setReadingForm((old) => ({ ...old, value: "", note: "" }));
     setActiveLayer(undefined);
-    await loadData();
-  };
-
-  const generateBills = async () => {
-    if (!organizationId) return;
-    const result = await mobileApi<{ leaseCount: number; billIds: string[] }>("/bills/generate", token, apiOptions(organizationId, "POST", {}));
-    setNotice(result.leaseCount > 0 ? "账单已生成，完成出账的月度账单会自动出现" : "暂无有效租约可生成账单");
     await loadData();
   };
 
@@ -291,9 +284,6 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
             <Text style={styles.smallButtonText}>{loading ? "刷新中" : "刷新"}</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.secondaryButton} onPress={generateBills}>
-          <Text style={styles.secondaryButtonText}>生成当前租约账单</Text>
-        </TouchableOpacity>
         {tab === "monthly" ? (
           <TouchableOpacity style={styles.button} onPress={openPayment}>
             <Text style={styles.buttonText}>登记收款</Text>

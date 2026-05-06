@@ -4,6 +4,7 @@ import {
   calculateUtilityAmount,
   generateCurrentLeaseBills,
   getCurrentMonthBillWindow,
+  getBillMonthLabel,
   getBillingDatesThrough,
   shouldGeneratePostpaidBill
 } from "./billing.js";
@@ -100,5 +101,6 @@ assert.deepEqual(emptyCurrentBillResult, { leaseCount: 0, billIds: [] }, "empty 
 const currentMonthWindow = getCurrentMonthBillWindow(date("2026-07-10"));
 assert.equal(currentMonthWindow.start.toISOString(), date("2026-07-01").toISOString(), "current month bill window should start on the first day");
 assert.equal(currentMonthWindow.end.toISOString(), date("2026-08-01").toISOString(), "current month bill window should end at the next month start");
+assert.equal(getBillMonthLabel(date("2026-07-01")), "2026年7月", "bill month label should use the billing month");
 
 console.info("billing tests passed");

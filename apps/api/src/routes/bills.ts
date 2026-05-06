@@ -16,6 +16,7 @@ billRouter.get(
   "/",
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
+    await generateCurrentLeaseBills(req.organizationId!);
     const status = z.enum(["DRAFT", "BILLING", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"]).optional().parse(req.query.status);
     ok(
       res,
@@ -32,6 +33,7 @@ billRouter.get(
   "/monthly",
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
+    await generateCurrentLeaseBills(req.organizationId!);
     const status = z.enum(["DRAFT", "BILLING", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"]).optional().parse(req.query.status);
     ok(
       res,

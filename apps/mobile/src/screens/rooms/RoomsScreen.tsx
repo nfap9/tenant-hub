@@ -372,7 +372,10 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                   </View>
                   <View style={styles.roomHeaderBadges}>
                     <Text style={[styles.statusBadge, statusStyles[room.status]]}>{statusLabels[room.status]}</Text>
-                    {roomActiveLease?.currentMonthBillGenerated ? <Text style={styles.todoBadge}>本月账单已出</Text> : null}
+                    {roomActiveLease?.currentMonthBillGenerated ? (
+                      <Text style={styles.todoBadge}>{roomActiveLease.currentMonthBillLabel ?? "本月"}账单已出</Text>
+                    ) : null}
+                    {roomActiveLease?.currentMonthBillSettled ? <Text style={[styles.statusBadge, styles.statusVacant]}>账单已结清</Text> : null}
                   </View>
                 </View>
                 <Text style={styles.muted}>{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>

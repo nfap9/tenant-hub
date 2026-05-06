@@ -125,6 +125,8 @@ export type Lease = {
   autoRenew: boolean;
   isAutoRenewalPeriod?: boolean;
   currentMonthBillGenerated?: boolean;
+  currentMonthBillSettled?: boolean;
+  currentMonthBillLabel?: string;
   status: LeaseStatus;
   terminationType?: TerminationType;
   terminationReason?: string;
