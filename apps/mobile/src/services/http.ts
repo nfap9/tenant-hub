@@ -1,5 +1,16 @@
 import { API_BASE_URL } from "../constants/config";
 
+const parseJsonBody = (text: string): Record<string, unknown> => {
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { error: text };
+  }
+};
+
+const errorMessage = (body: Record<string, unknown>) => (typeof body.error === "string" && body.error.trim() ? body.error : "请求失败");
+
 export async function mobileApi<T>(path: string, token?: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -10,9 +21,9 @@ export async function mobileApi<T>(path: string, token?: string, options: Reques
     }
   });
   const text = await response.text();
-  const body = text ? JSON.parse(text) : {};
-  if (!response.ok) throw new Error(body.error || "请求失败");
-  return body.data;
+  const body = parseJsonBody(text);
+  if (!response.ok) throw new Error(errorMessage(body));
+  return body.data as T;
 }
 
 export async function mobileText(path: string, token?: string, options: RequestInit = {}): Promise<string> {
@@ -25,13 +36,7 @@ export async function mobileText(path: string, token?: string, options: RequestI
   });
   const text = await response.text();
   if (!response.ok) {
-    try {
-      const body = JSON.parse(text);
-      throw new Error(body.error || "请求失败");
-    } catch (error) {
-      if (error instanceof Error && error.message !== "Unexpected end of JSON input") throw error;
-      throw new Error("请求失败");
-    }
+    throw new Error(errorMessage(parseJsonBody(text)));
   }
   return text;
 }
