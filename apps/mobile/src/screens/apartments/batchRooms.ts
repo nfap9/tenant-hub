@@ -4,6 +4,8 @@ type BatchRoomRange = {
   roomCount: string;
 };
 
+export const MAX_BATCH_ROOM_COUNT = 200;
+
 const positiveInteger = (value: string) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
@@ -17,6 +19,9 @@ export const buildBatchRoomNos = ({ startFloor, endFloor, roomCount }: BatchRoom
 
   const firstFloor = Math.min(start, end);
   const lastFloor = Math.max(start, end);
+  const totalRooms = (lastFloor - firstFloor + 1) * count;
+  if (totalRooms > MAX_BATCH_ROOM_COUNT) return [];
+
   const roomNos: string[] = [];
 
   for (let floor = firstFloor; floor <= lastFloor; floor += 1) {
