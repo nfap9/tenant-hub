@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
 import type { RoomActionKey } from "../../navigation/homeQuickActions";
@@ -561,19 +561,18 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
           ))}
         </View>
       </TaskSheet>
-      <Modal visible={Boolean(leaseRoom)} transparent animationType="slide" onRequestClose={() => setLeaseRoomId(undefined)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
-              <View style={styles.sectionHeader}>
-                <View>
-                  <Text style={styles.sectionTitle}>签约入住</Text>
-                  <Text style={styles.muted}>{leaseRoom?.apartment?.name} · {leaseRoom?.roomNo}</Text>
-                </View>
-                <TouchableOpacity style={styles.smallButton} onPress={() => setLeaseRoomId(undefined)}>
-                  <Text style={styles.smallButtonText}>关闭</Text>
-                </TouchableOpacity>
-              </View>
+      <TaskSheet
+        visible={Boolean(leaseRoom)}
+        variant="drawer"
+        title="签约入住"
+        subtitle={leaseRoom ? `${leaseRoom.apartment?.name} · ${leaseRoom.roomNo}` : undefined}
+        onClose={() => setLeaseRoomId(undefined)}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={createLease}>
+            <Text style={styles.buttonText}>确认签约</Text>
+          </TouchableOpacity>
+        )}
+      >
               <TextInput style={styles.input} placeholder="租客姓名" value={leaseForm.tenantName} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
               <TextInput style={styles.input} placeholder="租客电话" value={leaseForm.tenantPhone} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantPhone: value }))} />
               <View style={styles.formGrid}>
@@ -648,26 +647,19 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                   <Text style={styles.cardStat}>¥{money(item.amount)}</Text>
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity style={styles.button} onPress={createLease}>
-                <Text style={styles.buttonText}>确认签约</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-      <Modal visible={Boolean(terminatingLease)} transparent animationType="fade" onRequestClose={() => setTerminatingLease(undefined)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
-              <View style={styles.sectionHeader}>
-                <View>
-                  <Text style={styles.sectionTitle}>合约终止</Text>
-                  <Text style={styles.muted}>{terminatingLease?.tenantName} · {terminatingLease?.startDate.slice(0, 10)} 至 {terminatingLease?.endDate.slice(0, 10)}</Text>
-                </View>
-                <TouchableOpacity style={styles.smallButton} onPress={() => setTerminatingLease(undefined)}>
-                  <Text style={styles.smallButtonText}>关闭</Text>
-                </TouchableOpacity>
-              </View>
+      </TaskSheet>
+      <TaskSheet
+        visible={Boolean(terminatingLease)}
+        variant="drawer"
+        title="合约终止"
+        subtitle={terminatingLease ? `${terminatingLease.tenantName} · ${terminatingLease.startDate.slice(0, 10)} 至 ${terminatingLease.endDate.slice(0, 10)}` : undefined}
+        onClose={() => setTerminatingLease(undefined)}
+        footer={(
+          <TouchableOpacity style={styles.smallDangerButton} onPress={terminateLease}>
+            <Text style={styles.smallDangerText}>确认终止合约</Text>
+          </TouchableOpacity>
+        )}
+      >
               <View style={styles.segment}>
                 {(Object.keys(terminationLabels) as TerminationType[]).map((item) => (
                   <TouchableOpacity
@@ -746,13 +738,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
               <Text style={styles.fieldLabel}>原因</Text>
               <TextInput style={[styles.input, styles.textarea]} multiline placeholder="可选，默认使用解约类型" value={terminationForm.reason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
               {terminatingLease?.isAutoRenewalPeriod ? <Text style={styles.muted}>当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}
-              <TouchableOpacity style={styles.smallDangerButton} onPress={terminateLease}>
-                <Text style={styles.smallDangerText}>确认终止合约</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </TaskSheet>
     </>
   );
 }

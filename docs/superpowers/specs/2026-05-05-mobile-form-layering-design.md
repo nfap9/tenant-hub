@@ -25,26 +25,26 @@ The existing mobile UI guideline already states that forms with three or more in
 
 Business screens must not render a form directly at the feature entry point. The entry point should show only context, summary data, and an action button.
 
-Short forms use a bottom sheet or lightweight dialog. These are appropriate when the task has a small number of fields, is quick to complete, and benefits from keeping the source list or detail page visible behind it.
+All business forms use a drawer or dedicated subpage. Short forms may use a compact drawer, but they should not use confirmation dialogs or bottom sheets when the user needs to enter and submit data.
 
 Medium forms use a scrollable drawer. These are appropriate when the task has several fields, a selectable object list, or needs more vertical room while still preserving background context.
 
 Complex forms use a dedicated subpage. These are appropriate when the task has many fields, multiple sections, or requires focused editing space.
 
-High-risk confirmation actions use a dialog unless they require a longer explanation or additional input, in which case they use a drawer.
+High-risk confirmation actions use a dialog only when the user is making a short decision. If the action requires any additional input, the input step uses a drawer or subpage.
 
 ## Form Classification
 
 ### Short Forms
 
-The following forms should move into a bottom sheet or lightweight dialog:
+The following forms should move into a compact drawer:
 
 - `记录花费`
 - `登记收款`
 - `添加费用项`
-- simple delete confirmations
+Simple delete confirmations should use a dialog because they are confirmation actions, not forms.
 
-The sheet or dialog should include a clear title, optional context line, labeled fields, a close action, and a submit action. On successful submit it should close, reset only its own transient input values, refresh the page data, and show the existing notice message.
+The drawer should include a clear title, optional context line, labeled fields, a close action, and a submit action. On successful submit it should close, reset only its own transient input values, refresh the page data, and show the existing notice message.
 
 ### Medium Forms
 
@@ -77,7 +77,7 @@ Add a reusable mobile form container component, tentatively named `TaskSheet`, u
 The component should be based on React Native `Modal` and support:
 
 - `visible`
-- `variant`: `bottom`, `drawer`, or `dialog`
+- `variant`: `drawer` or `dialog`
 - `title`
 - optional `subtitle`
 - `onClose`
@@ -86,7 +86,7 @@ The component should be based on React Native `Modal` and support:
 
 The component owns the consistent overlay, card position, scroll behavior, title row, close button, and footer layout. Business pages own form state, validation, API calls, and success handling.
 
-Use `bottom` for short forms, `drawer` for medium forms, and `dialog` for confirmations. On native mobile, `drawer` can behave as a tall bottom sheet if a side drawer is not practical; the key requirement is that it is a separate scrollable task layer, not inline content.
+Use `drawer` for form tasks and `dialog` for confirmations. On native mobile, `drawer` can behave as a tall bottom sheet visually if a side drawer is not practical; the key requirement is that business forms use the drawer task layer, not inline content or confirmation dialogs.
 
 ## Screen Changes
 

@@ -256,11 +256,9 @@ export const styles = StyleSheet.create({
 
   // 新增：任务表单层
   taskSheetOverlay: { flex: 1, backgroundColor: "rgba(16, 37, 34, 0.42)" },
-  taskSheetOverlay_bottom: { justifyContent: "flex-end" },
   taskSheetOverlay_drawer: { justifyContent: "flex-end" },
   taskSheetOverlay_dialog: { justifyContent: "center", padding: 18 },
   taskSheetCard: { backgroundColor: "white", gap: 10, padding: 14 },
-  taskSheetCard_bottom: { maxHeight: "78%", borderTopLeftRadius: 12, borderTopRightRadius: 12 },
   taskSheetCard_drawer: { maxHeight: "90%", minHeight: "62%", borderTopLeftRadius: 12, borderTopRightRadius: 12 },
   taskSheetCard_dialog: { maxHeight: "78%", borderRadius: 8 },
   taskSheetTitleBlock: { flex: 1, gap: 2 },

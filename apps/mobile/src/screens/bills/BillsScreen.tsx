@@ -424,7 +424,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
 
       <TaskSheet
         visible={activeLayer === "payment"}
-        variant="bottom"
+        variant="drawer"
         title="登记收款"
         subtitle={selectedPaymentBill ? `${selectedPaymentBill.tenantName} · 应收 ¥${money(selectedPaymentBill.totalAmount)}` : "选择一张待收账单"}
         onClose={() => setActiveLayer(undefined)}
@@ -531,7 +531,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
 
       <TaskSheet
         visible={activeLayer === "utility"}
-        variant="bottom"
+        variant="drawer"
         title="录入本期水电"
         subtitle="按账单填写上期和本期读数"
         onClose={() => setActiveLayer(undefined)}

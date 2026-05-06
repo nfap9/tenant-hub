@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Modal, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
+import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Membership, Plan, SubscriptionOverview } from "../../types";
@@ -130,12 +131,25 @@ export default function PlanPurchaseSubPage({
           );
         })}
       </View>
-      <Modal visible={Boolean(confirmingPlan)} transparent animationType="fade" onRequestClose={() => setConfirmingPlanId(undefined)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.sectionTitle}>确认购买套餐</Text>
-            {confirmingPlan ? (
-              <>
+      <TaskSheet
+        visible={Boolean(confirmingPlan)}
+        variant="dialog"
+        title="确认购买套餐"
+        subtitle={confirmingPlan ? confirmingPlan.name : undefined}
+        onClose={() => setConfirmingPlanId(undefined)}
+        footer={confirmingPlan ? (
+          <View style={styles.roomActions}>
+            <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => setConfirmingPlanId(undefined)}>
+              <Text style={styles.secondaryButtonText}>取消</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.actionButton, buyingPlanId === confirmingPlan.id && styles.buttonDisabled]} disabled={buyingPlanId === confirmingPlan.id} onPress={() => buy(confirmingPlan.id)}>
+              <Text style={styles.buttonText}>{buyingPlanId === confirmingPlan.id ? "购买中" : "确认购买"}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      >
+        {confirmingPlan ? (
+          <>
                 <View style={styles.detailPanel}>
                   <View style={styles.detailRow}>
                     <Text style={styles.muted}>套餐</Text>
@@ -152,19 +166,9 @@ export default function PlanPurchaseSubPage({
                   </View>
                 </View>
                 {overview?.subscription ? <Text style={styles.muted}>当前套餐将更新为所选套餐。</Text> : null}
-                <View style={styles.roomActions}>
-                  <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => setConfirmingPlanId(undefined)}>
-                    <Text style={styles.secondaryButtonText}>取消</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, styles.actionButton, buyingPlanId === confirmingPlan.id && styles.buttonDisabled]} disabled={buyingPlanId === confirmingPlan.id} onPress={() => buy(confirmingPlan.id)}>
-                    <Text style={styles.buttonText}>{buyingPlanId === confirmingPlan.id ? "购买中" : "确认购买"}</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : null}
-          </View>
-        </View>
-      </Modal>
+          </>
+        ) : null}
+      </TaskSheet>
     </>
   );
 }

@@ -796,7 +796,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
 
       <TaskSheet
         visible={activeLayer === "expense"}
-        variant="bottom"
+        variant="drawer"
         title="记录花费"
         subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : "经营支出"}
         onClose={() => {
@@ -819,7 +819,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
 
       <TaskSheet
         visible={activeLayer === "fee"}
-        variant="bottom"
+        variant="drawer"
         title="添加费用项"
         subtitle={selectedApartment ? `${selectedApartment.name} · 签约可选费用` : undefined}
         onClose={() => setActiveLayer(undefined)}

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { styles } from "../theme/styles";
 
-export type TaskSheetVariant = "bottom" | "drawer" | "dialog";
+export type TaskSheetVariant = "drawer" | "dialog";
 
 type Props = {
   visible: boolean;
@@ -14,7 +14,7 @@ type Props = {
   footer?: ReactNode;
 };
 
-export function TaskSheet({ visible, variant = "bottom", title, subtitle, onClose, children, footer }: Props) {
+export function TaskSheet({ visible, variant = "drawer", title, subtitle, onClose, children, footer }: Props) {
   const isDialog = variant === "dialog";
 
   return (
