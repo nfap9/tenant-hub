@@ -6,6 +6,7 @@ import type { BillActionKey, BillTabKey } from "../../navigation/homeQuickAction
 import { mobileApi, mobileText } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Bill, BillStatus, MeterReading, MeterType, MonthlyBill, Room } from "../../types";
+import { getPaymentAmountError } from "./billPayment";
 import { getMonthlyBillCardSummary } from "./billPresentation";
 
 type Props = {
@@ -187,7 +188,8 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
     if (!paymentForm.monthlyBillId || !paymentForm.amount.trim()) return setNotice("请选择月度账单并填写收款金额");
     const bill = monthlyBills.find((item) => item.id === paymentForm.monthlyBillId);
     if (!bill || bill.status === "PAID" || bill.status === "VOID") return setNotice("请选择一张未结清账单");
-    if (Number(paymentForm.amount) > remainingAmount(bill)) return setNotice(`收款金额不能超过剩余应收 ¥${money(remainingAmount(bill))}`);
+    const amountError = getPaymentAmountError(paymentForm.amount, remainingAmount(bill));
+    if (amountError) return setNotice(amountError);
     try {
       await mobileApi(`/bills/monthly/${paymentForm.monthlyBillId}/payments`, token, apiOptions(organizationId, "POST", {
         amount: Number(paymentForm.amount),
