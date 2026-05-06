@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/ops-web dev",
     "build": "pnpm -r build",
+    "check": "pnpm test && pnpm typecheck && pnpm lint && pnpm build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
+    "acceptance": "pnpm acceptance:api && pnpm acceptance:ui",
+    "acceptance:api": "node scripts/acceptance-api.mjs",
+    "acceptance:ui": "node scripts/acceptance-ui.mjs",
+    "acceptance:docker": "docker compose up --build -d && pnpm acceptance",
     "db:generate": "pnpm --filter @tenant-hub/api prisma generate",
     "db:migrate": "pnpm --filter @tenant-hub/api prisma migrate dev"
   },

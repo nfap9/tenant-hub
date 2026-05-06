@@ -1,10 +1,11 @@
 import { ApartmentOutlined, CrownOutlined, LogoutOutlined, ProfileOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons";
 import { Button, Empty, Layout, Menu, Space, Typography, message } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { api, clearSession, readSession, writeSession } from "./api/client";
-import { AuthPage } from "./pages/AuthPage";
-import { AdminPage } from "./pages/AdminPage";
-import { OpsDashboardPage } from "./pages/OpsDashboardPage";
+
+const AuthPage = lazy(() => import("./pages/AuthPage").then((module) => ({ default: module.AuthPage })));
+const AdminPage = lazy(() => import("./pages/AdminPage").then((module) => ({ default: module.AdminPage })));
+const OpsDashboardPage = lazy(() => import("./pages/OpsDashboardPage").then((module) => ({ default: module.OpsDashboardPage })));
 
 const menuItems = [
   { key: "dashboard", icon: <ProfileOutlined />, label: "运营总览" },
@@ -45,23 +46,45 @@ export default function App() {
     return (
       <>
         {contextHolder}
-        <AuthPage
-          onAuthed={(next) => {
-            clearSession();
-            setSession(writeSession(next));
-            refreshMe();
-          }}
-        />
+        <Suspense fallback={null}>
+          <AuthPage
+            onAuthed={(next) => {
+              clearSession();
+              setSession(writeSession(next));
+              refreshMe();
+            }}
+          />
+        </Suspense>
       </>
     );
   }
 
   const page = {
-    dashboard: <OpsDashboardPage />,
-    users: <AdminPage section="users" />,
-    plans: <AdminPage section="plans" />,
-    organizations: <AdminPage section="organizations" />,
-    roles: <AdminPage section="roles" />
+    dashboard: (
+      <Suspense fallback={null}>
+        <OpsDashboardPage />
+      </Suspense>
+    ),
+    users: (
+      <Suspense fallback={null}>
+        <AdminPage section="users" />
+      </Suspense>
+    ),
+    plans: (
+      <Suspense fallback={null}>
+        <AdminPage section="plans" />
+      </Suspense>
+    ),
+    organizations: (
+      <Suspense fallback={null}>
+        <AdminPage section="organizations" />
+      </Suspense>
+    ),
+    roles: (
+      <Suspense fallback={null}>
+        <AdminPage section="roles" />
+      </Suspense>
+    )
   }[active];
 
   if (platformRole === "NONE") {

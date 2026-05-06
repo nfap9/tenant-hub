@@ -99,6 +99,16 @@ enum PlatformRole {
   SUPER_ADMIN
 }
 
+enum SettlementStatus {
+  PENDING
+  SETTLED
+}
+
+enum SettlementPaymentDirection {
+  RECEIVE
+  REFUND
+}
+
 model User {
   id           String       @id @default(cuid())
   phone        String       @unique
@@ -110,6 +120,9 @@ model User {
   memberships  OrgMember[]
   payments     Payment[]
   meterReadings MeterReading[]
+  createdOrgInvites OrgInvite[] @relation("OrgInviteCreatedBy")
+  usedOrgInvites    OrgInvite[] @relation("OrgInviteUsedBy")
+  settlementPayments SettlementPayment[]
 }
 
 model OtpCode {
@@ -141,6 +154,8 @@ model Organization {
   meterReadings MeterReading[]
   quotas        OrgQuotaPackage[]
   subscriptions Subscription[]
+  invites       OrgInvite[]
+  settlements   LeaseSettlement[]
 }
 
 model Role {
@@ -167,6 +182,25 @@ model OrgMember {
   role           Role          @relation(fields: [roleId], references: [id])
 
   @@unique([organizationId, userId])
+}
+
+model OrgInvite {
+  id             String       @id @default(cuid())
+  organizationId String
+  code           String       @unique
+  maxUses        Int          @default(1)
+  usedCount      Int          @default(0)
+  expiresAt      DateTime
+  createdById    String
+  usedById       String?
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User         @relation("OrgInviteCreatedBy", fields: [createdById], references: [id])
+  usedBy         User?        @relation("OrgInviteUsedBy", fields: [usedById], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([code, expiresAt])
 }
 
 model Apartment {
@@ -227,6 +261,7 @@ model Room {
   apartment   Apartment  @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   leases      Lease[]
   meterReadings MeterReading[]
+  settlements LeaseSettlement[]
 
   @@unique([apartmentId, roomNo])
 }
@@ -258,6 +293,59 @@ model Lease {
   bills             Bill[]
   monthlyBills      MonthlyBill[]
   meterReadings     MeterReading[]
+  settlement        LeaseSettlement?
+}
+
+model LeaseSettlement {
+  id                      String           @id @default(cuid())
+  organizationId          String
+  leaseId                 String           @unique
+  roomId                  String
+  type                    TerminationType
+  reason                  String?
+  terminatedAt            DateTime
+  depositAmount           Decimal          @db.Decimal(12, 2)
+  depositDeductionAmount  Decimal          @default(0) @db.Decimal(12, 2)
+  depositDeductionReason  String?
+  depositRefundAmount     Decimal          @default(0) @db.Decimal(12, 2)
+  rentAdjustmentAmount    Decimal          @default(0) @db.Decimal(12, 2)
+  previousWater           Decimal          @default(0) @db.Decimal(12, 2)
+  currentWater            Decimal          @default(0) @db.Decimal(12, 2)
+  previousPower           Decimal          @default(0) @db.Decimal(12, 2)
+  currentPower            Decimal          @default(0) @db.Decimal(12, 2)
+  waterUnitPrice          Decimal          @default(0) @db.Decimal(10, 2)
+  powerUnitPrice          Decimal          @default(0) @db.Decimal(10, 2)
+  utilityAmount           Decimal          @default(0) @db.Decimal(12, 2)
+  otherFeeAmount          Decimal          @default(0) @db.Decimal(12, 2)
+  otherFeeReason          String?
+  receivableAmount        Decimal          @default(0) @db.Decimal(12, 2)
+  refundableAmount        Decimal          @default(0) @db.Decimal(12, 2)
+  netAmount               Decimal          @default(0) @db.Decimal(12, 2)
+  status                  SettlementStatus @default(PENDING)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  organization            Organization     @relation(fields: [organizationId], references: [id])
+  lease                   Lease            @relation(fields: [leaseId], references: [id])
+  room                    Room             @relation(fields: [roomId], references: [id])
+  payments                SettlementPayment[]
+
+  @@index([organizationId, status])
+  @@index([roomId, terminatedAt])
+}
+
+model SettlementPayment {
+  id           String                     @id @default(cuid())
+  settlementId String
+  userId       String
+  direction    SettlementPaymentDirection
+  amount       Decimal                    @db.Decimal(12, 2)
+  paidAt       DateTime                   @default(now())
+  method       String
+  note         String?
+  settlement   LeaseSettlement            @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  user         User                       @relation(fields: [userId], references: [id])
+
+  @@index([settlementId, paidAt])
 }
 
 model LeaseFee {

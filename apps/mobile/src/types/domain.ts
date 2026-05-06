@@ -13,6 +13,19 @@ export type OrgMember = {
   role: OrgRole;
 };
 
+export type OrgInvite = {
+  id: string;
+  organizationId: string;
+  code: string;
+  maxUses: number;
+  usedCount: number;
+  expiresAt: string;
+  usedAt?: string;
+  createdAt: string;
+  createdBy?: { id: string; username: string; phone: string };
+  usedBy?: { id: string; username: string; phone: string };
+};
+
 export type Plan = {
   id: string;
   name: string;
@@ -174,6 +187,37 @@ export type Payment = {
   method: string;
   note?: string;
   user?: { id: string; username: string; phone: string };
+};
+
+export type SettlementStatus = "PENDING" | "SETTLED";
+export type SettlementPaymentDirection = "RECEIVE" | "REFUND";
+
+export type LeaseSettlement = {
+  id: string;
+  organizationId: string;
+  leaseId: string;
+  roomId: string;
+  type: TerminationType;
+  reason?: string;
+  terminatedAt: string;
+  depositAmount: string | number;
+  depositDeductionAmount: string | number;
+  depositDeductionReason?: string;
+  depositRefundAmount: string | number;
+  rentAdjustmentAmount: string | number;
+  previousWater: string | number;
+  currentWater: string | number;
+  previousPower: string | number;
+  currentPower: string | number;
+  waterUnitPrice: string | number;
+  powerUnitPrice: string | number;
+  utilityAmount: string | number;
+  otherFeeAmount: string | number;
+  otherFeeReason?: string;
+  receivableAmount: string | number;
+  refundableAmount: string | number;
+  netAmount: string | number;
+  status: SettlementStatus;
 };
 
 export type MonthlyBill = {

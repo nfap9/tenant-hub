@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
-    "test": "tsx src/services/billing.test.ts && tsx src/services/leaseLifecycle.test.ts",
+    "test": "tsx src/services/billing.test.ts && tsx src/services/leaseLifecycle.test.ts && tsx src/services/orgInvites.test.ts && tsx src/services/leaseSettlement.test.ts && tsx src/services/utilityImport.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prisma": "prisma"
   },

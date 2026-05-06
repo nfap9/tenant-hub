@@ -1,5 +1,5 @@
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MainTabBar from "../navigation/MainTabBar";
 import { tabItems } from "../navigation/tabs";
 import ApartmentsScreen from "../screens/apartments/ApartmentsScreen";
@@ -34,6 +34,10 @@ export default function AppRoot() {
   } = useAppSession();
 
   const title = useMemo(() => tabItems.find((tab) => tab.key === active)?.label ?? "首页", [active]);
+
+  useEffect(() => {
+    setUserMenuOpen(false);
+  }, [active, session?.user.id]);
 
   if (!session) {
     return (
@@ -101,7 +105,7 @@ export default function AppRoot() {
         {memberships.length === 0 ? (
           <View style={styles.panel}>
             <Text style={styles.sectionTitle}>开始使用 Tenant Hub</Text>
-            <Text style={styles.muted}>你还没有加入组织。先创建自己的组织，或输入组织编码加入已有团队。</Text>
+            <Text style={styles.muted}>你还没有加入组织。先创建自己的组织，或输入管理员生成的邀请码加入已有团队。</Text>
             <View style={styles.roomActions}>
               <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => setActive("settings")}>
                 <Text style={styles.buttonText}>创建或加入组织</Text>

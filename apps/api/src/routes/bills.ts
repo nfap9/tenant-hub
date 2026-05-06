@@ -5,6 +5,7 @@ import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
 import { generateLeaseBills, recordMonthlyBillPayment, refreshBillTotals, retryPostpaidBillAndMonthlyBill } from "../services/billing.js";
 import { PERMISSIONS } from "../services/roles.js";
+import { parseUtilityImportRows } from "../services/utilityImport.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 
@@ -129,8 +130,54 @@ billRouter.post(
   })
 );
 
+const applyUtilityReadingToBill = async ({
+  billId,
+  organizationId,
+  previousWater,
+  currentWater,
+  previousPower,
+  currentPower
+}: {
+  billId: string;
+  organizationId: string;
+  previousWater: number;
+  currentWater: number;
+  previousPower: number;
+  currentPower: number;
+}) => {
+  const bill = await prisma.bill.findFirst({
+    where: { id: billId, organizationId },
+    include: { items: true }
+  });
+  if (!bill) throw new HttpError(404, "账单不存在");
+  if (bill.mode !== "POSTPAID") throw new HttpError(400, "仅后付费水电账单可以录入读数");
+
+  const waterItem = bill.items.find((item) => item.type === "WATER");
+  const powerItem = bill.items.find((item) => item.type === "POWER");
+  if (!waterItem || !powerItem) throw new HttpError(400, "账单缺少水电项目");
+  if (currentWater < previousWater) throw new HttpError(400, "水表本期读数不能小于上期读数");
+  if (currentPower < previousPower) throw new HttpError(400, "电表本期读数不能小于上期读数");
+
+  const waterAmount = new Prisma.Decimal(currentWater).minus(previousWater).mul(waterItem.waterUnitPrice ?? 0);
+  const powerAmount = new Prisma.Decimal(currentPower).minus(previousPower).mul(powerItem.powerUnitPrice ?? 0);
+
+  await prisma.$transaction([
+    prisma.billItem.update({
+      where: { id: waterItem.id },
+      data: { previousWater, currentWater, amount: waterAmount, status: "UNPAID" }
+    }),
+    prisma.billItem.update({
+      where: { id: powerItem.id },
+      data: { previousPower, currentPower, amount: powerAmount, status: "UNPAID" }
+    }),
+    prisma.bill.update({ where: { id: bill.id }, data: { status: "UNPAID", failureReason: null } })
+  ]);
+  await refreshBillTotals(bill.id);
+  return prisma.bill.findUnique({ where: { id: bill.id }, include: { items: true } });
+};
+
 billRouter.post(
-  "/items/:itemId/utility-reading",
+  "/:id/utility-reading",
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
@@ -141,20 +188,7 @@ billRouter.post(
         currentPower: z.coerce.number()
       })
       .parse(req.body);
-    const item = await prisma.billItem.findUniqueOrThrow({ where: { id: req.params.itemId } });
-    const waterUnitPrice = new Prisma.Decimal(item.waterUnitPrice ?? 0);
-    const powerUnitPrice = new Prisma.Decimal(item.powerUnitPrice ?? 0);
-    const amount = new Prisma.Decimal(input.currentWater)
-      .minus(input.previousWater)
-      .mul(waterUnitPrice)
-      .plus(new Prisma.Decimal(input.currentPower).minus(input.previousPower).mul(powerUnitPrice));
-
-    const updated = await prisma.billItem.update({
-      where: { id: item.id },
-      data: { ...input, amount, status: "UNPAID" }
-    });
-    await refreshBillTotals(item.billId);
-    ok(res, updated);
+    ok(res, await applyUtilityReadingToBill({ billId: req.params.id, organizationId: req.organizationId!, ...input }));
   })
 );
 
@@ -185,28 +219,17 @@ billRouter.post(
   "/utility/import",
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        rows: z.array(
-          z.object({
-            itemId: z.string(),
-            previousWater: z.coerce.number(),
-            currentWater: z.coerce.number(),
-            previousPower: z.coerce.number(),
-            currentPower: z.coerce.number()
-          })
-        )
-      })
-      .parse(req.body);
+    const input = z.object({ csv: z.string().optional(), rows: z.array(z.object({
+      billId: z.string(),
+      previousWater: z.coerce.number(),
+      currentWater: z.coerce.number(),
+      previousPower: z.coerce.number(),
+      currentPower: z.coerce.number()
+    })).optional() }).parse(req.body);
+    const rows = input.csv ? parseUtilityImportRows(input.csv) : input.rows ?? [];
     const results = [];
-    for (const row of input.rows) {
-      const item = await prisma.billItem.findUniqueOrThrow({ where: { id: row.itemId } });
-      const amount = new Prisma.Decimal(row.currentWater)
-        .minus(row.previousWater)
-        .mul(item.waterUnitPrice ?? 0)
-        .plus(new Prisma.Decimal(row.currentPower).minus(row.previousPower).mul(item.powerUnitPrice ?? 0));
-      results.push(await prisma.billItem.update({ where: { id: item.id }, data: { ...row, amount, status: "UNPAID" } }));
-      await refreshBillTotals(item.billId);
+    for (const row of rows) {
+      results.push(await applyUtilityReadingToBill({ ...row, organizationId: req.organizationId! }));
     }
     ok(res, results);
   })

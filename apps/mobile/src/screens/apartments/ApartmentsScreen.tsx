@@ -357,7 +357,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
     if (!canManageRoom) return setNotice("当前角色没有管理房间权限");
     if (!roomForm.roomNo.trim() || !roomForm.layout.trim()) return setNotice("请填写房间号和户型");
     try {
-      await mobileApi(`/apartments/${selectedApartment.id}/rooms/batch`, token, apiOptions(organizationId, "POST", {
+      const result = await mobileApi<{ count: number }>(`/apartments/${selectedApartment.id}/rooms/batch`, token, apiOptions(organizationId, "POST", {
         rooms: [{
           roomNo: roomForm.roomNo.trim(),
           layout: roomForm.layout.trim(),
@@ -365,7 +365,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
           facilities: toFacilityArray(roomForm.facilities)
         }]
       }));
-      setNotice("房间已添加");
+      setNotice(result.count > 0 ? "房间已添加" : "房间号已存在，未重复创建");
       resetRoomWork();
       await loadApartments();
     } catch (error) {

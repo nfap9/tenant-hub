@@ -4,7 +4,7 @@ import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
-import type { ApartmentFeeItem, Lease, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
+import type { ApartmentFeeItem, Lease, LeaseSettlement, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
 
 type Props = {
   token: string;
@@ -39,6 +39,13 @@ type TerminationForm = {
   type: TerminationType;
   terminatedAt: string;
   reason: string;
+  depositDeductionAmount: string;
+  depositDeductionReason: string;
+  rentAdjustmentAmount: string;
+  currentWater: string;
+  currentPower: string;
+  otherFeeAmount: string;
+  otherFeeReason: string;
 };
 
 const statusLabels: Record<RoomStatus, string> = {
@@ -70,6 +77,7 @@ const apiOptions = (organizationId: string, method = "GET", body?: unknown): Req
   ...(body ? { body: JSON.stringify(body) } : {})
 });
 const money = (value?: string | number) => Number(value ?? 0).toFixed(2);
+const numberValue = (value: string) => Number(value || 0);
 const defaultTerminationType = (lease: Lease): TerminationType => (today() > lease.endDate.slice(0, 10) ? "EXPIRED" : "NEGOTIATED");
 const hasPermission = (membership: Membership | undefined, permission: string) =>
   Boolean(membership?.role.permissions.includes("*") || membership?.role.permissions.includes(permission));
@@ -96,7 +104,19 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
   });
   const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
   const [terminatingLease, setTerminatingLease] = useState<Lease>();
-  const [terminationForm, setTerminationForm] = useState<TerminationForm>({ type: "NEGOTIATED", terminatedAt: today(), reason: "" });
+  const [previousReadings, setPreviousReadings] = useState({ previousWater: 0, previousPower: 0 });
+  const [terminationForm, setTerminationForm] = useState<TerminationForm>({
+    type: "NEGOTIATED",
+    terminatedAt: today(),
+    reason: "",
+    depositDeductionAmount: "0",
+    depositDeductionReason: "",
+    rentAdjustmentAmount: "0",
+    currentWater: "0",
+    currentPower: "0",
+    otherFeeAmount: "0",
+    otherFeeReason: ""
+  });
 
   const selectedRoom = useMemo(() => rooms.find((item) => item.id === selectedId), [rooms, selectedId]);
   const editingRoom = useMemo(() => rooms.find((item) => item.id === editingRoomId), [rooms, editingRoomId]);
@@ -106,6 +126,20 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
   const occupiedCount = rooms.filter((item) => item.status === "OCCUPIED").length;
   const canManageRoom = hasPermission(currentMembership, "room:manage");
   const canManageLease = hasPermission(currentMembership, "lease:manage");
+  const settlementPreview = useMemo(() => {
+    if (!terminatingLease) return { utility: 0, depositRefund: 0, receivable: 0, refundable: 0, net: 0 };
+    const deposit = Number(terminatingLease.depositAmount ?? 0);
+    const depositDeduction = numberValue(terminationForm.depositDeductionAmount);
+    const rentAdjustment = numberValue(terminationForm.rentAdjustmentAmount);
+    const water = Math.max(numberValue(terminationForm.currentWater) - previousReadings.previousWater, 0) * Number(terminatingLease.waterUnitPrice ?? 0);
+    const power = Math.max(numberValue(terminationForm.currentPower) - previousReadings.previousPower, 0) * Number(terminatingLease.powerUnitPrice ?? 0);
+    const utility = water + power;
+    const otherFee = numberValue(terminationForm.otherFeeAmount);
+    const depositRefund = Math.max(deposit - depositDeduction, 0);
+    const receivable = Math.max(rentAdjustment, 0) + utility + otherFee + depositDeduction;
+    const refundable = depositRefund + Math.max(-rentAdjustment, 0);
+    return { utility, depositRefund, receivable, refundable, net: receivable - refundable };
+  }, [previousReadings, terminatingLease, terminationForm]);
 
   const loadRooms = useCallback(async () => {
     if (!organizationId) return;
@@ -220,19 +254,48 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
 
   const openTermination = (lease: Lease) => {
     setTerminatingLease(lease);
-    setTerminationForm({ type: defaultTerminationType(lease), terminatedAt: today(), reason: "" });
+    setPreviousReadings({ previousWater: 0, previousPower: 0 });
+    setTerminationForm({
+      type: defaultTerminationType(lease),
+      terminatedAt: today(),
+      reason: "",
+      depositDeductionAmount: "0",
+      depositDeductionReason: "",
+      rentAdjustmentAmount: "0",
+      currentWater: "0",
+      currentPower: "0",
+      otherFeeAmount: "0",
+      otherFeeReason: ""
+    });
+    if (organizationId) {
+      mobileApi<{ previousWater: string | number; previousPower: string | number }>(
+        `/leases/${lease.id}/settlement-preview?terminatedAt=${encodeURIComponent(today())}`,
+        token,
+        apiOptions(organizationId)
+      )
+        .then((data) => setPreviousReadings({ previousWater: Number(data.previousWater ?? 0), previousPower: Number(data.previousPower ?? 0) }))
+        .catch((error) => setNotice(error instanceof Error ? error.message : "退租读数加载失败"));
+    }
   };
 
   const terminateLease = async () => {
     if (!organizationId || !terminatingLease) return;
     if (!canManageLease) return setNotice("当前角色没有管理租约权限");
     try {
-      await mobileApi(`/leases/${terminatingLease.id}/terminate`, token, apiOptions(organizationId, "POST", {
+      const settlement = await mobileApi<LeaseSettlement>(`/leases/${terminatingLease.id}/terminate`, token, apiOptions(organizationId, "POST", {
         type: terminationForm.type,
         reason: terminationForm.reason.trim() || terminationLabels[terminationForm.type],
-        terminatedAt: terminationForm.terminatedAt
+        terminatedAt: terminationForm.terminatedAt,
+        depositDeductionAmount: numberValue(terminationForm.depositDeductionAmount),
+        depositDeductionReason: terminationForm.depositDeductionReason.trim() || undefined,
+        rentAdjustmentAmount: numberValue(terminationForm.rentAdjustmentAmount),
+        currentWater: numberValue(terminationForm.currentWater),
+        currentPower: numberValue(terminationForm.currentPower),
+        otherFeeAmount: numberValue(terminationForm.otherFeeAmount),
+        otherFeeReason: terminationForm.otherFeeReason.trim() || undefined
       }));
-      setNotice("退租完成，房间已转为空闲");
+      const net = Number(settlement.netAmount);
+      setNotice(net > 0 ? `退租完成，租客应补交 ¥${money(net)}` : net < 0 ? `退租完成，应退租客 ¥${money(Math.abs(net))}` : "退租完成，结算已结清");
       setTerminatingLease(undefined);
       await loadRooms();
     } catch (error) {
@@ -541,6 +604,68 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
               </View>
               <Text style={styles.fieldLabel}>退租日期</Text>
               <DateField value={terminationForm.terminatedAt} onChange={(value) => setTerminationForm((old) => ({ ...old, terminatedAt: value }))} />
+              <View style={styles.detailPanel}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.muted}>原押金</Text>
+                  <Text style={styles.cardStat}>¥{money(terminatingLease?.depositAmount)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.muted}>预计退押金</Text>
+                  <Text style={styles.cardStat}>¥{money(settlementPreview.depositRefund)}</Text>
+                </View>
+              </View>
+              <View style={styles.formGrid}>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>押金扣款</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.depositDeductionAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, depositDeductionAmount: value }))} />
+                </View>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>房租退补</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.rentAdjustmentAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, rentAdjustmentAmount: value }))} />
+                </View>
+              </View>
+              <TextInput style={styles.input} placeholder="押金扣款原因" value={terminationForm.depositDeductionReason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, depositDeductionReason: value }))} />
+              <View style={styles.formGrid}>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>退租水表读数</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.currentWater} onChangeText={(value) => setTerminationForm((old) => ({ ...old, currentWater: value }))} />
+                  <Text style={styles.muted}>上次 {money(previousReadings.previousWater)}</Text>
+                </View>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>退租电表读数</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.currentPower} onChangeText={(value) => setTerminationForm((old) => ({ ...old, currentPower: value }))} />
+                  <Text style={styles.muted}>上次 {money(previousReadings.previousPower)}</Text>
+                </View>
+              </View>
+              <View style={styles.formGrid}>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>其他费用</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.otherFeeAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, otherFeeAmount: value }))} />
+                </View>
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>预估水电费</Text>
+                  <View style={[styles.input, styles.dateField]}>
+                    <Text style={styles.dateFieldText}>¥{money(settlementPreview.utility)}</Text>
+                  </View>
+                </View>
+              </View>
+              <TextInput style={styles.input} placeholder="其他费用说明" value={terminationForm.otherFeeReason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, otherFeeReason: value }))} />
+              <View style={styles.detailPanel}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.muted}>应收</Text>
+                  <Text style={styles.cardStat}>¥{money(settlementPreview.receivable)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.muted}>应退</Text>
+                  <Text style={styles.cardStat}>¥{money(settlementPreview.refundable)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.muted}>结算结果</Text>
+                  <Text style={settlementPreview.net >= 0 ? styles.cardStat : styles.smallDangerText}>
+                    {settlementPreview.net > 0 ? `租客补交 ¥${money(settlementPreview.net)}` : settlementPreview.net < 0 ? `退租客 ¥${money(Math.abs(settlementPreview.net))}` : "结清"}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.fieldLabel}>原因</Text>
               <TextInput style={[styles.input, styles.textarea]} multiline placeholder="可选，默认使用解约类型" value={terminationForm.reason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
               {terminatingLease?.isAutoRenewalPeriod ? <Text style={styles.muted}>当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}

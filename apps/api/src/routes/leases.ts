@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
 import { generateActiveAutoRenewBills, generateLeaseBills } from "../services/billing.js";
 import { assertExpiredTerminationAllowed, withLeaseLifecycle } from "../services/leaseLifecycle.js";
+import { createLeaseSettlement, getLeaseSettlementPreview, recordSettlementPayment } from "../services/leaseSettlement.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
@@ -91,7 +92,18 @@ leaseRouter.post(
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
-      .object({ type: z.enum(["EXPIRED", "NEGOTIATED", "BREACH"]), reason: z.string().optional(), terminatedAt: z.coerce.date().default(new Date()) })
+      .object({
+        type: z.enum(["EXPIRED", "NEGOTIATED", "BREACH"]),
+        reason: z.string().optional(),
+        terminatedAt: z.coerce.date().default(new Date()),
+        depositDeductionAmount: amountSchema.default(0),
+        depositDeductionReason: z.string().optional(),
+        rentAdjustmentAmount: z.coerce.number().default(0),
+        currentWater: amountSchema,
+        currentPower: amountSchema,
+        otherFeeAmount: amountSchema.default(0),
+        otherFeeReason: z.string().optional()
+      })
       .parse(req.body);
     const current = await prisma.lease.findFirst({
       where: { id: req.params.id, organizationId: req.organizationId! },
@@ -105,12 +117,60 @@ leaseRouter.post(
         throw new HttpError(400, error instanceof Error ? error.message : "到期解约的退租日期不能早于原租约结束日期");
       }
     }
-    const lease = await prisma.lease.update({
-      where: { id: req.params.id },
-      data: { status: "TERMINATED", terminationType: input.type, terminationReason: input.reason, terminatedAt: input.terminatedAt },
-      include: leaseInclude
+    const settlement = await createLeaseSettlement({
+      leaseId: req.params.id,
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+      input
     });
-    await prisma.room.update({ where: { id: lease.roomId }, data: { status: "VACANT" } });
-    ok(res, withLeaseLifecycle(lease));
+    ok(res, settlement);
+  })
+);
+
+leaseRouter.get(
+  "/:id/settlement-preview",
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const terminatedAt = z.coerce.date().default(new Date()).parse(req.query.terminatedAt);
+    ok(res, await getLeaseSettlementPreview({ leaseId: req.params.id, organizationId: req.organizationId!, terminatedAt }));
+  })
+);
+
+leaseRouter.get(
+  "/settlements",
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    ok(
+      res,
+      await prisma.leaseSettlement.findMany({
+        where: { organizationId: req.organizationId! },
+        include: { lease: { include: leaseInclude }, room: true, payments: { include: { user: { select: { id: true, username: true, phone: true } } } } },
+        orderBy: { createdAt: "desc" }
+      })
+    );
+  })
+);
+
+leaseRouter.post(
+  "/settlements/:id/payments",
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        direction: z.enum(["RECEIVE", "REFUND"]),
+        amount: z.coerce.number().positive(),
+        method: z.string().min(1),
+        note: z.string().optional()
+      })
+      .parse(req.body);
+    ok(
+      res,
+      await recordSettlementPayment({
+        settlementId: req.params.id,
+        organizationId: req.organizationId!,
+        userId: req.user!.id,
+        ...input
+      })
+    );
   })
 );

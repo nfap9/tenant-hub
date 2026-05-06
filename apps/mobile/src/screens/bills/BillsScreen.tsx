@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
-import { mobileApi } from "../../services";
+import { mobileApi, mobileText } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Bill, BillStatus, MeterReading, MeterType, MonthlyBill, Room } from "../../types";
 
@@ -13,7 +13,7 @@ type Props = {
 };
 
 type TabKey = "monthly" | "meter" | "review";
-type BillLayer = "payment" | "reading";
+type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport";
 
 type ReadingForm = {
   roomId: string;
@@ -28,6 +28,14 @@ type PaymentForm = {
   amount: string;
   method: string;
   note: string;
+};
+
+type UtilityForm = {
+  billId: string;
+  previousWater: string;
+  currentWater: string;
+  previousPower: string;
+  currentPower: string;
 };
 
 const apiOptions = (organizationId: string, method = "GET", body?: unknown): RequestInit => ({
@@ -70,6 +78,8 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
   const [activeLayer, setActiveLayer] = useState<BillLayer>();
   const [readingForm, setReadingForm] = useState<ReadingForm>({ roomId: "", meterType: "WATER", readingDate: today(), value: "", note: "" });
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
+  const [utilityForm, setUtilityForm] = useState<UtilityForm>({ billId: "", previousWater: "", currentWater: "", previousPower: "", currentPower: "" });
+  const [utilityCsv, setUtilityCsv] = useState("");
 
   const unpaidTotal = useMemo(
     () => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID").reduce((sum, bill) => sum + remainingAmount(bill), 0),
@@ -175,6 +185,62 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
     }
   };
 
+  const openUtilityReading = (bill: Bill) => {
+    const water = bill.items?.find((item) => item.type === "WATER");
+    const power = bill.items?.find((item) => item.type === "POWER");
+    setUtilityForm({
+      billId: bill.id,
+      previousWater: water?.previousWater ? String(water.previousWater) : "",
+      currentWater: water?.currentWater ? String(water.currentWater) : "",
+      previousPower: power?.previousPower ? String(power.previousPower) : "",
+      currentPower: power?.currentPower ? String(power.currentPower) : ""
+    });
+    setActiveLayer("utility");
+  };
+
+  const submitUtilityReading = async () => {
+    if (!organizationId) return;
+    if (!utilityForm.billId) return setNotice("请选择水电账单");
+    try {
+      await mobileApi(`/bills/${utilityForm.billId}/utility-reading`, token, apiOptions(organizationId, "POST", {
+        previousWater: Number(utilityForm.previousWater || 0),
+        currentWater: Number(utilityForm.currentWater || 0),
+        previousPower: Number(utilityForm.previousPower || 0),
+        currentPower: Number(utilityForm.currentPower || 0)
+      }));
+      setNotice("水电读数已录入");
+      setActiveLayer(undefined);
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "水电录入失败");
+    }
+  };
+
+  const exportUtilityCsv = async () => {
+    if (!organizationId) return;
+    try {
+      const csv = await mobileText("/bills/utility/pending-export", token, { headers: { "x-organization-id": organizationId } });
+      setUtilityCsv(csv);
+      setActiveLayer("utilityExport");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "导出失败");
+    }
+  };
+
+  const importUtilityCsv = async () => {
+    if (!organizationId) return;
+    if (!utilityCsv.trim()) return setNotice("请粘贴导入内容");
+    try {
+      await mobileApi("/bills/utility/import", token, apiOptions(organizationId, "POST", { csv: utilityCsv }));
+      setNotice("水电读数已导入");
+      setUtilityCsv("");
+      setActiveLayer(undefined);
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "导入失败");
+    }
+  };
+
   if (!organizationId) {
     return (
       <View style={styles.panel}>
@@ -228,9 +294,17 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
           </TouchableOpacity>
         ) : null}
         {tab === "meter" ? (
-          <TouchableOpacity style={styles.button} onPress={() => setActiveLayer("reading")}>
-            <Text style={styles.buttonText}>录入读数</Text>
-          </TouchableOpacity>
+          <View style={styles.roomActions}>
+            <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => setActiveLayer("reading")}>
+              <Text style={styles.buttonText}>录入读数</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={exportUtilityCsv}>
+              <Text style={styles.secondaryButtonText}>导出</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => setActiveLayer("utilityImport")}>
+              <Text style={styles.secondaryButtonText}>导入</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
       </View>
 
@@ -262,6 +336,11 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
                       <Text style={styles.muted}>¥{money(item.amount)}</Text>
                     </View>
                   ))}
+                  {child.mode === "POSTPAID" ? (
+                    <TouchableOpacity style={styles.secondaryButton} onPress={() => openUtilityReading(child)}>
+                      <Text style={styles.secondaryButtonText}>录入本期水电</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               ))}
               {(bill.payments ?? []).length ? (
@@ -393,10 +472,70 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
               <TouchableOpacity style={styles.secondaryButton} onPress={() => retryBill(bill)}>
                 <Text style={styles.secondaryButtonText}>重新出账并生成月度账单</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={() => openUtilityReading(bill)}>
+                <Text style={styles.buttonText}>直接录入水电读数</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </>
       ) : null}
+
+      <TaskSheet
+        visible={activeLayer === "utility"}
+        variant="bottom"
+        title="录入本期水电"
+        subtitle="按账单填写上期和本期读数"
+        onClose={() => setActiveLayer(undefined)}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={submitUtilityReading}>
+            <Text style={styles.buttonText}>保存水电读数</Text>
+          </TouchableOpacity>
+        )}
+      >
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>上月水表</Text>
+            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.previousWater} onChangeText={(value) => setUtilityForm((old) => ({ ...old, previousWater: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>本月水表</Text>
+            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.currentWater} onChangeText={(value) => setUtilityForm((old) => ({ ...old, currentWater: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>上月电表</Text>
+            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.previousPower} onChangeText={(value) => setUtilityForm((old) => ({ ...old, previousPower: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>本月电表</Text>
+            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.currentPower} onChangeText={(value) => setUtilityForm((old) => ({ ...old, currentPower: value }))} />
+          </View>
+        </View>
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "utilityImport"}
+        variant="drawer"
+        title="导入水电读数"
+        subtitle="粘贴从导出模板填写后的 CSV 内容"
+        onClose={() => setActiveLayer(undefined)}
+        footer={(
+          <TouchableOpacity style={styles.button} onPress={importUtilityCsv}>
+            <Text style={styles.buttonText}>确认导入</Text>
+          </TouchableOpacity>
+        )}
+      >
+        <TextInput style={[styles.input, styles.textarea]} multiline value={utilityCsv} onChangeText={setUtilityCsv} placeholder="billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因" />
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "utilityExport"}
+        variant="drawer"
+        title="待录入水电导出"
+        subtitle="复制下方 CSV 内容填写后再导入"
+        onClose={() => setActiveLayer(undefined)}
+      >
+        <TextInput style={[styles.input, styles.textarea]} multiline value={utilityCsv} onChangeText={setUtilityCsv} />
+      </TaskSheet>
     </>
   );
 }

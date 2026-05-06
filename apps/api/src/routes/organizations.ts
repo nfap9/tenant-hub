@@ -7,6 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { assertOrganizationQuota } from "../services/quotas.js";
+import { assertInviteJoinable, buildInviteExpiry, generateInviteCode, normalizeInviteCode } from "../services/orgInvites.js";
 
 export const orgRouter = Router();
 const orgCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 8);
@@ -45,18 +46,82 @@ orgRouter.post(
 orgRouter.post(
   "/join",
   asyncHandler(async (req, res) => {
-    const input = z.object({ code: z.string().min(4) }).parse(req.body);
-    const organization = await prisma.organization.findUnique({ where: { code: input.code } });
-    if (!organization || organization.status !== "ACTIVE") throw new HttpError(404, "组织不存在");
-    const activeMemberCount = await prisma.orgMember.count({ where: { organizationId: organization.id, status: "ACTIVE" } });
-    await assertOrganizationQuota(organization.id, "member", activeMemberCount + 1);
-    const role = await prisma.role.findUniqueOrThrow({ where: { code: "readonly" } });
-    const member = await prisma.orgMember.upsert({
-      where: { organizationId_userId: { organizationId: organization.id, userId: req.user!.id } },
-      create: { organizationId: organization.id, userId: req.user!.id, roleId: role.id },
-      update: { status: "ACTIVE" }
+    const input = z.object({ inviteCode: z.string().min(6) }).parse(req.body);
+    const invite = await prisma.orgInvite.findUnique({
+      where: { code: normalizeInviteCode(input.inviteCode) },
+      include: { organization: true }
     });
-    ok(res, { organization, member });
+    if (!invite) throw new HttpError(404, "邀请码不存在");
+    assertInviteJoinable({ invite });
+
+    const existingMember = await prisma.orgMember.findUnique({
+      where: { organizationId_userId: { organizationId: invite.organizationId, userId: req.user!.id } }
+    });
+    const activeMemberCount = await prisma.orgMember.count({ where: { organizationId: invite.organizationId, status: "ACTIVE" } });
+    if (!existingMember || existingMember.status !== "ACTIVE") {
+      await assertOrganizationQuota(invite.organizationId, "member", activeMemberCount + 1);
+    }
+    const role = await prisma.role.findUniqueOrThrow({ where: { code: "readonly" } });
+    if (existingMember?.status === "ACTIVE") {
+      ok(res, { organization: invite.organization, member: existingMember });
+      return;
+    }
+    const member = await prisma.$transaction(async (tx) => {
+      const consumed = await tx.orgInvite.updateMany({
+        where: { id: invite.id, usedCount: { lt: invite.maxUses } },
+        data: {
+          usedCount: { increment: 1 },
+          usedAt: new Date(),
+          usedById: req.user!.id
+        }
+      });
+      if (consumed.count !== 1) throw new HttpError(400, "邀请码已被使用");
+      return tx.orgMember.upsert({
+        where: { organizationId_userId: { organizationId: invite.organizationId, userId: req.user!.id } },
+        create: { organizationId: invite.organizationId, userId: req.user!.id, roleId: role.id },
+        update: { status: "ACTIVE" }
+      });
+    });
+    ok(res, { organization: invite.organization, member });
+  })
+);
+
+orgRouter.get(
+  "/:organizationId/invites",
+  requireOrg,
+  requirePermission(PERMISSIONS.MEMBER_MANAGE),
+  asyncHandler(async (req, res) => {
+    ok(
+      res,
+      await prisma.orgInvite.findMany({
+        where: { organizationId: req.organizationId! },
+        include: {
+          createdBy: { select: { id: true, username: true, phone: true } },
+          usedBy: { select: { id: true, username: true, phone: true } }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      })
+    );
+  })
+);
+
+orgRouter.post(
+  "/:organizationId/invites",
+  requireOrg,
+  requirePermission(PERMISSIONS.MEMBER_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z.object({ expiresInHours: z.coerce.number().int().min(1).max(168).default(24) }).parse(req.body);
+    const invite = await prisma.orgInvite.create({
+      data: {
+        organizationId: req.organizationId!,
+        code: generateInviteCode(),
+        expiresAt: buildInviteExpiry(new Date(), input.expiresInHours),
+        createdById: req.user!.id
+      },
+      include: { createdBy: { select: { id: true, username: true, phone: true } } }
+    });
+    ok(res, invite);
   })
 );
 

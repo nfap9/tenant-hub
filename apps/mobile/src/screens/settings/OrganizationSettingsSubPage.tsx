@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
-import type { Membership, OrgMember, OrgRole } from "../../types";
+import type { Membership, OrgInvite, OrgMember, OrgRole } from "../../types";
 
 type OrganizationSettingsSubPageProps = {
   token: string;
@@ -36,7 +36,8 @@ export default function OrganizationSettingsSubPage({
   onBack
 }: OrganizationSettingsSubPageProps) {
   const [orgDescription, setOrgDescription] = useState("");
-  const [joinCode, setJoinCode] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [invites, setInvites] = useState<OrgInvite[]>([]);
   const [onboardingAction, setOnboardingAction] = useState<"create" | "join">();
   const [editingOrg, setEditingOrg] = useState(false);
   const [activeRoleMemberId, setActiveRoleMemberId] = useState<string>();
@@ -47,6 +48,7 @@ export default function OrganizationSettingsSubPage({
   const canManageOrg = currentMembership?.role.permissions.includes("*") || currentMembership?.role.permissions.includes("org:manage");
   const managerRoles = roles.filter((role) => role.code !== "owner");
   const roleEditingMember = members.find((member) => member.id === activeRoleMemberId);
+  const inviteAvailable = (invite: OrgInvite) => new Date(invite.expiresAt).getTime() > Date.now() && invite.usedCount < invite.maxUses;
 
   useEffect(() => {
     setEditName(currentMembership?.organization.name ?? "");
@@ -67,6 +69,25 @@ export default function OrganizationSettingsSubPage({
     }
   };
 
+  const loadInvites = async () => {
+    if (!currentOrgId || !canManageMembers) {
+      setInvites([]);
+      return;
+    }
+    try {
+      const data = await mobileApi<OrgInvite[]>(`/organizations/${currentOrgId}/invites`, token, {
+        headers: { "x-organization-id": currentOrgId }
+      });
+      setInvites(data);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "邀请码加载失败");
+    }
+  };
+
+  useEffect(() => {
+    loadInvites();
+  }, [currentOrgId, canManageMembers]);
+
   return (
     <>
       <View style={styles.subPageHeader}>
@@ -79,7 +100,7 @@ export default function OrganizationSettingsSubPage({
         <>
           <View style={styles.panel}>
             <Text style={styles.sectionTitle}>团队管理</Text>
-            <Text style={styles.muted}>首次使用需要先创建组织，或输入组织编码加入已有团队。</Text>
+            <Text style={styles.muted}>首次使用需要先创建组织，或输入管理员生成的邀请码加入已有团队。</Text>
             {!onboardingAction ? (
               <>
                 <TouchableOpacity style={styles.settingItem} onPress={() => setOnboardingAction("create")}>
@@ -129,17 +150,17 @@ export default function OrganizationSettingsSubPage({
                     <Text style={styles.smallButtonText}>返回</Text>
                   </TouchableOpacity>
                 </View>
-                <TextInput value={joinCode} onChangeText={setJoinCode} style={styles.input} placeholder="输入组织编码" />
+                <TextInput value={inviteCode} onChangeText={setInviteCode} style={styles.input} placeholder="输入邀请码" autoCapitalize="characters" />
                 <TouchableOpacity
                   style={styles.secondaryButton}
                   onPress={() =>
                     run(async () => {
                       const result = await mobileApi<{ organization: { id: string } }>("/organizations/join", token, {
                         method: "POST",
-                        body: JSON.stringify({ code: joinCode })
+                        body: JSON.stringify({ inviteCode })
                       });
                       setCurrentOrgId(result.organization.id);
-                      setJoinCode("");
+                      setInviteCode("");
                       setOnboardingAction(undefined);
                     }, "已加入组织")
                   }
@@ -217,6 +238,7 @@ export default function OrganizationSettingsSubPage({
                 <Text style={styles.muted}>组织编码</Text>
                 <Text style={styles.cardStat}>{currentMembership.organization.code}</Text>
               </View>
+              <Text style={styles.muted}>组织编码仅用于识别组织，不能直接加入团队。</Text>
               <View style={styles.detailRow}>
                 <Text style={styles.muted}>组织描述</Text>
                 <Text style={styles.muted}>{currentMembership.organization.description || "未填写"}</Text>
@@ -269,6 +291,41 @@ export default function OrganizationSettingsSubPage({
           </View>
           <View style={styles.panel}>
             <Text style={styles.sectionTitle}>成员管理</Text>
+            {canManageMembers ? (
+              <View style={styles.detailPanel}>
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <Text style={styles.sectionTitle}>邀请成员</Text>
+                    <Text style={styles.muted}>邀请码 24 小时有效且仅可使用一次。</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.smallButton}
+                    onPress={() =>
+                      run(async () => {
+                        const invite = await mobileApi<OrgInvite>(`/organizations/${currentOrgId}/invites`, token, {
+                          method: "POST",
+                          headers: { "x-organization-id": currentOrgId! },
+                          body: JSON.stringify({ expiresInHours: 24 })
+                        });
+                        setInvites((old) => [invite, ...old]);
+                      }, "邀请码已生成")
+                    }
+                  >
+                    <Text style={styles.smallButtonText}>生成邀请码</Text>
+                  </TouchableOpacity>
+                </View>
+                {invites.slice(0, 3).map((invite) => (
+                  <View style={styles.detailRow} key={invite.id}>
+                    <View>
+                      <Text style={inviteAvailable(invite) ? styles.cardTitle : styles.muted}>{invite.code}</Text>
+                      <Text style={styles.muted}>过期时间 {invite.expiresAt.slice(0, 16).replace("T", " ")}</Text>
+                    </View>
+                    <Text style={inviteAvailable(invite) ? styles.cardStat : styles.muted}>{inviteAvailable(invite) ? "可用" : "已失效"}</Text>
+                  </View>
+                ))}
+                {invites.length === 0 ? <Text style={styles.muted}>暂无邀请码，点击生成后发给新成员。</Text> : null}
+              </View>
+            ) : null}
             {members.map((member) => (
               <View style={styles.memberCard} key={member.id}>
                 <View style={styles.memberHeader}>
