@@ -1,6 +1,7 @@
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import MainTabBar from "../navigation/MainTabBar";
+import type { BillActionKey, BillTabKey, HomeNavigationIntent, RoomActionKey } from "../navigation/homeQuickActions";
 import { tabItems } from "../navigation/tabs";
 import ApartmentsScreen from "../screens/apartments/ApartmentsScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -15,6 +16,11 @@ import { useAppSession } from "./useAppSession";
 export default function AppRoot() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [active, setActive] = useState<TabKey>("home");
+  const [billsInitialTab, setBillsInitialTab] = useState<BillTabKey>("monthly");
+  const [billsInitialAction, setBillsInitialAction] = useState<BillActionKey>();
+  const [billsTabRequestKey, setBillsTabRequestKey] = useState(0);
+  const [roomsInitialAction, setRoomsInitialAction] = useState<RoomActionKey>();
+  const [roomsActionRequestKey, setRoomsActionRequestKey] = useState(0);
   const [phone, setPhone] = useState("");
   const [loginMode, setLoginMode] = useState<"password" | "code">("code");
   const [orgName, setOrgName] = useState("");
@@ -35,6 +41,32 @@ export default function AppRoot() {
 
   const title = useMemo(() => tabItems.find((tab) => tab.key === active)?.label ?? "首页", [active]);
 
+  const openTab = useCallback((key: TabKey) => {
+    if (key === "bills") {
+      setBillsInitialTab("monthly");
+      setBillsInitialAction(undefined);
+      setBillsTabRequestKey((value) => value + 1);
+    }
+    if (key === "rooms") {
+      setRoomsInitialAction(undefined);
+      setRoomsActionRequestKey((value) => value + 1);
+    }
+    setActive(key);
+  }, []);
+
+  const navigateFromHome = useCallback((intent: HomeNavigationIntent) => {
+    if (intent.tab === "bills") {
+      setBillsInitialTab(intent.billsTab ?? "monthly");
+      setBillsInitialAction(intent.billsAction);
+      setBillsTabRequestKey((value) => value + 1);
+    }
+    if (intent.tab === "rooms") {
+      setRoomsInitialAction(intent.roomsAction);
+      setRoomsActionRequestKey((value) => value + 1);
+    }
+    setActive(intent.tab);
+  }, []);
+
   useEffect(() => {
     setUserMenuOpen(false);
   }, [active, session?.user.id]);
@@ -54,16 +86,20 @@ export default function AppRoot() {
   return (
     <SafeAreaView style={styles.shell}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.product}>Tenant Hub</Text>
-          <Text style={styles.subtitle}>{currentMembership?.organization.name ?? "尚未选择组织"}</Text>
+        <View style={styles.headerTitleBlock}>
+          <Text style={styles.headerTitle}>{title}</Text>
         </View>
-        <TouchableOpacity style={styles.userPill} onPress={() => setUserMenuOpen((value) => !value)}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{session.user.username.slice(0, 1)}</Text>
-          </View>
-          <Text style={styles.userName}>{session.user.username}</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.userPill} onPress={() => setUserMenuOpen((value) => !value)}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{session.user.username.slice(0, 1)}</Text>
+            </View>
+            <View style={styles.userPillText}>
+              <Text style={styles.userName}>{session.user.username}</Text>
+              <Text style={styles.userOrgName}>{currentMembership?.organization.name ?? "尚未选择组织"}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {userMenuOpen ? (
@@ -101,23 +137,38 @@ export default function AppRoot() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
-        <Text style={styles.title}>{title}</Text>
         {memberships.length === 0 ? (
           <View style={styles.panel}>
             <Text style={styles.sectionTitle}>开始使用 Tenant Hub</Text>
             <Text style={styles.muted}>你还没有加入组织。先创建自己的组织，或输入管理员生成的邀请码加入已有团队。</Text>
             <View style={styles.roomActions}>
-              <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => setActive("settings")}>
+              <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => openTab("settings")}>
                 <Text style={styles.buttonText}>创建或加入组织</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : null}
-        {active === "home" ? <HomeScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} /> : null}
+        {active === "home" ? <HomeScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} onNavigate={navigateFromHome} /> : null}
         {active === "rooms" ? (
-          <RoomsScreen token={session.token} organizationId={currentOrgId} currentMembership={currentMembership} setNotice={setNotice} />
+          <RoomsScreen
+            token={session.token}
+            organizationId={currentOrgId}
+            currentMembership={currentMembership}
+            setNotice={setNotice}
+            initialAction={roomsInitialAction}
+            actionRequestKey={roomsActionRequestKey}
+          />
         ) : null}
-        {active === "bills" ? <BillsScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} /> : null}
+        {active === "bills" ? (
+          <BillsScreen
+            token={session.token}
+            organizationId={currentOrgId}
+            setNotice={setNotice}
+            initialTab={billsInitialTab}
+            initialAction={billsInitialAction}
+            tabRequestKey={billsTabRequestKey}
+          />
+        ) : null}
         {active === "apartments" ? (
           <ApartmentsScreen token={session.token} organizationId={currentOrgId} currentMembership={currentMembership} setNotice={setNotice} />
         ) : null}
@@ -139,7 +190,7 @@ export default function AppRoot() {
         ) : null}
       </ScrollView>
 
-      <MainTabBar active={active} onChange={setActive} />
+      <MainTabBar active={active} onChange={openTab} />
     </SafeAreaView>
   );
 }

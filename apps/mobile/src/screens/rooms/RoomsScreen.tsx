@@ -2,15 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
+import type { RoomActionKey } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { ApartmentFeeItem, Lease, LeaseSettlement, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
+import { getLeaseCandidateRooms } from "./leaseCandidates";
 
 type Props = {
   token: string;
   organizationId?: string;
   currentMembership?: Membership;
   setNotice: (notice: string) => void;
+  initialAction?: RoomActionKey;
+  actionRequestKey?: number;
 };
 
 type RoomForm = {
@@ -82,8 +86,10 @@ const defaultTerminationType = (lease: Lease): TerminationType => (today() > lea
 const hasPermission = (membership: Membership | undefined, permission: string) =>
   Boolean(membership?.role.permissions.includes("*") || membership?.role.permissions.includes(permission));
 
-export default function RoomsScreen({ token, organizationId, currentMembership, setNotice }: Props) {
+export default function RoomsScreen({ token, organizationId, currentMembership, setNotice, initialAction, actionRequestKey = 0 }: Props) {
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [quickLeaseSelecting, setQuickLeaseSelecting] = useState(false);
   const [filter, setFilter] = useState<RoomStatus | "ALL">("ALL");
   const [selectedId, setSelectedId] = useState<string>();
   const [editingRoomId, setEditingRoomId] = useState<string>();
@@ -122,6 +128,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
   const editingRoom = useMemo(() => rooms.find((item) => item.id === editingRoomId), [rooms, editingRoomId]);
   const leaseRoom = useMemo(() => rooms.find((item) => item.id === leaseRoomId), [rooms, leaseRoomId]);
   const visibleRooms = useMemo(() => (filter === "ALL" ? rooms : rooms.filter((item) => item.status === filter)), [filter, rooms]);
+  const leaseCandidateRooms = useMemo(() => getLeaseCandidateRooms(rooms), [rooms]);
   const vacantCount = rooms.filter((item) => item.status === "VACANT").length;
   const occupiedCount = rooms.filter((item) => item.status === "OCCUPIED").length;
   const canManageRoom = hasPermission(currentMembership, "room:manage");
@@ -143,14 +150,33 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
 
   const loadRooms = useCallback(async () => {
     if (!organizationId) return;
+    setLoaded(false);
     const data = await mobileApi<Room[]>("/apartments/rooms", token, apiOptions(organizationId));
     setRooms(data);
     setSelectedId((old) => (old && data.some((item) => item.id === old) ? old : undefined));
+    setLoaded(true);
   }, [organizationId, token]);
 
   useEffect(() => {
     loadRooms().catch((error) => setNotice(error.message));
   }, [loadRooms, setNotice]);
+
+  useEffect(() => {
+    if (initialAction !== "lease") {
+      setQuickLeaseSelecting(false);
+      return;
+    }
+    if (!loaded) return;
+    if (!canManageLease) {
+      setQuickLeaseSelecting(false);
+      setNotice("当前角色没有管理租约权限");
+      return;
+    }
+    setQuickLeaseSelecting(true);
+    setSelectedId(undefined);
+    setLeaseRoomId(undefined);
+    setEditingRoomId(undefined);
+  }, [actionRequestKey, canManageLease, initialAction, loaded, setNotice]);
 
   useEffect(() => {
     if (!selectedRoom) return;
@@ -307,6 +333,13 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
     setSelectedFeeIds((old) => (old.includes(item.id) ? old.filter((id) => id !== item.id) : [...old, item.id]));
   };
 
+  const openLeaseForRoom = (room: Room) => {
+    setSelectedId(room.id);
+    setLeaseRoomId(room.id);
+    setEditingRoomId(undefined);
+    setQuickLeaseSelecting(false);
+  };
+
   if (!organizationId) {
     return (
       <View style={styles.panel}>
@@ -317,20 +350,56 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
 
   return (
     <>
-      <View style={styles.statRow}>
-        <View style={styles.statBlock}>
-          <Text style={styles.statLabel}>全部房间</Text>
-          <Text style={styles.statValue}>{rooms.length}</Text>
-        </View>
-        <View style={styles.statBlock}>
-          <Text style={styles.statLabel}>空闲</Text>
-          <Text style={styles.statValue}>{vacantCount}</Text>
-        </View>
-        <View style={styles.statBlock}>
-          <Text style={styles.statLabel}>已租</Text>
-          <Text style={styles.statValue}>{occupiedCount}</Text>
-        </View>
-      </View>
+      {quickLeaseSelecting ? (
+        <>
+          <View style={styles.panel}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>选择签约房间</Text>
+                <Text style={styles.muted}>选择一间空闲房后填写租客和租约信息</Text>
+              </View>
+              <TouchableOpacity style={styles.smallButton} onPress={() => setQuickLeaseSelecting(false)}>
+                <Text style={styles.smallButtonText}>返回</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {leaseCandidateRooms.length === 0 ? <Text style={styles.emptyText}>暂无空闲房间可签约</Text> : null}
+
+          <View style={styles.roomGrid}>
+            {leaseCandidateRooms.map((room) => (
+              <TouchableOpacity key={room.id} style={styles.leaseCandidateCard} onPress={() => openLeaseForRoom(room)}>
+                <View>
+                  <Text style={styles.cardTitle}>{room.apartment?.name} · {room.roomNo}</Text>
+                  <Text style={styles.muted}>{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
+                </View>
+                <Text style={[styles.statusBadge, styles.statusVacant]}>选择</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.statRow}>
+            <View style={styles.statBlock}>
+              <Text style={styles.statLabel}>全部房间</Text>
+              <Text style={styles.statValue}>{rooms.length}</Text>
+            </View>
+            <View style={styles.statBlock}>
+              <Text style={styles.statLabel}>空闲</Text>
+              <Text style={styles.statValue}>{vacantCount}</Text>
+            </View>
+            <View style={styles.statBlock}>
+              <Text style={styles.statLabel}>已租</Text>
+              <Text style={styles.statValue}>{occupiedCount}</Text>
+            </View>
+          </View>
+
+          {canManageLease ? (
+            <TouchableOpacity style={styles.button} onPress={() => setQuickLeaseSelecting(true)}>
+              <Text style={styles.buttonText}>签约入住</Text>
+            </TouchableOpacity>
+          ) : null}
 
       <View style={styles.filterBar}>
         {filters.map((item) => (
@@ -450,10 +519,12 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                   ) : null}
                 </>
               ) : null}
-            </View>
-          );
-        })}
+          </View>
+        );
+      })}
       </View>
+        </>
+      )}
       <TaskSheet
         visible={Boolean(editingRoom)}
         variant="drawer"

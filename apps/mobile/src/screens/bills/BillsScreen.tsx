@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
+import type { BillActionKey, BillTabKey } from "../../navigation/homeQuickActions";
 import { mobileApi, mobileText } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Bill, BillStatus, MeterReading, MeterType, MonthlyBill, Room } from "../../types";
@@ -11,9 +12,11 @@ type Props = {
   token: string;
   organizationId?: string;
   setNotice: (notice: string) => void;
+  initialTab?: BillTabKey;
+  initialAction?: BillActionKey;
+  tabRequestKey?: number;
 };
 
-type TabKey = "monthly" | "meter" | "review";
 type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail";
 
 type ReadingForm = {
@@ -69,13 +72,15 @@ const statusStyle = (status: BillStatus) => {
 const billModeText = (bill: Bill) => (bill.mode === "PREPAID" ? "预付" : "后付");
 const remainingAmount = (bill: MonthlyBill) => Number(bill.totalAmount) - Number(bill.paidAmount);
 
-export default function BillsScreen({ token, organizationId, setNotice }: Props) {
-  const [tab, setTab] = useState<TabKey>("monthly");
+export default function BillsScreen({ token, organizationId, setNotice, initialTab = "monthly", initialAction, tabRequestKey = 0 }: Props) {
+  const [tab, setTab] = useState<BillTabKey>(initialTab);
   const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [readings, setReadings] = useState<MeterReading[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [pendingAction, setPendingAction] = useState<BillActionKey>();
   const [activeLayer, setActiveLayer] = useState<BillLayer>();
   const [selectedMonthlyBillId, setSelectedMonthlyBillId] = useState("");
   const [readingForm, setReadingForm] = useState<ReadingForm>({ roomId: "", meterType: "WATER", readingDate: today(), value: "", note: "" });
@@ -114,6 +119,7 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
   const loadData = useCallback(async () => {
     if (!organizationId) return;
     setLoading(true);
+    setLoaded(false);
     try {
       const nextMonthlyBills = await mobileApi<MonthlyBill[]>("/bills/monthly", token, apiOptions(organizationId));
       const [failedBills, billingBills, nextReadings, nextRooms] = await Promise.all([
@@ -133,12 +139,25 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
       setNotice(error instanceof Error ? error.message : "账单加载失败");
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, [organizationId, setNotice, token]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    setTab(initialTab);
+    setActiveLayer(undefined);
+    setPendingAction(initialAction);
+  }, [initialAction, initialTab, tabRequestKey]);
+
+  useEffect(() => {
+    if (!loaded || pendingAction !== "payment") return;
+    openPayment();
+    setPendingAction(undefined);
+  }, [loaded, pendingAction, unpaidBills]);
 
   const submitReading = async () => {
     if (!organizationId) return;
@@ -270,7 +289,7 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
           ["monthly", "月度账单"],
           ["meter", "抄表"],
           ["review", "出账处理"]
-        ] as Array<[TabKey, string]>).map(([key, label]) => (
+        ] as Array<[BillTabKey, string]>).map(([key, label]) => (
           <TouchableOpacity key={key} style={[styles.segmentItem, tab === key && styles.segmentItemActive]} onPress={() => setTab(key)}>
             <Text style={[styles.segmentText, tab === key && styles.segmentTextActive]}>{label}</Text>
           </TouchableOpacity>

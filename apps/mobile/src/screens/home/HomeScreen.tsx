@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { homeQuickActions, type HomeNavigationIntent } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Apartment, Bill, Lease, MonthlyBill, Room } from "../../types";
@@ -8,6 +9,7 @@ type Props = {
   token: string;
   organizationId?: string;
   setNotice: (notice: string) => void;
+  onNavigate: (intent: HomeNavigationIntent) => void;
 };
 
 type TodoTone = "danger" | "warning" | "calm";
@@ -62,7 +64,7 @@ const todoBadgeStyle = (tone: TodoTone) => {
   return styles.todoBadge;
 };
 
-export default function HomeScreen({ token, organizationId, setNotice }: Props) {
+export default function HomeScreen({ token, organizationId, setNotice, onNavigate }: Props) {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
@@ -212,6 +214,22 @@ export default function HomeScreen({ token, organizationId, setNotice }: Props) 
         <View style={styles.statBlock}>
           <Text style={styles.statLabel}>出租率</Text>
           <Text style={styles.statValue}>{occupancyRate}%</Text>
+        </View>
+      </View>
+
+      <View style={styles.panel}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.quickActionTitle}>常用操作</Text>
+        </View>
+        <View style={styles.quickActionGrid}>
+          {homeQuickActions.map((action) => (
+            <TouchableOpacity key={action.key} style={styles.quickActionCard} onPress={() => onNavigate(action.intent)}>
+              <View style={styles.quickActionIcon}>
+                <Text style={styles.quickActionIconText}>{action.icon}</Text>
+              </View>
+              <Text style={styles.quickActionLabel}>{action.title}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
