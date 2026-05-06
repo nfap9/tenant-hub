@@ -182,6 +182,7 @@ export const styles = StyleSheet.create({
   roomGrid: { gap: 10 },
   roomCardActive: { borderWidth: 1, borderColor: "#146c5c", backgroundColor: "#eef6f2" },
   roomHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
+  roomHeaderBadges: { alignItems: "flex-end", gap: 5, flexShrink: 0 },
   roomActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, fontSize: 12, fontWeight: "700", overflow: "hidden" },
   statusVacant: { backgroundColor: "#e0f1ea", color: "#146c5c" },

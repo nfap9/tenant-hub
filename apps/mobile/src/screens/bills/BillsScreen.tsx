@@ -158,10 +158,8 @@ export default function BillsScreen({ token, organizationId, setNotice }: Props)
 
   const generateBills = async () => {
     if (!organizationId) return;
-    const activeLeaseIds = rooms.flatMap((room) => room.leases ?? []).filter((lease) => lease.status === "ACTIVE").map((lease) => lease.id);
-    if (!activeLeaseIds.length) return setNotice("暂无有效租约可生成账单");
-    await Promise.all(activeLeaseIds.map((leaseId) => mobileApi("/bills/generate", token, apiOptions(organizationId, "POST", { leaseId }))));
-    setNotice("账单已生成，完成出账的月度账单会自动出现");
+    const result = await mobileApi<{ leaseCount: number; billIds: string[] }>("/bills/generate", token, apiOptions(organizationId, "POST", {}));
+    setNotice(result.leaseCount > 0 ? "账单已生成，完成出账的月度账单会自动出现" : "暂无有效租约可生成账单");
     await loadData();
   };
 

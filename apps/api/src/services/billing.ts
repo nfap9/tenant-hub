@@ -65,6 +65,11 @@ export const getBillingDatesThrough = ({ leaseStartDate, leaseEndDate, cycle, to
   return dates;
 };
 
+export const getCurrentMonthBillWindow = (today = new Date()) => ({
+  start: startOfDay(today).startOf("month").toDate(),
+  end: startOfDay(today).add(1, "month").startOf("month").toDate()
+});
+
 export const calculateUtilityAmount = ({
   previousWater,
   currentWater,
@@ -353,13 +358,36 @@ export const generateLeaseBills = async (leaseId: string, today = new Date()) =>
   return generatedIds;
 };
 
-export const generateActiveAutoRenewBills = async (organizationId: string) => {
-  const leases = await prisma.lease.findMany({
-    where: { organizationId, status: "ACTIVE" },
-    select: { id: true }
-  });
+type CurrentLeaseBillDependencies = {
+  findCurrentLeases: (organizationId: string) => Promise<Array<{ id: string }>>;
+  generateLeaseBillsForLease: (leaseId: string, today: Date) => Promise<string[] | undefined>;
+};
 
-  await Promise.all(leases.map((lease) => generateLeaseBills(lease.id)));
+const defaultCurrentLeaseBillDependencies: CurrentLeaseBillDependencies = {
+  findCurrentLeases: (organizationId) =>
+    prisma.lease.findMany({
+      where: { organizationId, status: "ACTIVE" },
+      select: { id: true }
+    }),
+  generateLeaseBillsForLease: generateLeaseBills
+};
+
+export const generateCurrentLeaseBills = async (
+  organizationId: string,
+  today = new Date(),
+  dependencies: CurrentLeaseBillDependencies = defaultCurrentLeaseBillDependencies
+) => {
+  const leases = await dependencies.findCurrentLeases(organizationId);
+  const generated = await Promise.all(leases.map((lease) => dependencies.generateLeaseBillsForLease(lease.id, today)));
+
+  return {
+    leaseCount: leases.length,
+    billIds: generated.flatMap((ids) => ids ?? [])
+  };
+};
+
+export const generateActiveAutoRenewBills = async (organizationId: string) => {
+  await generateCurrentLeaseBills(organizationId);
 };
 
 export const retryPostpaidBillAndMonthlyBill = async (billId: string) => {

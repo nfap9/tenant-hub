@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
-import { generateLeaseBills, recordMonthlyBillPayment, refreshBillTotals, retryPostpaidBillAndMonthlyBill } from "../services/billing.js";
+import { generateCurrentLeaseBills, generateLeaseBills, recordMonthlyBillPayment, refreshBillTotals, retryPostpaidBillAndMonthlyBill } from "../services/billing.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { parseUtilityImportRows } from "../services/utilityImport.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -48,7 +48,11 @@ billRouter.post(
   "/generate",
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ leaseId: z.string(), today: z.coerce.date().optional() }).parse(req.body);
+    const input = z.object({ leaseId: z.string().optional(), today: z.coerce.date().optional() }).parse(req.body);
+    if (!input.leaseId) {
+      ok(res, await generateCurrentLeaseBills(req.organizationId!, input.today ?? new Date()));
+      return;
+    }
     const lease = await prisma.lease.findFirst({ where: { id: input.leaseId, organizationId: req.organizationId! }, select: { id: true } });
     if (!lease) throw new HttpError(404, "租约不存在");
     ok(res, { billIds: await generateLeaseBills(input.leaseId, input.today ?? new Date()) });

@@ -370,7 +370,10 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                     <Text style={styles.cardTitle}>{room.apartment?.name} · {room.roomNo}</Text>
                     <Text style={styles.muted}>{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
                   </View>
-                  <Text style={[styles.statusBadge, statusStyles[room.status]]}>{statusLabels[room.status]}</Text>
+                  <View style={styles.roomHeaderBadges}>
+                    <Text style={[styles.statusBadge, statusStyles[room.status]]}>{statusLabels[room.status]}</Text>
+                    {roomActiveLease?.currentMonthBillGenerated ? <Text style={styles.todoBadge}>本月账单已出</Text> : null}
+                  </View>
                 </View>
                 <Text style={styles.muted}>{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>
               </TouchableOpacity>

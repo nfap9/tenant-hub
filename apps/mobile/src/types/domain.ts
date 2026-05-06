@@ -124,6 +124,7 @@ export type Lease = {
   powerUnitPrice: string | number;
   autoRenew: boolean;
   isAutoRenewalPeriod?: boolean;
+  currentMonthBillGenerated?: boolean;
   status: LeaseStatus;
   terminationType?: TerminationType;
   terminationReason?: string;

@@ -5,7 +5,7 @@ import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.j
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
-import { generateActiveAutoRenewBills } from "../services/billing.js";
+import { generateActiveAutoRenewBills, getCurrentMonthBillWindow } from "../services/billing.js";
 import { withLeaseLifecycle } from "../services/leaseLifecycle.js";
 import { assertOrganizationQuota } from "../services/quotas.js";
 
@@ -42,10 +42,27 @@ apartmentRouter.get(
   requirePermission(PERMISSIONS.APARTMENT_VIEW),
   asyncHandler(async (req, res) => {
     await generateActiveAutoRenewBills(req.organizationId!);
+    const currentMonthBillWindow = getCurrentMonthBillWindow();
     const apartments = await prisma.apartment.findMany({
       where: { organizationId: req.organizationId! },
       include: {
-        rooms: { include: { leases: { where: { status: "ACTIVE" }, include: { fees: true }, orderBy: { createdAt: "desc" } } } },
+        rooms: {
+          include: {
+            leases: {
+              where: { status: "ACTIVE" },
+              include: {
+                fees: true,
+                monthlyBills: {
+                  where: {
+                    billingDate: { gte: currentMonthBillWindow.start, lt: currentMonthBillWindow.end }
+                  },
+                  select: { id: true }
+                }
+              },
+              orderBy: { createdAt: "desc" }
+            }
+          }
+        },
         expenses: { orderBy: { spentAt: "desc" } },
         feeItems: true
       },
@@ -57,7 +74,10 @@ apartmentRouter.get(
         ...apartment,
         rooms: apartment.rooms.map((room) => ({
           ...room,
-          leases: room.leases.map((lease) => withLeaseLifecycle(lease))
+          leases: room.leases.map(({ monthlyBills, ...lease }) => ({
+            ...withLeaseLifecycle(lease),
+            currentMonthBillGenerated: monthlyBills.length > 0
+          }))
         }))
       }))
     );
@@ -69,11 +89,24 @@ apartmentRouter.get(
   requirePermission(PERMISSIONS.ROOM_VIEW),
   asyncHandler(async (req, res) => {
     await generateActiveAutoRenewBills(req.organizationId!);
+    const currentMonthBillWindow = getCurrentMonthBillWindow();
     const rooms = await prisma.room.findMany({
       where: { apartment: { organizationId: req.organizationId! } },
       include: {
         apartment: { include: { feeItems: { where: { enabled: true }, orderBy: { name: "asc" } } } },
-        leases: { where: { status: "ACTIVE" }, include: { fees: true }, orderBy: { createdAt: "desc" } }
+        leases: {
+          where: { status: "ACTIVE" },
+          include: {
+            fees: true,
+            monthlyBills: {
+              where: {
+                billingDate: { gte: currentMonthBillWindow.start, lt: currentMonthBillWindow.end }
+              },
+              select: { id: true }
+            }
+          },
+          orderBy: { createdAt: "desc" }
+        }
       },
       orderBy: [{ apartment: { createdAt: "desc" } }, { roomNo: "asc" }]
     });
@@ -81,7 +114,10 @@ apartmentRouter.get(
       res,
       rooms.map((room) => ({
         ...room,
-        leases: room.leases.map((lease) => withLeaseLifecycle(lease))
+        leases: room.leases.map(({ monthlyBills, ...lease }) => ({
+          ...withLeaseLifecycle(lease),
+          currentMonthBillGenerated: monthlyBills.length > 0
+        }))
       }))
     );
   })
