@@ -9,18 +9,30 @@ type WebStorage = {
 };
 
 export const readMobileSession = (): MobileSession | undefined => {
-  const storage = (globalThis as { localStorage?: WebStorage }).localStorage;
-  if (!storage) return undefined;
-  const value = storage.getItem(MOBILE_SESSION_KEY);
-  return value ? JSON.parse(value) : undefined;
+  try {
+    const storage = (globalThis as { localStorage?: WebStorage }).localStorage;
+    if (!storage) return undefined;
+    const value = storage.getItem(MOBILE_SESSION_KEY);
+    return value ? JSON.parse(value) : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 export const writeMobileSession = (session: MobileSession) => {
-  const storage = (globalThis as { localStorage?: WebStorage }).localStorage;
-  storage?.setItem(MOBILE_SESSION_KEY, JSON.stringify(session));
+  try {
+    const storage = (globalThis as { localStorage?: WebStorage }).localStorage;
+    storage?.setItem(MOBILE_SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Native storage can be unavailable during Expo lifecycle transitions.
+  }
 };
 
 export const clearMobileSession = () => {
-  const storage = (globalThis as { localStorage?: WebStorage }).localStorage;
-  storage?.removeItem(MOBILE_SESSION_KEY);
+  try {
+    const storage = (globalThis as { localStorage?: WebStorage }).localStorage;
+    storage?.removeItem(MOBILE_SESSION_KEY);
+  } catch {
+    // Ignore storage cleanup failures so sign out can still reset in-memory state.
+  }
 };

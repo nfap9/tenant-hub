@@ -24,13 +24,3 @@ services:
       - ./apps/ops-web:/app/apps/ops-web
       - /app/apps/ops-web/node_modules
 
-  mobile:
-    command: pnpm --filter @tenant-hub/mobile web
-    environment:
-      NODE_ENV: development
-      CHOKIDAR_USEPOLLING: "true"
-      WATCHPACK_POLLING: "true"
-      EXPO_USE_POLLING: "true"
-    volumes:
-      - ./apps/mobile:/app/apps/mobile
-      - /app/apps/mobile/node_modules

@@ -54,24 +54,5 @@ services:
       api:
         condition: service_healthy
 
-  mobile:
-    build:
-      context: .
-      dockerfile: apps/mobile/Dockerfile
-    container_name: tenant-hub-mobile
-    restart: unless-stopped
-    environment:
-      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
-      REACT_NATIVE_PACKAGER_HOSTNAME: localhost
-    ports:
-      - "8081:8081"
-      - "19000:19000"
-      - "19001:19001"
-      - "19002:19002"
-      - "19006:19006"
-    depends_on:
-      api:
-        condition: service_healthy
-
 volumes:
   postgres_data:

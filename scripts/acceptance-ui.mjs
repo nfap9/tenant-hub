@@ -1,5 +1,6 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { setTimeout } from "node:timers/promises";
 
 const appUrl = process.env.ACCEPTANCE_APP_URL ?? "http://localhost:19006";
 const apiUrl = process.env.ACCEPTANCE_API_URL ?? "http://localhost:4000/api";
@@ -32,9 +33,54 @@ const otpFromDockerLogs = (userPhone) => {
 
 const runPw = (...args) => execFileSync(playwrightCli, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
+const waitForPort = async (port, timeoutMs = 30000) => {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(`http://localhost:${port}`);
+      if (res.status < 500) return;
+    } catch {
+      // not ready yet
+    }
+    await setTimeout(500);
+  }
+  throw new Error(`端口 ${port} 在 ${timeoutMs}ms 内未就绪`);
+};
+
+const isPortOpen = async (port) => {
+  try {
+    const res = await fetch(`http://localhost:${port}`);
+    return res.status < 500;
+  } catch {
+    return false;
+  }
+};
+
 const main = async () => {
   if (!existsSync(playwrightCli)) {
     throw new Error(`未找到 Playwright CLI：${playwrightCli}。可通过 PLAYWRIGHT_CLI 指定脚本路径`);
+  }
+
+  let mobileProcess = null;
+  const port = new URL(appUrl).port || "80";
+
+  // 如果目标端口未占用，自动启动 mobile dev server
+  if (!(await isPortOpen(port))) {
+    console.info(`端口 ${port} 未占用，正在启动 mobile dev server...`);
+    mobileProcess = spawn("pnpm", ["--filter", "@tenant-hub/mobile", "web"], {
+      detached: true,
+      stdio: "pipe"
+    });
+
+    mobileProcess.on("error", (err) => {
+      console.error("mobile dev server 启动失败:", err);
+    });
+
+    // 等待端口就绪
+    await waitForPort(port, 60000);
+    console.info("mobile dev server 已就绪");
+  } else {
+    console.info(`端口 ${port} 已有服务，直接使用`);
   }
 
   const userPhone = phone();
@@ -62,6 +108,14 @@ const main = async () => {
         runPw("close");
       } catch {
         // Browser cleanup should not hide the original acceptance failure.
+      }
+    }
+    if (mobileProcess) {
+      console.info("正在关闭 mobile dev server...");
+      try {
+        process.kill(-mobileProcess.pid, "SIGTERM");
+      } catch {
+        // ignore
       }
     }
   }

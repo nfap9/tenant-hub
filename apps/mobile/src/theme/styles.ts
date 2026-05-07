@@ -1,4 +1,7 @@
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
+
+const tabBarBottomOffset = Platform.OS === "ios" ? 14 : 0;
+const contentBottomPadding = 92 + tabBarBottomOffset;
 
 export const styles = StyleSheet.create({
   shell: { flex: 1, backgroundColor: "#f4f2ec" },
@@ -60,7 +63,7 @@ export const styles = StyleSheet.create({
   menuOrgItemActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
   menuOrgName: { color: "#102522", fontWeight: "700" },
   menuLogout: { minHeight: 36, alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, gap: 12, paddingBottom: 92 },
+  content: { padding: 16, gap: 12, paddingBottom: contentBottomPadding },
   noticeBanner: { padding: 10, borderRadius: 6, backgroundColor: "#e0f1ea", color: "#146c5c", fontWeight: "700" },
   panel: { padding: 14, backgroundColor: "white", borderRadius: 8, gap: 10 },
   label: { color: "#394341", fontWeight: "700", marginTop: 0, fontSize: 13 },
@@ -151,7 +154,7 @@ export const styles = StyleSheet.create({
   smallButtonTextActive: { color: "white" },
   smallDangerButton: { minHeight: 34, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: "#c8674e", alignItems: "center", justifyContent: "center" },
   smallDangerText: { color: "#b14f38", fontWeight: "700" },
-  tabbar: { position: "absolute", left: 0, right: 0, bottom: 0, minHeight: 64, padding: 8, backgroundColor: "white", borderTopWidth: 1, borderTopColor: "#e4dece", flexDirection: "row", gap: 6 },
+  tabbar: { position: "absolute", left: 0, right: 0, bottom: tabBarBottomOffset, minHeight: 64, padding: 8, backgroundColor: "white", borderTopWidth: 1, borderTopColor: "#e4dece", flexDirection: "row", gap: 6 },
   tab: { flex: 1, borderRadius: 6, alignItems: "center", justifyContent: "center" },
   tabActive: { backgroundColor: "#146c5c" },
   tabText: { color: "#4f5b58", fontSize: 13 },
