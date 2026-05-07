@@ -1,4 +1,5 @@
-import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import MainTabBar from "../navigation/MainTabBar";
 import type { BillActionKey, BillTabKey, HomeNavigationIntent, RoomActionKey } from "../navigation/homeQuickActions";
@@ -84,7 +85,8 @@ export default function AppRoot() {
   }
 
   return (
-    <SafeAreaView style={styles.shell}>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.shell} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.headerTitle}>{title}</Text>
@@ -192,5 +194,6 @@ export default function AppRoot() {
 
       <MainTabBar active={active} onChange={openTab} />
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
