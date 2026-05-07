@@ -1,4 +1,5 @@
-import { ScrollView, Text, View } from "react-native";
+import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import Toast from "../components/Toast";
 import { Button, Card, PressableScale } from "../components/ui";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -12,6 +13,7 @@ import BillsScreen from "../screens/bills/BillsScreen";
 import HomeScreen from "../screens/home/HomeScreen";
 import RoomsScreen from "../screens/rooms/RoomsScreen";
 import SettingsScreen from "../screens/settings/SettingsScreen";
+import { colors } from "../theme/tokens";
 import { styles } from "../theme/styles";
 import type { TabKey } from "../types";
 import { useAppSession } from "./useAppSession";
@@ -74,6 +76,23 @@ export default function AppRoot() {
     setUserMenuOpen(false);
   }, [active, session?.user.id]);
 
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const onBack = () => {
+      if (userMenuOpen) {
+        setUserMenuOpen(false);
+        return true;
+      }
+      if (active !== "home") {
+        openTab("home");
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBack);
+    return () => sub.remove();
+  }, [userMenuOpen, active, openTab]);
+
   if (!session) {
     return (
       <LoginScreen
@@ -89,6 +108,7 @@ export default function AppRoot() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.shell} edges={["top", "left", "right"]}>
+      <StatusBar style="light" backgroundColor={colors.primaryDark} />
       <View style={styles.header}>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.headerTitle}>{title}</Text>
@@ -137,7 +157,11 @@ export default function AppRoot() {
         </View>
       ) : null}
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Toast message={notice} onDismiss={() => setNotice("")} />
         {memberships.length === 0 ? (
           <Card title="开始使用 Tenant Hub" subtitle="你还没有加入组织。先创建自己的组织，或输入管理员生成的邀请码加入已有团队。">
@@ -185,6 +209,7 @@ export default function AppRoot() {
           />
         ) : null}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <MainTabBar active={active} onChange={openTab} />
     </SafeAreaView>

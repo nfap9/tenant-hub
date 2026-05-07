@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import Toast from "../../components/Toast";
 import { Button, Input } from "../../components/ui";
 import { Card } from "../../components/ui/Card";
@@ -70,7 +71,13 @@ export default function LoginScreen({
 
   return (
     <SafeAreaView style={styles.loginShell}>
-      <ScrollView contentContainerStyle={[styles.loginContent, isRegister && styles.loginContentCompact]} keyboardShouldPersistTaps="handled">
+      <StatusBar style="light" />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        <ScrollView contentContainerStyle={[styles.loginContent, isRegister && styles.loginContentCompact]} keyboardShouldPersistTaps="handled">
         <View style={styles.loginHeader}>
           <Text style={styles.loginEyebrow}>APARTMENT OPS</Text>
           <Text style={styles.loginProduct}>Tenant Hub</Text>
@@ -133,7 +140,8 @@ export default function LoginScreen({
             {isRegister ? "已有账号，去登录" : "注册新账号"}
           </Button>
         </Card>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
