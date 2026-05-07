@@ -7,7 +7,7 @@ import { mobileApi, mobileText } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Bill, BillStatus, MeterReading, MeterType, MonthlyBill, Room } from "../../types";
 import { getPaymentAmountError } from "./billPayment";
-import { getMonthlyBillCardSummary } from "./billPresentation";
+import { getMonthlyBillCardSummary, sortMonthlyBillsForList } from "./billPresentation";
 
 type Props = {
   token: string;
@@ -72,6 +72,7 @@ const statusStyle = (status: BillStatus) => {
 
 const billModeText = (bill: Bill) => (bill.mode === "PREPAID" ? "预付" : "后付");
 const remainingAmount = (bill: MonthlyBill) => Number(bill.totalAmount) - Number(bill.paidAmount);
+const roomKeyForBill = (bill: MonthlyBill) => bill.lease?.roomId ?? bill.lease?.room?.id ?? bill.lease?.room?.roomNo ?? bill.id;
 
 export default function BillsScreen({ token, organizationId, setNotice, initialTab = "monthly", initialAction, tabRequestKey = 0 }: Props) {
   const [tab, setTab] = useState<BillTabKey>(initialTab);
@@ -84,6 +85,11 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
   const [pendingAction, setPendingAction] = useState<BillActionKey>();
   const [activeLayer, setActiveLayer] = useState<BillLayer>();
   const [selectedMonthlyBillId, setSelectedMonthlyBillId] = useState("");
+  const [paymentApartmentKey, setPaymentApartmentKey] = useState("");
+  const [apartmentDropdownOpen, setApartmentDropdownOpen] = useState(false);
+  const [roomBillDropdownOpen, setRoomBillDropdownOpen] = useState(false);
+  const [apartmentSearch, setApartmentSearch] = useState("");
+  const [roomBillSearch, setRoomBillSearch] = useState("");
   const [readingForm, setReadingForm] = useState<ReadingForm>({ roomId: "", meterType: "WATER", readingDate: today(), value: "", note: "" });
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
   const [utilityForm, setUtilityForm] = useState<UtilityForm>({ billId: "", previousWater: "", currentWater: "", previousPower: "", currentPower: "" });
@@ -93,27 +99,77 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
     () => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID").reduce((sum, bill) => sum + remainingAmount(bill), 0),
     [monthlyBills]
   );
-  const selectedPaymentBill = useMemo(() => monthlyBills.find((bill) => bill.id === paymentForm.monthlyBillId), [monthlyBills, paymentForm.monthlyBillId]);
   const selectedMonthlyBill = useMemo(() => monthlyBills.find((bill) => bill.id === selectedMonthlyBillId), [monthlyBills, selectedMonthlyBillId]);
   const unpaidBills = useMemo(() => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID"), [monthlyBills]);
+  const visibleMonthlyBills = useMemo(() => sortMonthlyBillsForList(monthlyBills), [monthlyBills]);
+  const roomById = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms]);
+  const paymentBills = useMemo(() => sortMonthlyBillsForList(unpaidBills), [unpaidBills]);
+  const selectedPaymentBill = useMemo(() => monthlyBills.find((bill) => bill.id === paymentForm.monthlyBillId), [monthlyBills, paymentForm.monthlyBillId]);
+  const paymentApartments = useMemo(() => {
+    const apartmentMap = new Map<string, { key: string; label: string; count: number }>();
+    paymentBills.forEach((bill) => {
+      const room = roomById.get(roomKeyForBill(bill));
+      const key = room?.apartmentId ?? bill.lease?.room?.apartmentId ?? "unknown";
+      const label = room?.apartment?.name ?? bill.lease?.room?.apartment?.name ?? "未关联公寓";
+      const current = apartmentMap.get(key);
+      apartmentMap.set(key, { key, label, count: (current?.count ?? 0) + 1 });
+    });
+    return Array.from(apartmentMap.values());
+  }, [paymentBills, roomById]);
+  const paymentRoomBills = useMemo(
+    () => paymentBills.filter((bill) => {
+      const room = roomById.get(roomKeyForBill(bill));
+      const apartmentKey = room?.apartmentId ?? bill.lease?.room?.apartmentId ?? "unknown";
+      return apartmentKey === paymentApartmentKey;
+    }),
+    [paymentApartmentKey, paymentBills, roomById]
+  );
+  const selectedPaymentApartment = useMemo(() => paymentApartments.find((apartment) => apartment.key === paymentApartmentKey), [paymentApartmentKey, paymentApartments]);
+  const filteredPaymentApartments = useMemo(() => {
+    const keyword = apartmentSearch.trim().toLocaleLowerCase();
+    if (!keyword) return paymentApartments;
+    return paymentApartments.filter((apartment) => apartment.label.toLocaleLowerCase().includes(keyword));
+  }, [apartmentSearch, paymentApartments]);
+  const filteredPaymentRoomBills = useMemo(() => {
+    const keyword = roomBillSearch.trim().toLocaleLowerCase();
+    if (!keyword) return paymentRoomBills;
+    return paymentRoomBills.filter((bill) => {
+      const room = roomById.get(roomKeyForBill(bill));
+      const roomNo = room?.roomNo ?? bill.lease?.room?.roomNo ?? "";
+      return `${roomNo} ${bill.tenantName}`.toLocaleLowerCase().includes(keyword);
+    });
+  }, [paymentRoomBills, roomBillSearch, roomById]);
+
+  const setPaymentBill = (bill: MonthlyBill) => {
+    const isPayable = bill.status !== "PAID" && bill.status !== "VOID";
+    setPaymentForm((old) => ({
+      ...old,
+      monthlyBillId: isPayable ? bill.id : "",
+      amount: isPayable ? String(remainingAmount(bill)) : "",
+      note: ""
+    }));
+  };
 
   const openPayment = () => {
-    const firstUnpaid = unpaidBills[0];
+    const firstUnpaid = paymentBills[0];
     if (!firstUnpaid) {
       setPaymentForm((old) => ({ ...old, monthlyBillId: "", amount: "" }));
       setNotice("暂无待收账单");
       return;
     }
-    setPaymentForm((old) => ({
-      ...old,
-      monthlyBillId: firstUnpaid.id,
-      amount: String(remainingAmount(firstUnpaid))
-    }));
+    const room = roomById.get(roomKeyForBill(firstUnpaid));
+    setPaymentApartmentKey(room?.apartmentId ?? firstUnpaid.lease?.room?.apartmentId ?? "unknown");
+    setPaymentBill(firstUnpaid);
+    setApartmentDropdownOpen(false);
+    setRoomBillDropdownOpen(false);
+    setApartmentSearch("");
+    setRoomBillSearch("");
     setActiveLayer("payment");
   };
 
   const openMonthlyDetail = (bill: MonthlyBill) => {
     setSelectedMonthlyBillId(bill.id);
+    setPaymentBill(bill);
     setActiveLayer("monthlyDetail");
   };
 
@@ -158,7 +214,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
     if (!loaded || pendingAction !== "payment") return;
     openPayment();
     setPendingAction(undefined);
-  }, [loaded, pendingAction, unpaidBills]);
+  }, [loaded, pendingAction, paymentBills, roomById]);
 
   const submitReading = async () => {
     if (!organizationId) return;
@@ -301,15 +357,17 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
       <View style={styles.panel}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{tab === "monthly" ? "收款单" : tab === "meter" ? "提前抄表" : "人工处理"}</Text>
-          <TouchableOpacity style={styles.smallButton} onPress={loadData} disabled={loading}>
-            <Text style={styles.smallButtonText}>{loading ? "刷新中" : "刷新"}</Text>
-          </TouchableOpacity>
+          <View style={styles.roomActions}>
+            {tab === "monthly" ? (
+              <TouchableOpacity style={styles.smallButton} onPress={openPayment}>
+                <Text style={styles.smallButtonText}>登记收款</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity style={styles.smallButton} onPress={loadData} disabled={loading}>
+              <Text style={styles.smallButtonText}>{loading ? "刷新中" : "刷新"}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        {tab === "monthly" ? (
-          <TouchableOpacity style={styles.button} onPress={openPayment}>
-            <Text style={styles.buttonText}>登记收款</Text>
-          </TouchableOpacity>
-        ) : null}
         {tab === "meter" ? (
           <View style={styles.roomActions}>
             <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => setActiveLayer("reading")}>
@@ -328,7 +386,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
       {tab === "monthly" ? (
         <>
           {monthlyBills.length === 0 ? <Text style={styles.emptyText}>暂无月度账单。先录入水电读数，再生成账单。</Text> : null}
-          {monthlyBills.map((bill) => {
+          {visibleMonthlyBills.map((bill) => {
             const summary = getMonthlyBillCardSummary(bill);
             return (
               <TouchableOpacity key={bill.id} style={styles.billCard} onPress={() => openMonthlyDetail(bill)}>
@@ -362,6 +420,11 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         title="账单详情"
         subtitle={selectedMonthlyBill ? `${selectedMonthlyBill.tenantName} · ${day(selectedMonthlyBill.billingDate)}` : ""}
         onClose={() => setActiveLayer(undefined)}
+        footer={selectedMonthlyBill && selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID" ? (
+          <TouchableOpacity style={styles.button} onPress={submitPayment}>
+            <Text style={styles.buttonText}>确认收款</Text>
+          </TouchableOpacity>
+        ) : undefined}
       >
         {selectedMonthlyBill ? (
           <>
@@ -374,6 +437,22 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                 <Text style={[styles.statusBadge, statusStyle(selectedMonthlyBill.status)]}>{statusLabels[selectedMonthlyBill.status]}</Text>
               </View>
             </View>
+            {selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID" ? (
+              <View style={styles.billDetailBlock}>
+                <Text style={styles.fieldLabel}>登记收款</Text>
+                <View style={styles.formGrid}>
+                  <View style={styles.formField}>
+                    <Text style={styles.fieldLabel}>金额</Text>
+                    <TextInput style={styles.input} value={paymentForm.amount} keyboardType="numeric" onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
+                  </View>
+                  <View style={styles.formField}>
+                    <Text style={styles.fieldLabel}>方式</Text>
+                    <TextInput style={styles.input} value={paymentForm.method} onChangeText={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
+                  </View>
+                </View>
+                <TextInput style={styles.input} placeholder="备注" value={paymentForm.note} onChangeText={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
+              </View>
+            ) : null}
             {(selectedMonthlyBill.bills ?? []).map((child) => (
               <View key={child.id} style={styles.billDetailBlock}>
                 <View style={styles.billLine}>
@@ -428,7 +507,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         visible={activeLayer === "payment"}
         variant="drawer"
         title="登记收款"
-        subtitle={selectedPaymentBill ? `${selectedPaymentBill.tenantName} · 应收 ¥${money(selectedPaymentBill.totalAmount)}` : "选择一张待收账单"}
+        subtitle={selectedPaymentBill ? `${selectedPaymentBill.tenantName} · 剩余 ¥${money(remainingAmount(selectedPaymentBill))}` : "选择公寓和房间账单"}
         onClose={() => setActiveLayer(undefined)}
         footer={(
           <TouchableOpacity style={styles.button} onPress={submitPayment}>
@@ -436,33 +515,94 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
           </TouchableOpacity>
         )}
       >
-        <View style={styles.billChoiceList}>
-          {unpaidBills.slice(0, 4).map((bill) => (
-            <TouchableOpacity
-              key={bill.id}
-              style={[styles.feeItem, paymentForm.monthlyBillId === bill.id && styles.feeItemActive]}
-              onPress={() => setPaymentForm((old) => ({ ...old, monthlyBillId: bill.id, amount: String(Number(bill.totalAmount) - Number(bill.paidAmount)) }))}
-            >
-              <View>
-                <Text style={styles.cardTitle}>{bill.tenantName} · {day(bill.billingDate)}</Text>
-                <Text style={styles.muted}>剩余 ¥{money(Number(bill.totalAmount) - Number(bill.paidAmount))}</Text>
-              </View>
-              <Text style={[styles.statusBadge, statusStyle(bill.status)]}>{statusLabels[bill.status]}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.billDetailBlock}>
+          <Text style={styles.fieldLabel}>选择公寓</Text>
+          <TouchableOpacity style={styles.feeItem} onPress={() => setApartmentDropdownOpen((open) => !open)}>
+            <Text style={styles.cardTitle}>{selectedPaymentApartment?.label ?? "请选择公寓"}</Text>
+            <Text style={styles.muted}>{apartmentDropdownOpen ? "收起" : "展开"}</Text>
+          </TouchableOpacity>
+          {apartmentDropdownOpen ? (
+            <View style={styles.billChoiceList}>
+              <TextInput style={styles.input} placeholder="搜索公寓" value={apartmentSearch} onChangeText={setApartmentSearch} />
+              {filteredPaymentApartments.map((apartment) => (
+                <TouchableOpacity
+                  key={apartment.key}
+                  style={[styles.feeItem, paymentApartmentKey === apartment.key && styles.feeItemActive]}
+                  onPress={() => {
+                    setPaymentApartmentKey(apartment.key);
+                    setApartmentDropdownOpen(false);
+                    setRoomBillDropdownOpen(false);
+                    setApartmentSearch("");
+                    setRoomBillSearch("");
+                    const firstBill = paymentBills.find((bill) => {
+                      const room = roomById.get(roomKeyForBill(bill));
+                      const apartmentKey = room?.apartmentId ?? bill.lease?.room?.apartmentId ?? "unknown";
+                      return apartmentKey === apartment.key;
+                    });
+                    if (firstBill) setPaymentBill(firstBill);
+                  }}
+                >
+                  <Text style={styles.cardTitle}>{apartment.label}</Text>
+                  <Text style={styles.muted}>{apartment.count} 张待收</Text>
+                </TouchableOpacity>
+              ))}
+              {filteredPaymentApartments.length === 0 ? <Text style={styles.muted}>没有匹配的公寓</Text> : null}
+            </View>
+          ) : null}
         </View>
-        {unpaidBills.length === 0 ? <Text style={styles.muted}>暂无待收账单</Text> : null}
-        <View style={styles.formGrid}>
-          <View style={styles.formField}>
-            <Text style={styles.fieldLabel}>金额</Text>
-            <TextInput style={styles.input} value={paymentForm.amount} keyboardType="numeric" onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
-          </View>
-          <View style={styles.formField}>
-            <Text style={styles.fieldLabel}>方式</Text>
-            <TextInput style={styles.input} value={paymentForm.method} onChangeText={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
-          </View>
+        <View style={styles.billDetailBlock}>
+          <Text style={styles.fieldLabel}>选择房间账单</Text>
+          <TouchableOpacity style={styles.feeItem} onPress={() => setRoomBillDropdownOpen((open) => !open)}>
+            <View>
+              <Text style={styles.cardTitle}>
+                {selectedPaymentBill ? `${roomById.get(roomKeyForBill(selectedPaymentBill))?.roomNo ?? selectedPaymentBill.lease?.room?.roomNo ?? "房间"} · ${selectedPaymentBill.tenantName}` : "请选择房间账单"}
+              </Text>
+              {selectedPaymentBill ? <Text style={styles.muted}>剩余 ¥{money(remainingAmount(selectedPaymentBill))}</Text> : null}
+            </View>
+            <Text style={styles.muted}>{roomBillDropdownOpen ? "收起" : "展开"}</Text>
+          </TouchableOpacity>
+          {roomBillDropdownOpen ? (
+            <View style={styles.billChoiceList}>
+              <TextInput style={styles.input} placeholder="搜索房号或租客" value={roomBillSearch} onChangeText={setRoomBillSearch} />
+              {filteredPaymentRoomBills.map((bill) => {
+                const room = roomById.get(roomKeyForBill(bill));
+                return (
+                  <TouchableOpacity
+                    key={bill.id}
+                    style={[styles.feeItem, paymentForm.monthlyBillId === bill.id && styles.feeItemActive]}
+                    onPress={() => {
+                      setPaymentBill(bill);
+                      setRoomBillDropdownOpen(false);
+                      setRoomBillSearch("");
+                    }}
+                  >
+                    <View>
+                      <Text style={styles.cardTitle}>{room?.roomNo ?? bill.lease?.room?.roomNo ?? "房间"} · {bill.tenantName}</Text>
+                      <Text style={styles.muted}>{day(bill.billingDate)} · 剩余 ¥{money(remainingAmount(bill))}</Text>
+                    </View>
+                    <Text style={[styles.statusBadge, statusStyle(bill.status)]}>{statusLabels[bill.status]}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {filteredPaymentRoomBills.length === 0 ? <Text style={styles.muted}>没有匹配的房间账单</Text> : null}
+            </View>
+          ) : null}
+          {paymentRoomBills.length === 0 ? <Text style={styles.muted}>这个公寓暂无待收账单</Text> : null}
         </View>
-        <TextInput style={styles.input} placeholder="备注" value={paymentForm.note} onChangeText={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
+        <View style={styles.billDetailBlock}>
+          <Text style={styles.fieldLabel}>收款信息</Text>
+          <View style={styles.formGrid}>
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>金额</Text>
+              <TextInput style={styles.input} value={paymentForm.amount} keyboardType="numeric" onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
+            </View>
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>方式</Text>
+              <TextInput style={styles.input} value={paymentForm.method} onChangeText={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
+            </View>
+          </View>
+          <TextInput style={styles.input} placeholder="备注" value={paymentForm.note} onChangeText={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
+        </View>
       </TaskSheet>
 
       <TaskSheet

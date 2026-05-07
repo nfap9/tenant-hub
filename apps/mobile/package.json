@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx tests/authInteraction.test.ts && tsx tests/batchRooms.test.ts && tsx tests/billPayment.test.ts && tsx tests/billPresentation.test.ts && tsx tests/config.test.ts && tsx tests/homeQuickActions.test.ts && tsx tests/http.test.ts && tsx tests/leaseCandidates.test.ts && tsx tests/mobileInteractionLayering.test.ts"
+    "test": "tsx tests/authInteraction.test.ts && tsx tests/batchRooms.test.ts && tsx tests/billPayment.test.ts && tsx tests/billPresentation.test.ts && tsx tests/billsScreenPaymentPlacement.test.ts && tsx tests/config.test.ts && tsx tests/homeQuickActions.test.ts && tsx tests/http.test.ts && tsx tests/leaseCandidates.test.ts && tsx tests/mobileInteractionLayering.test.ts && tsx tests/roomBillLabel.test.ts"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",

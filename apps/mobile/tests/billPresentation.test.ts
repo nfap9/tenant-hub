@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { getMonthlyBillCardSummary } from "../src/screens/bills/billPresentation";
+import { getMonthlyBillCardSummary, sortMonthlyBillsForList } from "../src/screens/bills/billPresentation";
 import type { MonthlyBill } from "../src/types";
 
 const bill: MonthlyBill = {
@@ -67,3 +67,24 @@ assert.deepEqual(getMonthlyBillCardSummary(bill), {
   remainingAmount: 980.5,
   detailCountText: "1 项账单 · 1 笔收款"
 });
+
+const billWith = (id: string, status: MonthlyBill["status"], dueDate: string, billingDate = dueDate): MonthlyBill => ({
+  ...bill,
+  id,
+  status,
+  dueDate,
+  billingDate,
+  tenantName: id
+});
+
+assert.deepEqual(
+  sortMonthlyBillsForList([
+    billWith("paid", "PAID", "2026-05-01T00:00:00.000Z"),
+    billWith("partial-later", "PARTIAL_PAID", "2026-05-10T00:00:00.000Z"),
+    billWith("failed", "FAILED", "2026-05-03T00:00:00.000Z"),
+    billWith("unpaid-earlier", "UNPAID", "2026-05-02T00:00:00.000Z"),
+    billWith("void", "VOID", "2026-04-01T00:00:00.000Z"),
+    billWith("billing", "BILLING", "2026-05-04T00:00:00.000Z")
+  ]).map((item) => item.id),
+  ["unpaid-earlier", "partial-later", "billing", "failed", "paid", "void"]
+);
