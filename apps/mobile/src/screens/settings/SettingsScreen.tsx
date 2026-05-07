@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { Button, Card, PressableScale } from "../../components/ui";
+import { Button, Card, Icon, PressableScale } from "../../components/ui";
+import { colors, spacing } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
 import type { Membership, OrgMember, OrgRole } from "../../types";
 import AccountSettingsSubPage from "./AccountSettingsSubPage";
@@ -25,11 +26,11 @@ type SettingsScreenProps = {
   reload: () => Promise<void>;
 };
 
-const settingsItems: Array<{ key: SettingsSubPage; label: string; icon: string }> = [
-  { key: "leases", label: "所有租约", icon: "📄" },
-  { key: "team", label: "团队管理", icon: "👥" },
-  { key: "account", label: "账号设置", icon: "🔐" },
-  { key: "plan", label: "付费计划", icon: "💎" }
+const settingsItems: Array<{ key: SettingsSubPage; label: string; icon: "document-text-outline" | "people-outline" | "lock-closed-outline" | "diamond-outline" }> = [
+  { key: "leases", label: "所有租约", icon: "document-text-outline" },
+  { key: "team", label: "团队管理", icon: "people-outline" },
+  { key: "account", label: "账号设置", icon: "lock-closed-outline" },
+  { key: "plan", label: "付费计划", icon: "diamond-outline" }
 ];
 
 export default function SettingsScreen({
@@ -96,11 +97,11 @@ export default function SettingsScreen({
         <PressableScale key={item.key} onPress={() => setSubPage(item.key)}>
           <Card padding="md" gap={0}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing[3] }}>
+                <Icon name={item.icon} size={22} color={colors.primary} />
                 <Text style={styles.settingItemText}>{item.label}</Text>
               </View>
-              <Text style={{ color: "#9a9488", fontSize: 16 }}>➤</Text>
+              <Icon name="chevron-forward-outline" size={18} color={colors.textPlaceholder} />
             </View>
           </Card>
         </PressableScale>

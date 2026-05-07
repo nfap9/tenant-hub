@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 import { colors, radii, spacing } from "../theme/tokens";
+import { Icon } from "../components/ui/Icon";
 import { PressableScale } from "../components/ui/PressableScale";
 import type { TabKey } from "../types/navigation";
 import { tabItems } from "./tabs";
@@ -16,7 +17,7 @@ export default function MainTabBar({ active, onChange }: { active: TabKey; onCha
             onPress={() => onChange(tab.key)}
             style={[styles.tab, isActive && styles.tabActive]}
           >
-            <Text style={{ fontSize: 18 }}>{tab.icon}</Text>
+            <Icon name={isActive ? tab.iconActive : tab.icon} size={22} color={isActive ? colors.white : colors.textPlaceholder} />
             <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
           </PressableScale>
         );

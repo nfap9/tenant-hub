@@ -123,7 +123,7 @@ export default function LoginScreen({
             </>
           ) : null}
           <Toast message={error} onDismiss={() => setError("")} />
-          <Button loading={busy} disabled={busy} onPress={submit}>
+          <Button loading={busy} disabled={busy} onPress={submit} icon={isRegister ? "person-add-outline" : "log-in-outline"}>
             {busy ? "处理中" : isRegister ? "注册并登录" : "登录"}
           </Button>
           <Button variant="ghost" size="small" onPress={() => {

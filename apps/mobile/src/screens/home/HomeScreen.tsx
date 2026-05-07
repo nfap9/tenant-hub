@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
-import { Badge, Button, Card, EmptyState } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, Icon } from "../../components/ui";
 import { homeQuickActions, type HomeNavigationIntent } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
+import { colors, spacing } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
 import type { Apartment, Bill, Lease, MonthlyBill, Room } from "../../types";
 
@@ -184,7 +185,7 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
             <Text style={styles.homeEyebrow}>本月经营概览</Text>
             <Text style={styles.homeHeroValue}>¥{compactMoney(monthlyIncome)}</Text>
           </View>
-          <Button variant="secondary" size="small" loading={loading} disabled={loading} onPress={loadData}>
+          <Button variant="secondary" size="small" loading={loading} disabled={loading} onPress={loadData} icon="refresh-outline">
             {loading ? "刷新中" : "刷新"}
           </Button>
         </View>
@@ -224,7 +225,7 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
           {homeQuickActions.map((action) => (
             <View key={action.key} style={styles.quickActionCard}>
               <View style={styles.quickActionIcon}>
-                <Text style={styles.quickActionIconText}>{action.icon}</Text>
+                <Icon name={action.icon} size={22} color={colors.primary} />
               </View>
               <Text style={styles.quickActionLabel}>{action.title}</Text>
             </View>

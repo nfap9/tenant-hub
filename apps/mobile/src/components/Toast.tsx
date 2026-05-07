@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { colors, radii, shadows, spacing, typography } from "../theme/tokens";
+import { Icon } from "./ui/Icon";
 
 interface ToastProps {
   message: string;
@@ -8,11 +9,11 @@ interface ToastProps {
   duration?: number;
 }
 
-function toastIcon(message: string): string {
-  if (message.includes("成功") || message.includes("已") || message.includes("完成")) return "✓";
-  if (message.includes("失败") || message.includes("错误") || message.includes("无法") || message.includes("不能")) return "✕";
-  if (message.includes("请") || message.includes("需要") || message.includes("必须")) return "⚠";
-  return "ℹ";
+function toastIcon(message: string): { name: "checkmark-circle" | "close-circle" | "warning" | "information-circle"; color: string } {
+  if (message.includes("成功") || message.includes("已") || message.includes("完成")) return { name: "checkmark-circle", color: "#4ade80" };
+  if (message.includes("失败") || message.includes("错误") || message.includes("无法") || message.includes("不能")) return { name: "close-circle", color: "#f87171" };
+  if (message.includes("请") || message.includes("需要") || message.includes("必须")) return { name: "warning", color: "#fbbf24" };
+  return { name: "information-circle", color: "#60a5fa" };
 }
 
 export default function Toast({ message, onDismiss, duration = 3000 }: ToastProps) {
@@ -52,6 +53,8 @@ export default function Toast({ message, onDismiss, duration = 3000 }: ToastProp
 
   if (!visible) return null;
 
+  const icon = toastIcon(message);
+
   return (
     <Animated.View
       style={[
@@ -59,7 +62,7 @@ export default function Toast({ message, onDismiss, duration = 3000 }: ToastProp
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
       ]}
     >
-      <Text style={styles.icon}>{toastIcon(message)}</Text>
+      <Icon name={icon.name} size={18} color={icon.color} />
       <Text style={styles.text}>{message}</Text>
     </Animated.View>
   );
@@ -79,13 +82,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2]
-  },
-  icon: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: "700",
-    width: 22,
-    textAlign: "center"
   },
   text: {
     color: colors.white,

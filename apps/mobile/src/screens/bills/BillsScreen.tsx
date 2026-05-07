@@ -323,9 +323,9 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         headerAction={
           <View style={{ flexDirection: "row", gap: 8 }}>
             {tab === "monthly" ? (
-              <Button variant="secondary" size="small" onPress={openPayment}>登记收款</Button>
+              <Button variant="secondary" size="small" onPress={openPayment} icon="cash-outline">登记收款</Button>
             ) : null}
-            <Button variant="ghost" size="small" loading={loading} disabled={loading} onPress={loadData}>
+            <Button variant="ghost" size="small" loading={loading} disabled={loading} onPress={loadData} icon="refresh-outline">
               {loading ? "刷新中" : "刷新"}
             </Button>
           </View>
@@ -333,9 +333,9 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
       >
         {tab === "meter" ? (
           <View style={styles.roomActions}>
-            <Button size="small" onPress={() => setActiveLayer("reading")}>录入读数</Button>
-            <Button variant="secondary" size="small" onPress={exportUtilityCsv}>导出</Button>
-            <Button variant="secondary" size="small" onPress={() => setActiveLayer("utilityImport")}>导入</Button>
+            <Button size="small" onPress={() => setActiveLayer("reading")} icon="create-outline">录入读数</Button>
+            <Button variant="secondary" size="small" onPress={exportUtilityCsv} icon="download-outline">导出</Button>
+            <Button variant="secondary" size="small" onPress={() => setActiveLayer("utilityImport")} icon="cloud-upload-outline">导入</Button>
           </View>
         ) : null}
       </Card>
@@ -378,7 +378,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle={selectedMonthlyBill ? `${selectedMonthlyBill.tenantName} · ${day(selectedMonthlyBill.billingDate)}` : ""}
         onClose={() => setActiveLayer(undefined)}
         footer={selectedMonthlyBill && selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID" ? (
-          <Button onPress={submitPayment}>确认收款</Button>
+          <Button onPress={submitPayment} icon="cash-outline">确认收款</Button>
         ) : undefined}
       >
         {selectedMonthlyBill ? (
@@ -421,7 +421,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                   </View>
                 ))}
                 {child.mode === "POSTPAID" ? (
-                  <Button variant="secondary" size="small" onPress={() => openUtilityReading(child)}>录入本期水电</Button>
+                  <Button variant="secondary" size="small" onPress={() => openUtilityReading(child)} icon="create-outline">录入本期水电</Button>
                 ) : null}
               </View>
             ))}
@@ -463,7 +463,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle={selectedPaymentBill ? `${selectedPaymentBill.tenantName} · 剩余 ¥${money(remainingAmount(selectedPaymentBill))}` : "选择公寓和房间账单"}
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <Button onPress={submitPayment}>确认收款</Button>
+          <Button onPress={submitPayment} icon="cash-outline">确认收款</Button>
         )}
       >
         <RoomBillSelector
@@ -523,7 +523,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle="选择房间、水电类型并填写本次读数"
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <Button onPress={submitReading}>保存读数</Button>
+          <Button onPress={submitReading} icon="save-outline">保存读数</Button>
         )}
       >
         <View style={styles.formGrid}>
@@ -566,8 +566,8 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                 <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
               </View>
               <Text style={styles.smallDangerText}>{bill.failureReason ?? "需要补录或修正水电读数"}</Text>
-              <Button variant="secondary" size="small" onPress={() => retryBill(bill)}>重新出账并生成月度账单</Button>
-              <Button size="small" onPress={() => openUtilityReading(bill)}>直接录入水电读数</Button>
+              <Button variant="secondary" size="small" onPress={() => retryBill(bill)} icon="refresh-outline">重新出账并生成月度账单</Button>
+              <Button size="small" onPress={() => openUtilityReading(bill)} icon="create-outline">直接录入水电读数</Button>
             </Card>
           ))}
         </>
@@ -580,7 +580,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle="按账单填写上期和本期读数"
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <Button onPress={submitUtilityReading}>保存水电读数</Button>
+          <Button onPress={submitUtilityReading} icon="save-outline">保存水电读数</Button>
         )}
       >
         <View style={styles.formGrid}>
@@ -610,7 +610,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle="粘贴从导出模板填写后的 CSV 内容"
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <Button onPress={importUtilityCsv}>确认导入</Button>
+          <Button onPress={importUtilityCsv} icon="checkmark-outline">确认导入</Button>
         )}
       >
         <Input multiline value={utilityCsv} onChangeText={setUtilityCsv} placeholder="billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因" />

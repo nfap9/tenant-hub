@@ -1,5 +1,7 @@
 import { Text, View, type ViewStyle } from "react-native";
 import { colors, darken, radii, spacing, typography } from "../../theme/tokens";
+import { Icon } from "./Icon";
+import type { IconName } from "./Icon";
 import { PressableScale } from "./PressableScale";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -12,6 +14,7 @@ type Props = {
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
+  icon?: IconName;
   onPress?: () => void;
   style?: ViewStyle;
 };
@@ -23,6 +26,7 @@ export function Button({
   disabled = false,
   loading = false,
   fullWidth = false,
+  icon,
   onPress,
   style
 }: Props) {
@@ -57,7 +61,7 @@ export function Button({
   };
 
   const vs = variantStyles[variant];
-
+  const iconSize = isSmall ? 14 : 16;
   const baseHeight = isSmall ? 34 : 44;
   const horizontalPadding = isSmall ? spacing[2.5] : spacing[4];
 
@@ -81,15 +85,18 @@ export function Button({
         style
       ]}
     >
-      <Text
-        style={{
-          color: isDisabled ? colors.textMuted : vs.text,
-          fontWeight: "700",
-          fontSize: isSmall ? 13 : 14
-        }}
-      >
-        {loading ? "处理中..." : children}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: spacing[1.5] }}>
+        {icon && !loading ? <Icon name={icon} size={iconSize} color={isDisabled ? colors.textMuted : vs.text} /> : null}
+        <Text
+          style={{
+            color: isDisabled ? colors.textMuted : vs.text,
+            fontWeight: "700",
+            fontSize: isSmall ? 13 : 14
+          }}
+        >
+          {loading ? "处理中..." : children}
+        </Text>
+      </View>
     </PressableScale>
   );
 }

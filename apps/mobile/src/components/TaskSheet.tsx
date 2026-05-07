@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Modal, ScrollView, Text, View } from "react-native";
 import { colors, radii, shadows, spacing, typography } from "../theme/tokens";
+import { Icon } from "./ui/Icon";
 import { PressableScale } from "./ui/PressableScale";
 
 export type TaskSheetVariant = "drawer" | "dialog";
@@ -65,7 +66,7 @@ export function TaskSheet({ visible, variant = "drawer", title, subtitle, onClos
               {subtitle ? <Text style={styles.subtitleText}>{subtitle}</Text> : null}
             </View>
             <PressableScale scale={0.85} onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeText}>✕</Text>
+              <Icon name="close" size={18} color={colors.textMuted} />
             </PressableScale>
           </View>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -144,7 +145,7 @@ const styles = {
     justifyContent: "center" as const
   },
 
-  closeText: {
+  closeIcon: {
     color: colors.textMuted,
     fontSize: 16,
     fontWeight: "700" as const

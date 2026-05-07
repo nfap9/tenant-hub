@@ -356,7 +356,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         <>
           <Card title="选择签约房间" subtitle="选择一间空闲房后填写租客和租约信息"
             headerAction={
-              <Button variant="ghost" size="small" onPress={() => setQuickLeaseSelecting(false)}>返回</Button>
+              <Button variant="ghost" size="small" onPress={() => setQuickLeaseSelecting(false)} icon="arrow-back-outline">返回</Button>
             }
           >
             <Text style={styles.muted}>点击下方房间卡片进行签约</Text>
@@ -398,7 +398,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
           </View>
 
           {canManageLease ? (
-            <Button onPress={() => setQuickLeaseSelecting(true)}>签约入住</Button>
+            <Button onPress={() => setQuickLeaseSelecting(true)} icon="document-text-outline">签约入住</Button>
           ) : null}
 
           <View style={styles.filterBar}>
@@ -460,7 +460,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                         </View>
                         <View style={styles.roomActions}>
                           {canManageRoom ? (
-                            <Button variant="secondary" size="small" onPress={() => startEditRoom(room)}>编辑房间</Button>
+                            <Button variant="secondary" size="small" onPress={() => startEditRoom(room)} icon="create-outline">编辑房间</Button>
                           ) : null}
                           {room.status === "VACANT" && canManageLease ? (
                             <Button size="small" onPress={() => {
@@ -470,7 +470,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                             }}>签约入住</Button>
                           ) : null}
                           {canManageRoom ? (
-                            <Button variant="danger" size="small" onPress={deleteRoom}>删除房间</Button>
+                            <Button variant="danger" size="small" onPress={deleteRoom} icon="trash-outline">删除房间</Button>
                           ) : null}
                         </View>
 
@@ -498,7 +498,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                               <Text style={styles.muted}>{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text>
                             </View>
                             {canManageLease ? (
-                              <Button variant="danger" size="small" onPress={() => openTermination(roomActiveLease)}>退租</Button>
+                              <Button variant="danger" size="small" onPress={() => openTermination(roomActiveLease)} icon="exit-outline">退租</Button>
                             ) : null}
                           </View>
                         ) : null}
@@ -518,7 +518,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         subtitle={editingRoom ? `${editingRoom.apartment?.name} · ${editingRoom.roomNo}` : undefined}
         onClose={() => setEditingRoomId(undefined)}
         footer={(
-          <Button onPress={updateRoom}>保存房间信息</Button>
+          <Button onPress={updateRoom} icon="save-outline">保存房间信息</Button>
         )}
       >
         <Input placeholder="房间号" value={roomForm.roomNo} onChangeText={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
@@ -553,7 +553,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         subtitle={leaseRoom ? `${leaseRoom.apartment?.name} · ${leaseRoom.roomNo}` : undefined}
         onClose={() => setLeaseRoomId(undefined)}
         footer={(
-          <Button onPress={createLease}>确认签约</Button>
+          <Button onPress={createLease} icon="document-text-outline">确认签约</Button>
         )}
       >
         <Input placeholder="租客姓名" value={leaseForm.tenantName} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
@@ -640,7 +640,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         subtitle={terminatingLease ? `${terminatingLease.tenantName} · ${terminatingLease.startDate.slice(0, 10)} 至 ${terminatingLease.endDate.slice(0, 10)}` : undefined}
         onClose={() => setTerminatingLease(undefined)}
         footer={(
-          <Button variant="danger" onPress={terminateLease}>确认终止合约</Button>
+          <Button variant="danger" onPress={terminateLease} icon="exit-outline">确认终止合约</Button>
         )}
       >
         <View style={styles.segment}>

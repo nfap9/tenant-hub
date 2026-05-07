@@ -503,7 +503,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
       {mode === "list" ? (
         <Card
           title="公寓列表"
-          headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={resetForCreate}>新建</Button> : undefined}
+          headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={resetForCreate} icon="add-circle-outline">新建</Button> : undefined}
         >
           {apartments.length === 0 ? <EmptyState icon="🏢" title="暂无公寓" subtitle="点击新建开始维护" actionLabel="新建公寓" onAction={resetForCreate} /> : null}
           {apartments.map((item) => {
@@ -529,7 +529,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
                   <Text style={styles.muted}>本月花费 ¥{money(monthlyExpense)}</Text>
                 </View>
                 {canManageApartment ? (
-                  <Button variant="ghost" size="small" onPress={() => openExpense(item.id)}>记录花费</Button>
+                  <Button variant="ghost" size="small" onPress={() => openExpense(item.id)} icon="create-outline">记录花费</Button>
                 ) : null}
               </Card>
             );
@@ -540,7 +540,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
       {(mode === "edit" || mode === "create") ? (
         <>
           <View style={styles.subPageHeader}>
-            <Button variant="ghost" size="small" onPress={mode === "create" ? backToList : () => setMode("detail")}>
+            <Button variant="ghost" size="small" onPress={mode === "create" ? backToList : () => setMode("detail")} icon="arrow-back-outline">
               {mode === "create" ? "返回公寓列表" : "返回公寓详情"}
             </Button>
           </View>
@@ -589,7 +589,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
                 <Input placeholder="元/度" value={form.powerUnitPrice} keyboardType="numeric" onChangeText={(value) => updateForm("powerUnitPrice", value)} />
               </View>
             </View>
-            <Button loading={saving} disabled={saving} onPress={saveApartment}>
+            <Button loading={saving} disabled={saving} onPress={saveApartment} icon="save-outline">
               {mode === "create" ? "创建公寓" : "保存公寓信息"}
             </Button>
           </Card>
@@ -597,7 +597,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
             <Card
               title="费用配置"
               subtitle="签约时可选择的网费、管理费、服务费等项目"
-              headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => setActiveLayer("fee")}>添加费用项</Button> : undefined}
+              headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => setActiveLayer("fee")} icon="add-circle-outline">添加费用项</Button> : undefined}
             >
               {(selectedApartment.feeItems ?? []).map((item) => (
                 <Card key={item.id} variant={item.enabled ? "default" : "outline"} padding="sm" gap={8} onPress={() => toggleFee(item)}>
@@ -616,13 +616,13 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
       {mode === "detail" && selectedApartment ? (
         <>
           <View style={styles.subPageHeader}>
-            <Button variant="ghost" size="small" onPress={backToList}>返回公寓列表</Button>
+            <Button variant="ghost" size="small" onPress={backToList} icon="arrow-back-outline">返回公寓列表</Button>
           </View>
 
           <Card
             title={selectedApartment.name}
             subtitle={selectedApartment.location}
-            headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => setMode("edit")}>编辑</Button> : undefined}
+            headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => setMode("edit")} icon="create-outline">编辑</Button> : undefined}
           >
             <View style={styles.segment}>
               <View style={[styles.segmentItem, detailTab === "expenses" && styles.segmentItemActive]}>
@@ -668,7 +668,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
               <Card
                 title="经营花费"
                 subtitle="每月经营支出从这里快速记录"
-                headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => openExpense(selectedApartment.id)}>记录花费</Button> : undefined}
+                headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => openExpense(selectedApartment.id)} icon="create-outline">记录花费</Button> : undefined}
               >
                 {(selectedApartment.expenses ?? []).slice(0, 4).map((item) => (
                   <View style={styles.detailRow} key={item.id}>
@@ -690,8 +690,8 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
             subtitle={`共 ${apartmentRooms.length} 间 · 空闲 ${apartmentVacantRooms} 间 · 已租 ${apartmentOccupiedRooms} 间`}
             headerAction={canManageRoom ? (
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <Button variant="secondary" size="small" onPress={startCreateRoom}>新增房间</Button>
-                <Button variant="secondary" size="small" onPress={startBatchRooms}>批量添加</Button>
+                <Button variant="secondary" size="small" onPress={startCreateRoom} icon="add-circle-outline">新增房间</Button>
+                <Button variant="secondary" size="small" onPress={startBatchRooms} icon="layers-outline">批量添加</Button>
               </View>
             ) : undefined}
           >
@@ -713,12 +713,13 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
                 <Text style={styles.muted}>{facilitiesText(room.facilities)}</Text>
                 {canManageRoom ? (
                   <View style={styles.roomActions}>
-                    <Button variant="secondary" size="small" onPress={() => startEditRoom(room)}>编辑</Button>
+                    <Button variant="secondary" size="small" onPress={() => startEditRoom(room)} icon="create-outline">编辑</Button>
                     <Button
                       variant="danger"
                       size="small"
                       disabled={room.status === "OCCUPIED"}
                       onPress={() => startDeleteRoom(room)}
+                      icon="trash-outline"
                     >
                       删除
                     </Button>
@@ -741,7 +742,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
           setExpenseApartmentId(undefined);
         }}
         footer={(
-          <Button onPress={() => addExpense()}>保存花费</Button>
+          <Button onPress={() => addExpense()} icon="save-outline">保存花费</Button>
         )}
       >
         <View style={styles.formGrid}>
@@ -759,7 +760,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
         subtitle={selectedApartment ? `${selectedApartment.name} · 签约可选费用` : undefined}
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <Button onPress={addFee}>保存费用项</Button>
+          <Button onPress={addFee} icon="save-outline">保存费用项</Button>
         )}
       >
         <View style={styles.formGrid}>
@@ -776,7 +777,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
         subtitle={selectedApartment ? selectedApartment.name : undefined}
         onClose={resetRoomWork}
         footer={(
-          <Button onPress={createRoom}>保存房间</Button>
+          <Button onPress={createRoom} icon="save-outline">保存房间</Button>
         )}
       >
         {renderRoomFields(false)}
@@ -789,7 +790,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
         subtitle={selectedApartment ? selectedApartment.name : undefined}
         onClose={resetRoomWork}
         footer={(
-          <Button onPress={addBatchRooms}>确认添加房间</Button>
+          <Button onPress={addBatchRooms} icon="checkmark-outline">确认添加房间</Button>
         )}
       >
         <View style={styles.formGrid}>
@@ -851,7 +852,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
         subtitle={editingRoom ? `${editingRoom.roomNo} · ${editingRoom.layout}` : undefined}
         onClose={resetRoomWork}
         footer={(
-          <Button onPress={updateRoom}>保存修改</Button>
+          <Button onPress={updateRoom} icon="save-outline">保存修改</Button>
         )}
       >
         {renderRoomFields(true)}
@@ -865,8 +866,8 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
         onClose={resetRoomWork}
         footer={deletingRoom ? (
           <View style={styles.roomActions}>
-            <Button variant="danger" size="small" onPress={() => deleteRoom(deletingRoom)}>确认删除</Button>
-            <Button variant="ghost" size="small" onPress={resetRoomWork}>取消</Button>
+            <Button variant="danger" size="small" onPress={() => deleteRoom(deletingRoom)} icon="trash-outline">确认删除</Button>
+            <Button variant="ghost" size="small" onPress={resetRoomWork} icon="close-outline">取消</Button>
           </View>
         ) : null}
       >

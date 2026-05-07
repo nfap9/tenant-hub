@@ -92,7 +92,7 @@ export default function OrganizationSettingsSubPage({
   return (
     <>
       <View style={styles.subPageHeader}>
-        <Button variant="ghost" size="small" onPress={onBack}>返回</Button>
+        <Button variant="ghost" size="small" onPress={onBack} icon="arrow-back-outline">返回</Button>
       </View>
 
       {memberships.length === 0 ? (
@@ -118,7 +118,7 @@ export default function OrganizationSettingsSubPage({
               <View style={styles.detailPanel}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>创建团队</Text>
-                  <Button variant="ghost" size="small" onPress={() => setOnboardingAction(undefined)}>返回</Button>
+                  <Button variant="ghost" size="small" onPress={() => setOnboardingAction(undefined)} icon="arrow-back-outline">返回</Button>
                 </View>
                 <Input value={orgName} onChangeText={setOrgName} placeholder="组织名称" />
                 <Input multiline value={orgDescription} onChangeText={setOrgDescription} placeholder="组织描述" />
@@ -133,7 +133,7 @@ export default function OrganizationSettingsSubPage({
                     setOrgDescription("");
                     setOnboardingAction(undefined);
                   }, "组织已创建")
-                }>
+                } icon="add-circle-outline">
                   创建组织
                 </Button>
               </View>
@@ -142,7 +142,7 @@ export default function OrganizationSettingsSubPage({
               <View style={styles.detailPanel}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>加入团队</Text>
-                  <Button variant="ghost" size="small" onPress={() => setOnboardingAction(undefined)}>返回</Button>
+                  <Button variant="ghost" size="small" onPress={() => setOnboardingAction(undefined)} icon="arrow-back-outline">返回</Button>
                 </View>
                 <Input value={inviteCode} onChangeText={setInviteCode} placeholder="输入邀请码" autoCapitalize="characters" />
                 <Button variant="secondary" onPress={() =>
@@ -155,7 +155,7 @@ export default function OrganizationSettingsSubPage({
                     setInviteCode("");
                     setOnboardingAction(undefined);
                   }, "已加入组织")
-                }>
+                } icon="enter-outline">
                   加入组织
                 </Button>
               </View>
@@ -166,7 +166,7 @@ export default function OrganizationSettingsSubPage({
       {currentMembership && roleEditingMember ? (
         <>
           <View style={styles.subPageHeader}>
-            <Button variant="ghost" size="small" onPress={() => setActiveRoleMemberId(undefined)}>返回成员管理</Button>
+            <Button variant="ghost" size="small" onPress={() => setActiveRoleMemberId(undefined)} icon="arrow-back-outline">返回成员管理</Button>
           </View>
           <Card title="调整成员角色">
             <View style={styles.detailPanel}>
@@ -211,7 +211,7 @@ export default function OrganizationSettingsSubPage({
           <Card
             title="组织信息"
             headerAction={canManageOrg ? (
-              <Button variant="ghost" size="small" onPress={() => setEditingOrg((old) => !old)}>
+              <Button variant="ghost" size="small" onPress={() => setEditingOrg((old) => !old)} icon={editingOrg ? "chevron-up-outline" : "create-outline"}>
                 {editingOrg ? "收起" : "编辑"}
               </Button>
             ) : undefined}
@@ -245,7 +245,7 @@ export default function OrganizationSettingsSubPage({
                     });
                     setEditingOrg(false);
                   }, "组织信息已更新")
-                }>
+                } icon="save-outline">
                   保存组织信息
                 </Button>
               </View>
@@ -264,7 +264,7 @@ export default function OrganizationSettingsSubPage({
                     });
                     setDeleteConfirmName("");
                   }, "组织已删除")
-                }>
+                } icon="trash-outline">
                   确认删除组织
                 </Button>
               </View>
@@ -314,7 +314,7 @@ export default function OrganizationSettingsSubPage({
                 </View>
                 {canManageMembers && member.role.code !== "owner" ? (
                   <View style={styles.roleActions}>
-                    <Button variant="secondary" size="small" onPress={() => setActiveRoleMemberId(member.id)}>调整角色</Button>
+                    <Button variant="secondary" size="small" onPress={() => setActiveRoleMemberId(member.id)} icon="swap-horizontal-outline">调整角色</Button>
                     <Button variant="danger" size="small" onPress={() =>
                       run(async () => {
                         await mobileApi(`/organizations/${currentOrgId}/members/${member.id}`, token, {
@@ -322,7 +322,7 @@ export default function OrganizationSettingsSubPage({
                           headers: { "x-organization-id": currentOrgId! }
                         });
                       }, "成员已移除")
-                    }>
+                    } icon="remove-circle-outline">
                       移除
                     </Button>
                   </View>
@@ -336,7 +336,7 @@ export default function OrganizationSettingsSubPage({
                         body: JSON.stringify({ userId: member.userId })
                       });
                     }, "所有者已转移")
-                  }>
+                  } icon="arrow-forward-outline">
                     转移所有者给该成员
                   </Button>
                 ) : null}

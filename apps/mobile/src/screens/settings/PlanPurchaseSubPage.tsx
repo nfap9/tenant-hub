@@ -80,7 +80,7 @@ export default function PlanPurchaseSubPage({
   return (
     <>
       <View style={styles.subPageHeader}>
-        <Button variant="ghost" size="small" onPress={onBack}>返回</Button>
+        <Button variant="ghost" size="small" onPress={onBack} icon="arrow-back-outline">返回</Button>
       </View>
       <Card title="当前套餐">
         {overview?.subscription ? (
@@ -122,6 +122,7 @@ export default function PlanPurchaseSubPage({
                 loading={buying}
                 disabled={!canManageOrg || active || buying}
                 onPress={() => setConfirmingPlanId(plan.id)}
+                icon={active ? "checkmark-outline" : "cart-outline"}
               >
                 {active ? "已购买" : buying ? "购买中" : "购买此套餐"}
               </Button>
@@ -138,8 +139,8 @@ export default function PlanPurchaseSubPage({
         onClose={() => setConfirmingPlanId(undefined)}
         footer={confirmingPlan ? (
           <View style={styles.roomActions}>
-            <Button variant="ghost" size="small" onPress={() => setConfirmingPlanId(undefined)}>取消</Button>
-            <Button size="small" loading={buyingPlanId === confirmingPlan.id} disabled={buyingPlanId === confirmingPlan.id} onPress={() => buy(confirmingPlan.id)}>
+            <Button variant="ghost" size="small" onPress={() => setConfirmingPlanId(undefined)} icon="close-outline">取消</Button>
+            <Button size="small" loading={buyingPlanId === confirmingPlan.id} disabled={buyingPlanId === confirmingPlan.id} onPress={() => buy(confirmingPlan.id)} icon="cart-outline">
               {buyingPlanId === confirmingPlan.id ? "购买中" : "确认购买"}
             </Button>
           </View>

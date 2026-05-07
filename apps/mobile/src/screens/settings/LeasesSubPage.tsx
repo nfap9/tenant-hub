@@ -89,7 +89,7 @@ export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }
   return (
     <>
       <View style={styles.subPageHeader}>
-        <Button variant="ghost" size="small" onPress={onBack}>返回</Button>
+        <Button variant="ghost" size="small" onPress={onBack} icon="arrow-back-outline">返回</Button>
         <Text style={styles.sectionTitle}>所有租约</Text>
       </View>
 
