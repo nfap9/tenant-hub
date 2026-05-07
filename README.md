@@ -30,7 +30,7 @@ pnpm dev
 日常开发请使用热更新模式，容器会挂载本地源码并运行 API 和 Vite 的开发服务器：
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 需要验证生产镜像时再使用基础 Compose，API 会执行 `prisma migrate deploy`，运营端会以 nginx 静态服务启动：
@@ -58,14 +58,14 @@ pnpm --filter @tenant-hub/api prisma generate
 Docker 热更新环境：
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api sh -c "pnpm --filter @tenant-hub/api prisma migrate deploy && pnpm --filter @tenant-hub/api prisma generate"
-docker compose -f docker-compose.yml -f docker-compose.dev.yml restart api
+docker compose -f docker-compose.dev.yml exec api sh -c "pnpm --filter @tenant-hub/api prisma migrate deploy && pnpm --filter @tenant-hub/api prisma generate"
+docker compose -f docker-compose.dev.yml restart api
 ```
 
 如果容器还没启动，先运行：
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres api ops-web
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 生产镜像环境：

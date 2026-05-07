@@ -38,6 +38,12 @@
 docker compose up --build -d
 ```
 
+或单独启动生产环境验收：
+
+```bash
+docker compose -f docker-compose.yml up --build -d
+```
+
 预期：
 
 - `tenant-hub-postgres` 为 `healthy`
@@ -97,7 +103,7 @@ curl -I http://localhost:5173
 5. 从 API 容器日志读取验证码：
 
 ```bash
-docker logs tenant-hub-api --tail=80
+docker compose -f docker-compose.yml logs api --tail=80
 ```
 
 6. 输入验证码并提交注册。
