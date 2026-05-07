@@ -4,6 +4,7 @@ import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
 import { Badge, Button, Card, EmptyState, Input } from "../../components/ui";
 import { mobileApi } from "../../services";
+import { colors } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
 import type { Apartment, ApartmentFeeItem, Membership, Room, RoomStatus } from "../../types";
 import { buildBatchRoomNos, toggleBatchRoomSelection } from "./batchRooms";
@@ -701,7 +702,7 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
                 variant={(editingRoomId === room.id || deleteRoomId === room.id) ? "default" : "outline"}
                 padding="md"
                 gap={10}
-                style={(editingRoomId === room.id || deleteRoomId === room.id) ? { borderWidth: 1.5, borderColor: "#146c5c", backgroundColor: "#eef6f2" } : undefined}
+                style={(editingRoomId === room.id || deleteRoomId === room.id) ? { borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.primaryLightest } : undefined}
               >
                 <View style={styles.sectionHeader}>
                   <View>

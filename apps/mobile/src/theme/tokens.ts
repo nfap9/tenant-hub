@@ -1,55 +1,55 @@
 import { Platform } from "react-native";
 
 // ============================================
-// Colors — 语义化颜色 Token
+// Colors — 清爽风格配色 Token
 // ============================================
 export const colors = {
-  // Brand
-  primary: "#146c5c",
-  primaryDark: "#102522",
-  primaryLight: "#d7efe6",
-  primaryLighter: "#e0f1ea",
-  primaryLightest: "#eef6f2",
+  // Brand — 清爽蓝绿
+  primary: "#0d9488",
+  primaryDark: "#115e59",
+  primaryLight: "#ccfbf1",
+  primaryLighter: "#e6fffa",
+  primaryLightest: "#f0fdfa",
 
-  // Accent (gold tones for login eyebrow etc)
-  accent: "#c7a85a",
-  accentLight: "#cfe8df",
+  // Accent
+  accent: "#f59e0b",
+  accentLight: "#e0f2fe",
 
-  // Backgrounds
-  background: "#f4f2ec",
+  // Backgrounds — 冷白灰系
+  background: "#f8fafc",
   surface: "#ffffff",
-  surfaceWarm: "#fffaf0",
-  surfaceWarm2: "#fffdf7",
+  surfaceWarm: "#fafaf9",
+  surfaceWarm2: "#fafafa",
 
-  // Text
-  text: "#102522",
-  textSecondary: "#394341",
-  textMuted: "#6b7471",
-  textPlaceholder: "#9a9488",
+  // Text — 深灰蓝
+  text: "#0f172a",
+  textSecondary: "#334155",
+  textMuted: "#64748b",
+  textPlaceholder: "#94a3b8",
 
-  // Borders
-  border: "#d9d3c4",
-  borderLight: "#e3dece",
-  borderLighter: "#e4dece",
+  // Borders — 浅灰蓝
+  border: "#e2e8f0",
+  borderLight: "#f1f5f9",
+  borderLighter: "#f8fafc",
 
   // Dividers
-  divider: "#eee8da",
-  dividerLight: "#ebe4d4",
+  divider: "#e2e8f0",
+  dividerLight: "#f1f5f9",
 
   // Status
-  success: "#146c5c",
-  successLight: "#d7efe6",
-  warning: "#c77700",
-  warningLight: "#fff3e0",
-  danger: "#b14f38",
-  dangerLight: "#fceeee",
-  neutral: "#7a6a4f",
-  neutralLight: "#ece5d5",
+  success: "#0d9488",
+  successLight: "#ccfbf1",
+  warning: "#d97706",
+  warningLight: "#fffbeb",
+  danger: "#dc2626",
+  dangerLight: "#fef2f2",
+  neutral: "#64748b",
+  neutralLight: "#f1f5f9",
 
   // Overlays
-  overlay: "rgba(16, 37, 34, 0.28)",
-  overlayHeavy: "rgba(16, 37, 34, 0.42)",
-  toastBg: "rgba(16, 37, 34, 0.92)",
+  overlay: "rgba(15, 23, 42, 0.28)",
+  overlayHeavy: "rgba(15, 23, 42, 0.42)",
+  toastBg: "rgba(15, 23, 42, 0.92)",
 
   // Misc
   white: "#ffffff",

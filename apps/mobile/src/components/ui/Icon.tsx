@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
+import { colors } from "../../theme/tokens";
 
 export type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -9,6 +10,6 @@ type Props = {
   color?: string;
 };
 
-export function Icon({ name, size = 20, color = "#102522" }: Props) {
+export function Icon({ name, size = 20, color = colors.text }: Props) {
   return <Ionicons name={name} size={size} color={color} />;
 }

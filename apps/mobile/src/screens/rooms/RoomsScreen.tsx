@@ -5,6 +5,7 @@ import { TaskSheet } from "../../components/TaskSheet";
 import { Badge, Button, Card, EmptyState, Input, PressableScale } from "../../components/ui";
 import type { RoomActionKey } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
+import { colors } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
 import type { ApartmentFeeItem, Lease, LeaseSettlement, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
 import { getLeaseCandidateRooms } from "./leaseCandidates";
@@ -430,7 +431,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                   setSelectedId(expanded ? undefined : room.id);
                   setEditingRoomId(undefined);
                 }}>
-                  <Card style={expanded ? { borderWidth: 1.5, borderColor: "#146c5c", backgroundColor: "#eef6f2" } : undefined}>
+                  <Card style={expanded ? { borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.primaryLightest } : undefined}>
                     <View style={styles.roomHeader}>
                       <View>
                         <Text style={styles.cardTitle}>{room.apartment?.name} · {room.roomNo}</Text>

@@ -42,7 +42,7 @@ export const styles = StyleSheet.create({
     padding: spacing[1],
     paddingRight: spacing[2.5],
     borderRadius: radii.full,
-    backgroundColor: "#183531"
+    backgroundColor: colors.primaryDark
   },
 
   avatar: {
@@ -232,7 +232,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing[2.5],
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "#c8674e",
+    borderColor: colors.danger,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -418,7 +418,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     padding: spacing[0.75],
     borderRadius: radii.md,
-    backgroundColor: "#ece5d5",
+    backgroundColor: colors.neutralLight,
     gap: spacing[0.75]
   },
 
@@ -432,7 +432,7 @@ export const styles = StyleSheet.create({
 
   segmentItemActive: { backgroundColor: colors.surface },
 
-  segmentText: { color: "#596460", ...typography.bodySmall },
+  segmentText: { color: colors.textMuted, ...typography.bodySmall },
 
   segmentTextActive: { color: colors.text },
 
@@ -498,7 +498,7 @@ export const styles = StyleSheet.create({
     gap: spacing[2.5],
     paddingTop: spacing[3],
     borderTopWidth: 1,
-    borderTopColor: "#294743"
+    borderTopColor: "rgba(255,255,255,0.22)"
   },
 
   homeHeroLabel: { color: colors.accentLight, ...typography.labelSmall },

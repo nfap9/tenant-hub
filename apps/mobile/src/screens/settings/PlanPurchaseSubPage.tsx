@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { Button, Card } from "../../components/ui";
 import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
+import { colors } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
 import type { Membership, Plan, SubscriptionOverview } from "../../types";
 
@@ -103,7 +104,7 @@ export default function PlanPurchaseSubPage({
           const active = activePlanId === plan.id;
           const buying = buyingPlanId === plan.id;
           return (
-            <Card key={plan.id} variant={active ? "default" : "outline"} padding="md" gap={12} style={active ? { borderWidth: 1.5, borderColor: "#146c5c", backgroundColor: "#eef6f2" } : undefined}>
+            <Card key={plan.id} variant={active ? "default" : "outline"} padding="md" gap={12} style={active ? { borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.primaryLightest } : undefined}>
               <View style={styles.planHeader}>
                 <View>
                   <Text style={styles.cardTitle}>{plan.name}</Text>

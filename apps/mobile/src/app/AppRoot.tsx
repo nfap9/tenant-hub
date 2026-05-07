@@ -95,12 +95,14 @@ export default function AppRoot() {
         </View>
         <View style={styles.headerActions}>
           <PressableScale scale={0.97} style={styles.userPill} onPress={() => setUserMenuOpen((value) => !value)}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{session.user.username.slice(0, 1)}</Text>
-            </View>
-            <View style={styles.userPillText}>
-              <Text style={styles.userName}>{session.user.username}</Text>
-              <Text style={styles.userOrgName}>{currentMembership?.organization.name ?? "尚未选择组织"}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{session.user.username.slice(0, 1)}</Text>
+              </View>
+              <View style={styles.userPillText}>
+                <Text style={styles.userName}>{session.user.username}</Text>
+                <Text style={styles.userOrgName}>{currentMembership?.organization.name ?? "尚未选择组织"}</Text>
+              </View>
             </View>
           </PressableScale>
         </View>
