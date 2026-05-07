@@ -6,8 +6,14 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "platforms": ["ios", "android", "web"],
-    "assetBundlePatterns": ["**/*"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "scheme": "tenanthub",
     "icon": "./assets/icon-1024.png",
     "splash": {
@@ -33,6 +39,14 @@
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "75ace74c-5be2-4d8b-beb4-92cf510de98c"
+      }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
