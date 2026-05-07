@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Toast from "../../components/Toast";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
@@ -119,7 +120,7 @@ export default function LoginScreen({
               </View>
             </>
           ) : null}
-          {error ? <Text style={styles.formMessage}>{error}</Text> : null}
+          <Toast message={error} onDismiss={() => setError("")} />
           <TouchableOpacity style={[styles.button, busy && styles.buttonDisabled]} onPress={submit} disabled={busy}>
             <Text style={styles.buttonText}>{busy ? "处理中" : isRegister ? "注册并登录" : "登录"}</Text>
           </TouchableOpacity>

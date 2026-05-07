@@ -1,4 +1,5 @@
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Toast from "../components/Toast";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import MainTabBar from "../navigation/MainTabBar";
@@ -138,7 +139,7 @@ export default function AppRoot() {
       ) : null}
 
       <ScrollView contentContainerStyle={styles.content}>
-        {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
+        <Toast message={notice} onDismiss={() => setNotice("")} />
         {memberships.length === 0 ? (
           <View style={styles.panel}>
             <Text style={styles.sectionTitle}>开始使用 Tenant Hub</Text>
