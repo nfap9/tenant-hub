@@ -7,6 +7,7 @@ import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { ApartmentFeeItem, Lease, LeaseSettlement, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
 import { getLeaseCandidateRooms } from "./leaseCandidates";
+import { getRoomBillGeneratedLabel } from "./roomBillLabel";
 
 type Props = {
   token: string;
@@ -442,7 +443,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
                   <View style={styles.roomHeaderBadges}>
                     <Text style={[styles.statusBadge, statusStyles[room.status]]}>{statusLabels[room.status]}</Text>
                     {roomActiveLease?.currentMonthBillGenerated ? (
-                      <Text style={styles.todoBadge}>{roomActiveLease.currentMonthBillLabel ?? "本月"}账单已出</Text>
+                      <Text style={styles.todoBadge}>{getRoomBillGeneratedLabel(roomActiveLease.currentMonthBillLabel)}</Text>
                     ) : null}
                     {roomActiveLease?.currentMonthBillSettled ? <Text style={[styles.statusBadge, styles.statusVacant]}>账单已结清</Text> : null}
                   </View>
