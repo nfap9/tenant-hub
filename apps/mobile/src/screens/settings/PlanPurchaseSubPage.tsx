@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Text, View } from "react-native";
+import { Button, Card } from "../../components/ui";
 import { TaskSheet } from "../../components/TaskSheet";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
@@ -79,12 +80,9 @@ export default function PlanPurchaseSubPage({
   return (
     <>
       <View style={styles.subPageHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>返回</Text>
-        </TouchableOpacity>
+        <Button variant="ghost" size="small" onPress={onBack}>返回</Button>
       </View>
-      <View style={styles.panel}>
-        <Text style={styles.sectionTitle}>当前套餐</Text>
+      <Card title="当前套餐">
         {overview?.subscription ? (
           <>
             <Text style={styles.cardTitle}>{overview.subscription.plan.name}</Text>
@@ -97,16 +95,15 @@ export default function PlanPurchaseSubPage({
         ) : (
           <Text style={styles.muted}>尚未购买套餐</Text>
         )}
-      </View>
-      <View style={styles.panel}>
-        <Text style={styles.sectionTitle}>购买套餐</Text>
+      </Card>
+      <Card title="购买套餐">
         {!currentOrgId ? <Text style={styles.muted}>请先创建或加入组织后再购买套餐。</Text> : null}
         {plans.length === 0 ? <Text style={styles.muted}>暂无可购买套餐，请联系运营端启用套餐。</Text> : null}
         {plans.map((plan) => {
           const active = activePlanId === plan.id;
           const buying = buyingPlanId === plan.id;
           return (
-            <View style={[styles.planCard, active && styles.planCardActive]} key={plan.id}>
+            <Card key={plan.id} variant={active ? "default" : "outline"} padding="md" gap={12} style={active ? { borderWidth: 1.5, borderColor: "#146c5c", backgroundColor: "#eef6f2" } : undefined}>
               <View style={styles.planHeader}>
                 <View>
                   <Text style={styles.cardTitle}>{plan.name}</Text>
@@ -119,18 +116,20 @@ export default function PlanPurchaseSubPage({
                 <Text style={styles.quotaText}>房间 {plan.roomLimit}</Text>
                 <Text style={styles.quotaText}>成员 {plan.memberLimit}</Text>
               </View>
-              <TouchableOpacity
-                style={[styles.secondaryButton, (!canManageOrg || active || buying) && styles.buttonDisabled]}
+              <Button
+                variant="secondary"
+                size="small"
+                loading={buying}
                 disabled={!canManageOrg || active || buying}
                 onPress={() => setConfirmingPlanId(plan.id)}
               >
-                <Text style={styles.secondaryButtonText}>{active ? "已购买" : buying ? "购买中" : "购买此套餐"}</Text>
-              </TouchableOpacity>
+                {active ? "已购买" : buying ? "购买中" : "购买此套餐"}
+              </Button>
               {!canManageOrg ? <Text style={styles.muted}>需要组织管理权限才能购买套餐</Text> : null}
-            </View>
+            </Card>
           );
         })}
-      </View>
+      </Card>
       <TaskSheet
         visible={Boolean(confirmingPlan)}
         variant="dialog"
@@ -139,33 +138,31 @@ export default function PlanPurchaseSubPage({
         onClose={() => setConfirmingPlanId(undefined)}
         footer={confirmingPlan ? (
           <View style={styles.roomActions}>
-            <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => setConfirmingPlanId(undefined)}>
-              <Text style={styles.secondaryButtonText}>取消</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.actionButton, buyingPlanId === confirmingPlan.id && styles.buttonDisabled]} disabled={buyingPlanId === confirmingPlan.id} onPress={() => buy(confirmingPlan.id)}>
-              <Text style={styles.buttonText}>{buyingPlanId === confirmingPlan.id ? "购买中" : "确认购买"}</Text>
-            </TouchableOpacity>
+            <Button variant="ghost" size="small" onPress={() => setConfirmingPlanId(undefined)}>取消</Button>
+            <Button size="small" loading={buyingPlanId === confirmingPlan.id} disabled={buyingPlanId === confirmingPlan.id} onPress={() => buy(confirmingPlan.id)}>
+              {buyingPlanId === confirmingPlan.id ? "购买中" : "确认购买"}
+            </Button>
           </View>
         ) : null}
       >
         {confirmingPlan ? (
           <>
-                <View style={styles.detailPanel}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.muted}>套餐</Text>
-                    <Text style={styles.cardTitle}>{confirmingPlan.name}</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.muted}>价格</Text>
-                    <Text style={styles.planPrice}>{formatPlanPrice(confirmingPlan.price)}</Text>
-                  </View>
-                  <View style={styles.quotaRow}>
-                    <Text style={styles.quotaText}>公寓 {confirmingPlan.apartmentLimit}</Text>
-                    <Text style={styles.quotaText}>房间 {confirmingPlan.roomLimit}</Text>
-                    <Text style={styles.quotaText}>成员 {confirmingPlan.memberLimit}</Text>
-                  </View>
-                </View>
-                {overview?.subscription ? <Text style={styles.muted}>当前套餐将更新为所选套餐。</Text> : null}
+            <View style={styles.detailPanel}>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>套餐</Text>
+                <Text style={styles.cardTitle}>{confirmingPlan.name}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.muted}>价格</Text>
+                <Text style={styles.planPrice}>{formatPlanPrice(confirmingPlan.price)}</Text>
+              </View>
+              <View style={styles.quotaRow}>
+                <Text style={styles.quotaText}>公寓 {confirmingPlan.apartmentLimit}</Text>
+                <Text style={styles.quotaText}>房间 {confirmingPlan.roomLimit}</Text>
+                <Text style={styles.quotaText}>成员 {confirmingPlan.memberLimit}</Text>
+              </View>
+            </View>
+            {overview?.subscription ? <Text style={styles.muted}>当前套餐将更新为所选套餐。</Text> : null}
           </>
         ) : null}
       </TaskSheet>

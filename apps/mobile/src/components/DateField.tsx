@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { Modal, Platform, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
+import { Modal, Platform, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { PressableScale } from "./ui/PressableScale";
 import { styles } from "../theme/styles";
 
 type Props = {
@@ -56,30 +57,30 @@ export function DateField({ value, onChange, placeholder = "选择日期", style
   if (Platform.OS === "web") {
     return (
       <View style={[styles.dateFieldWrap, style]}>
-        <TouchableOpacity style={[styles.input, styles.dateField]} onPress={openPicker} activeOpacity={0.75}>
+        <PressableScale scale={0.98} style={[styles.input, styles.dateField]} onPress={openPicker}>
           <Text style={value ? styles.dateFieldText : styles.dateFieldPlaceholder}>{value || placeholder}</Text>
-        </TouchableOpacity>
+        </PressableScale>
         {open ? (
           <Modal transparent animationType="fade" visible={open} onRequestClose={() => setOpen(false)}>
-            <TouchableOpacity style={styles.datePickerModalOverlay} activeOpacity={1} onPress={() => setOpen(false)}>
-              <TouchableOpacity style={styles.datePickerModalPanel} activeOpacity={1}>
+            <PressableScale style={styles.datePickerModalOverlay} onPress={() => setOpen(false)}>
+              <View style={styles.datePickerModalPanel}>
                 <View style={styles.datePickerHeader}>
-                  <TouchableOpacity style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
+                  <PressableScale scale={0.9} style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
                     <Text style={styles.datePickerNavText}>‹</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                   <Text style={styles.datePickerTitle}>{monthTitle(visibleMonth)}</Text>
-                  <TouchableOpacity style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}>
+                  <PressableScale scale={0.9} style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}>
                     <Text style={styles.datePickerNavText}>›</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
                 <View style={styles.datePickerGrid}>
                   {["日", "一", "二", "三", "四", "五", "六"].map((item) => (
                     <Text key={item} style={styles.datePickerWeekday}>{item}</Text>
                   ))}
                   {days.map((day, index) => (
-                    <TouchableOpacity
+                    <PressableScale
                       key={day ? toDateString(day) : `blank-${index}`}
-                      style={[styles.datePickerDay, day && sameDate(day, selectedDate) && styles.datePickerDayActive]}
+                      scale={0.9}
                       disabled={!day}
                       onPress={() => {
                         if (!day) return;
@@ -87,12 +88,14 @@ export function DateField({ value, onChange, placeholder = "选择日期", style
                         setOpen(false);
                       }}
                     >
-                      <Text style={[styles.datePickerDayText, day && sameDate(day, selectedDate) && styles.datePickerDayTextActive]}>{day?.getDate() ?? ""}</Text>
-                    </TouchableOpacity>
+                      <View style={[styles.datePickerDay, day && sameDate(day, selectedDate) && styles.datePickerDayActive]}>
+                        <Text style={[styles.datePickerDayText, day && sameDate(day, selectedDate) && styles.datePickerDayTextActive]}>{day?.getDate() ?? ""}</Text>
+                      </View>
+                    </PressableScale>
                   ))}
                 </View>
-              </TouchableOpacity>
-            </TouchableOpacity>
+              </View>
+            </PressableScale>
           </Modal>
         ) : null}
       </View>
@@ -101,9 +104,9 @@ export function DateField({ value, onChange, placeholder = "选择日期", style
 
   return (
     <>
-      <TouchableOpacity style={[styles.input, styles.dateField, style]} onPress={() => setOpen(true)} activeOpacity={0.75}>
+      <PressableScale scale={0.98} style={[styles.input, styles.dateField, style]} onPress={() => setOpen(true)}>
         <Text style={value ? styles.dateFieldText : styles.dateFieldPlaceholder}>{value || placeholder}</Text>
-      </TouchableOpacity>
+      </PressableScale>
       {open ? (
         <DateTimePicker
           value={toDate(value)}

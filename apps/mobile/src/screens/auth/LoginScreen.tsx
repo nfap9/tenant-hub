@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import Toast from "../../components/Toast";
+import { Button, Input } from "../../components/ui";
+import { Card } from "../../components/ui/Card";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
@@ -74,37 +76,37 @@ export default function LoginScreen({
           <Text style={styles.loginProduct}>Tenant Hub</Text>
           <Text style={styles.loginSubtitle}>给二房东和小型物业公司的移动经营台</Text>
         </View>
-        <View style={styles.loginPanel}>
+        <Card variant="warm" padding="lg" gap={12}>
           <View>
             <Text style={styles.formTitle}>{isRegister ? "注册账号" : "欢迎回来"}</Text>
             <Text style={styles.formSubTitle}>{isRegister ? "手机号验证后即可创建账号" : "使用手机号登录你的公寓经营工作台"}</Text>
           </View>
           {!isRegister ? (
             <View style={styles.segment}>
-              <TouchableOpacity style={[styles.segmentItem, mode === "code" && styles.segmentItemActive]} onPress={() => setMode("code")}>
-                <Text style={[styles.segmentText, mode === "code" && styles.segmentTextActive]}>验证码登录</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.segmentItem, mode === "password" && styles.segmentItemActive]} onPress={() => setMode("password")}>
-                <Text style={[styles.segmentText, mode === "password" && styles.segmentTextActive]}>密码登录</Text>
-              </TouchableOpacity>
+              <View style={[styles.segmentItem, mode === "code" && styles.segmentItemActive]}>
+                <Text style={[styles.segmentText, mode === "code" && styles.segmentTextActive]} onPress={() => setMode("code")}>验证码登录</Text>
+              </View>
+              <View style={[styles.segmentItem, mode === "password" && styles.segmentItemActive]}>
+                <Text style={[styles.segmentText, mode === "password" && styles.segmentTextActive]} onPress={() => setMode("password")}>密码登录</Text>
+              </View>
             </View>
           ) : null}
           <Text style={styles.label}>手机号</Text>
-          <TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" style={styles.input} placeholder="请输入手机号" placeholderTextColor="#9a9488" />
+          <Input value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="请输入手机号" />
           {isRegister ? (
             <>
               <Text style={styles.label}>用户名</Text>
-              <TextInput value={username} onChangeText={setUsername} style={styles.input} placeholder="请输入用户名" placeholderTextColor="#9a9488" />
+              <Input value={username} onChangeText={setUsername} placeholder="请输入用户名" />
             </>
           ) : null}
           {mode === "password" || isRegister ? (
             <>
               <Text style={styles.label}>密码</Text>
-              <TextInput value={password} onChangeText={setPassword} secureTextEntry style={styles.input} placeholder="至少 8 位密码" placeholderTextColor="#9a9488" />
+              <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="至少 8 位密码" />
               {isRegister ? (
                 <>
                   <Text style={styles.label}>确认密码</Text>
-                  <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry style={styles.input} placeholder="再次输入密码" placeholderTextColor="#9a9488" />
+                  <Input value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry placeholder="再次输入密码" />
                 </>
               ) : null}
             </>
@@ -113,27 +115,24 @@ export default function LoginScreen({
             <>
               <Text style={styles.label}>验证码</Text>
               <View style={styles.codeRow}>
-                <TextInput value={code} onChangeText={setCode} style={[styles.input, styles.codeInput]} placeholder="6 位验证码" placeholderTextColor="#9a9488" keyboardType="number-pad" />
-                <TouchableOpacity style={[styles.codeButton, (otpBusy || busy) && styles.buttonDisabled]} onPress={sendOtp} disabled={otpBusy || busy}>
-                  <Text style={styles.secondaryButtonText}>{otpBusy ? "发送中" : "获取验证码"}</Text>
-                </TouchableOpacity>
+                <Input value={code} onChangeText={setCode} style={{ flex: 1 }} placeholder="6 位验证码" keyboardType="number-pad" />
+                <Button variant="secondary" size="small" loading={otpBusy} disabled={otpBusy || busy} onPress={sendOtp}>
+                  {otpBusy ? "发送中" : "获取验证码"}
+                </Button>
               </View>
             </>
           ) : null}
           <Toast message={error} onDismiss={() => setError("")} />
-          <TouchableOpacity style={[styles.button, busy && styles.buttonDisabled]} onPress={submit} disabled={busy}>
-            <Text style={styles.buttonText}>{busy ? "处理中" : isRegister ? "注册并登录" : "登录"}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.switchAuthButton}
-            onPress={() => {
-              setAuthMode(isRegister ? "login" : "register");
-              if (!isRegister) setMode("code");
-            }}
-          >
-            <Text style={styles.switchAuthText}>{isRegister ? "已有账号，去登录" : "注册新账号"}</Text>
-          </TouchableOpacity>
-        </View>
+          <Button loading={busy} disabled={busy} onPress={submit}>
+            {busy ? "处理中" : isRegister ? "注册并登录" : "登录"}
+          </Button>
+          <Button variant="ghost" size="small" onPress={() => {
+            setAuthMode(isRegister ? "login" : "register");
+            if (!isRegister) setMode("code");
+          }}>
+            {isRegister ? "已有账号，去登录" : "注册新账号"}
+          </Button>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );

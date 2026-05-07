@@ -1,5 +1,6 @@
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import Toast from "../components/Toast";
+import { Button, Card, PressableScale } from "../components/ui";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import MainTabBar from "../navigation/MainTabBar";
@@ -93,7 +94,7 @@ export default function AppRoot() {
           <Text style={styles.headerTitle}>{title}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.userPill} onPress={() => setUserMenuOpen((value) => !value)}>
+          <PressableScale scale={0.97} style={styles.userPill} onPress={() => setUserMenuOpen((value) => !value)}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{session.user.username.slice(0, 1)}</Text>
             </View>
@@ -101,7 +102,7 @@ export default function AppRoot() {
               <Text style={styles.userName}>{session.user.username}</Text>
               <Text style={styles.userOrgName}>{currentMembership?.organization.name ?? "尚未选择组织"}</Text>
             </View>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </View>
 
@@ -113,8 +114,9 @@ export default function AppRoot() {
           <Text style={styles.menuLabel}>切换组织</Text>
           {memberships.length === 0 ? <Text style={styles.muted}>暂无组织</Text> : null}
           {memberships.map((item) => (
-            <TouchableOpacity
+            <PressableScale
               key={item.organization.id}
+              scale={0.98}
               style={[styles.menuOrgItem, currentOrgId === item.organization.id && styles.menuOrgItemActive]}
               onPress={() => {
                 setCurrentOrgId(item.organization.id);
@@ -126,30 +128,19 @@ export default function AppRoot() {
                 <Text style={styles.userMenuPhone}>{item.role.name} · {item.organization.code}</Text>
               </View>
               {currentOrgId === item.organization.id ? <Text style={styles.link}>当前</Text> : null}
-            </TouchableOpacity>
+            </PressableScale>
           ))}
           <View style={styles.menuDivider} />
-          <TouchableOpacity
-            style={styles.menuLogout}
-            onPress={signOut}
-          >
-            <Text style={styles.smallDangerText}>退出登录</Text>
-          </TouchableOpacity>
+          <Button variant="danger" size="small" onPress={signOut}>退出登录</Button>
         </View>
       ) : null}
 
       <ScrollView contentContainerStyle={styles.content}>
         <Toast message={notice} onDismiss={() => setNotice("")} />
         {memberships.length === 0 ? (
-          <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>开始使用 Tenant Hub</Text>
-            <Text style={styles.muted}>你还没有加入组织。先创建自己的组织，或输入管理员生成的邀请码加入已有团队。</Text>
-            <View style={styles.roomActions}>
-              <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => openTab("settings")}>
-                <Text style={styles.buttonText}>创建或加入组织</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Card title="开始使用 Tenant Hub" subtitle="你还没有加入组织。先创建自己的组织，或输入管理员生成的邀请码加入已有团队。">
+            <Button onPress={() => openTab("settings")}>创建或加入组织</Button>
+          </Card>
         ) : null}
         {active === "home" ? <HomeScreen token={session.token} organizationId={currentOrgId} setNotice={setNotice} onNavigate={navigateFromHome} /> : null}
         {active === "rooms" ? (

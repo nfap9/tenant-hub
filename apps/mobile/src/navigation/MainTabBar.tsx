@@ -1,16 +1,54 @@
-import { Text, TouchableOpacity, View } from "react-native";
-import { styles } from "../theme/styles";
+import { Text, View } from "react-native";
+import { colors, radii, spacing } from "../theme/tokens";
+import { PressableScale } from "../components/ui/PressableScale";
 import type { TabKey } from "../types/navigation";
 import { tabItems } from "./tabs";
 
 export default function MainTabBar({ active, onChange }: { active: TabKey; onChange: (key: TabKey) => void }) {
   return (
     <View style={styles.tabbar}>
-      {tabItems.map((tab) => (
-        <TouchableOpacity key={tab.key} style={[styles.tab, active === tab.key && styles.tabActive]} onPress={() => onChange(tab.key)}>
-          <Text style={[styles.tabText, active === tab.key && styles.tabTextActive]}>{tab.label}</Text>
-        </TouchableOpacity>
-      ))}
+      {tabItems.map((tab) => {
+        const isActive = active === tab.key;
+        return (
+          <PressableScale
+            key={tab.key}
+            scale={0.92}
+            onPress={() => onChange(tab.key)}
+            style={[styles.tab, isActive && styles.tabActive]}
+          >
+            <Text style={{ fontSize: 18 }}>{tab.icon}</Text>
+            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
+          </PressableScale>
+        );
+      })}
     </View>
   );
 }
+
+const styles = {
+  tabbar: {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    minHeight: 64,
+    padding: spacing[2],
+    paddingBottom: spacing[2] + 14,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLighter,
+    flexDirection: "row" as const,
+    gap: spacing[1.5]
+  },
+  tab: {
+    flex: 1,
+    borderRadius: radii.md,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: spacing[0.5],
+    paddingVertical: spacing[1]
+  },
+  tabActive: { backgroundColor: colors.primary },
+  tabText: { color: colors.textPlaceholder, fontSize: 12, lineHeight: 16 },
+  tabTextActive: { color: colors.white, fontWeight: "700" as const }
+};

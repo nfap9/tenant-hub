@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, View } from "react-native";
+import { Button, Card, Input } from "../../components/ui";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 
@@ -38,17 +39,15 @@ export default function AccountSettingsSubPage({ token, setNotice, onBack }: Acc
   return (
     <>
       <View style={styles.subPageHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>返回</Text>
-        </TouchableOpacity>
+        <Button variant="ghost" size="small" onPress={onBack}>返回</Button>
       </View>
-      <View style={styles.panel}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>账号安全</Text>
-          <TouchableOpacity style={styles.smallButton} onPress={() => setEditingPassword((old) => !old)}>
-            <Text style={styles.smallButtonText}>{editingPassword ? "收起" : "修改密码"}</Text>
-          </TouchableOpacity>
-        </View>
+      <Card title="账号安全"
+        headerAction={
+          <Button variant="ghost" size="small" onPress={() => setEditingPassword((old) => !old)}>
+            {editingPassword ? "收起" : "修改密码"}
+          </Button>
+        }
+      >
         <View style={styles.detailPanel}>
           <View style={styles.detailRow}>
             <Text style={styles.muted}>登录密码</Text>
@@ -59,33 +58,15 @@ export default function AccountSettingsSubPage({ token, setNotice, onBack }: Acc
         {editingPassword ? (
           <View style={styles.detailPanel}>
             <Text style={styles.sectionTitle}>修改密码</Text>
-            <TextInput
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              style={styles.input}
-              placeholder="当前密码"
-              secureTextEntry
-            />
-            <TextInput
-              value={newPassword}
-              onChangeText={setNewPassword}
-              style={styles.input}
-              placeholder="新密码，至少 8 位"
-              secureTextEntry
-            />
-            <TextInput
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              style={styles.input}
-              placeholder="再次输入新密码"
-              secureTextEntry
-            />
-            <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} disabled={saving} onPress={submit}>
-              <Text style={styles.buttonText}>{saving ? "保存中" : "保存新密码"}</Text>
-            </TouchableOpacity>
+            <Input value={currentPassword} onChangeText={setCurrentPassword} placeholder="当前密码" secureTextEntry />
+            <Input value={newPassword} onChangeText={setNewPassword} placeholder="新密码，至少 8 位" secureTextEntry />
+            <Input value={confirmPassword} onChangeText={setConfirmPassword} placeholder="再次输入新密码" secureTextEntry />
+            <Button loading={saving} disabled={saving} onPress={submit}>
+              {saving ? "保存中" : "保存新密码"}
+            </Button>
           </View>
         ) : null}
-      </View>
+      </Card>
     </>
   );
 }

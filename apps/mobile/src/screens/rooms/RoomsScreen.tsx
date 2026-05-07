@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, View } from "react-native";
 import { DateField } from "../../components/DateField";
 import { TaskSheet } from "../../components/TaskSheet";
+import { Badge, Button, Card, EmptyState, Input, PressableScale } from "../../components/ui";
 import type { RoomActionKey } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
@@ -60,11 +61,11 @@ const statusLabels: Record<RoomStatus, string> = {
   MAINTENANCE: "维修"
 };
 
-const statusStyles: Record<RoomStatus, object> = {
-  VACANT: styles.statusVacant,
-  RESERVED: styles.statusReserved,
-  OCCUPIED: styles.statusOccupied,
-  MAINTENANCE: styles.statusMaintenance
+const toneForStatus: Record<RoomStatus, Parameters<typeof Badge>[0]["tone"]> = {
+  VACANT: "success",
+  RESERVED: "neutral",
+  OCCUPIED: "warning",
+  MAINTENANCE: "danger"
 };
 
 const filters: Array<RoomStatus | "ALL"> = ["ALL", "VACANT", "OCCUPIED", "RESERVED", "MAINTENANCE"];
@@ -343,9 +344,9 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
 
   if (!organizationId) {
     return (
-      <View style={styles.panel}>
-        <Text style={styles.muted}>请先选择组织</Text>
-      </View>
+      <Card>
+        <EmptyState icon="🏢" title="尚未选择组织" subtitle="请先从右上角用户菜单中选择一个组织" />
+      </Card>
     );
   }
 
@@ -353,177 +354,161 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
     <>
       {quickLeaseSelecting ? (
         <>
-          <View style={styles.panel}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>选择签约房间</Text>
-                <Text style={styles.muted}>选择一间空闲房后填写租客和租约信息</Text>
-              </View>
-              <TouchableOpacity style={styles.smallButton} onPress={() => setQuickLeaseSelecting(false)}>
-                <Text style={styles.smallButtonText}>返回</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Card title="选择签约房间" subtitle="选择一间空闲房后填写租客和租约信息"
+            headerAction={
+              <Button variant="ghost" size="small" onPress={() => setQuickLeaseSelecting(false)}>返回</Button>
+            }
+          >
+            <Text style={styles.muted}>点击下方房间卡片进行签约</Text>
+          </Card>
 
-          {leaseCandidateRooms.length === 0 ? <Text style={styles.emptyText}>暂无空闲房间可签约</Text> : null}
+          {leaseCandidateRooms.length === 0 ? <EmptyState icon="🛏️" title="暂无空闲房间" subtitle="暂无空闲房间可签约" /> : null}
 
           <View style={styles.roomGrid}>
             {leaseCandidateRooms.map((room) => (
-              <TouchableOpacity key={room.id} style={styles.leaseCandidateCard} onPress={() => openLeaseForRoom(room)}>
-                <View>
-                  <Text style={styles.cardTitle}>{room.apartment?.name} · {room.roomNo}</Text>
-                  <Text style={styles.muted}>{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
-                </View>
-                <Text style={[styles.statusBadge, styles.statusVacant]}>选择</Text>
-              </TouchableOpacity>
+              <PressableScale key={room.id} onPress={() => openLeaseForRoom(room)}>
+                <Card variant="outline" padding="md">
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <View>
+                      <Text style={styles.cardTitle}>{room.apartment?.name} · {room.roomNo}</Text>
+                      <Text style={styles.muted}>{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
+                    </View>
+                    <Badge tone="success">选择</Badge>
+                  </View>
+                </Card>
+              </PressableScale>
             ))}
           </View>
         </>
       ) : (
         <>
           <View style={styles.statRow}>
-            <View style={styles.statBlock}>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
               <Text style={styles.statLabel}>全部房间</Text>
               <Text style={styles.statValue}>{rooms.length}</Text>
-            </View>
-            <View style={styles.statBlock}>
+            </Card>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
               <Text style={styles.statLabel}>空闲</Text>
               <Text style={styles.statValue}>{vacantCount}</Text>
-            </View>
-            <View style={styles.statBlock}>
+            </Card>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
               <Text style={styles.statLabel}>已租</Text>
               <Text style={styles.statValue}>{occupiedCount}</Text>
-            </View>
+            </Card>
           </View>
 
           {canManageLease ? (
-            <TouchableOpacity style={styles.button} onPress={() => setQuickLeaseSelecting(true)}>
-              <Text style={styles.buttonText}>签约入住</Text>
-            </TouchableOpacity>
+            <Button onPress={() => setQuickLeaseSelecting(true)}>签约入住</Button>
           ) : null}
 
-      <View style={styles.filterBar}>
-        {filters.map((item) => (
-          <TouchableOpacity
-            key={item}
-            style={[styles.filterButton, filter === item && styles.filterButtonActive]}
-            onPress={() => {
-              setFilter(item);
-              setSelectedId(undefined);
-              setEditingRoomId(undefined);
-              setLeaseRoomId(undefined);
-            }}
-          >
-            <Text style={[styles.filterButtonText, filter === item && styles.filterButtonTextActive]}>
-              {item === "ALL" ? "全部" : statusLabels[item]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {visibleRooms.length === 0 ? <Text style={styles.emptyText}>暂无房间，请先到公寓页批量添加</Text> : null}
-
-      <View style={styles.roomGrid}>
-        {visibleRooms.map((room) => {
-          const expanded = selectedId === room.id;
-          const roomActiveLease = room.leases?.find((item) => item.status === "ACTIVE");
-          return (
-            <View key={room.id} style={[styles.roomCard, expanded && styles.roomCardActive]}>
-              <TouchableOpacity
+          <View style={styles.filterBar}>
+            {filters.map((item) => (
+              <Button
+                key={item}
+                variant={filter === item ? "primary" : "ghost"}
+                size="small"
                 onPress={() => {
-                  setSelectedId(expanded ? undefined : room.id);
+                  setFilter(item);
+                  setSelectedId(undefined);
                   setEditingRoomId(undefined);
+                  setLeaseRoomId(undefined);
                 }}
               >
-                <View style={styles.roomHeader}>
-                  <View>
-                    <Text style={styles.cardTitle}>{room.apartment?.name} · {room.roomNo}</Text>
-                    <Text style={styles.muted}>{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
-                  </View>
-                  <View style={styles.roomHeaderBadges}>
-                    <Text style={[styles.statusBadge, statusStyles[room.status]]}>{statusLabels[room.status]}</Text>
-                    {roomActiveLease?.currentMonthBillGenerated ? (
-                      <Text style={styles.todoBadge}>{getRoomBillGeneratedLabel(roomActiveLease.currentMonthBillLabel)}</Text>
-                    ) : null}
-                    {roomActiveLease?.currentMonthBillSettled ? <Text style={[styles.statusBadge, styles.statusVacant]}>账单已结清</Text> : null}
-                  </View>
-                </View>
-                <Text style={styles.muted}>{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>
-              </TouchableOpacity>
-
-              {expanded ? (
-                <>
-                  <View style={styles.detailPanel}>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.muted}>设施</Text>
-                      <Text style={styles.muted}>{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.muted}>水电单价</Text>
-                      <Text style={styles.muted}>水 ¥{money(room.apartment?.waterUnitPrice)} · 电 ¥{money(room.apartment?.powerUnitPrice)}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.roomActions}>
-                    {canManageRoom ? (
-                      <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => startEditRoom(room)}>
-                        <Text style={styles.secondaryButtonText}>编辑房间</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    {room.status === "VACANT" && canManageLease ? (
-                      <TouchableOpacity
-                        style={[styles.button, styles.actionButton]}
-                        onPress={() => {
-                          setSelectedId(room.id);
-                          setLeaseRoomId(room.id);
-                          setEditingRoomId(undefined);
-                        }}
-                      >
-                        <Text style={styles.buttonText}>签约入住</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    {canManageRoom ? (
-                      <TouchableOpacity style={[styles.smallDangerButton, styles.actionButton]} onPress={deleteRoom}>
-                        <Text style={styles.smallDangerText}>删除房间</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-
-                  {room.status === "OCCUPIED" && roomActiveLease ? (
-                    <View style={styles.detailPanel}>
-                      <Text style={styles.sectionTitle}>在租信息</Text>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.muted}>租客</Text>
-                        <Text style={styles.cardTitle}>{roomActiveLease.tenantName}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.muted}>租金</Text>
-                        <Text style={styles.cardStat}>¥{money(roomActiveLease.rentAmount)}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.muted}>合同期</Text>
-                        <Text style={styles.muted}>{roomActiveLease.startDate.slice(0, 10)} 至 {roomActiveLease.endDate.slice(0, 10)}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.muted}>交租周期</Text>
-                        <Text style={styles.muted}>{cycleLabels[roomActiveLease.cycle]} · 宽限 {roomActiveLease.graceDays ?? 0} 天</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.muted}>自动续约</Text>
-                        <Text style={styles.muted}>{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text>
-                      </View>
-                      {canManageLease ? (
-                        <TouchableOpacity style={styles.smallDangerButton} onPress={() => openTermination(roomActiveLease)}>
-                          <Text style={styles.smallDangerText}>退租</Text>
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                  ) : null}
-                </>
-              ) : null}
+                {item === "ALL" ? "全部" : statusLabels[item]}
+              </Button>
+            ))}
           </View>
-        );
-      })}
-      </View>
+
+          {visibleRooms.length === 0 ? <EmptyState icon="🛏️" title="暂无房间" subtitle="请先到公寓页批量添加" /> : null}
+
+          <View style={styles.roomGrid}>
+            {visibleRooms.map((room) => {
+              const expanded = selectedId === room.id;
+              const roomActiveLease = room.leases?.find((item) => item.status === "ACTIVE");
+              return (
+                <PressableScale key={room.id} onPress={() => {
+                  setSelectedId(expanded ? undefined : room.id);
+                  setEditingRoomId(undefined);
+                }}>
+                  <Card style={expanded ? { borderWidth: 1.5, borderColor: "#146c5c", backgroundColor: "#eef6f2" } : undefined}>
+                    <View style={styles.roomHeader}>
+                      <View>
+                        <Text style={styles.cardTitle}>{room.apartment?.name} · {room.roomNo}</Text>
+                        <Text style={styles.muted}>{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
+                      </View>
+                      <View style={styles.roomHeaderBadges}>
+                        <Badge tone={toneForStatus[room.status]}>{statusLabels[room.status]}</Badge>
+                        {roomActiveLease?.currentMonthBillGenerated ? (
+                          <Badge tone="primary">{getRoomBillGeneratedLabel(roomActiveLease.currentMonthBillLabel)}</Badge>
+                        ) : null}
+                        {roomActiveLease?.currentMonthBillSettled ? <Badge tone="success">账单已结清</Badge> : null}
+                      </View>
+                    </View>
+                    <Text style={styles.muted}>{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>
+
+                    {expanded ? (
+                      <>
+                        <View style={styles.detailPanel}>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.muted}>设施</Text>
+                            <Text style={styles.muted}>{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>
+                          </View>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.muted}>水电单价</Text>
+                            <Text style={styles.muted}>水 ¥{money(room.apartment?.waterUnitPrice)} · 电 ¥{money(room.apartment?.powerUnitPrice)}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.roomActions}>
+                          {canManageRoom ? (
+                            <Button variant="secondary" size="small" onPress={() => startEditRoom(room)}>编辑房间</Button>
+                          ) : null}
+                          {room.status === "VACANT" && canManageLease ? (
+                            <Button size="small" onPress={() => {
+                              setSelectedId(room.id);
+                              setLeaseRoomId(room.id);
+                              setEditingRoomId(undefined);
+                            }}>签约入住</Button>
+                          ) : null}
+                          {canManageRoom ? (
+                            <Button variant="danger" size="small" onPress={deleteRoom}>删除房间</Button>
+                          ) : null}
+                        </View>
+
+                        {room.status === "OCCUPIED" && roomActiveLease ? (
+                          <View style={styles.detailPanel}>
+                            <Text style={styles.sectionTitle}>在租信息</Text>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.muted}>租客</Text>
+                              <Text style={styles.cardTitle}>{roomActiveLease.tenantName}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.muted}>租金</Text>
+                              <Text style={styles.cardStat}>¥{money(roomActiveLease.rentAmount)}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.muted}>合同期</Text>
+                              <Text style={styles.muted}>{roomActiveLease.startDate.slice(0, 10)} 至 {roomActiveLease.endDate.slice(0, 10)}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.muted}>交租周期</Text>
+                              <Text style={styles.muted}>{cycleLabels[roomActiveLease.cycle]} · 宽限 {roomActiveLease.graceDays ?? 0} 天</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.muted}>自动续约</Text>
+                              <Text style={styles.muted}>{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text>
+                            </View>
+                            {canManageLease ? (
+                              <Button variant="danger" size="small" onPress={() => openTermination(roomActiveLease)}>退租</Button>
+                            ) : null}
+                          </View>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </Card>
+                </PressableScale>
+              );
+            })}
+          </View>
         </>
       )}
       <TaskSheet
@@ -533,32 +518,31 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         subtitle={editingRoom ? `${editingRoom.apartment?.name} · ${editingRoom.roomNo}` : undefined}
         onClose={() => setEditingRoomId(undefined)}
         footer={(
-          <TouchableOpacity style={styles.button} onPress={updateRoom}>
-            <Text style={styles.buttonText}>保存房间信息</Text>
-          </TouchableOpacity>
+          <Button onPress={updateRoom}>保存房间信息</Button>
         )}
       >
-        <TextInput style={styles.input} placeholder="房间号" value={roomForm.roomNo} onChangeText={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
+        <Input placeholder="房间号" value={roomForm.roomNo} onChangeText={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
         <View style={styles.formGrid}>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>户型</Text>
-            <TextInput style={styles.input} placeholder="例如 一室一卫" value={roomForm.layout} onChangeText={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
+            <Input placeholder="例如 一室一卫" value={roomForm.layout} onChangeText={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
           </View>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>面积</Text>
-            <TextInput style={styles.input} placeholder="平方米" value={roomForm.area} keyboardType="numeric" onChangeText={(value) => setRoomForm((old) => ({ ...old, area: value }))} />
+            <Input placeholder="平方米" value={roomForm.area} keyboardType="numeric" onChangeText={(value) => setRoomForm((old) => ({ ...old, area: value }))} />
           </View>
         </View>
-        <TextInput style={styles.input} placeholder="设施，用逗号分隔" value={roomForm.facilities} onChangeText={(value) => setRoomForm((old) => ({ ...old, facilities: value }))} />
+        <Input placeholder="设施，用逗号分隔" value={roomForm.facilities} onChangeText={(value) => setRoomForm((old) => ({ ...old, facilities: value }))} />
         <View style={styles.segment}>
           {(Object.keys(statusLabels) as RoomStatus[]).map((item) => (
-            <TouchableOpacity
+            <View
               key={item}
               style={[styles.segmentItem, roomForm.status === item && styles.segmentItemActive]}
-              onPress={() => setRoomForm((old) => ({ ...old, status: item }))}
             >
-              <Text style={[styles.segmentText, roomForm.status === item && styles.segmentTextActive]}>{statusLabels[item]}</Text>
-            </TouchableOpacity>
+              <Text style={[styles.segmentText, roomForm.status === item && styles.segmentTextActive]} onPress={() => setRoomForm((old) => ({ ...old, status: item }))}>
+                {statusLabels[item]}
+              </Text>
+            </View>
           ))}
         </View>
       </TaskSheet>
@@ -569,85 +553,85 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         subtitle={leaseRoom ? `${leaseRoom.apartment?.name} · ${leaseRoom.roomNo}` : undefined}
         onClose={() => setLeaseRoomId(undefined)}
         footer={(
-          <TouchableOpacity style={styles.button} onPress={createLease}>
-            <Text style={styles.buttonText}>确认签约</Text>
-          </TouchableOpacity>
+          <Button onPress={createLease}>确认签约</Button>
         )}
       >
-              <TextInput style={styles.input} placeholder="租客姓名" value={leaseForm.tenantName} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
-              <TextInput style={styles.input} placeholder="租客电话" value={leaseForm.tenantPhone} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantPhone: value }))} />
-              <View style={styles.formGrid}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>开始日期</Text>
-                  <DateField value={leaseForm.startDate} onChange={(value) => setLeaseForm((old) => ({ ...old, startDate: value }))} />
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>结束日期</Text>
-                  <DateField value={leaseForm.endDate} onChange={(value) => setLeaseForm((old) => ({ ...old, endDate: value }))} />
-                </View>
-              </View>
-              <View style={styles.formGrid}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>租金</Text>
-                  <TextInput style={styles.input} placeholder="每期金额" value={leaseForm.rentAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, rentAmount: value }))} />
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>押金</Text>
-                  <TextInput style={styles.input} placeholder="押金金额" value={leaseForm.depositAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, depositAmount: value }))} />
-                </View>
-              </View>
-              <View style={styles.formGrid}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>交租期限</Text>
-                  <TextInput style={styles.input} placeholder="交租日后几日内" value={leaseForm.graceDays} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, graceDays: value }))} />
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>自动续约</Text>
-                  <View style={styles.segment}>
-                    {[true, false].map((item) => (
-                      <TouchableOpacity
-                        key={String(item)}
-                        style={[styles.segmentItem, leaseForm.autoRenew === item && styles.segmentItemActive]}
-                        onPress={() => setLeaseForm((old) => ({ ...old, autoRenew: item }))}
-                      >
-                        <Text style={[styles.segmentText, leaseForm.autoRenew === item && styles.segmentTextActive]}>{item ? "开启" : "关闭"}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-              <View style={styles.segment}>
-                {(["MONTHLY", "QUARTERLY", "YEARLY"] as RentCycle[]).map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.segmentItem, leaseForm.cycle === item && styles.segmentItemActive]}
-                    onPress={() => setLeaseForm((old) => ({ ...old, cycle: item }))}
-                  >
-                    <Text style={[styles.segmentText, leaseForm.cycle === item && styles.segmentTextActive]}>{cycleLabels[item]}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.formGrid}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>水费单价</Text>
-                  <TextInput style={styles.input} placeholder="元/吨" value={leaseForm.waterUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, waterUnitPrice: value }))} />
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>电费单价</Text>
-                  <TextInput style={styles.input} placeholder="元/度" value={leaseForm.powerUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
-                </View>
-              </View>
-              {(leaseRoom?.apartment?.feeItems ?? []).length ? <Text style={styles.label}>选择费用</Text> : null}
-              {(leaseRoom?.apartment?.feeItems ?? []).map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.feeItem, selectedFeeIds.includes(item.id) && styles.feeItemActive]}
-                  onPress={() => toggleFee(item)}
+        <Input placeholder="租客姓名" value={leaseForm.tenantName} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
+        <Input placeholder="租客电话" value={leaseForm.tenantPhone} onChangeText={(value) => setLeaseForm((old) => ({ ...old, tenantPhone: value }))} />
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>开始日期</Text>
+            <DateField value={leaseForm.startDate} onChange={(value) => setLeaseForm((old) => ({ ...old, startDate: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>结束日期</Text>
+            <DateField value={leaseForm.endDate} onChange={(value) => setLeaseForm((old) => ({ ...old, endDate: value }))} />
+          </View>
+        </View>
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>租金</Text>
+            <Input placeholder="每期金额" value={leaseForm.rentAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, rentAmount: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>押金</Text>
+            <Input placeholder="押金金额" value={leaseForm.depositAmount} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, depositAmount: value }))} />
+          </View>
+        </View>
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>交租期限</Text>
+            <Input placeholder="交租日后几日内" value={leaseForm.graceDays} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, graceDays: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>自动续约</Text>
+            <View style={styles.segment}>
+              {[true, false].map((item) => (
+                <View
+                  key={String(item)}
+                  style={[styles.segmentItem, leaseForm.autoRenew === item && styles.segmentItemActive]}
                 >
-                  <Text style={styles.cardTitle}>{item.name}{item.spec ? ` · ${item.spec}` : ""}</Text>
-                  <Text style={styles.cardStat}>¥{money(item.amount)}</Text>
-                </TouchableOpacity>
+                  <Text style={[styles.segmentText, leaseForm.autoRenew === item && styles.segmentTextActive]} onPress={() => setLeaseForm((old) => ({ ...old, autoRenew: item }))}>
+                    {item ? "开启" : "关闭"}
+                  </Text>
+                </View>
               ))}
+            </View>
+          </View>
+        </View>
+        <View style={styles.segment}>
+          {(["MONTHLY", "QUARTERLY", "YEARLY"] as RentCycle[]).map((item) => (
+            <View
+              key={item}
+              style={[styles.segmentItem, leaseForm.cycle === item && styles.segmentItemActive]}
+            >
+              <Text style={[styles.segmentText, leaseForm.cycle === item && styles.segmentTextActive]} onPress={() => setLeaseForm((old) => ({ ...old, cycle: item }))}>
+                {cycleLabels[item]}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>水费单价</Text>
+            <Input placeholder="元/吨" value={leaseForm.waterUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, waterUnitPrice: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>电费单价</Text>
+            <Input placeholder="元/度" value={leaseForm.powerUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
+          </View>
+        </View>
+        {(leaseRoom?.apartment?.feeItems ?? []).length ? <Text style={styles.label}>选择费用</Text> : null}
+        {(leaseRoom?.apartment?.feeItems ?? []).map((item) => (
+          <PressableScale key={item.id} onPress={() => toggleFee(item)}>
+            <Card variant={selectedFeeIds.includes(item.id) ? "default" : "outline"} padding="sm" gap={8}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={styles.cardTitle}>{item.name}{item.spec ? ` · ${item.spec}` : ""}</Text>
+                <Text style={selectedFeeIds.includes(item.id) ? styles.cardStat : styles.muted}>¥{money(item.amount)}</Text>
+              </View>
+            </Card>
+          </PressableScale>
+        ))}
       </TaskSheet>
       <TaskSheet
         visible={Boolean(terminatingLease)}
@@ -656,89 +640,88 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         subtitle={terminatingLease ? `${terminatingLease.tenantName} · ${terminatingLease.startDate.slice(0, 10)} 至 ${terminatingLease.endDate.slice(0, 10)}` : undefined}
         onClose={() => setTerminatingLease(undefined)}
         footer={(
-          <TouchableOpacity style={styles.smallDangerButton} onPress={terminateLease}>
-            <Text style={styles.smallDangerText}>确认终止合约</Text>
-          </TouchableOpacity>
+          <Button variant="danger" onPress={terminateLease}>确认终止合约</Button>
         )}
       >
-              <View style={styles.segment}>
-                {(Object.keys(terminationLabels) as TerminationType[]).map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.segmentItem, terminationForm.type === item && styles.segmentItemActive]}
-                    onPress={() => setTerminationForm((old) => ({ ...old, type: item }))}
-                  >
-                    <Text style={[styles.segmentText, terminationForm.type === item && styles.segmentTextActive]}>{terminationLabels[item]}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Text style={styles.fieldLabel}>退租日期</Text>
-              <DateField value={terminationForm.terminatedAt} onChange={(value) => setTerminationForm((old) => ({ ...old, terminatedAt: value }))} />
-              <View style={styles.detailPanel}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.muted}>原押金</Text>
-                  <Text style={styles.cardStat}>¥{money(terminatingLease?.depositAmount)}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.muted}>预计退押金</Text>
-                  <Text style={styles.cardStat}>¥{money(settlementPreview.depositRefund)}</Text>
-                </View>
-              </View>
-              <View style={styles.formGrid}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>押金扣款</Text>
-                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.depositDeductionAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, depositDeductionAmount: value }))} />
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>房租退补</Text>
-                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.rentAdjustmentAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, rentAdjustmentAmount: value }))} />
-                </View>
-              </View>
-              <TextInput style={styles.input} placeholder="押金扣款原因" value={terminationForm.depositDeductionReason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, depositDeductionReason: value }))} />
-              <View style={styles.formGrid}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>退租水表读数</Text>
-                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.currentWater} onChangeText={(value) => setTerminationForm((old) => ({ ...old, currentWater: value }))} />
-                  <Text style={styles.muted}>上次 {money(previousReadings.previousWater)}</Text>
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>退租电表读数</Text>
-                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.currentPower} onChangeText={(value) => setTerminationForm((old) => ({ ...old, currentPower: value }))} />
-                  <Text style={styles.muted}>上次 {money(previousReadings.previousPower)}</Text>
-                </View>
-              </View>
-              <View style={styles.formGrid}>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>其他费用</Text>
-                  <TextInput style={styles.input} keyboardType="numeric" value={terminationForm.otherFeeAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, otherFeeAmount: value }))} />
-                </View>
-                <View style={styles.formField}>
-                  <Text style={styles.fieldLabel}>预估水电费</Text>
-                  <View style={[styles.input, styles.dateField]}>
-                    <Text style={styles.dateFieldText}>¥{money(settlementPreview.utility)}</Text>
-                  </View>
-                </View>
-              </View>
-              <TextInput style={styles.input} placeholder="其他费用说明" value={terminationForm.otherFeeReason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, otherFeeReason: value }))} />
-              <View style={styles.detailPanel}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.muted}>应收</Text>
-                  <Text style={styles.cardStat}>¥{money(settlementPreview.receivable)}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.muted}>应退</Text>
-                  <Text style={styles.cardStat}>¥{money(settlementPreview.refundable)}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.muted}>结算结果</Text>
-                  <Text style={settlementPreview.net >= 0 ? styles.cardStat : styles.smallDangerText}>
-                    {settlementPreview.net > 0 ? `租客补交 ¥${money(settlementPreview.net)}` : settlementPreview.net < 0 ? `退租客 ¥${money(Math.abs(settlementPreview.net))}` : "结清"}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.fieldLabel}>原因</Text>
-              <TextInput style={[styles.input, styles.textarea]} multiline placeholder="可选，默认使用解约类型" value={terminationForm.reason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
-              {terminatingLease?.isAutoRenewalPeriod ? <Text style={styles.muted}>当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}
+        <View style={styles.segment}>
+          {(Object.keys(terminationLabels) as TerminationType[]).map((item) => (
+            <View
+              key={item}
+              style={[styles.segmentItem, terminationForm.type === item && styles.segmentItemActive]}
+            >
+              <Text style={[styles.segmentText, terminationForm.type === item && styles.segmentTextActive]} onPress={() => setTerminationForm((old) => ({ ...old, type: item }))}>
+                {terminationLabels[item]}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.fieldLabel}>退租日期</Text>
+        <DateField value={terminationForm.terminatedAt} onChange={(value) => setTerminationForm((old) => ({ ...old, terminatedAt: value }))} />
+        <View style={styles.detailPanel}>
+          <View style={styles.detailRow}>
+            <Text style={styles.muted}>原押金</Text>
+            <Text style={styles.cardStat}>¥{money(terminatingLease?.depositAmount)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.muted}>预计退押金</Text>
+            <Text style={styles.cardStat}>¥{money(settlementPreview.depositRefund)}</Text>
+          </View>
+        </View>
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>押金扣款</Text>
+            <Input keyboardType="numeric" value={terminationForm.depositDeductionAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, depositDeductionAmount: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>房租退补</Text>
+            <Input keyboardType="numeric" value={terminationForm.rentAdjustmentAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, rentAdjustmentAmount: value }))} />
+          </View>
+        </View>
+        <Input placeholder="押金扣款原因" value={terminationForm.depositDeductionReason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, depositDeductionReason: value }))} />
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>退租水表读数</Text>
+            <Input keyboardType="numeric" value={terminationForm.currentWater} onChangeText={(value) => setTerminationForm((old) => ({ ...old, currentWater: value }))} />
+            <Text style={styles.muted}>上次 {money(previousReadings.previousWater)}</Text>
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>退租电表读数</Text>
+            <Input keyboardType="numeric" value={terminationForm.currentPower} onChangeText={(value) => setTerminationForm((old) => ({ ...old, currentPower: value }))} />
+            <Text style={styles.muted}>上次 {money(previousReadings.previousPower)}</Text>
+          </View>
+        </View>
+        <View style={styles.formGrid}>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>其他费用</Text>
+            <Input keyboardType="numeric" value={terminationForm.otherFeeAmount} onChangeText={(value) => setTerminationForm((old) => ({ ...old, otherFeeAmount: value }))} />
+          </View>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>预估水电费</Text>
+            <View style={[styles.input, styles.dateField]}>
+              <Text style={styles.dateFieldText}>¥{money(settlementPreview.utility)}</Text>
+            </View>
+          </View>
+        </View>
+        <Input placeholder="其他费用说明" value={terminationForm.otherFeeReason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, otherFeeReason: value }))} />
+        <View style={styles.detailPanel}>
+          <View style={styles.detailRow}>
+            <Text style={styles.muted}>应收</Text>
+            <Text style={styles.cardStat}>¥{money(settlementPreview.receivable)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.muted}>应退</Text>
+            <Text style={styles.cardStat}>¥{money(settlementPreview.refundable)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.muted}>结算结果</Text>
+            <Text style={settlementPreview.net >= 0 ? styles.cardStat : styles.smallDangerText}>
+              {settlementPreview.net > 0 ? `租客补交 ¥${money(settlementPreview.net)}` : settlementPreview.net < 0 ? `退租客 ¥${money(Math.abs(settlementPreview.net))}` : "结清"}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.fieldLabel}>原因</Text>
+        <Input multiline placeholder="可选，默认使用解约类型" value={terminationForm.reason} onChangeText={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
+        {terminatingLease?.isAutoRenewalPeriod ? <Text style={styles.muted}>当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}
       </TaskSheet>
     </>
   );

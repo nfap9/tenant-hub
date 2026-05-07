@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Text, View } from "react-native";
+import { Badge, Button, Card, EmptyState } from "../../components/ui";
 import { homeQuickActions, type HomeNavigationIntent } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
@@ -58,10 +59,11 @@ const leaseMonthlyIncome = (lease: Lease) => {
 };
 const isUnpaid = (bill: MonthlyBill) => bill.status !== "PAID" && bill.status !== "VOID";
 const isOverdue = (bill: MonthlyBill) => isUnpaid(bill) && bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
-const todoBadgeStyle = (tone: TodoTone) => {
-  if (tone === "danger") return styles.todoBadgeDanger;
-  if (tone === "warning") return styles.todoBadgeWarning;
-  return styles.todoBadge;
+
+const todoTone = (tone: TodoTone) => {
+  if (tone === "danger") return "danger" as const;
+  if (tone === "warning") return "warning" as const;
+  return "primary" as const;
 };
 
 export default function HomeScreen({ token, organizationId, setNotice, onNavigate }: Props) {
@@ -168,9 +170,9 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
 
   if (!organizationId) {
     return (
-      <View style={styles.panel}>
-        <Text style={styles.muted}>请先选择组织</Text>
-      </View>
+      <Card>
+        <EmptyState icon="🏢" title="尚未选择组织" subtitle="请先从右上角用户菜单中选择一个组织" />
+      </Card>
     );
   }
 
@@ -182,9 +184,9 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
             <Text style={styles.homeEyebrow}>本月经营概览</Text>
             <Text style={styles.homeHeroValue}>¥{compactMoney(monthlyIncome)}</Text>
           </View>
-          <TouchableOpacity style={styles.refreshButton} onPress={loadData} disabled={loading}>
-            <Text style={styles.refreshButtonText}>{loading ? "刷新中" : "刷新"}</Text>
-          </TouchableOpacity>
+          <Button variant="secondary" size="small" loading={loading} disabled={loading} onPress={loadData}>
+            {loading ? "刷新中" : "刷新"}
+          </Button>
         </View>
         <View style={styles.homeHeroGrid}>
           <View>
@@ -203,42 +205,37 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
       </View>
 
       <View style={styles.statRow}>
-        <View style={styles.statBlock}>
+        <Card padding="md" gap={8} style={{ flex: 1 }}>
           <Text style={styles.statLabel}>公寓</Text>
           <Text style={styles.statValue}>{apartments.length}</Text>
-        </View>
-        <View style={styles.statBlock}>
+        </Card>
+        <Card padding="md" gap={8} style={{ flex: 1 }}>
           <Text style={styles.statLabel}>房间</Text>
           <Text style={styles.statValue}>{rooms.length}</Text>
-        </View>
-        <View style={styles.statBlock}>
+        </Card>
+        <Card padding="md" gap={8} style={{ flex: 1 }}>
           <Text style={styles.statLabel}>出租率</Text>
           <Text style={styles.statValue}>{occupancyRate}%</Text>
-        </View>
+        </Card>
       </View>
 
-      <View style={styles.panel}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.quickActionTitle}>常用操作</Text>
-        </View>
+      <Card title="常用操作" subtitle="快速进入高频功能">
         <View style={styles.quickActionGrid}>
           {homeQuickActions.map((action) => (
-            <TouchableOpacity key={action.key} style={styles.quickActionCard} onPress={() => onNavigate(action.intent)}>
+            <View key={action.key} style={styles.quickActionCard}>
               <View style={styles.quickActionIcon}>
                 <Text style={styles.quickActionIconText}>{action.icon}</Text>
               </View>
               <Text style={styles.quickActionLabel}>{action.title}</Text>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
-      </View>
+      </Card>
 
-      <View style={styles.panel}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>资产出租</Text>
-          <Text style={styles.cardStat}>{occupiedCount} 已租 · {vacantCount} 空闲</Text>
-        </View>
-        {topApartments.length === 0 ? <Text style={styles.muted}>暂无公寓资产，请先到公寓页添加</Text> : null}
+      <Card title="资产出租" subtitle={`${occupiedCount} 已租 · ${vacantCount} 空闲`}>
+        {topApartments.length === 0 ? (
+          <EmptyState icon="🏢" title="暂无公寓资产" subtitle="请先到公寓页添加" />
+        ) : null}
         {topApartments.map(({ apartment, apartmentRooms, apartmentOccupied, apartmentIncome }) => (
           <View key={apartment.id} style={styles.homeApartmentRow}>
             <View style={styles.homeApartmentMain}>
@@ -251,24 +248,22 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
             </View>
           </View>
         ))}
-      </View>
+      </Card>
 
-      <View style={styles.panel}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>待办事项</Text>
-          <Text style={styles.cardStat}>{todos.length} 项</Text>
-        </View>
-        {todos.length === 0 ? <Text style={styles.muted}>暂无紧急待办，经营状态稳定</Text> : null}
+      <Card title="待办事项" subtitle={`${todos.length} 项`}>
+        {todos.length === 0 ? (
+          <EmptyState icon="✅" title="暂无紧急待办" subtitle="经营状态稳定" />
+        ) : null}
         {todos.map((todo) => (
           <View key={todo.key} style={styles.todoItem}>
             <View style={styles.todoContent}>
               <Text style={styles.cardTitle}>{todo.title}</Text>
               <Text style={styles.muted}>{todo.detail}</Text>
             </View>
-            <Text style={[styles.todoBadge, todoBadgeStyle(todo.tone)]}>{todo.badge}</Text>
+            <Badge tone={todoTone(todo.tone)}>{todo.badge}</Badge>
           </View>
         ))}
-      </View>
+      </Card>
     </>
   );
 }

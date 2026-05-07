@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { styles } from "../theme/styles";
+import { Text, View } from "react-native";
+import { Card, Input, PressableScale } from "./ui";
 import { TaskSheet } from "./TaskSheet";
+import { styles } from "../theme/styles";
 
 export type SelectorRoom = {
   id: string;
@@ -30,13 +31,17 @@ export function RoomBillSelector({ rooms, selectedRoomId, onSelectRoom, label = 
   return (
     <View style={styles.billDetailBlock}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TouchableOpacity style={styles.feeItem} onPress={() => setDrawerOpen(true)}>
-        <View>
-          <Text style={styles.cardTitle}>{selectedRoom?.apartmentName ?? "请选择房间"}</Text>
-          {selectedRoom ? <Text style={styles.muted}>{selectedRoom.roomNo}</Text> : null}
-        </View>
-        <Text style={styles.link}>选择</Text>
-      </TouchableOpacity>
+      <PressableScale scale={0.98} onPress={() => setDrawerOpen(true)}>
+        <Card variant="outline" padding="md" gap={8}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View>
+              <Text style={styles.cardTitle}>{selectedRoom?.apartmentName ?? "请选择房间"}</Text>
+              {selectedRoom ? <Text style={styles.muted}>{selectedRoom.roomNo}</Text> : null}
+            </View>
+            <Text style={styles.link}>选择</Text>
+          </View>
+        </Card>
+      </PressableScale>
       <TaskSheet
         visible={drawerOpen}
         variant="drawer"
@@ -45,20 +50,22 @@ export function RoomBillSelector({ rooms, selectedRoomId, onSelectRoom, label = 
         onClose={() => setDrawerOpen(false)}
       >
         <>
-          <TextInput style={styles.input} placeholder="搜索公寓或房号" value={search} onChangeText={setSearch} />
+          <Input placeholder="搜索公寓或房号" value={search} onChangeText={setSearch} />
           {filteredRooms.map((room) => (
-            <TouchableOpacity
+            <PressableScale
               key={room.id}
-              style={[styles.feeItem, selectedRoomId === room.id && styles.feeItemActive]}
+              scale={0.98}
               onPress={() => {
                 onSelectRoom(room.id);
                 setDrawerOpen(false);
                 setSearch("");
               }}
             >
-              <Text style={styles.cardTitle}>{room.apartmentName}</Text>
-              <Text style={styles.muted}>{room.roomNo}</Text>
-            </TouchableOpacity>
+              <Card variant={selectedRoomId === room.id ? "default" : "outline"} padding="sm" gap={8}>
+                <Text style={styles.cardTitle}>{room.apartmentName}</Text>
+                <Text style={styles.muted}>{room.roomNo}</Text>
+              </Card>
+            </PressableScale>
           ))}
           {filteredRooms.length === 0 ? <Text style={styles.muted}>{emptyText}</Text> : null}
         </>

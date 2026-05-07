@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Text, TouchableOpacity } from "react-native";
+import { Text, View } from "react-native";
+import { Button, Card, PressableScale } from "../../components/ui";
 import { styles } from "../../theme/styles";
 import type { Membership, OrgMember, OrgRole } from "../../types";
 import AccountSettingsSubPage from "./AccountSettingsSubPage";
@@ -23,6 +24,13 @@ type SettingsScreenProps = {
   setNotice: (value: string) => void;
   reload: () => Promise<void>;
 };
+
+const settingsItems: Array<{ key: SettingsSubPage; label: string; icon: string }> = [
+  { key: "leases", label: "所有租约", icon: "📄" },
+  { key: "team", label: "团队管理", icon: "👥" },
+  { key: "account", label: "账号设置", icon: "🔐" },
+  { key: "plan", label: "付费计划", icon: "💎" }
+];
 
 export default function SettingsScreen({
   token,
@@ -83,23 +91,20 @@ export default function SettingsScreen({
   }
 
   return (
-    <>
-      <TouchableOpacity style={styles.settingItem} onPress={() => setSubPage("leases")}>
-        <Text style={styles.settingItemText}>所有租约</Text>
-        <Text style={styles.link}>进入</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.settingItem} onPress={() => setSubPage("team")}>
-        <Text style={styles.settingItemText}>团队管理</Text>
-        <Text style={styles.link}>进入</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.settingItem} onPress={() => setSubPage("account")}>
-        <Text style={styles.settingItemText}>账号设置</Text>
-        <Text style={styles.link}>进入</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.settingItem} onPress={() => setSubPage("plan")}>
-        <Text style={styles.settingItemText}>付费计划</Text>
-        <Text style={styles.link}>进入</Text>
-      </TouchableOpacity>
-    </>
+    <View style={{ gap: styles.content.gap }}>
+      {settingsItems.map((item) => (
+        <PressableScale key={item.key} onPress={() => setSubPage(item.key)}>
+          <Card padding="md" gap={0}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                <Text style={styles.settingItemText}>{item.label}</Text>
+              </View>
+              <Text style={{ color: "#9a9488", fontSize: 16 }}>➤</Text>
+            </View>
+          </Card>
+        </PressableScale>
+      ))}
+    </View>
   );
 }

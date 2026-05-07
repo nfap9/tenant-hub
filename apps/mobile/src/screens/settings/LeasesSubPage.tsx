@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, View } from "react-native";
+import { Badge, Button, Card, EmptyState, Input } from "../../components/ui";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Lease, LeaseStatus } from "../../types";
@@ -88,63 +89,57 @@ export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }
   return (
     <>
       <View style={styles.subPageHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>返回</Text>
-        </TouchableOpacity>
+        <Button variant="ghost" size="small" onPress={onBack}>返回</Button>
         <Text style={styles.sectionTitle}>所有租约</Text>
       </View>
 
       {!currentOrgId ? (
-        <View style={styles.panel}>
-          <Text style={styles.muted}>请先选择组织</Text>
-        </View>
+        <Card>
+          <EmptyState icon="🏢" title="尚未选择组织" subtitle="请先从右上角用户菜单中选择一个组织" />
+        </Card>
       ) : (
         <>
           <View style={styles.statRow}>
-            <View style={styles.statBlock}>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
               <Text style={styles.statLabel}>有效租约</Text>
               <Text style={styles.statValue}>{activeCount}</Text>
-            </View>
-            <View style={styles.statBlock}>
+            </Card>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
               <Text style={styles.statLabel}>自动续约</Text>
               <Text style={styles.statValue}>{autoRenewingCount}</Text>
-            </View>
-            <View style={styles.statBlock}>
+            </Card>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
               <Text style={styles.statLabel}>近到期</Text>
               <Text style={styles.statValue}>{expiringCount}</Text>
-            </View>
+            </Card>
           </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="搜索租客、电话、房间号或公寓"
-            value={query}
-            onChangeText={setQuery}
-          />
+          <Input placeholder="搜索租客、电话、房间号或公寓" value={query} onChangeText={setQuery} />
 
           <View style={[styles.filterBar, { flexWrap: "wrap" }]}>
             {filters.map((item) => (
-              <TouchableOpacity
+              <Button
                 key={item.key}
-                style={[styles.filterButton, filter === item.key && styles.filterButtonActive]}
+                variant={filter === item.key ? "primary" : "ghost"}
+                size="small"
                 onPress={() => setFilter(item.key)}
               >
-                <Text style={[styles.filterButtonText, filter === item.key && styles.filterButtonTextActive]}>{item.label}</Text>
-              </TouchableOpacity>
+                {item.label}
+              </Button>
             ))}
           </View>
 
           <View style={styles.roomGrid}>
             {visibleLeases.map((lease) => (
-              <View key={lease.id} style={styles.roomCard}>
+              <Card key={lease.id} variant="outline" padding="md" gap={10}>
                 <View style={styles.roomHeader}>
                   <View>
                     <Text style={styles.cardTitle}>{lease.room?.apartment?.name ?? "未关联公寓"} · {lease.room?.roomNo ?? "未关联房间"}</Text>
                     <Text style={styles.muted}>{lease.tenantName} · {lease.tenantPhone}</Text>
                   </View>
-                  <Text style={[styles.statusBadge, lease.status === "ACTIVE" ? styles.statusOccupied : styles.statusReserved]}>
+                  <Badge tone={lease.status === "ACTIVE" ? "warning" : "neutral"}>
                     {lease.isAutoRenewalPeriod ? "自动续约中" : statusLabels[lease.status]}
-                  </Text>
+                  </Badge>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.muted}>租期</Text>
@@ -158,11 +153,11 @@ export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }
                   <Text style={styles.muted}>交租</Text>
                   <Text style={styles.muted}>{lease.cycle === "MONTHLY" ? "月付" : lease.cycle === "QUARTERLY" ? "季付" : "年付"} · 宽限 {lease.graceDays ?? 0} 天</Text>
                 </View>
-              </View>
+              </Card>
             ))}
           </View>
 
-          {visibleLeases.length === 0 ? <Text style={styles.emptyText}>暂无符合条件的租约</Text> : null}
+          {visibleLeases.length === 0 ? <EmptyState icon="📄" title="暂无符合条件的租约" /> : null}
         </>
       )}
     </>

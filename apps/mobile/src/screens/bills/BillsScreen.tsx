@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, View } from "react-native";
 import { DateField } from "../../components/DateField";
 import { RoomBillSelector, type SelectorRoom } from "../../components/RoomBillSelector";
 import { TaskSheet } from "../../components/TaskSheet";
+import { Badge, Button, Card, EmptyState, Input } from "../../components/ui";
 import type { BillActionKey, BillTabKey } from "../../navigation/homeQuickActions";
 import { mobileApi, mobileText } from "../../services";
 import { styles } from "../../theme/styles";
@@ -64,11 +65,11 @@ const statusLabels: Record<BillStatus, string> = {
   VOID: "已作废"
 };
 
-const statusStyle = (status: BillStatus) => {
-  if (status === "PAID") return styles.statusVacant;
-  if (status === "FAILED" || status === "VOID") return styles.statusMaintenance;
-  if (status === "BILLING") return styles.statusReserved;
-  return styles.statusOccupied;
+const toneForBillStatus = (status: BillStatus): Parameters<typeof Badge>[0]["tone"] => {
+  if (status === "PAID") return "success";
+  if (status === "FAILED" || status === "VOID") return "danger";
+  if (status === "BILLING") return "neutral";
+  return "warning";
 };
 
 const billModeText = (bill: Bill) => (bill.mode === "PREPAID" ? "预付" : "后付");
@@ -282,27 +283,27 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
 
   if (!organizationId) {
     return (
-      <View style={styles.panel}>
-        <Text style={styles.muted}>请先选择组织</Text>
-      </View>
+      <Card>
+        <EmptyState icon="🏢" title="尚未选择组织" subtitle="请先从右上角用户菜单中选择一个组织" />
+      </Card>
     );
   }
 
   return (
     <>
       <View style={styles.statRow}>
-        <View style={styles.statBlock}>
+        <Card padding="md" gap={8} style={{ flex: 1 }}>
           <Text style={styles.statLabel}>月度账单</Text>
           <Text style={styles.statValue}>{monthlyBills.length}</Text>
-        </View>
-        <View style={styles.statBlock}>
+        </Card>
+        <Card padding="md" gap={8} style={{ flex: 1 }}>
           <Text style={styles.statLabel}>待收金额</Text>
           <Text style={styles.statValue}>¥{money(unpaidTotal)}</Text>
-        </View>
-        <View style={styles.statBlock}>
+        </Card>
+        <Card padding="md" gap={8} style={{ flex: 1 }}>
           <Text style={styles.statLabel}>待处理</Text>
           <Text style={styles.statValue}>{reviewBills.length}</Text>
-        </View>
+        </Card>
       </View>
 
       <View style={styles.segment}>
@@ -311,54 +312,47 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
           ["meter", "抄表"],
           ["review", "出账处理"]
         ] as Array<[BillTabKey, string]>).map(([key, label]) => (
-          <TouchableOpacity key={key} style={[styles.segmentItem, tab === key && styles.segmentItemActive]} onPress={() => setTab(key)}>
-            <Text style={[styles.segmentText, tab === key && styles.segmentTextActive]}>{label}</Text>
-          </TouchableOpacity>
+          <View key={key} style={[styles.segmentItem, tab === key && styles.segmentItemActive]}>
+            <Text style={[styles.segmentText, tab === key && styles.segmentTextActive]} onPress={() => setTab(key)}>{label}</Text>
+          </View>
         ))}
       </View>
 
-      <View style={styles.panel}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{tab === "monthly" ? "收款单" : tab === "meter" ? "提前抄表" : "人工处理"}</Text>
-          <View style={styles.roomActions}>
+      <Card
+        title={tab === "monthly" ? "收款单" : tab === "meter" ? "提前抄表" : "人工处理"}
+        headerAction={
+          <View style={{ flexDirection: "row", gap: 8 }}>
             {tab === "monthly" ? (
-              <TouchableOpacity style={styles.smallButton} onPress={openPayment}>
-                <Text style={styles.smallButtonText}>登记收款</Text>
-              </TouchableOpacity>
+              <Button variant="secondary" size="small" onPress={openPayment}>登记收款</Button>
             ) : null}
-            <TouchableOpacity style={styles.smallButton} onPress={loadData} disabled={loading}>
-              <Text style={styles.smallButtonText}>{loading ? "刷新中" : "刷新"}</Text>
-            </TouchableOpacity>
+            <Button variant="ghost" size="small" loading={loading} disabled={loading} onPress={loadData}>
+              {loading ? "刷新中" : "刷新"}
+            </Button>
           </View>
-        </View>
+        }
+      >
         {tab === "meter" ? (
           <View style={styles.roomActions}>
-            <TouchableOpacity style={[styles.button, styles.actionButton]} onPress={() => setActiveLayer("reading")}>
-              <Text style={styles.buttonText}>录入读数</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={exportUtilityCsv}>
-              <Text style={styles.secondaryButtonText}>导出</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryButton, styles.actionButton]} onPress={() => setActiveLayer("utilityImport")}>
-              <Text style={styles.secondaryButtonText}>导入</Text>
-            </TouchableOpacity>
+            <Button size="small" onPress={() => setActiveLayer("reading")}>录入读数</Button>
+            <Button variant="secondary" size="small" onPress={exportUtilityCsv}>导出</Button>
+            <Button variant="secondary" size="small" onPress={() => setActiveLayer("utilityImport")}>导入</Button>
           </View>
         ) : null}
-      </View>
+      </Card>
 
       {tab === "monthly" ? (
         <>
-          {monthlyBills.length === 0 ? <Text style={styles.emptyText}>暂无月度账单。先录入水电读数，再生成账单。</Text> : null}
+          {monthlyBills.length === 0 ? <EmptyState icon="📄" title="暂无月度账单" subtitle="先录入水电读数，再生成账单" /> : null}
           {visibleMonthlyBills.map((bill) => {
             const summary = getMonthlyBillCardSummary(bill);
             return (
-              <TouchableOpacity key={bill.id} style={styles.billCard} onPress={() => openMonthlyDetail(bill)}>
+              <Card key={bill.id} variant="outline" padding="md" gap={12} onPress={() => openMonthlyDetail(bill)}>
                 <View style={styles.sectionHeader}>
                   <View>
                     <Text style={styles.cardTitle}>{summary.title}</Text>
                     <Text style={styles.muted}>{summary.meta}</Text>
                   </View>
-                  <Text style={[styles.statusBadge, statusStyle(bill.status)]}>{statusLabels[bill.status]}</Text>
+                  <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
                 </View>
                 <View style={styles.billAmountRow}>
                   <Text style={styles.billAmount}>¥{money(summary.totalAmount)}</Text>
@@ -371,7 +365,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                   <Text style={styles.fieldLabel}>{summary.detailCountText}</Text>
                   <Text style={styles.link}>查看详情</Text>
                 </View>
-              </TouchableOpacity>
+              </Card>
             );
           })}
         </>
@@ -384,9 +378,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle={selectedMonthlyBill ? `${selectedMonthlyBill.tenantName} · ${day(selectedMonthlyBill.billingDate)}` : ""}
         onClose={() => setActiveLayer(undefined)}
         footer={selectedMonthlyBill && selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID" ? (
-          <TouchableOpacity style={styles.button} onPress={submitPayment}>
-            <Text style={styles.buttonText}>确认收款</Text>
-          </TouchableOpacity>
+          <Button onPress={submitPayment}>确认收款</Button>
         ) : undefined}
       >
         {selectedMonthlyBill ? (
@@ -397,7 +389,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                   <Text style={styles.cardTitle}>{selectedMonthlyBill.lease?.room?.roomNo ?? "房间"} · 到期 {day(selectedMonthlyBill.dueDate)}</Text>
                   <Text style={styles.muted}>应收 ¥{money(selectedMonthlyBill.totalAmount)} · 已收 ¥{money(selectedMonthlyBill.paidAmount)}</Text>
                 </View>
-                <Text style={[styles.statusBadge, statusStyle(selectedMonthlyBill.status)]}>{statusLabels[selectedMonthlyBill.status]}</Text>
+                <Badge tone={toneForBillStatus(selectedMonthlyBill.status)}>{statusLabels[selectedMonthlyBill.status]}</Badge>
               </View>
             </View>
             {selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID" ? (
@@ -406,14 +398,14 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                 <View style={styles.formGrid}>
                   <View style={styles.formField}>
                     <Text style={styles.fieldLabel}>金额</Text>
-                    <TextInput style={styles.input} value={paymentForm.amount} keyboardType="numeric" onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
+                    <Input keyboardType="numeric" value={paymentForm.amount} onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
                   </View>
                   <View style={styles.formField}>
                     <Text style={styles.fieldLabel}>方式</Text>
-                    <TextInput style={styles.input} value={paymentForm.method} onChangeText={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
+                    <Input value={paymentForm.method} onChangeText={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
                   </View>
                 </View>
-                <TextInput style={styles.input} placeholder="备注" value={paymentForm.note} onChangeText={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
+                <Input placeholder="备注" value={paymentForm.note} onChangeText={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
               </View>
             ) : null}
             {(selectedMonthlyBill.bills ?? []).map((child) => (
@@ -429,9 +421,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                   </View>
                 ))}
                 {child.mode === "POSTPAID" ? (
-                  <TouchableOpacity style={styles.secondaryButton} onPress={() => openUtilityReading(child)}>
-                    <Text style={styles.secondaryButtonText}>录入本期水电</Text>
-                  </TouchableOpacity>
+                  <Button variant="secondary" size="small" onPress={() => openUtilityReading(child)}>录入本期水电</Button>
                 ) : null}
               </View>
             ))}
@@ -473,9 +463,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle={selectedPaymentBill ? `${selectedPaymentBill.tenantName} · 剩余 ¥${money(remainingAmount(selectedPaymentBill))}` : "选择公寓和房间账单"}
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <TouchableOpacity style={styles.button} onPress={submitPayment}>
-            <Text style={styles.buttonText}>确认收款</Text>
-          </TouchableOpacity>
+          <Button onPress={submitPayment}>确认收款</Button>
         )}
       >
         <RoomBillSelector
@@ -494,17 +482,21 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         <View style={styles.billDetailBlock}>
           <Text style={styles.fieldLabel}>选择收款账单</Text>
           {paymentRoomBills.map((bill) => (
-            <TouchableOpacity
+            <Card
               key={bill.id}
-              style={[styles.feeItem, paymentForm.monthlyBillId === bill.id && styles.feeItemActive]}
+              variant={paymentForm.monthlyBillId === bill.id ? "default" : "outline"}
+              padding="sm"
+              gap={8}
               onPress={() => setPaymentBill(bill)}
             >
-              <View>
-                <Text style={styles.cardTitle}>{day(bill.billingDate)}</Text>
-                <Text style={styles.muted}>剩余 ¥{money(remainingAmount(bill))}</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View>
+                  <Text style={styles.cardTitle}>{day(bill.billingDate)}</Text>
+                  <Text style={styles.muted}>剩余 ¥{money(remainingAmount(bill))}</Text>
+                </View>
+                <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
               </View>
-              <Text style={[styles.statusBadge, statusStyle(bill.status)]}>{statusLabels[bill.status]}</Text>
-            </TouchableOpacity>
+            </Card>
           ))}
           {paymentRoomId && paymentRoomBills.length === 0 ? <Text style={styles.muted}>该房间暂无待收账单</Text> : null}
         </View>
@@ -513,14 +505,14 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
           <View style={styles.formGrid}>
             <View style={styles.formField}>
               <Text style={styles.fieldLabel}>金额</Text>
-              <TextInput style={styles.input} value={paymentForm.amount} keyboardType="numeric" onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
+              <Input keyboardType="numeric" value={paymentForm.amount} onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
             </View>
             <View style={styles.formField}>
               <Text style={styles.fieldLabel}>方式</Text>
-              <TextInput style={styles.input} value={paymentForm.method} onChangeText={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
+              <Input value={paymentForm.method} onChangeText={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
             </View>
           </View>
-          <TextInput style={styles.input} placeholder="备注" value={paymentForm.note} onChangeText={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
+          <Input placeholder="备注" value={paymentForm.note} onChangeText={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
         </View>
       </TaskSheet>
 
@@ -531,9 +523,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle="选择房间、水电类型并填写本次读数"
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <TouchableOpacity style={styles.button} onPress={submitReading}>
-            <Text style={styles.buttonText}>保存读数</Text>
-          </TouchableOpacity>
+          <Button onPress={submitReading}>保存读数</Button>
         )}
       >
         <View style={styles.formGrid}>
@@ -543,14 +533,16 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
           </View>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>读数</Text>
-            <TextInput style={styles.input} value={readingForm.value} keyboardType="numeric" onChangeText={(value) => setReadingForm((old) => ({ ...old, value }))} />
+            <Input keyboardType="numeric" value={readingForm.value} onChangeText={(value) => setReadingForm((old) => ({ ...old, value }))} />
           </View>
         </View>
         <View style={styles.segment}>
           {(["WATER", "POWER"] as MeterType[]).map((meterType) => (
-            <TouchableOpacity key={meterType} style={[styles.segmentItem, readingForm.meterType === meterType && styles.segmentItemActive]} onPress={() => setReadingForm((old) => ({ ...old, meterType }))}>
-              <Text style={[styles.segmentText, readingForm.meterType === meterType && styles.segmentTextActive]}>{meterLabels[meterType]}</Text>
-            </TouchableOpacity>
+            <View key={meterType} style={[styles.segmentItem, readingForm.meterType === meterType && styles.segmentItemActive]}>
+              <Text style={[styles.segmentText, readingForm.meterType === meterType && styles.segmentTextActive]} onPress={() => setReadingForm((old) => ({ ...old, meterType }))}>
+                {meterLabels[meterType]}
+              </Text>
+            </View>
           ))}
         </View>
         <RoomBillSelector
@@ -558,29 +550,25 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
           selectedRoomId={readingForm.roomId}
           onSelectRoom={(roomId) => setReadingForm((old) => ({ ...old, roomId }))}
         />
-        <TextInput style={styles.input} placeholder="备注" value={readingForm.note} onChangeText={(value) => setReadingForm((old) => ({ ...old, note: value }))} />
+        <Input placeholder="备注" value={readingForm.note} onChangeText={(value) => setReadingForm((old) => ({ ...old, note: value }))} />
       </TaskSheet>
 
       {tab === "review" ? (
         <>
-          {reviewBills.length === 0 ? <Text style={styles.emptyText}>没有出账失败的后付费账单</Text> : null}
+          {reviewBills.length === 0 ? <EmptyState icon="📄" title="没有出账失败的后付费账单" /> : null}
           {reviewBills.map((bill) => (
-            <View key={bill.id} style={styles.billCard}>
+            <Card key={bill.id} variant="outline" padding="md" gap={12}>
               <View style={styles.sectionHeader}>
                 <View>
                   <Text style={styles.cardTitle}>{bill.lease?.tenantName ?? "租客"} · {bill.lease?.room?.roomNo ?? "房间"}</Text>
                   <Text style={styles.muted}>{day(bill.periodStart)} 至 {day(bill.periodEnd)}</Text>
                 </View>
-                <Text style={[styles.statusBadge, statusStyle(bill.status)]}>{statusLabels[bill.status]}</Text>
+                <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
               </View>
               <Text style={styles.smallDangerText}>{bill.failureReason ?? "需要补录或修正水电读数"}</Text>
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => retryBill(bill)}>
-                <Text style={styles.secondaryButtonText}>重新出账并生成月度账单</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={() => openUtilityReading(bill)}>
-                <Text style={styles.buttonText}>直接录入水电读数</Text>
-              </TouchableOpacity>
-            </View>
+              <Button variant="secondary" size="small" onPress={() => retryBill(bill)}>重新出账并生成月度账单</Button>
+              <Button size="small" onPress={() => openUtilityReading(bill)}>直接录入水电读数</Button>
+            </Card>
           ))}
         </>
       ) : null}
@@ -592,27 +580,25 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle="按账单填写上期和本期读数"
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <TouchableOpacity style={styles.button} onPress={submitUtilityReading}>
-            <Text style={styles.buttonText}>保存水电读数</Text>
-          </TouchableOpacity>
+          <Button onPress={submitUtilityReading}>保存水电读数</Button>
         )}
       >
         <View style={styles.formGrid}>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>上月水表</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.previousWater} onChangeText={(value) => setUtilityForm((old) => ({ ...old, previousWater: value }))} />
+            <Input keyboardType="numeric" value={utilityForm.previousWater} onChangeText={(value) => setUtilityForm((old) => ({ ...old, previousWater: value }))} />
           </View>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>本月水表</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.currentWater} onChangeText={(value) => setUtilityForm((old) => ({ ...old, currentWater: value }))} />
+            <Input keyboardType="numeric" value={utilityForm.currentWater} onChangeText={(value) => setUtilityForm((old) => ({ ...old, currentWater: value }))} />
           </View>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>上月电表</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.previousPower} onChangeText={(value) => setUtilityForm((old) => ({ ...old, previousPower: value }))} />
+            <Input keyboardType="numeric" value={utilityForm.previousPower} onChangeText={(value) => setUtilityForm((old) => ({ ...old, previousPower: value }))} />
           </View>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>本月电表</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={utilityForm.currentPower} onChangeText={(value) => setUtilityForm((old) => ({ ...old, currentPower: value }))} />
+            <Input keyboardType="numeric" value={utilityForm.currentPower} onChangeText={(value) => setUtilityForm((old) => ({ ...old, currentPower: value }))} />
           </View>
         </View>
       </TaskSheet>
@@ -624,12 +610,10 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle="粘贴从导出模板填写后的 CSV 内容"
         onClose={() => setActiveLayer(undefined)}
         footer={(
-          <TouchableOpacity style={styles.button} onPress={importUtilityCsv}>
-            <Text style={styles.buttonText}>确认导入</Text>
-          </TouchableOpacity>
+          <Button onPress={importUtilityCsv}>确认导入</Button>
         )}
       >
-        <TextInput style={[styles.input, styles.textarea]} multiline value={utilityCsv} onChangeText={setUtilityCsv} placeholder="billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因" />
+        <Input multiline value={utilityCsv} onChangeText={setUtilityCsv} placeholder="billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因" />
       </TaskSheet>
 
       <TaskSheet
@@ -639,7 +623,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         subtitle="复制下方 CSV 内容填写后再导入"
         onClose={() => setActiveLayer(undefined)}
       >
-        <TextInput style={[styles.input, styles.textarea]} multiline value={utilityCsv} onChangeText={setUtilityCsv} />
+        <Input multiline value={utilityCsv} onChangeText={setUtilityCsv} />
       </TaskSheet>
     </>
   );

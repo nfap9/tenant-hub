@@ -1,270 +1,859 @@
 import { Platform, StyleSheet } from "react-native";
-
-const tabBarBottomOffset = Platform.OS === "ios" ? 14 : 0;
-const contentBottomPadding = 92 + tabBarBottomOffset;
+import { colors, layout, radii, shadows, spacing, typography } from "./tokens";
 
 export const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: "#f4f2ec" },
-  loginShell: { flex: 1, backgroundColor: "#102522" },
-  loginContent: { flexGrow: 1, justifyContent: "center", padding: 18, gap: 12 },
-  loginContentCompact: { paddingVertical: 10, gap: 8 },
-  loginHeader: { gap: 4 },
-  loginEyebrow: { color: "#c7a85a", fontSize: 12, fontWeight: "700" },
-  loginProduct: { color: "white", fontSize: 34, fontWeight: "700" },
-  loginSubtitle: { color: "#cfe8df", fontSize: 14, lineHeight: 19 },
-  loginPanel: {
-    padding: 14,
-    backgroundColor: "#fffaf0",
-    borderRadius: 8,
-    gap: 7,
-    shadowColor: "#000",
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8
+  // ============================================
+  // Shell & layout
+  // ============================================
+  shell: { flex: 1, backgroundColor: colors.background },
+
+  content: {
+    padding: spacing[4],
+    gap: spacing[3],
+    paddingBottom: layout.contentBottomPadding
   },
-  formTitle: { color: "#102522", fontSize: 21, fontWeight: "700" },
-  formSubTitle: { color: "#66716d", marginTop: 2, fontSize: 13, lineHeight: 18 },
-  formMessage: { padding: 8, borderRadius: 6, backgroundColor: "#eef6f2", color: "#146c5c" },
-  header: { paddingHorizontal: 20, paddingVertical: 12, backgroundColor: "#102522", flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
+
+  // ============================================
+  // Header
+  // ============================================
+  header: {
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[3],
+    backgroundColor: colors.primaryDark,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing[3]
+  },
+
   headerTitleBlock: { flex: 1, minWidth: 0 },
-  headerTitle: { fontSize: 22, fontWeight: "700", color: "white" },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
-  badge: { color: "#102522", backgroundColor: "#d7efe6", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, overflow: "hidden" },
-  userPill: { flexDirection: "row", alignItems: "center", gap: 8, padding: 4, paddingRight: 10, borderRadius: 999, backgroundColor: "#183531" },
-  avatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: "#d7efe6", alignItems: "center", justifyContent: "center" },
-  avatarText: { color: "#102522", fontWeight: "700" },
+
+  headerTitle: { ...typography.h5, color: colors.white },
+
+  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing[2], flexShrink: 0 },
+
+  // ============================================
+  // User pill & avatar
+  // ============================================
+  userPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    padding: spacing[1],
+    paddingRight: spacing[2.5],
+    borderRadius: radii.full,
+    backgroundColor: "#183531"
+  },
+
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.full,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  avatarText: { color: colors.primaryDark, fontWeight: "700" },
+
   userPillText: { maxWidth: 112 },
-  userName: { color: "white", fontWeight: "700" },
-  userOrgName: { color: "#cfe8df", fontSize: 11, marginTop: 1 },
+
+  userName: { color: colors.white, fontWeight: "700" },
+
+  userOrgName: { color: colors.accentLight, fontSize: typography.caption.fontSize, marginTop: 1 },
+
+  // ============================================
+  // User menu dropdown
+  // ============================================
   userMenu: {
     position: "absolute",
-    top: 62,
-    right: 12,
+    top: layout.headerHeight + spacing[1.5],
+    right: spacing[3],
     zIndex: 10,
     width: 260,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "white",
+    padding: spacing[3],
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e3dece",
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-    gap: 8
+    borderColor: colors.borderLight,
+    ...shadows.elevated,
+    gap: spacing[2]
   },
-  userMenuName: { color: "#102522", fontSize: 16, fontWeight: "700" },
-  userMenuPhone: { color: "#6b7471", fontSize: 12 },
-  menuDivider: { height: 1, backgroundColor: "#ebe4d4", marginVertical: 2 },
-  menuLabel: { color: "#394341", fontWeight: "700", fontSize: 13 },
-  menuOrgItem: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#ede7d8", flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  menuOrgItemActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
-  menuOrgName: { color: "#102522", fontWeight: "700" },
+
+  userMenuName: { color: colors.text, ...typography.h6 },
+
+  userMenuPhone: { color: colors.textMuted, ...typography.bodySmall },
+
+  menuDivider: { height: 0.5, backgroundColor: colors.dividerLight, marginVertical: spacing[0.5] },
+
+  menuLabel: { color: colors.textSecondary, ...typography.bodySmall },
+
+  menuOrgItem: {
+    padding: spacing[2.5],
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing[2]
+  },
+
+  menuOrgItemActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
+
+  menuOrgName: { color: colors.text, fontWeight: "700" },
+
   menuLogout: { minHeight: 36, alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, gap: 12, paddingBottom: contentBottomPadding },
-  noticeBanner: { padding: 10, borderRadius: 6, backgroundColor: "#e0f1ea", color: "#146c5c", fontWeight: "700" },
-  panel: { padding: 14, backgroundColor: "white", borderRadius: 8, gap: 10 },
-  label: { color: "#394341", fontWeight: "700", marginTop: 0, fontSize: 13 },
-  sectionTitle: { color: "#102522", fontSize: 17, fontWeight: "700" },
-  input: { minHeight: 40, borderWidth: 1, borderColor: "#d9d3c4", borderRadius: 6, paddingHorizontal: 10, color: "#102522", backgroundColor: "white" },
+
+  // ============================================
+  // Login
+  // ============================================
+  loginShell: { flex: 1, backgroundColor: colors.primaryDark },
+
+  loginContent: { flexGrow: 1, justifyContent: "center", padding: spacing[4.5], gap: spacing[3] },
+
+  loginContentCompact: { paddingVertical: spacing[2.5], gap: spacing[2] },
+
+  loginHeader: { gap: spacing[1] },
+
+  loginEyebrow: { color: colors.accent, ...typography.labelSmall },
+
+  loginProduct: { color: colors.white, ...typography.hero },
+
+  loginSubtitle: { color: colors.accentLight, ...typography.body },
+
+  loginPanel: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radii.lg,
+    gap: spacing[1.5],
+    ...shadows.elevated
+  },
+
+  // ============================================
+  // Form elements (being migrated to <Input> / <Button>)
+  // ============================================
+  formTitle: { color: colors.text, ...typography.h3 },
+
+  formSubTitle: { color: colors.textMuted, marginTop: spacing[0.5], ...typography.bodySmall },
+
+  formMessage: {
+    padding: spacing[2],
+    borderRadius: radii.md,
+    backgroundColor: colors.primaryLightest,
+    color: colors.primary,
+    ...typography.bodySmall
+  },
+
+  label: { color: colors.textSecondary, ...typography.bodySmall },
+
+  fieldLabel: { color: colors.textMuted, ...typography.labelSmall },
+
+  input: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing[3],
+    color: colors.text,
+    backgroundColor: colors.surface,
+    ...typography.body
+  },
+
+  textarea: { minHeight: 88, paddingTop: spacing[3], textAlignVertical: "top" },
+
+  codeRow: { flexDirection: "row", gap: spacing[2] },
+
+  codeInput: { flex: 1 },
+
+  gridInput: { flexGrow: 1, flexBasis: 104 },
+
+  // ============================================
+  // Buttons (legacy — migrate to <Button>)
+  // ============================================
+  button: {
+    minHeight: 44,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing[3]
+  },
+
+  buttonDisabled: { opacity: 0.48 },
+
+  buttonText: { color: colors.white, ...typography.body },
+
+  secondaryButton: {
+    minHeight: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing[3]
+  },
+
+  secondaryButtonText: { color: colors.primary, ...typography.body },
+
+  switchAuthButton: { minHeight: 28, alignItems: "center", justifyContent: "center" },
+
+  switchAuthText: { color: colors.primary, ...typography.bodySmall },
+
+  codeButton: {
+    width: 104,
+    minHeight: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  smallButton: {
+    minHeight: 34,
+    paddingHorizontal: spacing[2.5],
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    backgroundColor: colors.surface
+  },
+
+  smallButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+
+  smallButtonText: { color: colors.textSecondary, ...typography.bodySmall },
+
+  smallButtonTextActive: { color: colors.white },
+
+  smallDangerButton: {
+    minHeight: 34,
+    paddingHorizontal: spacing[2.5],
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: "#c8674e",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  smallDangerText: { color: colors.danger, ...typography.bodySmall },
+
+  backButton: { paddingHorizontal: spacing[2.5], paddingVertical: spacing[1.5], borderRadius: radii.md, backgroundColor: colors.primaryLightest },
+
+  backButtonText: { color: colors.primary, ...typography.bodySmall },
+
+  refreshButton: {
+    minHeight: 34,
+    paddingHorizontal: spacing[3],
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primaryLight
+  },
+
+  refreshButtonText: { color: colors.text, ...typography.bodySmall },
+
+  actionButton: { flex: 1 },
+
+  // ============================================
+  // Cards & panels (legacy — migrate to <Card>)
+  // ============================================
+  panel: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    gap: spacing[2.5],
+    ...shadows.card
+  },
+
+  card: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing[3],
+    ...shadows.card
+  },
+
+  detailPanel: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surfaceWarm2,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: spacing[2]
+  },
+
+  apartmentListCard: {
+    padding: spacing[3],
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radii.lg,
+    gap: spacing[2.5],
+    backgroundColor: colors.surfaceWarm2
+  },
+
+  roomCard: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    gap: spacing[2.5],
+    ...shadows.card
+  },
+
+  roomCardActive: { borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.primaryLightest },
+
+  billCard: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    gap: spacing[2.5],
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.subtle
+  },
+
+  planCard: {
+    padding: spacing[3],
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radii.lg,
+    gap: spacing[2.5],
+    backgroundColor: colors.surfaceWarm2
+  },
+
+  planCardActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
+
+  memberCard: {
+    padding: spacing[3],
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radii.lg,
+    gap: spacing[2.5],
+    backgroundColor: colors.surfaceWarm2
+  },
+
+  leaseCandidateCard: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3],
+    ...shadows.subtle
+  },
+
+  // ============================================
+  // Typography helpers
+  // ============================================
+  sectionTitle: { color: colors.text, ...typography.h5 },
+
+  cardTitle: { color: colors.text, ...typography.h5 },
+
+  cardStat: { color: colors.primary, ...typography.body },
+
+  muted: { color: colors.textMuted, ...typography.body },
+
+  link: { color: colors.primary, ...typography.body },
+
+  noticeBanner: {
+    padding: spacing[2.5],
+    borderRadius: radii.md,
+    backgroundColor: colors.primaryLighter,
+    color: colors.primary,
+    ...typography.bodySmall,
+    fontWeight: "700"
+  },
+
+  noticeText: { color: colors.text, ...typography.bodyLarge },
+
+  emptyText: { color: colors.textPlaceholder, textAlign: "center", marginTop: spacing[6], ...typography.body },
+
+  // ============================================
+  // Status badges (legacy — migrate to <Badge>)
+  // ============================================
+  statusBadge: {
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[0.5],
+    borderRadius: radii.full,
+    fontSize: 12,
+    fontWeight: "700",
+    overflow: "hidden"
+  },
+
+  statusVacant: { backgroundColor: colors.successLight, color: colors.success },
+
+  statusOccupied: { backgroundColor: colors.warningLight, color: colors.warning },
+
+  statusMaintenance: { backgroundColor: colors.dangerLight, color: colors.danger },
+
+  statusReserved: { backgroundColor: colors.neutralLight, color: colors.neutral },
+
+  todoBadge: {
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[0.5],
+    borderRadius: radii.full,
+    backgroundColor: colors.primaryLighter,
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "700",
+    overflow: "hidden"
+  },
+
+  todoBadgeDanger: { backgroundColor: colors.dangerLight, color: colors.danger },
+
+  todoBadgeWarning: { backgroundColor: colors.warningLight, color: colors.warning },
+
+  roleBadge: { color: colors.primary, ...typography.bodySmall },
+
+  // ============================================
+  // Segment control
+  // ============================================
+  segment: {
+    flexDirection: "row",
+    padding: spacing[0.75],
+    borderRadius: radii.md,
+    backgroundColor: "#ece5d5",
+    gap: spacing[0.75]
+  },
+
+  segmentItem: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: radii.sm,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  segmentItemActive: { backgroundColor: colors.surface },
+
+  segmentText: { color: "#596460", ...typography.bodySmall },
+
+  segmentTextActive: { color: colors.text },
+
+  // ============================================
+  // Metrics & stats
+  // ============================================
+  metricRow: { flexDirection: "row", gap: spacing[2.5] },
+
+  metric: { flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing[3], ...shadows.card },
+
+  metricValue: { marginTop: spacing[1], ...typography.metric, color: colors.text },
+
+  statRow: { flexDirection: "row", gap: spacing[2.5] },
+
+  statBlock: { flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing[3.5], gap: spacing[1.5], ...shadows.card },
+
+  statValue: { ...typography.stat, color: colors.text },
+
+  statLabel: { color: colors.textMuted, ...typography.labelSmall },
+
+  // ============================================
+  // Tab bar
+  // ============================================
+  tabbar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: layout.tabBarBottomOffset,
+    minHeight: layout.tabBarHeight,
+    padding: spacing[2],
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLighter,
+    flexDirection: "row",
+    gap: spacing[1.5]
+  },
+
+  tab: { flex: 1, borderRadius: radii.md, alignItems: "center", justifyContent: "center", gap: spacing[0.5] },
+
+  tabActive: { backgroundColor: colors.primary },
+
+  tabText: { color: colors.textPlaceholder, fontSize: 12, lineHeight: 16 },
+
+  tabTextActive: { color: colors.white, fontWeight: "700" },
+
+  // ============================================
+  // Home screen
+  // ============================================
+  homeHero: {
+    padding: spacing[4],
+    borderRadius: radii.lg,
+    backgroundColor: colors.primaryDark,
+    gap: spacing[3.5]
+  },
+
+  homeEyebrow: { color: colors.accent, ...typography.labelSmall },
+
+  homeHeroValue: { marginTop: spacing[1], color: colors.white, ...typography.h1 },
+
+  homeHeroGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing[2.5],
+    paddingTop: spacing[3],
+    borderTopWidth: 1,
+    borderTopColor: "#294743"
+  },
+
+  homeHeroLabel: { color: colors.accentLight, ...typography.labelSmall },
+
+  homeHeroMetric: { marginTop: spacing[0.75], color: colors.white, ...typography.bodyLarge },
+
+  todoItem: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[2.5],
+    ...shadows.subtle
+  },
+
+  todoContent: { flex: 1, gap: spacing[1] },
+
+  homeApartmentRow: {
+    paddingVertical: spacing[2.5],
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3]
+  },
+
+  homeApartmentMain: { flex: 1, gap: spacing[0.75] },
+
+  homeApartmentStat: { alignItems: "flex-end", gap: spacing[0.75] },
+
+  quickActionTitle: { color: colors.textMuted, ...typography.labelSmall },
+
+  quickActionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[3] },
+
+  quickActionCard: { width: 64, alignItems: "center", gap: spacing[1.5] },
+
+  quickActionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.primaryLightest,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  quickActionIconText: { color: colors.primary, fontSize: 18, fontWeight: "700" },
+
+  quickActionLabel: { color: colors.text, fontSize: 12, fontWeight: "700", textAlign: "center" },
+
+  // ============================================
+  // Rooms screen
+  // ============================================
+  roomGrid: { gap: spacing[2.5] },
+
+  roomHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
+
+  roomHeaderBadges: { alignItems: "flex-end", gap: spacing[1], flexShrink: 0 },
+
+  roomActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+
+  filterBar: { flexDirection: "row", gap: spacing[2] },
+
+  filterButton: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1.5],
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface
+  },
+
+  filterButtonActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
+
+  filterButtonText: { color: colors.textSecondary, ...typography.bodySmall },
+
+  filterButtonTextActive: { color: colors.primary },
+
+  // ============================================
+  // Settings
+  // ============================================
+  settingItem: {
+    padding: spacing[3.5],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3],
+    ...shadows.card
+  },
+
+  settingItemText: { color: colors.text, ...typography.bodyLarge, fontWeight: "700" },
+
+  subPageHeader: { flexDirection: "row", alignItems: "center", gap: spacing[2], marginBottom: spacing[1] },
+
+  planHeader: { flexDirection: "row", justifyContent: "space-between", gap: spacing[3] },
+
+  planPrice: { marginTop: spacing[1], color: colors.primary, ...typography.h4 },
+
+  quotaRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+
+  quotaText: {
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
+    color: colors.textSecondary,
+    fontSize: 12,
+    overflow: "hidden"
+  },
+
+  // ============================================
+  // Bills
+  // ============================================
+  billAmountRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: spacing[3] },
+
+  billSummaryAside: { alignItems: "flex-end", gap: spacing[0.5] },
+
+  billCardFooter: {
+    paddingTop: spacing[2],
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3]
+  },
+
+  billAmount: { color: colors.text, ...typography.stat },
+
+  billLine: { paddingVertical: spacing[2], borderTopWidth: 1, borderTopColor: colors.divider, flexDirection: "row", justifyContent: "space-between", gap: spacing[2.5] },
+
+  billDetailBlock: { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing[2], gap: spacing[1.5] },
+
+  billItemLine: { flexDirection: "row", justifyContent: "space-between", gap: spacing[2.5], paddingLeft: spacing[2] },
+
+  billChoiceList: { gap: spacing[2] },
+
+  readingRow: {
+    padding: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3],
+    ...shadows.subtle
+  },
+
+  // ============================================
+  // Form layout
+  // ============================================
+  formGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+
+  formField: { flexGrow: 1, flexBasis: 104, gap: spacing[1] },
+
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing[2.5], flexWrap: "wrap" },
+
+  detailRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing[3] },
+
+  // ============================================
+  // Org & members
+  // ============================================
+  orgOption: {
+    padding: spacing[3],
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: radii.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing[3]
+  },
+
+  orgOptionActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
+
+  memberHeader: { flexDirection: "row", justifyContent: "space-between", gap: spacing[3] },
+
+  roleActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+
+  // ============================================
+  // Batch rooms
+  // ============================================
+  batchRoomPanel: {
+    padding: spacing[2.5],
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surfaceWarm2,
+    gap: spacing[2]
+  },
+
+  batchRoomGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+
+  batchRoomButton: {
+    minWidth: 62,
+    minHeight: 34,
+    paddingHorizontal: spacing[2.5],
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface
+  },
+
+  batchRoomButtonActive: { borderColor: colors.primary, backgroundColor: colors.primary },
+
+  batchRoomButtonText: { color: colors.textSecondary, ...typography.bodySmall },
+
+  batchRoomButtonTextActive: { color: colors.white },
+
+  // ============================================
+  // Fee items
+  // ============================================
+  feeItem: {
+    padding: spacing[2.5],
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surfaceWarm2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[2.5]
+  },
+
+  feeItemActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
+
+  // ============================================
+  // Modal / overlay
+  // ============================================
+  modalOverlay: {
+    flex: 1,
+    padding: spacing[4],
+    backgroundColor: colors.overlayHeavy,
+    justifyContent: "center"
+  },
+
+  modalCard: {
+    maxHeight: "88%",
+    padding: spacing[3.5],
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    gap: spacing[2.5],
+    ...shadows.float
+  },
+
+  modalScrollContent: { gap: spacing[2.5] },
+
+  // ============================================
+  // Task sheet
+  // ============================================
+  taskSheetOverlay: { flex: 1, backgroundColor: colors.overlayHeavy },
+
+  taskSheetOverlay_drawer: { justifyContent: "flex-end" },
+
+  taskSheetOverlay_dialog: { justifyContent: "center", padding: spacing[4.5] },
+
+  taskSheetCard: { backgroundColor: colors.surface, gap: spacing[2.5], padding: spacing[3.5] },
+
+  taskSheetCard_drawer: {
+    maxHeight: layout.maxSheetHeight,
+    minHeight: layout.minSheetHeight,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    ...shadows.float
+  },
+
+  taskSheetCard_dialog: {
+    maxHeight: "78%",
+    borderRadius: radii.lg,
+    ...shadows.float
+  },
+
+  taskSheetTitleBlock: { flex: 1, gap: spacing[0.5] },
+
+  taskSheetContent: { gap: spacing[2.5], paddingBottom: spacing[0.5] },
+
+  taskSheetFooter: { gap: spacing[2], paddingTop: spacing[2], borderTopWidth: 1, borderTopColor: colors.divider },
+
+  // ============================================
+  // Date field (legacy — migrate styling)
+  // ============================================
   dateFieldWrap: { position: "relative", flexGrow: 1, flexBasis: 104 },
+
   dateField: { justifyContent: "center" },
-  dateFieldText: { color: "#102522" },
-  dateFieldPlaceholder: { color: "#9a9488" },
+
+  dateFieldText: { color: colors.text },
+
+  dateFieldPlaceholder: { color: colors.textPlaceholder },
+
   datePickerPanel: {
     position: "absolute",
-    top: 44,
+    top: 48,
     left: 0,
     zIndex: 30,
     width: 260,
-    padding: 10,
-    borderRadius: 8,
+    padding: spacing[2.5],
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: "#d9d3c4",
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.elevated
   },
-  datePickerHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  datePickerTitle: { color: "#102522", fontWeight: "700" },
-  datePickerNav: { width: 32, height: 32, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#eef6f2" },
-  datePickerNavText: { color: "#146c5c", fontSize: 22, lineHeight: 24, fontWeight: "700" },
+
+  datePickerHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing[2] },
+
+  datePickerTitle: { color: colors.text, ...typography.body },
+
+  datePickerNav: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primaryLightest
+  },
+
+  datePickerNavText: { color: colors.primary, fontSize: 22, lineHeight: 24, fontWeight: "700" },
+
   datePickerGrid: { flexDirection: "row", flexWrap: "wrap" },
-  datePickerWeekday: { width: "14.2857%", paddingVertical: 5, textAlign: "center", color: "#6b7471", fontSize: 12, fontWeight: "700" },
-  datePickerDay: { width: "14.2857%", height: 32, alignItems: "center", justifyContent: "center", borderRadius: 6 },
-  datePickerDayActive: { backgroundColor: "#146c5c" },
-  datePickerDayText: { color: "#102522", fontWeight: "700" },
-  datePickerDayTextActive: { color: "white" },
-  datePickerModalOverlay: { flex: 1, padding: 18, backgroundColor: "rgba(16, 37, 34, 0.28)", alignItems: "center", justifyContent: "center" },
+
+  datePickerWeekday: { width: "14.2857%", paddingVertical: spacing[1], textAlign: "center", color: colors.textMuted, ...typography.labelSmall },
+
+  datePickerDay: { width: "14.2857%", height: 32, alignItems: "center", justifyContent: "center", borderRadius: radii.md },
+
+  datePickerDayActive: { backgroundColor: colors.primary },
+
+  datePickerDayText: { color: colors.text, ...typography.bodySmall },
+
+  datePickerDayTextActive: { color: colors.white },
+
+  datePickerModalOverlay: {
+    flex: 1,
+    padding: spacing[4.5],
+    backgroundColor: colors.overlay,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
   datePickerModalPanel: {
     width: 320,
     maxWidth: "100%",
-    padding: 12,
-    borderRadius: 8,
+    padding: spacing[3],
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: "#d9d3c4",
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 16
-  },
-  codeRow: { flexDirection: "row", gap: 8 },
-  codeInput: { flex: 1 },
-  codeButton: { width: 104, minHeight: 40, borderRadius: 6, borderWidth: 1, borderColor: "#146c5c", alignItems: "center", justifyContent: "center" },
-  textarea: { minHeight: 88, paddingTop: 10, textAlignVertical: "top" },
-  button: { minHeight: 40, borderRadius: 6, backgroundColor: "#146c5c", alignItems: "center", justifyContent: "center" },
-  buttonDisabled: { opacity: 0.48 },
-  buttonText: { color: "white", fontWeight: "700" },
-  secondaryButton: { minHeight: 40, borderRadius: 6, borderWidth: 1, borderColor: "#146c5c", alignItems: "center", justifyContent: "center" },
-  secondaryButtonText: { color: "#146c5c", fontWeight: "700" },
-  switchAuthButton: { minHeight: 28, alignItems: "center", justifyContent: "center" },
-  switchAuthText: { color: "#146c5c", fontWeight: "700" },
-  segment: { flexDirection: "row", padding: 3, borderRadius: 6, backgroundColor: "#ece5d5" },
-  segmentItem: { flex: 1, minHeight: 34, borderRadius: 5, alignItems: "center", justifyContent: "center" },
-  segmentItemActive: { backgroundColor: "white" },
-  segmentText: { color: "#596460", fontWeight: "700" },
-  segmentTextActive: { color: "#102522" },
-  metricRow: { flexDirection: "row", gap: 10 },
-  metric: { flex: 1, backgroundColor: "white", borderRadius: 8, padding: 12 },
-  metricValue: { marginTop: 4, fontSize: 24, color: "#102522", fontWeight: "700" },
-  notice: { padding: 14, backgroundColor: "white", borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  noticeText: { color: "#102522", fontSize: 15 },
-  link: { color: "#146c5c", fontWeight: "700" },
-  card: { padding: 14, backgroundColor: "white", borderRadius: 8, flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  cardTitle: { color: "#102522", fontSize: 17, fontWeight: "700" },
-  cardStat: { color: "#146c5c", fontWeight: "700" },
-  apartmentListCard: { padding: 12, borderWidth: 1, borderColor: "#e3dece", borderRadius: 8, gap: 10, backgroundColor: "#fffdf7" },
-  muted: { color: "#6b7471" },
-  orgOption: { padding: 12, borderWidth: 1, borderColor: "#e3dece", borderRadius: 8, flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  orgOptionActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
-  memberCard: { padding: 12, borderWidth: 1, borderColor: "#e3dece", borderRadius: 8, gap: 10, backgroundColor: "#fffdf7" },
-  memberHeader: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  roleBadge: { color: "#146c5c", fontWeight: "700" },
-  roleActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  smallButton: { minHeight: 34, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: "#d9d3c4", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  smallButtonActive: { backgroundColor: "#146c5c", borderColor: "#146c5c" },
-  smallButtonText: { color: "#394341", fontWeight: "700" },
-  smallButtonTextActive: { color: "white" },
-  smallDangerButton: { minHeight: 34, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: "#c8674e", alignItems: "center", justifyContent: "center" },
-  smallDangerText: { color: "#b14f38", fontWeight: "700" },
-  tabbar: { position: "absolute", left: 0, right: 0, bottom: tabBarBottomOffset, minHeight: 64, padding: 8, backgroundColor: "white", borderTopWidth: 1, borderTopColor: "#e4dece", flexDirection: "row", gap: 6 },
-  tab: { flex: 1, borderRadius: 6, alignItems: "center", justifyContent: "center" },
-  tabActive: { backgroundColor: "#146c5c" },
-  tabText: { color: "#4f5b58", fontSize: 13 },
-  tabTextActive: { color: "white", fontWeight: "700" },
-
-  // 新增：首页
-  statRow: { flexDirection: "row", gap: 10 },
-  statBlock: { flex: 1, backgroundColor: "white", borderRadius: 8, padding: 14, gap: 6 },
-  statValue: { fontSize: 20, color: "#102522", fontWeight: "700" },
-  statLabel: { color: "#6b7471", fontSize: 12 },
-  todoItem: { padding: 14, backgroundColor: "white", borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  todoContent: { flex: 1, gap: 4 },
-  todoBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: "#e0f1ea", color: "#146c5c", fontSize: 12, fontWeight: "700", overflow: "hidden" },
-  todoBadgeDanger: { backgroundColor: "#fceeee", color: "#b14f38" },
-  todoBadgeWarning: { backgroundColor: "#fff3e0", color: "#c77700" },
-  homeHero: { padding: 16, borderRadius: 8, backgroundColor: "#102522", gap: 14 },
-  homeEyebrow: { color: "#c7a85a", fontSize: 12, fontWeight: "700" },
-  homeHeroValue: { marginTop: 4, color: "white", fontSize: 30, fontWeight: "700" },
-  homeHeroGrid: { flexDirection: "row", justifyContent: "space-between", gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#294743" },
-  homeHeroLabel: { color: "#cfe8df", fontSize: 12 },
-  homeHeroMetric: { marginTop: 3, color: "white", fontSize: 15, fontWeight: "700" },
-  refreshButton: { minHeight: 34, paddingHorizontal: 12, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#d7efe6" },
-  refreshButtonText: { color: "#102522", fontWeight: "700" },
-  homeApartmentRow: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#eee8da", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  homeApartmentMain: { flex: 1, gap: 3 },
-  homeApartmentStat: { alignItems: "flex-end", gap: 3 },
-  quickActionTitle: { color: "#6b7471", fontSize: 12, fontWeight: "700" },
-  quickActionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  quickActionCard: { width: 64, alignItems: "center", gap: 6 },
-  quickActionIcon: { width: 44, height: 44, borderRadius: 8, borderWidth: 1, borderColor: "#d9d3c4", backgroundColor: "#eef6f2", alignItems: "center", justifyContent: "center" },
-  quickActionIconText: { color: "#146c5c", fontSize: 18, fontWeight: "700" },
-  quickActionLabel: { color: "#102522", fontSize: 12, fontWeight: "700", textAlign: "center" },
-
-  // 新增：房间
-  roomCard: { padding: 14, backgroundColor: "white", borderRadius: 8, gap: 10 },
-  roomGrid: { gap: 10 },
-  roomCardActive: { borderWidth: 1, borderColor: "#146c5c", backgroundColor: "#eef6f2" },
-  leaseCandidateCard: { padding: 14, backgroundColor: "white", borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  roomHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
-  roomHeaderBadges: { alignItems: "flex-end", gap: 5, flexShrink: 0 },
-  roomActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, fontSize: 12, fontWeight: "700", overflow: "hidden" },
-  statusVacant: { backgroundColor: "#e0f1ea", color: "#146c5c" },
-  statusOccupied: { backgroundColor: "#fff3e0", color: "#c77700" },
-  statusMaintenance: { backgroundColor: "#fceeee", color: "#b14f38" },
-  statusReserved: { backgroundColor: "#ece5d5", color: "#7a6a4f" },
-
-  // 新增：筛选与空状态
-  filterBar: { flexDirection: "row", gap: 8 },
-  filterButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: "#d9d3c4", backgroundColor: "white" },
-  filterButtonActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
-  filterButtonText: { color: "#394341", fontWeight: "700", fontSize: 13 },
-  filterButtonTextActive: { color: "#146c5c" },
-  emptyText: { color: "#9a9488", textAlign: "center", marginTop: 24 },
-
-  // 新增：详情面板
-  detailPanel: { padding: 14, backgroundColor: "#fffdf7", borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", gap: 8 },
-  detailRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" },
-  formGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  formField: { flexGrow: 1, flexBasis: 104, gap: 4 },
-  fieldLabel: { color: "#6b7471", fontSize: 12, fontWeight: "700" },
-  gridInput: { flexGrow: 1, flexBasis: 104 },
-  actionButton: { flex: 1 },
-  batchRoomPanel: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", backgroundColor: "#fffdf7", gap: 8 },
-  batchRoomGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  batchRoomButton: { minWidth: 62, minHeight: 34, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: "#d9d3c4", alignItems: "center", justifyContent: "center", backgroundColor: "white" },
-  batchRoomButtonActive: { borderColor: "#146c5c", backgroundColor: "#146c5c" },
-  batchRoomButtonText: { color: "#394341", fontWeight: "700" },
-  batchRoomButtonTextActive: { color: "white" },
-  feeItem: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", backgroundColor: "#fffdf7", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  feeItemActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
-  modalOverlay: { flex: 1, padding: 16, backgroundColor: "rgba(16, 37, 34, 0.42)", justifyContent: "center" },
-  modalCard: { maxHeight: "88%", padding: 14, borderRadius: 8, backgroundColor: "white", gap: 10 },
-  modalScrollContent: { gap: 10 },
-
-  // 新增：设置与子页面
-  settingItem: { padding: 14, backgroundColor: "white", borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  settingItemText: { color: "#102522", fontSize: 15, fontWeight: "700" },
-  subPageHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
-  backButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: "#eef6f2" },
-  backButtonText: { color: "#146c5c", fontWeight: "700" },
-  planCard: { padding: 12, borderWidth: 1, borderColor: "#e3dece", borderRadius: 8, gap: 10, backgroundColor: "#fffdf7" },
-  planCardActive: { borderColor: "#146c5c", backgroundColor: "#eef6f2" },
-  planHeader: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  planPrice: { marginTop: 4, color: "#146c5c", fontSize: 18, fontWeight: "700" },
-  quotaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  quotaText: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: "#f4f2ec", color: "#394341", fontSize: 12, overflow: "hidden" },
-
-  // 新增：账单
-  billCard: { padding: 14, backgroundColor: "white", borderRadius: 8, gap: 10, borderWidth: 1, borderColor: "#e3dece" },
-  billAmountRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
-  billSummaryAside: { alignItems: "flex-end", gap: 2 },
-  billCardFooter: { paddingTop: 8, borderTopWidth: 1, borderTopColor: "#eee8da", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  billAmount: { color: "#102522", fontSize: 20, fontWeight: "700" },
-  billLine: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: "#eee8da", flexDirection: "row", justifyContent: "space-between", gap: 10 },
-  billDetailBlock: { borderTopWidth: 1, borderTopColor: "#eee8da", paddingTop: 8, gap: 6 },
-  billItemLine: { flexDirection: "row", justifyContent: "space-between", gap: 10, paddingLeft: 8 },
-  billChoiceList: { gap: 8 },
-  readingRow: { padding: 12, backgroundColor: "white", borderRadius: 8, borderWidth: 1, borderColor: "#e3dece", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }
-  ,
-
-  // 新增：任务表单层
-  taskSheetOverlay: { flex: 1, backgroundColor: "rgba(16, 37, 34, 0.42)" },
-  taskSheetOverlay_drawer: { justifyContent: "flex-end" },
-  taskSheetOverlay_dialog: { justifyContent: "center", padding: 18 },
-  taskSheetCard: { backgroundColor: "white", gap: 10, padding: 14 },
-  taskSheetCard_drawer: { maxHeight: "90%", minHeight: "62%", borderTopLeftRadius: 12, borderTopRightRadius: 12 },
-  taskSheetCard_dialog: { maxHeight: "78%", borderRadius: 8 },
-  taskSheetTitleBlock: { flex: 1, gap: 2 },
-  taskSheetContent: { gap: 10, paddingBottom: 2 },
-  taskSheetFooter: { gap: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#eee8da" }
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.float
+  }
 });
