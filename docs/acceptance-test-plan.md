@@ -9,7 +9,7 @@
 - API 健康检查：`http://localhost:4000/health`
 - API 基础地址：`http://localhost:4000/api`
 - 运营端：`http://localhost:5173`
-- 移动端 Web 预览：`http://localhost:19006`
+- 移动端本地开发：`cd apps/mobile && pnpm web`（验收脚本会自动启动，无需手动操作）
 
 ### 测试数据
 
@@ -43,7 +43,6 @@ docker compose up --build -d
 - `tenant-hub-postgres` 为 `healthy`
 - `tenant-hub-api` 为 `healthy`
 - `tenant-hub-ops-web` 为 `running`
-- `tenant-hub-mobile` 为 `running`
 
 ### 1.2 检查容器状态
 
@@ -58,7 +57,6 @@ docker compose ps
 - `postgres` 端口映射为 `5433->5432`
 - `api` 端口映射为 `4000->4000`
 - `ops-web` 端口映射为 `5173->80`
-- `mobile` 暴露 `19006`
 
 ### 1.3 检查 API 健康
 
@@ -80,13 +78,11 @@ curl -fsS http://localhost:4000/health
 
 ```bash
 curl -I http://localhost:5173
-curl -I http://localhost:19006
 ```
 
 预期：
 
 - 运营端返回 `HTTP/1.1 200 OK`
-- 移动端 Web 预览返回 `HTTP/1.1 200 OK` 或 Expo dev server 的可访问响应
 
 ## 2. 账号与组织验收
 
@@ -94,7 +90,7 @@ curl -I http://localhost:19006
 
 步骤：
 
-1. 打开移动端 Web 预览。
+1. 打开移动端 Web 预览（如未运行，执行 `cd apps/mobile && pnpm web`）。
 2. 切换到注册。
 3. 输入业主手机号、用户名、密码、确认密码。
 4. 点击获取验证码。

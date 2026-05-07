@@ -26,9 +26,8 @@ pnpm dev
 - `postgres`：PostgreSQL 16，宿主机端口 `5433`，容器内端口 `5432`
 - `api`：Express API，端口 `4000`
 - `ops-web`：平台运营端，端口 `5173`
-- `mobile`：最终用户 App 的 React Native/Expo Web 预览服务，端口 `19006`
 
-日常开发请使用热更新模式，容器会挂载本地源码并运行 API、Vite 和 Expo 的开发服务器：
+日常开发请使用热更新模式，容器会挂载本地源码并运行 API 和 Vite 的开发服务器：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
@@ -44,7 +43,6 @@ docker compose up --build
 
 - API 健康检查：`http://localhost:4000/health`
 - 平台运营端：`http://localhost:5173`
-- 客户端 App 浏览器预览：`http://localhost:19006`
 
 ### 修改 Prisma Schema 后
 
@@ -67,7 +65,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml restart api
 如果容器还没启动，先运行：
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres api ops-web mobile
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres api ops-web
 ```
 
 生产镜像环境：
