@@ -1,12 +1,26 @@
-import { Button, Card, Form, Input, Space, message } from "antd";
+import { Button, Card, Form, Input, Select, Space, Typography, message } from "antd";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
 interface SmsConfigValue {
-  templateCode?: string;
-  name?: string;
-  bodyTemplate?: Record<string, string>;
+  url?: string;
+  method?: "GET" | "POST" | "PUT";
+  headers?: Record<string, string>;
+  params?: Record<string, string>;
 }
+
+const methodOptions = [
+  { value: "POST", label: "POST" },
+  { value: "GET", label: "GET" },
+  { value: "PUT", label: "PUT" }
+];
+
+const defaultParams = [
+  { key: "code", value: "{{code}}" },
+  { key: "targets", value: "{{targets}}" },
+  { key: "name", value: "{{name}}" },
+  { key: "number", value: "{{number}}" }
+];
 
 export function SmsConfigPage() {
   const [form] = Form.useForm();
@@ -16,56 +30,56 @@ export function SmsConfigPage() {
 
   useEffect(() => {
     setLoading(true);
-    api<{ value?: SmsConfigValue }>("/admin/settings/sms_spug_config")
+    api<{ value?: SmsConfigValue }>("/admin/settings/sms_config")
       .then((data) => {
         const value = data.value ?? {};
         form.setFieldsValue({
-          templateCode: value.templateCode ?? "",
-          name: value.name ?? "TenantHub",
-          bodyTemplate: Object.entries(value.bodyTemplate ?? { code: "{{code}}", targets: "{{targets}}", name: "{{name}}", number: "{{number}}" }).map(
-            ([key, val]) => ({ key, value: val })
-          )
+          url: value.url ?? "",
+          method: value.method ?? "POST",
+          headers: Object.entries(value.headers ?? {}).map(([key, val]) => ({ key, value: val })),
+          params: Object.entries(value.params ?? {}).map(([key, val]) => ({ key, value: val }))
         });
       })
       .catch(() => {
         form.setFieldsValue({
-          templateCode: "",
-          name: "TenantHub",
-          bodyTemplate: [
-            { key: "code", value: "{{code}}" },
-            { key: "targets", value: "{{targets}}" },
-            { key: "name", value: "{{name}}" },
-            { key: "number", value: "{{number}}" }
-          ]
+          url: "",
+          method: "POST",
+          headers: [],
+          params: defaultParams.map((item) => ({ ...item }))
         });
       })
       .finally(() => setLoading(false));
   }, [form]);
 
-  const handleSave = async (values: {
-    templateCode: string;
-    name: string;
-    bodyTemplate: Array<{ key: string; value: string }>;
-  }) => {
-    const bodyTemplate: Record<string, string> = {};
-    for (const item of values.bodyTemplate) {
+  const toRecord = (items: Array<{ key: string; value: string }>) => {
+    const record: Record<string, string> = {};
+    for (const item of items) {
       if (item.key && item.value !== undefined) {
-        bodyTemplate[item.key] = item.value;
+        record[item.key] = item.value;
       }
     }
+    return record;
+  };
 
+  const handleSave = async (values: {
+    url: string;
+    method: "GET" | "POST" | "PUT";
+    headers: Array<{ key: string; value: string }>;
+    params: Array<{ key: string; value: string }>;
+  }) => {
     const payload = {
       value: {
-        templateCode: values.templateCode,
-        name: values.name,
-        bodyTemplate
+        url: values.url,
+        method: values.method,
+        headers: toRecord(values.headers),
+        params: toRecord(values.params)
       } as SmsConfigValue,
-      description: "Spug 短信推送配置"
+      description: "通用短信服务配置"
     };
 
     setSaving(true);
     try {
-      await api("/admin/settings/sms_spug_config", {
+      await api("/admin/settings/sms_config", {
         method: "PUT",
         body: JSON.stringify(payload)
       });
@@ -77,6 +91,41 @@ export function SmsConfigPage() {
     }
   };
 
+  const renderKeyValueList = (name: string, keyPlaceholder: string, valuePlaceholder: string) => (
+    <Form.List name={name}>
+      {(fields, { add, remove }) => (
+        <div>
+          {fields.map((field) => (
+            <Space key={field.key} align="baseline" style={{ display: "flex", marginBottom: 8 }}>
+              <Form.Item
+                {...field}
+                name={[field.name, "key"]}
+                rules={[{ required: true, message: "请输入字段名" }]}
+                noStyle
+              >
+                <Input placeholder={keyPlaceholder} style={{ width: 160 }} />
+              </Form.Item>
+              <Form.Item
+                {...field}
+                name={[field.name, "value"]}
+                rules={[{ required: true, message: "请输入字段值" }]}
+                noStyle
+              >
+                <Input placeholder={valuePlaceholder} style={{ width: 320 }} />
+              </Form.Item>
+              <Button type="link" danger onClick={() => remove(field.name)}>
+                删除
+              </Button>
+            </Space>
+          ))}
+          <Button type="dashed" onClick={() => add()} block>
+            新增字段
+          </Button>
+        </div>
+      )}
+    </Form.List>
+  );
+
   return (
     <main className="page">
       {contextHolder}
@@ -84,54 +133,68 @@ export function SmsConfigPage() {
         <h1>短信配置</h1>
       </div>
       <div className="content-band">
-        <Card loading={loading} title="Spug 推送助手配置" style={{ maxWidth: 720 }}>
+        <Card loading={loading} title="通用短信服务配置" style={{ maxWidth: 720 }}>
           <Form form={form} layout="vertical" onFinish={handleSave}>
-            <Form.Item name="templateCode" label="模板编码" rules={[{ required: true, message: "请输入模板编码" }]}>
-              <Input placeholder="在 https://push.spug.cc/ 获取的模版编码" />
+            <Form.Item
+              name="url"
+              label="接口地址"
+              rules={[{ required: true, message: "请输入短信接口地址" }]}
+            >
+              <Input placeholder="https://api.example.com/sms/send" />
             </Form.Item>
-            <Form.Item name="name" label="推送名称" rules={[{ required: true, message: "请输入推送名称" }]}>
-              <Input placeholder="如 TenantHub" />
+
+            <Form.Item
+              name="method"
+              label="请求方式"
+              rules={[{ required: true, message: "请选择请求方式" }]}
+            >
+              <Select options={methodOptions} />
             </Form.Item>
-            <Form.Item label="请求体模板">
-              <Form.List name="bodyTemplate" initialValue={[{ key: "code", value: "{{code}}" }]}>
-                {(fields, { add, remove }) => (
-                  <div>
-                    {fields.map((field) => (
-                      <Space key={field.key} align="baseline" style={{ display: "flex", marginBottom: 8 }}>
-                        <Form.Item
-                          {...field}
-                          name={[field.name, "key"]}
-                          rules={[{ required: true, message: "字段名" }]}
-                          noStyle
-                        >
-                          <Input placeholder="字段名" style={{ width: 160 }} />
-                        </Form.Item>
-                        <Form.Item
-                          {...field}
-                          name={[field.name, "value"]}
-                          rules={[{ required: true, message: "字段值" }]}
-                          noStyle
-                        >
-                          <Input placeholder="字段值，可用 {{code}} {{targets}} {{name}} {{number}}" style={{ width: 320 }} />
-                        </Form.Item>
-                        <Button type="link" danger onClick={() => remove(field.name)}>
-                          删除
-                        </Button>
-                      </Space>
-                    ))}
-                    <Button type="dashed" onClick={() => add()} block>
-                      新增字段
-                    </Button>
-                  </div>
-                )}
-              </Form.List>
+
+            <Form.Item label="请求头 (Headers)">
+              {renderKeyValueList("headers", "Header 名称", "Header 值，可用 {{code}} {{targets}} {{name}} {{number}}")}
             </Form.Item>
+
+            <Form.Item label="请求参数 (Params)">
+              {renderKeyValueList("params", "参数名", "参数值，可用 {{code}} {{targets}} {{name}} {{number}}")}
+            </Form.Item>
+
             <Form.Item>
               <Button type="primary" htmlType="submit" loading={saving}>
                 保存配置
               </Button>
             </Form.Item>
           </Form>
+        </Card>
+
+        <Card
+          title="变量说明"
+          size="small"
+          style={{ maxWidth: 720, marginTop: 16, background: "#fffaf0" }}
+        >
+          <Typography.Paragraph style={{ marginBottom: 8 }}>
+            在 URL、Headers、Params 中均可使用以下变量，发送时会被自动替换为实际值：
+          </Typography.Paragraph>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <li>
+              <Typography.Text code>{"{{code}}"}</Typography.Text> — 验证码（6 位数字）
+            </li>
+            <li>
+              <Typography.Text code>{"{{targets}}"}</Typography.Text> — 接收短信的手机号
+            </li>
+            <li>
+              <Typography.Text code>{"{{name}}"}</Typography.Text> — 应用名称（默认 TenantHub）
+            </li>
+            <li>
+              <Typography.Text code>{"{{number}}"}</Typography.Text> — 验证码过期时间（分钟），取自环境变量{" "}
+              <Typography.Text code>OTP_EXPIRES_IN_MINUTES</Typography.Text>（默认 5）
+            </li>
+          </ul>
+          <Typography.Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0 }}>
+            GET 请求：参数自动拼接到 URL Query String。
+            <br />
+            POST / PUT 请求：参数作为 JSON Body 发送。
+          </Typography.Paragraph>
         </Card>
       </div>
     </main>

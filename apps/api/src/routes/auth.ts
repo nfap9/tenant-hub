@@ -4,7 +4,7 @@ import { z } from "zod";
 import { platformAdminPhones } from "../config/env.js";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
-import { sendSpugSms } from "../services/spugPush.js";
+import { sendSms, type SmsConfig } from "../services/smsService.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
@@ -38,22 +38,28 @@ authRouter.post(
         expiresAt: new Date(Date.now() + env.OTP_EXPIRES_IN_MINUTES * 60 * 1000)
       }
     });
-    const smsConfig = await prisma.systemSetting.findUnique({ where: { key: "sms_spug_config" } });
+    const smsConfig = await prisma.systemSetting.findUnique({ where: { key: "sms_config" } });
     const parsedConfig = smsConfig?.value ? (smsConfig.value as Record<string, unknown>) : null;
-    const spugOptions = parsedConfig
-      ? {
-          templateCode: typeof parsedConfig.templateCode === "string" ? parsedConfig.templateCode : undefined,
-          name: typeof parsedConfig.name === "string" ? parsedConfig.name : undefined,
-          bodyTemplate:
-            typeof parsedConfig.bodyTemplate === "object" && parsedConfig.bodyTemplate !== null
-              ? (parsedConfig.bodyTemplate as Record<string, string>)
-              : undefined
-        }
-      : undefined;
 
-    if (spugOptions?.templateCode) {
-      await sendSpugSms(input.phone, code, { ...spugOptions, number: env.OTP_EXPIRES_IN_MINUTES }).catch((err) => {
-        console.error(`[SpugPush] 发送验证码失败: ${err.message}`);
+    if (parsedConfig?.url) {
+      const config = {
+        url: String(parsedConfig.url),
+        method:
+          (parsedConfig.method === "GET" || parsedConfig.method === "POST" || parsedConfig.method === "PUT"
+            ? parsedConfig.method
+            : "POST") as SmsConfig["method"],
+        headers:
+          typeof parsedConfig.headers === "object" && parsedConfig.headers !== null
+            ? (parsedConfig.headers as Record<string, string>)
+            : undefined,
+        params:
+          typeof parsedConfig.params === "object" && parsedConfig.params !== null
+            ? (parsedConfig.params as Record<string, string>)
+            : undefined
+      };
+
+      await sendSms({ targets: input.phone, code, number: env.OTP_EXPIRES_IN_MINUTES, config }).catch((err) => {
+        console.error(`[SmsService] 发送验证码失败: ${err.message}`);
       });
     }
     if (env.NODE_ENV !== "production") {
