@@ -1,6 +1,6 @@
-# Tenant Hub 核心业务验收脚本
+# Tenant Hub 核心业务验收清单
 
-> 目标：在发布前用一套固定流程验证 Tenant Hub 的核心业务闭环。每轮验收使用全新的测试账号、测试组织和测试房源，避免历史数据干扰。
+> 目标：在发布前用一套固定流程手动验证 Tenant Hub 的核心业务闭环。每轮验收使用全新的测试账号、测试组织和测试房源，避免历史数据干扰。
 
 ## 0. 验收准备
 
@@ -9,7 +9,7 @@
 - API 健康检查：`http://localhost:4000/health`
 - API 基础地址：`http://localhost:4000/api`
 - 运营端：`http://localhost:5173`
-- 移动端本地开发：`cd apps/mobile && pnpm web`（验收脚本会自动启动，无需手动操作）
+- 移动端本地开发：`cd apps/mobile && pnpm web`
 
 ### 测试数据
 
@@ -35,13 +35,7 @@
 运行：
 
 ```bash
-docker compose up --build -d
-```
-
-或单独启动生产环境验收：
-
-```bash
-docker compose -f docker-compose.yml up --build -d
+docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 ```
 
 预期：
@@ -55,7 +49,7 @@ docker compose -f docker-compose.yml up --build -d
 运行：
 
 ```bash
-docker compose ps
+docker compose -f docker-compose.prod.yml ps
 ```
 
 预期：
@@ -103,7 +97,7 @@ curl -I http://localhost:5173
 5. 从 API 容器日志读取验证码：
 
 ```bash
-docker compose -f docker-compose.yml logs api --tail=80
+docker compose -f docker-compose.prod.yml logs api --tail=80
 ```
 
 6. 输入验证码并提交注册。
