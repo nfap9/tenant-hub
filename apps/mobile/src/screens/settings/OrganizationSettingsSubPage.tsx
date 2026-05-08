@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { Button, Card, EmptyState, Input, PressableScale } from "../../components/ui";
+import { Button, Card, Input, PressableScale } from "../../components/ui";
 import { mobileApi } from "../../services";
 import { styles } from "../../theme/styles";
 import type { Membership, OrgInvite, OrgMember, OrgRole } from "../../types";

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { Button, Card, Icon, PressableScale } from "../../components/ui";
+import { Card, Icon, PressableScale } from "../../components/ui";
 import { colors, spacing } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
 import type { Membership, OrgMember, OrgRole } from "../../types";

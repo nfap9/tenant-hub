@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import { Badge, Button, Card, EmptyState, Icon } from "../../components/ui";
 import { homeQuickActions, type HomeNavigationIntent } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
-import { colors, spacing } from "../../theme/tokens";
+import { colors } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
 import type { Apartment, Bill, Lease, MonthlyBill, Room } from "../../types";
 
@@ -11,7 +11,7 @@ type Props = {
   token: string;
   organizationId?: string;
   setNotice: (notice: string) => void;
-  onNavigate: (intent: HomeNavigationIntent) => void;
+  onNavigate: (_intent: HomeNavigationIntent) => void;
 };
 
 type TodoTone = "danger" | "warning" | "calm";
@@ -67,7 +67,7 @@ const todoTone = (tone: TodoTone) => {
   return "primary" as const;
 };
 
-export default function HomeScreen({ token, organizationId, setNotice, onNavigate }: Props) {
+export default function HomeScreen({ token, organizationId, setNotice, onNavigate: _onNavigate }: Props) {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);

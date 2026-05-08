@@ -5,17 +5,24 @@
   "description": "轻量化公寓管理系统 monorepo",
   "scripts": {
     "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/ops-web dev",
+    "dev:mobile": "pnpm --filter @tenant-hub/mobile dev:android",
     "build": "pnpm -r build",
     "check": "pnpm test && pnpm typecheck && pnpm lint && pnpm build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
+    "format": "pnpm -r format",
+    "format:check": "pnpm -r format:check",
     "acceptance": "pnpm acceptance:api && pnpm acceptance:ui",
     "acceptance:api": "node scripts/acceptance-api.mjs",
     "acceptance:ui": "node scripts/acceptance-ui.mjs",
     "acceptance:docker": "docker compose up --build -d && pnpm acceptance",
     "db:generate": "pnpm --filter @tenant-hub/api prisma generate",
-    "db:migrate": "pnpm --filter @tenant-hub/api prisma migrate dev"
+    "db:migrate": "pnpm --filter @tenant-hub/api prisma migrate dev",
+    "mobile:build:apk": "pnpm --filter @tenant-hub/mobile android:apk",
+    "mobile:test": "pnpm --filter @tenant-hub/mobile test",
+    "mobile:typecheck": "pnpm --filter @tenant-hub/mobile typecheck",
+    "mobile:lint": "pnpm --filter @tenant-hub/mobile lint"
   },
   "engines": {
     "node": ">=20"

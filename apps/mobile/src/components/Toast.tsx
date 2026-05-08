@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text } from "react-native";
 import { colors, radii, shadows, spacing, typography } from "../theme/tokens";
 import { Icon } from "./ui/Icon";
 

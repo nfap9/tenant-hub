@@ -44,7 +44,8 @@ pnpm-debug.log*
 .expo/
 .expo-shared/
 web-build/
-android/
+# Note: apps/mobile/android is tracked for local APK builds
+# iOS is ignored as we only target Android APK
 ios/
 *.jks
 *.p8

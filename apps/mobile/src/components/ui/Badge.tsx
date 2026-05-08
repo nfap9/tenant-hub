@@ -1,5 +1,5 @@
 import { Text, View, type ViewStyle } from "react-native";
-import { colors, radii, spacing, toneColors, type Tone } from "../../theme/tokens";
+import { radii, spacing, toneColors, type Tone } from "../../theme/tokens";
 
 type Props = {
   children: string;

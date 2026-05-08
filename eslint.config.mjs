@@ -22,5 +22,17 @@ export default tseslint.config(
       "@typescript-eslint/no-namespace": "off",
       "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
     }
+  },
+  {
+    files: ["**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.commonjs
+      }
+    },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off"
+    }
   }
 );

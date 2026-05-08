@@ -1,5 +1,5 @@
 import { Text, View, type ViewStyle } from "react-native";
-import { colors, darken, radii, spacing, typography } from "../../theme/tokens";
+import { colors, darken, radii, spacing } from "../../theme/tokens";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
 import { PressableScale } from "./PressableScale";

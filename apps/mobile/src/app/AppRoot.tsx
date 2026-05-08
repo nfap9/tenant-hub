@@ -1,5 +1,4 @@
-import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, View } from "react-native";
 import Toast from "../components/Toast";
 import { Button, Card, PressableScale } from "../components/ui";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -108,7 +107,7 @@ export default function AppRoot() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.shell} edges={["top", "left", "right"]}>
-      <StatusBar style="light" backgroundColor={colors.primaryDark} />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primaryDark} />
       <View style={styles.header}>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.headerTitle}>{title}</Text>

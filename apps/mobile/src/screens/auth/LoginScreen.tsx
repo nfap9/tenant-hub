@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, View } from "react-native";
 import Toast from "../../components/Toast";
 import { Button, Input } from "../../components/ui";
 import { Card } from "../../components/ui/Card";
@@ -71,7 +70,7 @@ export default function LoginScreen({
 
   return (
     <SafeAreaView style={styles.loginShell}>
-      <StatusBar style="light" />
+      <StatusBar barStyle="light-content" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
