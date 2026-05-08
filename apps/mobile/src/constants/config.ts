@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-// @ts-ignore - react-native-dotenv generates this module at build time
+// @ts-expect-error - react-native-dotenv generates this module at build time
 import { API_BASE_URL as ENV_API_BASE_URL } from "@env";
 
 type Env = Record<string, string | undefined>;

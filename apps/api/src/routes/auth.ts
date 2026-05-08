@@ -4,6 +4,7 @@ import { z } from "zod";
 import { platformAdminPhones } from "../config/env.js";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
+import { sendSpugSms } from "../services/spugPush.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
@@ -37,6 +38,24 @@ authRouter.post(
         expiresAt: new Date(Date.now() + env.OTP_EXPIRES_IN_MINUTES * 60 * 1000)
       }
     });
+    const smsConfig = await prisma.systemSetting.findUnique({ where: { key: "sms_spug_config" } });
+    const parsedConfig = smsConfig?.value ? (smsConfig.value as Record<string, unknown>) : null;
+    const spugOptions = parsedConfig
+      ? {
+          templateCode: typeof parsedConfig.templateCode === "string" ? parsedConfig.templateCode : undefined,
+          name: typeof parsedConfig.name === "string" ? parsedConfig.name : undefined,
+          bodyTemplate:
+            typeof parsedConfig.bodyTemplate === "object" && parsedConfig.bodyTemplate !== null
+              ? (parsedConfig.bodyTemplate as Record<string, string>)
+              : undefined
+        }
+      : undefined;
+
+    if (spugOptions?.templateCode) {
+      await sendSpugSms(input.phone, code, spugOptions).catch((err) => {
+        console.error(`[SpugPush] 发送验证码失败: ${err.message}`);
+      });
+    }
     if (env.NODE_ENV !== "production") {
       console.info(`[TenantHub] ${input.phone} ${input.purpose} 验证码：${code}`);
     }

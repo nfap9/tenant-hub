@@ -1,4 +1,4 @@
-import { ApartmentOutlined, CrownOutlined, LogoutOutlined, ProfileOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons";
+import { ApartmentOutlined, CrownOutlined, LogoutOutlined, MessageOutlined, ProfileOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons";
 import { Button, Empty, Layout, Menu, Space, Typography, message } from "antd";
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { api, clearSession, readSession, writeSession } from "./api/client";
@@ -6,13 +6,15 @@ import { api, clearSession, readSession, writeSession } from "./api/client";
 const AuthPage = lazy(() => import("./pages/AuthPage").then((module) => ({ default: module.AuthPage })));
 const AdminPage = lazy(() => import("./pages/AdminPage").then((module) => ({ default: module.AdminPage })));
 const OpsDashboardPage = lazy(() => import("./pages/OpsDashboardPage").then((module) => ({ default: module.OpsDashboardPage })));
+const SmsConfigPage = lazy(() => import("./pages/SmsConfigPage").then((module) => ({ default: module.SmsConfigPage })));
 
 const menuItems = [
   { key: "dashboard", icon: <ProfileOutlined />, label: "运营总览" },
   { key: "users", icon: <UserOutlined />, label: "用户管理" },
   { key: "plans", icon: <CrownOutlined />, label: "套餐配置" },
   { key: "organizations", icon: <ApartmentOutlined />, label: "组织管理" },
-  { key: "roles", icon: <SafetyCertificateOutlined />, label: "角色权限" }
+  { key: "roles", icon: <SafetyCertificateOutlined />, label: "角色权限" },
+  { key: "sms", icon: <MessageOutlined />, label: "短信配置" }
 ];
 
 export default function App() {
@@ -83,6 +85,11 @@ export default function App() {
     roles: (
       <Suspense fallback={null}>
         <AdminPage section="roles" />
+      </Suspense>
+    ),
+    sms: (
+      <Suspense fallback={null}>
+        <SmsConfigPage />
       </Suspense>
     )
   }[active];
