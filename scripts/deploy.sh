@@ -90,27 +90,29 @@ fi
 
 # ---- 数据库备份脚本 ----
 echo "[7/7] 配置数据库备份..."
-cat > "$PROJECT_DIR/scripts/backup-db.sh" << 'EOF'
+cat > "$PROJECT_DIR/scripts/backup-db.sh" << EOF
 #!/bin/bash
-BACKUP_DIR="/home/$(whoami)/tenant-hub/backups"
-DB_NAME="tenant_hub"
-DB_USER="postgres"
+BACKUP_DIR="$PROJECT_DIR/backups"
 CONTAINER="tenant-hub-postgres"
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/tenant_hub_$DATE.sql"
+DATE=\$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="\$BACKUP_DIR/tenant_hub_\$DATE.sql"
 RETENTION_DAYS=30
 
-mkdir -p "$BACKUP_DIR"
-docker exec "$CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" > "$BACKUP_FILE"
-gzip "$BACKUP_FILE"
-find "$BACKUP_DIR" -name "tenant_hub_*.sql.gz" -mtime +$RETENTION_DAYS -delete
+# 从容器环境变量读取数据库配置，回退到默认值
+DB_NAME=\$(docker exec "\$CONTAINER" printenv POSTGRES_DB 2>/dev/null || echo "tenant_hub")
+DB_USER=\$(docker exec "\$CONTAINER" printenv POSTGRES_USER 2>/dev/null || echo "postgres")
 
-echo "[$(date)] Backup completed: ${BACKUP_FILE}.gz"
+mkdir -p "\$BACKUP_DIR"
+docker exec "\$CONTAINER" pg_dump -U "\$DB_USER" -d "\$DB_NAME" > "\$BACKUP_FILE"
+gzip "\$BACKUP_FILE"
+find "\$BACKUP_DIR" -name "tenant_hub_*.sql.gz" -mtime +\$RETENTION_DAYS -delete
+
+echo "[\$(date)] Backup completed: \${BACKUP_FILE}.gz"
 EOF
 chmod +x "$PROJECT_DIR/scripts/backup-db.sh"
 
 # 添加定时任务（如果不存在）
-CRON_CMD="0 3 * * * /home/$(whoami)/tenant-hub/scripts/backup-db.sh >> /home/$(whoami)/tenant-hub/backups/backup.log 2>&1"
+CRON_CMD="0 3 * * * $PROJECT_DIR/scripts/backup-db.sh >> $PROJECT_DIR/backups/backup.log 2>&1"
 (crontab -l 2>/dev/null | grep -F "$CRON_CMD") || (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
 
 echo ""
@@ -130,20 +132,20 @@ echo "   - scripts/download-page.html"
 echo ""
 echo "2. 创建环境变量文件:"
 echo "   cd $PROJECT_DIR"
-echo "   cp .env.example .env.production"
-echo "   # 编辑 .env.production，修改密码和密钥"
+echo "   cp .env.production.example .env.production"
 echo "   # 编辑 .env.production，修改密码和密钥"
 echo ""
 echo "3. 启动 Docker 服务:"
-echo "   docker compose -f docker-compose.prod.yml up --build -d"
+echo "   docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d"
 echo ""
 echo "4. 配置域名 DNS，将以下域名指向本机 IP:"
 echo "   - $DOMAIN_API"
 echo "   - $DOMAIN_OPS"
 echo ""
 echo "5. 运行以下命令启用 Nginx 配置（如果第6步被跳过）:"
+echo "   cd $PROJECT_DIR"
 echo "   sed -e \"s|API_DOMAIN|\$DOMAIN_API|g\" scripts/nginx-api.conf | sudo tee /etc/nginx/sites-available/tenant-hub-api"
-echo "   sed -e \"s|OPS_DOMAIN|\$DOMAIN_OPS|g\" -e \"s|PROJECT_DIR|\$HOME/tenant-hub|g\" scripts/nginx-ops.conf | sudo tee /etc/nginx/sites-available/tenant-hub-ops"
+echo "   sed -e \"s|OPS_DOMAIN|\$DOMAIN_OPS|g\" -e \"s|PROJECT_DIR|$PROJECT_DIR|g\" scripts/nginx-ops.conf | sudo tee /etc/nginx/sites-available/tenant-hub-ops"
 echo "   sudo ln -sf /etc/nginx/sites-available/tenant-hub-* /etc/nginx/sites-enabled/"
 echo "   sudo rm -f /etc/nginx/sites-enabled/default"
 echo "   sudo nginx -t && sudo systemctl reload nginx"
