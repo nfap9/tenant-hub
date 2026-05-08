@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
+import type { StringValue } from "ms";
 import { env, platformAdminPhones } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../utils/http.js";
@@ -11,7 +12,7 @@ export type AuthUser = {
 };
 
 export const signToken = (user: AuthUser) =>
-  jwt.sign(user, env.JWT_SECRET, { expiresIn: "7d" });
+  jwt.sign(user, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN as StringValue });
 
 export const isTokenStaleForPasswordChange = (issuedAt: Date | undefined, passwordChangedAt: Date | null) => {
   if (!issuedAt || !passwordChangedAt) return false;

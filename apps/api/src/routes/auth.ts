@@ -33,8 +33,8 @@ authRouter.post(
       data: {
         phone: input.phone,
         purpose: input.purpose,
-        codeHash: await bcrypt.hash(code, 10),
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+        codeHash: await bcrypt.hash(code, env.BCRYPT_OTP_SALT_ROUNDS),
+        expiresAt: new Date(Date.now() + env.OTP_EXPIRES_IN_MINUTES * 60 * 1000)
       }
     });
     if (env.NODE_ENV !== "production") {
@@ -66,7 +66,7 @@ authRouter.post(
       data: {
         phone: input.phone,
         username: input.username,
-        passwordHash: await bcrypt.hash(input.password, 12)
+        passwordHash: await bcrypt.hash(input.password, env.BCRYPT_PASSWORD_SALT_ROUNDS)
       },
       select: { id: true, phone: true, username: true }
     });
@@ -145,7 +145,7 @@ authRouter.put(
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await bcrypt.hash(input.newPassword, 12), passwordChangedAt: new Date() }
+      data: { passwordHash: await bcrypt.hash(input.newPassword, env.BCRYPT_PASSWORD_SALT_ROUNDS), passwordChangedAt: new Date() }
     });
 
     ok(res, { message: "密码已更新" });

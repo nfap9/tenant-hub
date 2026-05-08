@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
+import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -107,7 +108,7 @@ orgRouter.post(
   requireOrg,
   requirePermission(PERMISSIONS.MEMBER_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ expiresInHours: z.coerce.number().int().min(1).max(168).default(24) }).parse(req.body);
+    const input = z.object({ expiresInHours: z.coerce.number().int().min(1).max(env.INVITE_EXPIRES_MAX_HOURS).default(env.INVITE_EXPIRES_IN_HOURS) }).parse(req.body);
     const invite = await prisma.orgInvite.create({
       data: {
         organizationId: req.organizationId!,

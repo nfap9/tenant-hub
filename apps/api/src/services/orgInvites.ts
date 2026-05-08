@@ -1,4 +1,5 @@
 import { customAlphabet } from "nanoid";
+import { env } from "../config/env.js";
 import { HttpError } from "../utils/http.js";
 
 const inviteCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 10);
@@ -14,7 +15,7 @@ export const normalizeInviteCode = (value: string) => value.trim().replace(/[\s-
 
 export const generateInviteCode = () => inviteCode();
 
-export const buildInviteExpiry = (now = new Date(), expiresInHours = 24) =>
+export const buildInviteExpiry = (now = new Date(), expiresInHours = env.INVITE_EXPIRES_IN_HOURS) =>
   new Date(now.getTime() + expiresInHours * 60 * 60 * 1000);
 
 export const assertInviteJoinable = ({ invite, now = new Date() }: { invite: JoinableInvite; now?: Date }) => {

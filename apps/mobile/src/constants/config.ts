@@ -1,9 +1,16 @@
+import { Platform } from "react-native";
+// @ts-ignore - react-native-dotenv generates this module at build time
+import { API_BASE_URL as ENV_API_BASE_URL } from "@env";
+
 type Env = Record<string, string | undefined>;
 
-export const DEFAULT_API_BASE_URL = "http://localhost:4000/api";
+export const DEFAULT_API_BASE_URL =
+  Platform.OS === "android"
+    ? "http://10.0.2.2:4000/api"
+    : "http://localhost:4000/api";
 
 export const resolveApiBaseUrl = (env: Env = {}) => {
-  const configured = env.EXPO_PUBLIC_API_BASE_URL?.trim() || env.VITE_API_BASE_URL?.trim();
+  const configured = env.API_BASE_URL?.trim() || ENV_API_BASE_URL?.trim();
   return configured || DEFAULT_API_BASE_URL;
 };
 

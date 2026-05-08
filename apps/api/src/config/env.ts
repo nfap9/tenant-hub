@@ -4,9 +4,15 @@ import { z } from "zod";
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(12).default("tenant-hub-dev-secret"),
+  JWT_EXPIRES_IN: z.string().default("7d"),
   CORS_ORIGINS: z.string().default("http://localhost:5173,http://localhost:8081,http://localhost:19006"),
   PLATFORM_ADMIN_PHONES: z.string().default(""),
   PORT: z.coerce.number().default(4000),
+  OTP_EXPIRES_IN_MINUTES: z.coerce.number().default(5),
+  BCRYPT_OTP_SALT_ROUNDS: z.coerce.number().default(10),
+  BCRYPT_PASSWORD_SALT_ROUNDS: z.coerce.number().default(12),
+  INVITE_EXPIRES_IN_HOURS: z.coerce.number().default(24),
+  INVITE_EXPIRES_MAX_HOURS: z.coerce.number().default(168),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development")
 }).superRefine((value, ctx) => {
   if (value.NODE_ENV !== "production") return;

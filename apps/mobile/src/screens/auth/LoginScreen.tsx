@@ -76,7 +76,7 @@ export default function LoginScreen({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        <ScrollView contentContainerStyle={[styles.loginContent, isRegister && styles.loginContentCompact]} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.loginContent, isRegister && styles.loginContentCompact]} keyboardShouldPersistTaps="always">
         <View style={styles.loginHeader}>
           <Text style={styles.loginEyebrow}>APARTMENT OPS</Text>
           <Text style={styles.loginProduct}>Tenant Hub</Text>
