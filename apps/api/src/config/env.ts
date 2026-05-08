@@ -6,14 +6,16 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(12).default("tenant-hub-dev-secret"),
   JWT_EXPIRES_IN: z.string().default("7d"),
   CORS_ORIGINS: z.string().default("http://localhost:5173,http://localhost:8081,http://localhost:19006"),
-  PLATFORM_ADMIN_PHONES: z.string().default(""),
   PORT: z.coerce.number().default(4000),
   OTP_EXPIRES_IN_MINUTES: z.coerce.number().default(5),
   BCRYPT_OTP_SALT_ROUNDS: z.coerce.number().default(10),
   BCRYPT_PASSWORD_SALT_ROUNDS: z.coerce.number().default(12),
   INVITE_EXPIRES_IN_HOURS: z.coerce.number().default(24),
   INVITE_EXPIRES_MAX_HOURS: z.coerce.number().default(168),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development")
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+
+  PLATFORM_ADMIN_PHONE: z.string().default(""),
+  PLATFORM_ADMIN_PASSWORD: z.string().default("")
 }).superRefine((value, ctx) => {
   if (value.NODE_ENV !== "production") return;
   if (value.JWT_SECRET === "tenant-hub-dev-secret") {
@@ -33,6 +35,4 @@ export const corsOrigins = env.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-export const platformAdminPhones = env.PLATFORM_ADMIN_PHONES.split(",")
-  .map((phone) => phone.trim())
-  .filter(Boolean);
+export const platformAdminPhones = env.PLATFORM_ADMIN_PHONE ? [env.PLATFORM_ADMIN_PHONE] : [];

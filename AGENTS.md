@@ -68,7 +68,7 @@ tenant-hub/
 │   │   │   │   ├── auth.ts   # JWT 校验、组织成员校验、权限校验、平台权限校验
 │   │   │   │   └── error.ts  # 全局错误处理
 │   │   │   ├── routes/       # 路由：auth, apartments, bills, leases, organizations, admin
-│   │   │   └── services/     # 业务逻辑：billing, leaseLifecycle, roles, csv, utilityImport…
+│   │   │   └── services/     # 业务逻辑：billing, leaseLifecycle, roles, csv, utilityImport, adminInit…
 │   │   ├── prisma/
 │   │   │   └── schema.prisma # 完整数据库模型（20+ 张表）
 │   │   └── Dockerfile        # 多阶段构建（base → deps → development → build → production）
@@ -77,7 +77,7 @@ tenant-hub/
 │   │   │   ├── main.tsx      # React 根 + Ant Design ConfigProvider（zh_CN）
 │   │   │   ├── App.tsx       # 布局：侧边栏导航、懒加载页面、登录 gate
 │   │   │   ├── api/client.ts # fetch 封装：Bearer Auth、x-organization-id、localStorage session
-│   │   │   ├── pages/        # AuthPage, AdminPage, OpsDashboardPage
+│   │   │   ├── pages/        # AuthPage, AdminPage, OpsDashboardPage, SmsConfigPage
 │   │   │   └── styles/global.css
 │   │   ├── nginx.conf        # SPA fallback + gzip
 │   │   └── Dockerfile        # Node build → nginx static serve
@@ -97,8 +97,9 @@ tenant-hub/
 │       ├── babel.config.js
 │       └── jest.config.js
 ├── scripts/
-│   ├── acceptance-api.mjs      # API 端到端验收脚本
-│   └── acceptance-ui.mjs       # Playwright CLI 移动端 Web 预览验收脚本
+│   ├── deploy.sh               # 一键部署脚本
+│   ├── nginx-api.conf          # Nginx API 反向代理配置
+│   └── nginx-ops.conf          # Nginx 运营端反向代理配置
 ├── docs/
 │   ├── mobile-ui-guidelines.md # 移动端交互规范（层级、按钮、表单、卡片、文案）
 │   ├── acceptance-test-plan.md # 发布前核心业务验收清单（7 大章节）
@@ -144,11 +145,8 @@ pnpm --filter @tenant-hub/mobile android
 # 移动端构建 APK
 pnpm mobile:build:apk
 
-# 验收测试（需要 Docker 服务已启动）
-pnpm acceptance          # API 验收 + UI 验收
-pnpm acceptance:api      # 仅 API 验收
-pnpm acceptance:ui       # 仅 UI 验收
-pnpm acceptance:docker   # docker compose up --build -d && pnpm acceptance
+# 代码质量流水线
+pnpm check               # test → typecheck → lint → build
 ```
 
 > 首次使用 Docker 前，请复制对应场景的模板：
@@ -228,17 +226,9 @@ docker compose -f docker-compose.dev.yml restart api
 - **遗留集成测试**：`tests/` 目录下的 13 个 `.test.ts` 文件，通过 `tsx` 直接运行。
   - 运行：`pnpm --filter @tenant-hub/mobile test:legacy`
 
-### 6.3 验收测试
-- `scripts/acceptance-api.mjs`：完整 API 业务闭环（注册 → 组织 → 公寓 → 房间 → 租约 → 账单 → 收款 → 水电导入导出 → 解约）。
-  - 从 Docker 容器 `tenant-hub-api` 的日志中读取 OTP 验证码。
-- `scripts/acceptance-ui.mjs`：基于 **Playwright CLI** 对移动端 Web 预览进行 UI 验收。
-  - 默认期望移动端 Web 预览运行在 `http://localhost:19006`。
-  - 同样需要读取 Docker 日志中的验证码。
-
-### 6.4 发布前必须通过项
+### 6.3 发布前必须通过项
 - `pnpm test`、`pnpm typecheck`、`pnpm lint`、`pnpm build` 全部通过。
 - Docker 冷启动通过，数据库迁移成功。
-- 核心业务验收脚本（账号/组织/公寓/房间/租约/账单/收款/运营端）全部通过。
 - 不存在组织间数据越权、已租房间重复签约、账单金额错误、普通用户进入运营端等 P0/P1 问题。
 
 ---
@@ -254,7 +244,9 @@ docker compose -f docker-compose.dev.yml restart api
 - **组织隔离**：所有业务查询必须携带 `x-organization-id` 请求头，并由 `auth.ts` 中间件校验当前用户是否为该组织成员。
 - **角色权限**：`auth.ts` 中间件提供 `requirePermission(...)`，校验用户在当前组织内的角色是否拥有对应权限码。
 - **平台权限**：运营端路由通过 `requirePlatformAccess()` 校验 `effectivePlatformRole`。普通用户默认 `NONE`。
-- **超级管理员初始化**：可通过环境变量 `PLATFORM_ADMIN_PHONES`（逗号分隔）配置初始化超级管理员；若系统无任何平台管理员，首个已登录用户可临时进入运营端进行授权。
+- **超级管理员初始化**：
+  - 可通过 `PLATFORM_ADMIN_PHONE` + `PLATFORM_ADMIN_PASSWORD` 配置自动创建超级管理员账号；系统启动时若该手机号不存在则自动创建（`platformRole = SUPER_ADMIN`），已存在则跳过。
+  - 若系统无任何平台管理员，首个已登录用户可临时进入运营端进行授权。
 
 ### 7.3 生产部署安全提醒
 - 生产部署前，请复制 `.env.production.example` 为 `.env.production`，并**务必修改** `JWT_SECRET`、`POSTGRES_PASSWORD`、`CORS_ORIGINS`、`VITE_API_BASE_URL` 为实际值。
@@ -312,14 +304,15 @@ docker compose -f docker-compose.dev.yml restart api
 | API 入口 | `apps/api/src/server.ts`, `apps/api/src/app.ts` |
 | API 环境校验 | `apps/api/src/config/env.ts` |
 | API 认证中间件 | `apps/api/src/middleware/auth.ts` |
+| 超级管理员初始化 | `apps/api/src/services/adminInit.ts` |
 | Prisma Schema | `apps/api/prisma/schema.prisma` |
 | 运营端入口 | `apps/ops-web/src/main.tsx`, `apps/ops-web/src/App.tsx` |
+| 运营端短信配置 | `apps/ops-web/src/pages/SmsConfigPage.tsx` |
 | 移动端入口 | `apps/mobile/src/app/AppRoot.tsx` |
 | 移动端 Metro 配置 | `apps/mobile/metro.config.js` |
 | 移动端 Jest 配置 | `apps/mobile/jest.config.js` |
-| 验收脚本 | `scripts/acceptance-api.mjs`, `scripts/acceptance-ui.mjs` |
 | 移动端交互规范 | `docs/mobile-ui-guidelines.md` |
-| 验收测试计划 | `docs/acceptance-test-plan.md` |
+| 部署指南 | `docs/deployment-guide.md` |
 | Docker 生产编排 | `docker-compose.prod.yml` |
 | Docker 开发编排 | `docker-compose.dev.yml` |
 | CI 工作流 | `.github/workflows/mobile-ci.yml` |

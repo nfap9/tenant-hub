@@ -140,7 +140,6 @@ DATABASE_URL=postgresql://postgres:<上方密码>@postgres:5432/tenant_hub?schem
 JWT_SECRET=<随机64位字符串>
 JWT_EXPIRES_IN=7d
 CORS_ORIGINS=https://ops.tenant-hub.com
-PLATFORM_ADMIN_PHONES=<你的手机号>
 PORT=4000
 OTP_EXPIRES_IN_MINUTES=5
 BCRYPT_OTP_SALT_ROUNDS=10
