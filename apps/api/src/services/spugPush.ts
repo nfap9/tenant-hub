@@ -3,6 +3,7 @@ const SPUG_PUSH_URL = "https://push.spug.cc/send";
 export interface SpugPushOptions {
   templateCode?: string;
   name?: string;
+  number?: number;
   bodyTemplate?: Record<string, string>;
 }
 
@@ -18,6 +19,7 @@ export async function sendSpugSms(
 
   const phoneList = Array.isArray(targets) ? targets.join(",") : targets;
   const name = options?.name ?? "TenantHub";
+  const number = options?.number ?? 5;
 
   let bodyObj: Record<string, string>;
   if (options?.bodyTemplate) {
@@ -26,13 +28,15 @@ export async function sendSpugSms(
       bodyObj[key] = value
         .replace(/\{\{code\}\}/g, code)
         .replace(/\{\{targets\}\}/g, phoneList)
-        .replace(/\{\{name\}\}/g, name);
+        .replace(/\{\{name\}\}/g, name)
+        .replace(/\{\{number\}\}/g, String(number));
     }
   } else {
     bodyObj = {
       name,
       code,
-      targets: phoneList
+      targets: phoneList,
+      number: String(number)
     };
   }
 

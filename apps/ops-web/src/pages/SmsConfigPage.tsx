@@ -22,7 +22,7 @@ export function SmsConfigPage() {
         form.setFieldsValue({
           templateCode: value.templateCode ?? "",
           name: value.name ?? "TenantHub",
-          bodyTemplate: Object.entries(value.bodyTemplate ?? { code: "{{code}}", targets: "{{targets}}", name: "{{name}}" }).map(
+          bodyTemplate: Object.entries(value.bodyTemplate ?? { code: "{{code}}", targets: "{{targets}}", name: "{{name}}", number: "{{number}}" }).map(
             ([key, val]) => ({ key, value: val })
           )
         });
@@ -34,7 +34,8 @@ export function SmsConfigPage() {
           bodyTemplate: [
             { key: "code", value: "{{code}}" },
             { key: "targets", value: "{{targets}}" },
-            { key: "name", value: "{{name}}" }
+            { key: "name", value: "{{name}}" },
+            { key: "number", value: "{{number}}" }
           ]
         });
       })
@@ -111,7 +112,7 @@ export function SmsConfigPage() {
                           rules={[{ required: true, message: "字段值" }]}
                           noStyle
                         >
-                          <Input placeholder="字段值，可用 {{code}} {{targets}} {{name}}" style={{ width: 320 }} />
+                          <Input placeholder="字段值，可用 {{code}} {{targets}} {{name}} {{number}}" style={{ width: 320 }} />
                         </Form.Item>
                         <Button type="link" danger onClick={() => remove(field.name)}>
                           删除

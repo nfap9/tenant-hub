@@ -52,7 +52,7 @@ authRouter.post(
       : undefined;
 
     if (spugOptions?.templateCode) {
-      await sendSpugSms(input.phone, code, spugOptions).catch((err) => {
+      await sendSpugSms(input.phone, code, { ...spugOptions, number: env.OTP_EXPIRES_IN_MINUTES }).catch((err) => {
         console.error(`[SpugPush] 发送验证码失败: ${err.message}`);
       });
     }
