@@ -6,6 +6,9 @@ on:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-ci.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'tsconfig.base.json'
       - 'eslint.config.mjs'
   pull_request:
@@ -13,6 +16,9 @@ on:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-ci.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'tsconfig.base.json'
       - 'eslint.config.mjs'
 
@@ -31,7 +37,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,6 +50,9 @@ jobs:
 
       - name: Lint
         run: pnpm mobile:lint
+
+      - name: Format Check
+        run: pnpm --filter @tenant-hub/mobile format:check
 
       - name: Test
         run: pnpm mobile:test
@@ -59,7 +68,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
