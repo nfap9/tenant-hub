@@ -233,6 +233,15 @@ adminRouter.get(
   })
 );
 
+adminRouter.get(
+  "/settings/:key",
+  asyncHandler(async (req, res) => {
+    const setting = await prisma.systemSetting.findUnique({ where: { key: req.params.key } });
+    if (!setting) throw new HttpError(404, "设置项不存在");
+    ok(res, setting);
+  })
+);
+
 adminRouter.put(
   "/settings/:key",
   asyncHandler(async (req, res) => {
