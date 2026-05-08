@@ -4,15 +4,15 @@ services:
     container_name: tenant-hub-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: tenant_hub
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-tenant_hub}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d tenant_hub"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tenant_hub}"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -26,18 +26,25 @@ services:
     command: sh -c "pnpm --filter @tenant-hub/api prisma generate && pnpm --filter @tenant-hub/api dev"
     environment:
       NODE_ENV: development
-      PORT: 4000
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tenant_hub?schema=public
-      JWT_SECRET: tenant-hub-docker-development-secret
+      PORT: ${PORT:-4000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-tenant_hub}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-tenant-hub-dev-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8081,http://localhost:19006}
       PLATFORM_ADMIN_PHONES: ${PLATFORM_ADMIN_PHONES:-}
       CHOKIDAR_USEPOLLING: "true"
+      OTP_EXPIRES_IN_MINUTES: ${OTP_EXPIRES_IN_MINUTES:-5}
+      BCRYPT_OTP_SALT_ROUNDS: ${BCRYPT_OTP_SALT_ROUNDS:-10}
+      BCRYPT_PASSWORD_SALT_ROUNDS: ${BCRYPT_PASSWORD_SALT_ROUNDS:-12}
+      INVITE_EXPIRES_IN_HOURS: ${INVITE_EXPIRES_IN_HOURS:-24}
+      INVITE_EXPIRES_MAX_HOURS: ${INVITE_EXPIRES_MAX_HOURS:-168}
     ports:
-      - "4000:4000"
+      - "${PORT:-4000}:4000"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${PORT:-4000}/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 12
@@ -55,7 +62,7 @@ services:
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: "true"
-      VITE_API_BASE_URL: http://localhost:4000/api
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000/api}
     ports:
       - "5173:5173"
     depends_on:

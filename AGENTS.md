@@ -108,7 +108,7 @@ tenant-hub/
 ├── pnpm-workspace.yaml         # `apps/*`
 ├── tsconfig.base.json          # 公共 TS 配置（strict, esModuleInterop, skipLibCheck）
 ├── eslint.config.mjs           # 统一 ESLint 配置（typescript-eslint recommended）
-├── docker-compose.yml          # 生产编排（postgres + api + ops-web，nginx 静态）
+├── docker-compose.prod.yml     # 生产编排（postgres + api + ops-web，nginx 静态）
 ├── docker-compose.dev.yml      # 开发热更新编排（tsx watch + vite dev，volume 挂载源码）
 └── .env.example                # 环境变量模板
 ```
@@ -151,14 +151,18 @@ pnpm acceptance:ui       # 仅 UI 验收
 pnpm acceptance:docker   # docker compose up --build -d && pnpm acceptance
 ```
 
+> 首次使用 Docker 前，请复制对应场景的模板：
+> - 本地开发：`cp .env.example .env`
+> - 服务器部署：`cp .env.production.example .env.production`
+
 ### 4.1 Docker 启动
 
 ```bash
 # 日常开发（热更新，源码挂载）
 docker compose -f docker-compose.dev.yml up --build
 
-# 验证生产镜像（API 会执行 prisma migrate deploy，ops-web 以 nginx 启动）
-docker compose up --build
+# 生产部署（API 会执行 prisma migrate deploy，ops-web 以 nginx 启动）
+docker compose --env-file .env.production -f docker-compose.prod.yml up --build
 ```
 
 访问地址：
@@ -205,7 +209,7 @@ docker compose -f docker-compose.dev.yml restart api
 ### 5.4 环境变量
 - API 使用 `src/config/env.ts` 通过 **Zod Schema** 在运行时强校验环境变量。
 - **生产安全规则**：`NODE_ENV === "production"` 时，若 `JWT_SECRET` 仍为默认的 `tenant-hub-dev-secret`，Zod 会抛校验错误阻止启动。
-- 各应用均使用 `.env` 文件（已 `.gitignore`），根目录提供 `.env.example` 作为模板。
+- 各应用均使用 `.env` 文件（已 `.gitignore`），根目录提供 `.env.example`（本地开发）和 `.env.production.example`（服务器部署）作为模板。
 
 ---
 
@@ -253,7 +257,8 @@ docker compose -f docker-compose.dev.yml restart api
 - **超级管理员初始化**：可通过环境变量 `PLATFORM_ADMIN_PHONES`（逗号分隔）配置初始化超级管理员；若系统无任何平台管理员，首个已登录用户可临时进入运营端进行授权。
 
 ### 7.3 生产部署安全提醒
-- **必须修改** `docker-compose.yml` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、`JWT_SECRET`。
+- 生产部署前，请复制 `.env.production.example` 为 `.env.production`，并**务必修改** `JWT_SECRET`、`POSTGRES_PASSWORD`、`CORS_ORIGINS`、`VITE_API_BASE_URL` 为实际值。
+- `docker-compose.prod.yml` 已强制要求配置 `VITE_API_BASE_URL`，且运行时依赖 `.env.production` 中的安全项，若未设置将无法启动。
 - API 容器启动会自动执行 `prisma migrate deploy`，请确保数据库连接串正确。
 
 ---
@@ -315,6 +320,6 @@ docker compose -f docker-compose.dev.yml restart api
 | 验收脚本 | `scripts/acceptance-api.mjs`, `scripts/acceptance-ui.mjs` |
 | 移动端交互规范 | `docs/mobile-ui-guidelines.md` |
 | 验收测试计划 | `docs/acceptance-test-plan.md` |
-| Docker 生产编排 | `docker-compose.yml` |
+| Docker 生产编排 | `docker-compose.prod.yml` |
 | Docker 开发编排 | `docker-compose.dev.yml` |
 | CI 工作流 | `.github/workflows/mobile-ci.yml` |
