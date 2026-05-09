@@ -61,7 +61,7 @@ CORS_ORIGINS="https://www.your.domain"
 # 运营端构建时注入的 API 地址（单域名方案，固定为 /api）
 VITE_API_BASE_URL="https://www.your.domain/api"
 
-# 可选：自动创建超级管理员账号
+# 创建超级管理员账号
 PLATFORM_ADMIN_PHONE="你的手机号"
 PLATFORM_ADMIN_PASSWORD="管理员密码"
 ```
