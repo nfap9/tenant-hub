@@ -296,11 +296,6 @@ sudo rm -f /etc/nginx/sites-enabled/default
 
 sudo nginx -t && sudo systemctl reload nginx
 
-# 复制下载页到 apk 目录
-if [ -f "$PROJECT_DIR/scripts/download-page.html" ]; then
-    cp "$PROJECT_DIR/scripts/download-page.html" "$PROJECT_DIR/apk/index.html"
-fi
-
 ok "Nginx 配置完成并生效"
 
 # ============================================
@@ -398,11 +393,7 @@ server {
         }
     }
 
-    # 下载页面
-    location = /download {
-        alias $PROJECT_DIR/apk/index.html;
-        add_header Cache-Control "no-cache";
-    }
+    # 下载页面由 ops-web 托管（apps/ops-web/public/download.html）
 }
 EOF
     sudo nginx -t && sudo systemctl reload nginx
