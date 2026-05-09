@@ -105,16 +105,19 @@ jobs:
     steps:
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GH_REPO: ${{ github.repository }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script_stop: true
-          timeout: 300s
+          command_timeout: 300s
+          envs: GH_REPO
           script: |
             set -e
             cd ~/tenant-hub
             echo "[DEPLOY] Pulling latest code..."
+            git remote set-url origin git@github.com:${GH_REPO}.git 2>/dev/null || true
             git pull origin main
             echo "[DEPLOY] Running deploy script..."
             bash scripts/deploy.sh --domain www.shen00.top --email admin@shen00.top
