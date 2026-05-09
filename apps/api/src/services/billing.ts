@@ -293,7 +293,7 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
   return prisma.bill.findUnique({ where: { id: bill.id }, include: { items: true } });
 };
 
-const tryCreateMonthlyBill = async (leaseId: string, billingDate: Date) => {
+export const tryCreateMonthlyBill = async (leaseId: string, billingDate: Date) => {
   const lease = await prisma.lease.findUnique({ where: { id: leaseId }, include: { bills: true } });
   if (!lease) return null;
 
@@ -329,7 +329,7 @@ const tryCreateMonthlyBill = async (leaseId: string, billingDate: Date) => {
   return prisma.monthlyBill.findUnique({ where: { id: monthlyBill.id }, include: { bills: { include: { items: true } }, payments: true } });
 };
 
-export const generateLeaseBills = async (leaseId: string, today = new Date()) => {
+export const generateLeaseBills = async (leaseId: string, today = new Date(), options?: { onlyCurrentPeriod?: boolean }) => {
   const lease = await prisma.lease.findUnique({
     where: { id: leaseId },
     include: { fees: true, bills: true, room: { include: { apartment: true } } }
@@ -343,9 +343,12 @@ export const generateLeaseBills = async (leaseId: string, today = new Date()) =>
     cycle: lease.cycle,
     today
   });
+  const datesToGenerate = options?.onlyCurrentPeriod && billingDates.length > 0
+    ? [billingDates[billingDates.length - 1]]
+    : billingDates;
   const generatedIds: string[] = [];
 
-  for (const billingDate of billingDates) {
+  for (const billingDate of datesToGenerate) {
     const periods = calculateBillingPeriods({
       leaseStartDate: lease.startDate,
       leaseEndDate: billingEnd,

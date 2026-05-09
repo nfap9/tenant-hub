@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma.js";
 import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
 import { generateLeaseBills } from "../services/billing.js";
-import { assertExpiredTerminationAllowed, withLeaseLifecycle } from "../services/leaseLifecycle.js";
+import { assertExpiredTerminationAllowed, startOfLeaseDay, withLeaseLifecycle } from "../services/leaseLifecycle.js";
 import { createLeaseSettlement, getLeaseSettlementPreview, recordSettlementPayment } from "../services/leaseSettlement.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -82,7 +82,8 @@ leaseRouter.post(
       include: leaseInclude
     });
     await prisma.room.update({ where: { id: roomId }, data: { status: "OCCUPIED" } });
-    await generateLeaseBills(lease.id);
+    const isHistorical = startOfLeaseDay(input.startDate).isBefore(startOfLeaseDay(new Date()), "day");
+    await generateLeaseBills(lease.id, new Date(), { onlyCurrentPeriod: isHistorical });
     ok(res, withLeaseLifecycle(lease));
   })
 );
