@@ -14,7 +14,7 @@ leaseRouter.use(requireAuth, requireOrg);
 
 const leaseInclude = { room: { include: { apartment: true } }, fees: true } as const;
 const amountSchema = z.coerce.number().nonnegative();
-const feeItemTypeSchema = z.enum(["MANAGEMENT", "NETWORK", "OTHER"]).default("OTHER");
+const feeItemTypeSchema = z.enum(["MANAGEMENT", "SANITATION", "ELEVATOR", "PROPERTY", "NETWORK", "OTHER"]).default("OTHER");
 
 leaseRouter.get(
   "/",
@@ -51,7 +51,7 @@ leaseRouter.post(
         waterUnitPrice: amountSchema,
         powerUnitPrice: amountSchema,
         autoRenew: z.boolean().default(false),
-        fees: z.array(z.object({ feeItemId: z.string().optional(), type: feeItemTypeSchema, name: z.string().min(1), amount: amountSchema })).default([]),
+        fees: z.array(z.object({ type: feeItemTypeSchema, name: z.string().min(1), amount: amountSchema })).default([]),
         generateHistoricalBills: z.boolean().default(false)
       })
       .refine((data) => data.endDate >= data.startDate, { path: ["endDate"], message: "租约结束日期不能早于开始日期" })
@@ -60,18 +60,10 @@ leaseRouter.post(
     const { fees, roomId, generateHistoricalBills, ...leaseData } = input;
     const room = await prisma.room.findFirst({
       where: { id: roomId, apartment: { organizationId: req.organizationId! } },
-      include: { apartment: { select: { id: true } } }
+      select: { id: true, status: true }
     });
     if (!room) throw new HttpError(404, "房间不存在");
     if (room.status !== "VACANT") throw new HttpError(400, "仅空闲房间可以签约");
-
-    const feeItemIds = fees.map((fee) => fee.feeItemId).filter((feeItemId): feeItemId is string => Boolean(feeItemId));
-    if (feeItemIds.length) {
-      const feeCount = await prisma.apartmentFeeItem.count({
-        where: { id: { in: feeItemIds }, apartmentId: room.apartment.id, enabled: true }
-      });
-      if (feeCount !== feeItemIds.length) throw new HttpError(400, "费用项目不可用");
-    }
 
     const lease = await prisma.lease.create({
       data: {

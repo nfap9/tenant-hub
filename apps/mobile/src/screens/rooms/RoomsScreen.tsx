@@ -7,7 +7,7 @@ import type { RoomActionKey } from "../../navigation/homeQuickActions";
 import { mobileApi } from "../../services";
 import { colors } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
-import type { ApartmentFeeItem, Lease, LeaseSettlement, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
+import type { BillItemType, Lease, LeaseSettlement, Membership, RentCycle, Room, RoomStatus, TerminationType } from "../../types";
 import { getLeaseCandidateRooms } from "./leaseCandidates";
 import { getRoomBillGeneratedLabel } from "./roomBillLabel";
 
@@ -72,6 +72,13 @@ const toneForStatus: Record<RoomStatus, Parameters<typeof Badge>[0]["tone"]> = {
 
 const filters: Array<RoomStatus | "ALL"> = ["ALL", "VACANT", "OCCUPIED", "RESERVED", "MAINTENANCE"];
 const cycleLabels: Record<RentCycle, string> = { MONTHLY: "月付", QUARTERLY: "季付", YEARLY: "年付" };
+const presetFeeTypes: Array<{ type: BillItemType; label: string }> = [
+  { type: "MANAGEMENT", label: "管理费" },
+  { type: "SANITATION", label: "卫生费" },
+  { type: "ELEVATOR", label: "电梯费" },
+  { type: "PROPERTY", label: "物业费" },
+  { type: "NETWORK", label: "网费" }
+];
 const terminationLabels: Record<TerminationType, string> = { EXPIRED: "到期解约", NEGOTIATED: "协商解约", BREACH: "违约退租" };
 const today = () => new Date().toISOString().slice(0, 10);
 const nextYear = () => {
@@ -113,7 +120,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
     autoRenew: true,
     generateHistoricalBills: false
   });
-  const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
+  const [presetFees, setPresetFees] = useState<Array<{ type: BillItemType; amount: string }>>([]);
   const [customFees, setCustomFees] = useState<Array<{ id: string; name: string; amount: string }>>([]);
   const [terminatingLease, setTerminatingLease] = useState<Lease>();
   const [previousReadings, setPreviousReadings] = useState({ previousWater: 0, previousPower: 0 });
@@ -198,7 +205,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
       waterUnitPrice: String(selectedRoom.apartment?.waterUnitPrice ?? 0),
       powerUnitPrice: String(selectedRoom.apartment?.powerUnitPrice ?? 0)
     }));
-    setSelectedFeeIds([]);
+    setPresetFees([]);
     setCustomFees([]);
   }, [selectedRoom]);
 
@@ -243,11 +250,10 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
     if (!leaseForm.tenantName.trim() || !leaseForm.tenantPhone.trim() || !leaseForm.rentAmount.trim()) {
       return setNotice("请填写租客、电话和租金");
     }
-    const feeItems = selectedRoom.apartment?.feeItems ?? [];
     const fees = [
-      ...feeItems
-        .filter((item) => selectedFeeIds.includes(item.id))
-        .map((item) => ({ feeItemId: item.id, name: item.spec ? `${item.name} ${item.spec}` : item.name, amount: Number(item.amount) })),
+      ...presetFees
+        .filter((item) => item.amount.trim())
+        .map((item) => ({ type: item.type, name: presetFeeTypes.find((p) => p.type === item.type)!.label, amount: Number(item.amount) })),
       ...customFees
         .filter((item) => item.name.trim() && item.amount.trim())
         .map((item) => ({ name: item.name.trim(), amount: Number(item.amount) }))
@@ -271,7 +277,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
       }));
       setNotice("签约完成，水电单价和费用项已带入租约");
       setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true, generateHistoricalBills: false }));
-      setSelectedFeeIds([]);
+      setPresetFees([]);
       setCustomFees([]);
       setEditingRoomId(undefined);
       setLeaseRoomId(undefined);
@@ -344,8 +350,15 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
     }
   };
 
-  const toggleFee = (item: ApartmentFeeItem) => {
-    setSelectedFeeIds((old) => (old.includes(item.id) ? old.filter((id) => id !== item.id) : [...old, item.id]));
+  const togglePresetFee = (type: BillItemType) => {
+    setPresetFees((old) => {
+      const exists = old.some((item) => item.type === type);
+      if (exists) return old.filter((item) => item.type !== type);
+      return [...old, { type, amount: "" }];
+    });
+  };
+  const updatePresetFeeAmount = (type: BillItemType, amount: string) => {
+    setPresetFees((old) => old.map((item) => (item.type === type ? { ...item, amount } : item)));
   };
 
   const openLeaseForRoom = (room: Room) => {
@@ -566,6 +579,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         subtitle={leaseRoom ? `${leaseRoom.apartment?.name} · ${leaseRoom.roomNo}` : undefined}
         onClose={() => {
           setLeaseRoomId(undefined);
+          setPresetFees([]);
           setCustomFees([]);
         }}
         footer={(
@@ -659,17 +673,25 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
             </View>
           </View>
         ) : null}
-        {(leaseRoom?.apartment?.feeItems ?? []).length ? <Text style={styles.label}>选择费用</Text> : null}
-        {(leaseRoom?.apartment?.feeItems ?? []).map((item) => (
-          <PressableScale key={item.id} onPress={() => toggleFee(item)}>
-            <Card variant={selectedFeeIds.includes(item.id) ? "default" : "outline"} padding="sm" gap={8}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={styles.cardTitle}>{item.name}{item.spec ? ` · ${item.spec}` : ""}</Text>
-                <Text style={selectedFeeIds.includes(item.id) ? styles.cardStat : styles.muted}>¥{money(item.amount)}</Text>
-              </View>
-            </Card>
-          </PressableScale>
-        ))}
+        <Text style={styles.label}>费用项目</Text>
+        {presetFeeTypes.map(({ type, label }) => {
+          const selected = presetFees.find((item) => item.type === type);
+          return (
+            <View key={type} style={{ gap: 8 }}>
+              <PressableScale onPress={() => togglePresetFee(type)}>
+                <Card variant={selected ? "default" : "outline"} padding="sm" gap={8}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={selected ? styles.cardTitle : styles.muted}>{label}</Text>
+                    <Text style={selected ? styles.cardStat : styles.muted}>{selected ? `¥${money(selected.amount)}` : "点击添加"}</Text>
+                  </View>
+                </Card>
+              </PressableScale>
+              {selected ? (
+                <Input placeholder="输入金额" value={selected.amount} keyboardType="numeric" onChangeText={(value) => updatePresetFeeAmount(type, value)} />
+              ) : null}
+            </View>
+          );
+        })}
         {customFees.length > 0 ? <Text style={styles.label}>其他费用</Text> : null}
         {customFees.map((item, index) => (
           <View key={item.id} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>

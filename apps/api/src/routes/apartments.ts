@@ -27,8 +27,6 @@ const apartmentInput = z.object({
   powerUnitPrice: z.coerce.number().default(0)
 });
 
-const feeItemTypeSchema = z.enum(["MANAGEMENT", "NETWORK", "OTHER"]).default("OTHER");
-
 const ensureApartmentInOrg = async (apartmentId: string, organizationId: string) => {
   const apartment = await prisma.apartment.findFirst({ where: { id: apartmentId, organizationId }, select: { id: true } });
   if (!apartment) throw new HttpError(404, "公寓不存在");
@@ -65,8 +63,7 @@ apartmentRouter.get(
             }
           }
         },
-        expenses: { orderBy: { spentAt: "desc" } },
-        feeItems: true
+        expenses: { orderBy: { spentAt: "desc" } }
       },
       orderBy: { createdAt: "desc" }
     });
@@ -97,7 +94,7 @@ apartmentRouter.get(
     const rooms = await prisma.room.findMany({
       where: { apartment: { organizationId: req.organizationId! } },
       include: {
-        apartment: { include: { feeItems: { where: { enabled: true }, orderBy: { name: "asc" } } } },
+        apartment: true,
         leases: {
           where: { status: "ACTIVE" },
           include: {
@@ -178,40 +175,6 @@ apartmentRouter.post(
       .parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
     ok(res, await prisma.apartmentExpense.create({ data: { ...input, apartmentId: req.params.id } }));
-  })
-);
-
-apartmentRouter.post(
-  "/:id/fees",
-  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({ name: z.string().min(1), spec: z.string().optional(), type: feeItemTypeSchema, amount: z.coerce.number(), enabled: z.boolean().default(true) })
-      .parse(req.body);
-    await ensureApartmentInOrg(req.params.id, req.organizationId!);
-    ok(res, await prisma.apartmentFeeItem.create({ data: { ...input, apartmentId: req.params.id } }));
-  })
-);
-
-apartmentRouter.put(
-  "/fees/:feeId",
-  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        name: z.string().min(1).optional(),
-        spec: z.string().optional(),
-        type: feeItemTypeSchema.optional(),
-        amount: z.coerce.number().optional(),
-        enabled: z.boolean().optional()
-      })
-      .parse(req.body);
-    const fee = await prisma.apartmentFeeItem.findFirst({
-      where: { id: req.params.feeId, apartment: { organizationId: req.organizationId! } },
-      select: { id: true }
-    });
-    if (!fee) throw new HttpError(404, "费用项目不存在");
-    ok(res, await prisma.apartmentFeeItem.update({ where: { id: req.params.feeId }, data: input }));
   })
 );
 

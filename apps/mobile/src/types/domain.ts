@@ -58,7 +58,7 @@ export type LeaseStatus = "ACTIVE" | "TERMINATED" | "EXPIRED";
 export type TerminationType = "EXPIRED" | "NEGOTIATED" | "BREACH";
 export type BillStatus = "DRAFT" | "BILLING" | "UNPAID" | "PARTIAL_PAID" | "PAID" | "FAILED" | "VOID";
 export type BillMode = "PREPAID" | "POSTPAID";
-export type BillItemType = "RENT" | "UTILITY" | "WATER" | "POWER" | "DEPOSIT" | "MANAGEMENT" | "NETWORK" | "OTHER";
+export type BillItemType = "RENT" | "UTILITY" | "WATER" | "POWER" | "DEPOSIT" | "MANAGEMENT" | "SANITATION" | "ELEVATOR" | "PROPERTY" | "NETWORK" | "OTHER";
 export type MeterType = "WATER" | "POWER";
 export type MeterReadingStatus = "NORMAL" | "SUSPECTED" | "CONFIRMED" | "VOID";
 
@@ -69,15 +69,6 @@ export type ApartmentExpense = {
   amount: string | number;
   spentAt: string;
   note?: string;
-};
-
-export type ApartmentFeeItem = {
-  id: string;
-  apartmentId: string;
-  name: string;
-  spec?: string;
-  amount: string | number;
-  enabled: boolean;
 };
 
 export type Apartment = {
@@ -97,13 +88,12 @@ export type Apartment = {
   powerUnitPrice: string | number;
   rooms?: Room[];
   expenses?: ApartmentExpense[];
-  feeItems?: ApartmentFeeItem[];
 };
 
 export type LeaseFee = {
   id: string;
   leaseId: string;
-  feeItemId?: string;
+  type: BillItemType;
   name: string;
   amount: string | number;
 };

@@ -71,6 +71,9 @@ enum BillItemType {
   POWER
   DEPOSIT
   MANAGEMENT
+  SANITATION
+  ELEVATOR
+  PROPERTY
   NETWORK
   OTHER
 }
@@ -224,7 +227,6 @@ model Apartment {
   organization   Organization @relation(fields: [organizationId], references: [id])
   rooms          Room[]
   expenses       ApartmentExpense[]
-  feeItems       ApartmentFeeItem[]
   meterReadings  MeterReading[]
 }
 
@@ -236,18 +238,6 @@ model ApartmentExpense {
   spentAt     DateTime
   note        String?
   apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
-}
-
-model ApartmentFeeItem {
-  id          String    @id @default(cuid())
-  apartmentId String
-  name        String
-  spec        String?
-  type        BillItemType      @default(OTHER)
-  amount      Decimal   @db.Decimal(10, 2)
-  enabled     Boolean   @default(true)
-  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
-  leaseFees   LeaseFee[]
 }
 
 model Room {
@@ -353,12 +343,10 @@ model SettlementPayment {
 model LeaseFee {
   id        String            @id @default(cuid())
   leaseId   String
-  feeItemId String?
   type      BillItemType       @default(OTHER)
   name      String
   amount    Decimal           @db.Decimal(10, 2)
   lease     Lease             @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  feeItem   ApartmentFeeItem? @relation(fields: [feeItemId], references: [id])
 }
 
 model Bill {

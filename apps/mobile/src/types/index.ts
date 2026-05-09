@@ -2,7 +2,6 @@ export type { MobileSession } from "./auth";
 export type {
   Apartment,
   ApartmentExpense,
-  ApartmentFeeItem,
   Bill,
   BillItem,
   BillItemType,

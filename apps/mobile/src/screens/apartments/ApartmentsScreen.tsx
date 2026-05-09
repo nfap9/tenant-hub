@@ -6,7 +6,7 @@ import { Badge, Button, Card, EmptyState, Input } from "../../components/ui";
 import { mobileApi } from "../../services";
 import { colors } from "../../theme/tokens";
 import { styles } from "../../theme/styles";
-import type { Apartment, ApartmentFeeItem, Membership, Room, RoomStatus } from "../../types";
+import type { Apartment, Membership, Room, RoomStatus } from "../../types";
 import { buildBatchRoomNos, toggleBatchRoomSelection } from "./batchRooms";
 
 type Props = {
@@ -39,7 +39,7 @@ type RoomForm = {
   status: RoomStatus;
 };
 
-type ApartmentLayer = "expense" | "fee" | "roomSingle" | "roomBatch" | "roomEdit" | "roomDelete";
+type ApartmentLayer = "expense" | "roomSingle" | "roomBatch" | "roomEdit" | "roomDelete";
 
 const emptyApartmentForm: ApartmentForm = {
   name: "",
@@ -137,7 +137,6 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
   const [form, setForm] = useState<ApartmentForm>(emptyApartmentForm);
   const [roomForm, setRoomForm] = useState<RoomForm>(emptyRoomForm);
   const [expense, setExpense] = useState({ name: "", amount: "", spentAt: new Date().toISOString().slice(0, 10), note: "" });
-  const [fee, setFee] = useState({ name: "", spec: "", amount: "" });
   const [batchStartFloor, setBatchStartFloor] = useState("2");
   const [batchEndFloor, setBatchEndFloor] = useState("4");
   const [batchRoomCount, setBatchRoomCount] = useState("4");
@@ -320,37 +319,6 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
       await loadApartments();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "记录花费失败");
-    }
-  };
-
-  const addFee = async () => {
-    if (!organizationId || !selectedApartment) return;
-    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
-    if (!fee.name.trim() || !fee.amount.trim()) return setNotice("请填写费用名称和金额");
-    try {
-      await mobileApi(`/apartments/${selectedApartment.id}/fees`, token, apiOptions(organizationId, "POST", {
-        name: fee.name.trim(),
-        spec: optionalText(fee.spec),
-        amount: Number(fee.amount),
-        enabled: true
-      }));
-      setFee({ name: "", spec: "", amount: "" });
-      setActiveLayer(undefined);
-      setNotice("费用项目已添加");
-      await loadApartments();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "添加费用项失败");
-    }
-  };
-
-  const toggleFee = async (item: ApartmentFeeItem) => {
-    if (!organizationId) return;
-    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
-    try {
-      await mobileApi(`/apartments/fees/${item.id}`, token, apiOptions(organizationId, "PUT", { enabled: !item.enabled }));
-      await loadApartments();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "更新费用项失败");
     }
   };
 
@@ -594,23 +562,6 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
               {mode === "create" ? "创建公寓" : "保存公寓信息"}
             </Button>
           </Card>
-          {mode === "edit" && selectedApartment ? (
-            <Card
-              title="费用配置"
-              subtitle="签约时可选择的网费、管理费、服务费等项目"
-              headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => setActiveLayer("fee")} icon="add-circle-outline">添加费用项</Button> : undefined}
-            >
-              {(selectedApartment.feeItems ?? []).map((item) => (
-                <Card key={item.id} variant={item.enabled ? "default" : "outline"} padding="sm" gap={8} onPress={() => toggleFee(item)}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text style={styles.cardTitle}>{item.name}{item.spec ? ` · ${item.spec}` : ""}</Text>
-                    <Text style={item.enabled ? styles.cardStat : styles.muted}>¥{money(item.amount)} · {item.enabled ? "启用" : "停用"}</Text>
-                  </View>
-                </Card>
-              ))}
-              {(selectedApartment.feeItems ?? []).length === 0 ? <Text style={styles.muted}>暂无可选费用项目，点击添加费用项维护</Text> : null}
-            </Card>
-          ) : null}
         </>
       ) : null}
 
@@ -752,23 +703,6 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
           <DateField style={{ flexGrow: 1, flexBasis: 104 }} value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
         </View>
         <Input placeholder="备注" value={expense.note} onChangeText={(value) => setExpense((old) => ({ ...old, note: value }))} />
-      </TaskSheet>
-
-      <TaskSheet
-        visible={activeLayer === "fee"}
-        variant="drawer"
-        title="添加费用项"
-        subtitle={selectedApartment ? `${selectedApartment.name} · 签约可选费用` : undefined}
-        onClose={() => setActiveLayer(undefined)}
-        footer={(
-          <Button onPress={addFee} icon="save-outline">保存费用项</Button>
-        )}
-      >
-        <View style={styles.formGrid}>
-          <Input style={{ flexGrow: 1, flexBasis: 104 }} placeholder="费用名称" value={fee.name} onChangeText={(value) => setFee((old) => ({ ...old, name: value }))} />
-          <Input style={{ flexGrow: 1, flexBasis: 104 }} placeholder="规格" value={fee.spec} onChangeText={(value) => setFee((old) => ({ ...old, spec: value }))} />
-          <Input style={{ flexGrow: 1, flexBasis: 104 }} placeholder="金额" value={fee.amount} keyboardType="numeric" onChangeText={(value) => setFee((old) => ({ ...old, amount: value }))} />
-        </View>
       </TaskSheet>
 
       <TaskSheet
