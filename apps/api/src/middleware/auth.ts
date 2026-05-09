@@ -80,16 +80,23 @@ export const requirePlatformAccess = (req: Request, _res: Response, next: NextFu
   Promise.resolve()
     .then(async () => {
       if (!req.user) throw new HttpError(401, "请先登录");
+      // 1. 环境变量配置的超级管理员直接放行（不依赖数据库角色，确保初始化时可用）
       if (platformAdminPhones.includes(req.user.phone)) return next();
 
       const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { platformRole: true } });
       if (!user) throw new HttpError(403, "无运营平台权限");
-      if (user.platformRole === "NONE") {
+
+      // 2. 已授予平台角色的用户放行
+      if (user.platformRole !== "NONE") return next();
+
+      // 3. 开发环境 Fallback：未配置平台管理员时，首个已登录用户可临时进入运营端授权他人
+      //    生产环境关闭此机制，防止任意用户获得运营权限
+      if (env.NODE_ENV === "development") {
         const platformAdminCount = await prisma.user.count({ where: { platformRole: { not: "NONE" } } });
         if (platformAdminCount === 0) return next();
-        throw new HttpError(403, "无运营平台权限");
       }
-      next();
+
+      throw new HttpError(403, "无运营平台权限");
     })
     .catch(next);
 };

@@ -247,7 +247,7 @@ docker compose -f docker-compose.dev.yml restart api
 - **平台权限**：运营端路由通过 `requirePlatformAccess()` 校验 `effectivePlatformRole`。普通用户默认 `NONE`。
 - **超级管理员初始化**：
   - 可通过 `PLATFORM_ADMIN_PHONE` + `PLATFORM_ADMIN_PASSWORD` 配置自动创建超级管理员账号；系统启动时若该手机号不存在则自动创建（`platformRole = SUPER_ADMIN`），已存在则跳过。
-  - 若系统无任何平台管理员，首个已登录用户可临时进入运营端进行授权。
+  - **开发环境 Fallback**：仅在 `NODE_ENV === "development"` 且系统未配置任何平台管理员时，首个已登录用户可临时进入运营端进行授权。生产环境此机制关闭，必须通过环境变量预置或已有管理员在运营端授权。
 
 ### 7.3 生产部署安全提醒
 - 生产部署前，请复制 `.env.production.example` 为 `.env.production`，并**务必修改** `JWT_SECRET`、`POSTGRES_PASSWORD`、`CORS_ORIGINS`、`VITE_API_BASE_URL` 为实际值。
