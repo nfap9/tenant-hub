@@ -5,14 +5,14 @@ set -e
 # Tenant Hub 一键生产部署脚本 (Ubuntu 22.04)
 #
 # 用法:
-#   bash scripts/deploy.sh --domain-api api.xxx.com --domain-ops ops.xxx.com --email admin@xxx.com
+#   bash scripts/deploy.sh --domain www.xxx.com --email admin@xxx.com
 #
 # 首次运行会自动完成以下全部步骤：
 #   1. 安装 Docker、Nginx、Certbot
 #   2. 配置防火墙、备份脚本
 #   3. 校验 .env.production
 #   4. 启动 Docker 服务并等待健康检查
-#   5. 配置 Nginx 反向代理
+#   5. 配置 Nginx 反向代理（单域名：前端 + API 统一代理）
 #   6. 申请 HTTPS 证书（域名解析生效后自动执行）
 #   7. 最终部署验证
 #
@@ -20,10 +20,15 @@ set -e
 # ============================================
 
 PROJECT_DIR="${PROJECT_DIR:-$HOME/tenant-hub}"
-DOMAIN_API="${DOMAIN_API:-api.tenant-hub.com}"
+DOMAIN="${DOMAIN:-}"
 DOMAIN_OPS="${DOMAIN_OPS:-ops.tenant-hub.com}"
 EMAIL="${EMAIL:-admin@tenant-hub.com}"
 SKIP_SSL=false
+
+# 向后兼容：若未传 --domain 但传了 --domain-ops，使用 --domain-ops
+if [ -z "$DOMAIN" ]; then
+    DOMAIN="$DOMAIN_OPS"
+fi
 
 # ---- 颜色输出 ----
 RED='\033[0;31m'
@@ -45,23 +50,24 @@ Tenant Hub 一键部署脚本
   bash scripts/deploy.sh [选项]
 
 选项:
-  --domain-api <域名>    API 域名 (默认: api.tenant-hub.com)
-  --domain-ops <域名>    运营端域名 (默认: ops.tenant-hub.com)
+  --domain <域名>        部署域名 (默认: ops.tenant-hub.com)
+  --domain-ops <域名>    兼容旧参数，同 --domain
   --email <邮箱>         用于 Certbot 的邮箱 (默认: admin@tenant-hub.com)
   --project-dir <路径>   项目目录 (默认: ~/tenant-hub)
   --skip-ssl             跳过 HTTPS 证书申请
   -h, --help             显示此帮助
 
 示例:
-  bash scripts/deploy.sh --domain-api api.example.com --domain-ops ops.example.com --email admin@example.com
+  bash scripts/deploy.sh --domain www.example.com --email admin@example.com
 EOF
 }
 
 # ---- 参数解析 ----
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --domain-api)  DOMAIN_API="$2"; shift 2 ;;
-        --domain-ops)  DOMAIN_OPS="$2"; shift 2 ;;
+        --domain)      DOMAIN="$2"; shift 2 ;;
+        --domain-ops)  DOMAIN="$2"; shift 2 ;;
+        --domain-api)  warn "--domain-api 已废弃，单域名方案不再使用"; shift 2 ;;
         --email)       EMAIL="$2";      shift 2 ;;
         --project-dir) PROJECT_DIR="$2"; shift 2 ;;
         --skip-ssl)    SKIP_SSL=true;   shift ;;
@@ -72,8 +78,7 @@ done
 
 info "Tenant Hub 一键部署"
 info "项目目录: $PROJECT_DIR"
-info "API 域名: $DOMAIN_API"
-info "Ops 域名: $DOMAIN_OPS"
+info "部署域名: $DOMAIN"
 echo ""
 
 # ============================================
@@ -102,8 +107,8 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "  POSTGRES_PASSWORD      → 强密码（16位以上）"
     echo "  DATABASE_URL           → 其中的密码与 POSTGRES_PASSWORD 一致"
     echo "  JWT_SECRET             → 32位以上随机字符串"
-    echo "  CORS_ORIGINS           → https://$DOMAIN_OPS"
-    echo "  VITE_API_BASE_URL      → https://$DOMAIN_API/api"
+    echo "  CORS_ORIGINS           → https://$DOMAIN"
+    echo "  VITE_API_BASE_URL      → https://$DOMAIN/api"
     echo "  PLATFORM_ADMIN_PHONE   → 超级管理员手机号（可选）"
     echo ""
     echo "编辑命令: nano $ENV_FILE"
@@ -182,7 +187,7 @@ fi
 if ! $DOCKER_CMD info &>/dev/null; then
     if groups | grep -q '\bdocker\b'; then
         warn "当前会话未加载 docker 组权限，尝试 newgrp docker 切换..."
-        exec sg docker "bash $0 --domain-api $DOMAIN_API --domain-ops $DOMAIN_OPS --email $EMAIL --project-dir $PROJECT_DIR $( [ "$SKIP_SSL" = true ] && echo '--skip-ssl' )"
+        exec sg docker "bash $0 --domain $DOMAIN --email $EMAIL --project-dir $PROJECT_DIR $( [ "$SKIP_SSL" = true ] && echo '--skip-ssl' )"
     else
         DOCKER_CMD="sudo docker"
         warn "当前用户无 docker 组权限，将使用 sudo 运行 docker 命令"
@@ -274,11 +279,17 @@ echo ""
 
 info "配置 Nginx 虚拟主机..."
 
-sed -e "s|API_DOMAIN|$DOMAIN_API|g" "$PROJECT_DIR/scripts/nginx-api.conf" | sudo tee /etc/nginx/sites-available/tenant-hub-api > /dev/null
-sed -e "s|OPS_DOMAIN|$DOMAIN_OPS|g" -e "s|PROJECT_DIR|$PROJECT_DIR|g" "$PROJECT_DIR/scripts/nginx-ops.conf" | sudo tee /etc/nginx/sites-available/tenant-hub-ops > /dev/null
+# 创建 certbot webroot 目录（用于 ACME 挑战）
+sudo mkdir -p /var/www/certbot
 
-sudo ln -sf /etc/nginx/sites-available/tenant-hub-api /etc/nginx/sites-enabled/
-sudo ln -sf /etc/nginx/sites-available/tenant-hub-ops /etc/nginx/sites-enabled/
+# 清理旧的双域名配置（如果存在）
+sudo rm -f /etc/nginx/sites-enabled/tenant-hub-api
+sudo rm -f /etc/nginx/sites-available/tenant-hub-api
+
+# 生成单域名统一配置
+sed -e "s|DOMAIN|$DOMAIN|g" -e "s|PROJECT_DIR|$PROJECT_DIR|g" "$PROJECT_DIR/scripts/nginx-site.conf" | sudo tee /etc/nginx/sites-available/tenant-hub > /dev/null
+
+sudo ln -sf /etc/nginx/sites-available/tenant-hub /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 
 sudo nginx -t && sudo systemctl reload nginx
@@ -305,33 +316,31 @@ else
 
     # 检查域名是否解析到本机
     DNS_READY=true
-    for domain in "$DOMAIN_API" "$DOMAIN_OPS"; do
-        DOMAIN_IP=$(getent hosts "$domain" | awk '{print $1}' | head -n1)
-        if [ -z "$DOMAIN_IP" ]; then
-            DOMAIN_IP=$(dig +short "$domain" 2>/dev/null | head -n1)
-        fi
+    DOMAIN_IP=$(getent hosts "$DOMAIN" | awk '{print $1}' | head -n1)
+    if [ -z "$DOMAIN_IP" ]; then
+        DOMAIN_IP=$(dig +short "$DOMAIN" 2>/dev/null | head -n1)
+    fi
 
-        if [ -z "$DOMAIN_IP" ]; then
-            warn "$domain DNS 未解析，无法申请证书"
-            DNS_READY=false
-        elif [ "$DOMAIN_IP" != "$PUBLIC_IP" ] && [ "$DOMAIN_IP" != "$LOCAL_IP" ]; then
-            warn "$domain 解析到 $DOMAIN_IP，但本机 IP 为 $PUBLIC_IP/$LOCAL_IP"
-            DNS_READY=false
-        else
-            ok "$domain DNS 解析正确 → $DOMAIN_IP"
-        fi
-    done
+    if [ -z "$DOMAIN_IP" ]; then
+        warn "$DOMAIN DNS 未解析，无法申请证书"
+        DNS_READY=false
+    elif [ "$DOMAIN_IP" != "$PUBLIC_IP" ] && [ "$DOMAIN_IP" != "$LOCAL_IP" ]; then
+        warn "$DOMAIN 解析到 $DOMAIN_IP，但本机 IP 为 $PUBLIC_IP/$LOCAL_IP"
+        DNS_READY=false
+    else
+        ok "$DOMAIN DNS 解析正确 → $DOMAIN_IP"
+    fi
 
     if [ "$DNS_READY" = true ]; then
-        sudo certbot --nginx -d "$DOMAIN_API" -d "$DOMAIN_OPS" --non-interactive --agree-tos --email "$EMAIL"
+        sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL"
         ok "HTTPS 证书申请成功"
     else
         warn "域名 DNS 未正确指向本机，跳过证书申请"
         echo ""
         echo "请完成以下步骤后手动申请证书："
-        echo "  1. 在 DNS 服务商处将 $DOMAIN_API 和 $DOMAIN_OPS 的 A 记录指向 $PUBLIC_IP"
+        echo "  1. 在 DNS 服务商处将 $DOMAIN 的 A 记录指向 $PUBLIC_IP"
         echo "  2. 等待 DNS 生效（通常 5-60 分钟）"
-        echo "  3. 手动执行: sudo certbot --nginx -d $DOMAIN_API -d $DOMAIN_OPS --non-interactive --agree-tos --email $EMAIL"
+        echo "  3. 手动执行: sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email $EMAIL"
         echo ""
     fi
 fi
@@ -378,10 +387,10 @@ echo "=========================================="
 HEALTH_OK=false
 OPS_OK=false
 
-# API 健康检查
-API_URL="http://localhost:4000/health"
-if curl -fsS "$API_URL" &>/dev/null; then
-    ok "API 健康检查: $API_URL → $(curl -fsS "$API_URL")"
+# API 健康检查（通过 Nginx 代理路径访问）
+API_URL="http://localhost/api/health"
+if curl -fsS -H "Host: $DOMAIN" "$API_URL" &>/dev/null; then
+    ok "API 健康检查: $API_URL → $(curl -fsS -H "Host: $DOMAIN" "$API_URL")"
     HEALTH_OK=true
 else
     err "API 健康检查失败"
@@ -406,9 +415,9 @@ fi
 echo "=========================================="
 echo ""
 echo "访问地址:"
-echo "  API:      https://$DOMAIN_API  (HTTP: http://$DOMAIN_API)"
-echo "  运营端:   https://$DOMAIN_OPS  (HTTP: http://$DOMAIN_OPS)"
-echo "  下载页:   https://$DOMAIN_OPS/download"
+echo "  运营端:   https://$DOMAIN"
+echo "  API:      https://$DOMAIN/api"
+echo "  下载页:   https://$DOMAIN/download"
 echo ""
 echo "常用命令:"
 echo "  查看日志:    cd $PROJECT_DIR && docker compose -f docker-compose.prod.yml logs -f"
