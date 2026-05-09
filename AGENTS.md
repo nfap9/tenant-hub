@@ -97,9 +97,10 @@ tenant-hub/
 │       ├── babel.config.js
 │       └── jest.config.js
 ├── scripts/
-│   ├── deploy.sh               # 一键部署脚本
-│   ├── nginx-api.conf          # Nginx API 反向代理配置
-│   └── nginx-ops.conf          # Nginx 运营端反向代理配置
+│   ├── deploy.sh               # 一键部署脚本（单域名方案）
+│   ├── nginx-site.conf         # Nginx 统一站点配置（前端 + API 路径分流）
+│   ├── nginx-api.conf          # [已废弃] 双域名方案 API 配置
+│   └── nginx-ops.conf          # [已废弃] 双域名方案运营端配置
 ├── docs/
 │   ├── mobile-ui-guidelines.md # 移动端交互规范（层级、按钮、表单、卡片、文案）
 │   ├── acceptance-test-plan.md # 发布前核心业务验收清单（7 大章节）
