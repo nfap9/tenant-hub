@@ -96,3 +96,26 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'http://localhost:4000/api' }}
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push-api, build-and-push-ops-web]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          timeout: 300s
+          script: |
+            set -e
+            cd ~/tenant-hub
+            echo "[DEPLOY] Pulling latest code..."
+            git pull origin main
+            echo "[DEPLOY] Running deploy script..."
+            bash scripts/deploy.sh --domain www.shen00.top --email admin@shen00.top
+            echo "[DEPLOY] Deployment completed successfully"

@@ -242,18 +242,21 @@ ok "项目目录就绪"
 info "[5/6] 构建 ops-web..."
 cd "$PROJECT_DIR"
 
-# 使用 Docker 构建 ops-web dist，避免服务器安装 Node.js
-if ! [ -d "$PROJECT_DIR/apps/ops-web/dist" ]; then
-    info "构建 ops-web 静态文件..."
-    docker build --target build -f apps/ops-web/Dockerfile \
-      --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
-      -t tenant-hub-ops-web-build . >/dev/null 2>&1
-    docker create --name ops-web-extract tenant-hub-ops-web-build >/dev/null
-    docker cp ops-web-extract:/app/apps/ops-web/dist "$PROJECT_DIR/apps/ops-web/dist" >/dev/null
-    docker rm ops-web-extract >/dev/null
-    docker rmi tenant-hub-ops-web-build >/dev/null 2>&1 || true
-    ok "ops-web 构建完成"
+# 每次部署都重新构建 ops-web dist，确保前端代码与最新源码一致
+if [ -d "$PROJECT_DIR/apps/ops-web/dist" ]; then
+    info "清理旧版 ops-web dist..."
+    rm -rf "$PROJECT_DIR/apps/ops-web/dist"
 fi
+
+info "构建 ops-web 静态文件..."
+docker build --target build -f apps/ops-web/Dockerfile \
+  --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+  -t tenant-hub-ops-web-build . >/dev/null 2>&1
+docker create --name ops-web-extract tenant-hub-ops-web-build >/dev/null
+docker cp ops-web-extract:/app/apps/ops-web/dist "$PROJECT_DIR/apps/ops-web/dist" >/dev/null
+docker rm ops-web-extract >/dev/null
+docker rmi tenant-hub-ops-web-build >/dev/null 2>&1 || true
+ok "ops-web 构建完成"
 
 info "[6/6] 启动 Docker 服务..."
 $DOCKER_CMD compose -f docker-compose.prod.yml --env-file .env.production up --build -d
