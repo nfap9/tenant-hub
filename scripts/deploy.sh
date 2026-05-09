@@ -198,28 +198,22 @@ fi
 # 2. 安装 Nginx + Certbot
 # ============================================
 
-if ! command -v nginx &> /dev/null; then
-    info "[2/7] 安装 Nginx..."
-    sudo apt install -y nginx
-    sudo systemctl enable nginx
-    ok "Nginx 安装完成"
-else
-    ok "[2/7] Nginx 已安装，跳过"
-fi
+# 系统级 Nginx 不再需要（nginx 运行在 Docker 容器中）
+# 如果系统 nginx 正在运行，后续步骤会提示手动停止
 
 if ! command -v certbot &> /dev/null; then
-    info "[3/7] 安装 Certbot..."
-    sudo apt install -y certbot python3-certbot-nginx
+    info "[2/6] 安装 Certbot..."
+    sudo apt install -y certbot
     ok "Certbot 安装完成"
 else
-    ok "[3/7] Certbot 已安装，跳过"
+    ok "[2/6] Certbot 已安装，跳过"
 fi
 
 # ============================================
 # 3. 系统基础配置
 # ============================================
 
-info "[4/7] 系统基础配置..."
+info "[3/6] 系统基础配置..."
 sudo apt install -y ufw fail2ban
 sudo timedatectl set-timezone Asia/Shanghai || true
 
@@ -236,19 +230,32 @@ ok "防火墙已启用（允许 SSH/HTTP/HTTPS）"
 # 4. 创建项目目录
 # ============================================
 
-info "[5/7] 创建项目目录..."
+info "[4/6] 创建项目目录..."
 mkdir -p "$PROJECT_DIR/backups"
 mkdir -p "$PROJECT_DIR/scripts"
-mkdir -p "$PROJECT_DIR/apk"
 ok "项目目录就绪"
 
 # ============================================
 # 5. 启动 Docker 服务
 # ============================================
 
-info "[6/7] 启动 Docker 服务..."
+info "[5/6] 构建 ops-web..."
 cd "$PROJECT_DIR"
 
+# 使用 Docker 构建 ops-web dist，避免服务器安装 Node.js
+if ! [ -d "$PROJECT_DIR/apps/ops-web/dist" ]; then
+    info "构建 ops-web 静态文件..."
+    docker build --target build -f apps/ops-web/Dockerfile \
+      --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+      -t tenant-hub-ops-web-build . >/dev/null 2>&1
+    docker create --name ops-web-extract tenant-hub-ops-web-build >/dev/null
+    docker cp ops-web-extract:/app/apps/ops-web/dist "$PROJECT_DIR/apps/ops-web/dist" >/dev/null
+    docker rm ops-web-extract >/dev/null
+    docker rmi tenant-hub-ops-web-build >/dev/null 2>&1 || true
+    ok "ops-web 构建完成"
+fi
+
+info "[6/6] 启动 Docker 服务..."
 $DOCKER_CMD compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 
 ok "Docker 服务已启动"
@@ -274,40 +281,20 @@ done
 echo ""
 
 # ============================================
-# 6. 配置 Nginx
+# 7. 检查/申请 HTTPS 证书
 # ============================================
 
-info "配置 Nginx 虚拟主机..."
-
-# 创建 certbot webroot 目录（用于 ACME 挑战）
-sudo mkdir -p /var/www/certbot
-
-# 清理旧的双域名配置（如果存在）
-sudo rm -f /etc/nginx/sites-enabled/tenant-hub-api
-sudo rm -f /etc/nginx/sites-available/tenant-hub-api
-sudo rm -f /etc/nginx/sites-enabled/tenant-hub-ops
-sudo rm -f /etc/nginx/sites-available/tenant-hub-ops
-
-# 生成单域名统一配置
-sed -e "s|DOMAIN|$DOMAIN|g" -e "s|PROJECT_DIR|$PROJECT_DIR|g" "$PROJECT_DIR/scripts/nginx-site.conf" | sudo tee /etc/nginx/sites-available/tenant-hub > /dev/null
-
-sudo ln -sf /etc/nginx/sites-available/tenant-hub /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-
-sudo nginx -t && sudo systemctl reload nginx
-
-ok "Nginx 配置完成并生效"
-
-# ============================================
-# 7. 申请 HTTPS 证书
-# ============================================
+cert_path="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+key_path="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
 if [ "$SKIP_SSL" = true ]; then
     warn "已跳过 HTTPS 证书申请（--skip-ssl）"
+elif [ -f "$cert_path" ] && [ -f "$key_path" ]; then
+    ok "HTTPS 证书已存在，跳过申请"
 else
     info "[7/7] 检查域名解析并申请 HTTPS 证书..."
 
-    # 获取本机公网 IP（优先尝试，失败回退到本地网络 IP）
+    # 获取本机公网 IP
     LOCAL_IP=$(hostname -I | awk '{print $1}')
     PUBLIC_IP=$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || echo "$LOCAL_IP")
 
@@ -329,7 +316,8 @@ else
     fi
 
     if [ "$DNS_READY" = true ]; then
-        sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL"
+        # 使用 webroot 模式申请证书（nginx 运行在 Docker 容器中，无法使用 --nginx 插件）
+        sudo certbot certonly --webroot -w /var/www/certbot -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL"
         ok "HTTPS 证书申请成功"
     else
         warn "域名 DNS 未正确指向本机，跳过证书申请"
@@ -337,67 +325,17 @@ else
         echo "请完成以下步骤后手动申请证书："
         echo "  1. 在 DNS 服务商处将 $DOMAIN 的 A 记录指向 $PUBLIC_IP"
         echo "  2. 等待 DNS 生效（通常 5-60 分钟）"
-        echo "  3. 手动执行: sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email $EMAIL"
+        echo "  3. 手动执行: sudo certbot certonly --webroot -w /var/www/certbot -d $DOMAIN --non-interactive --agree-tos --email $EMAIL"
         echo ""
     fi
 fi
 
-# 确保 Nginx 443 SSL 配置存在
-cert_path="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
-key_path="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
-nginx_conf="/etc/nginx/sites-available/tenant-hub"
-
-if [ -f "$cert_path" ] && [ -f "$key_path" ] && ! grep -q "listen 443 ssl" "$nginx_conf" 2>/dev/null; then
-    info "证书已存在但 Nginx 缺少 443 配置，自动添加..."
-    sudo tee -a "$nginx_conf" > /dev/null << EOF
-
-server {
-    listen 443 ssl;
-    server_name $DOMAIN;
-
-    ssl_certificate $cert_path;
-    ssl_certificate_key $key_path;
-
-    # API 后端代理
-    location /api/ {
-        proxy_pass http://127.0.0.1:4000;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 60s;
-    }
-
-    # 运营端 Web
-    location / {
-        proxy_pass http://127.0.0.1:5173;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
-    # APK 下载目录
-    location /apk/ {
-        alias $PROJECT_DIR/apk/;
-        autoindex on;
-        autoindex_exact_size off;
-        autoindex_localtime on;
-        add_header Cache-Control "public, max-age=86400";
-
-        location ~* \.apk$ {
-            add_header Content-Type application/vnd.android.package-archive;
-            add_header Content-Disposition "attachment";
-        }
-    }
-
-    # 下载页面由 ops-web 托管（apps/ops-web/public/download.html）
-}
-EOF
-    sudo nginx -t && sudo systemctl reload nginx
-    ok "443 SSL 配置已添加并生效"
+# 检查系统 nginx 是否占用 80/443 端口（nginx 容器需要这些端口）
+if sudo ss -tlnp | grep -q ":80\|:443"; then
+    warn "检测到系统服务占用了 80/443 端口"
+    echo "新架构中 nginx 运行在 Docker 容器中，需要独占 80/443 端口。"
+    echo "请手动执行: sudo systemctl stop nginx && sudo systemctl disable nginx"
+    echo ""
 fi
 
 # ============================================
@@ -451,9 +389,9 @@ else
     err "API 健康检查失败"
 fi
 
-# 运营端检查
-OPS_URL="http://localhost:5173"
-if curl -fsS -o /dev/null -I "$OPS_URL" &>/dev/null; then
+# 运营端检查（通过 nginx 容器访问）
+OPS_URL="http://localhost"
+if curl -fsS -o /dev/null -H "Host: $DOMAIN" -I "$OPS_URL" &>/dev/null; then
     ok "运营端访问: $OPS_URL → HTTP 200"
     OPS_OK=true
 else
@@ -472,7 +410,6 @@ echo ""
 echo "访问地址:"
 echo "  运营端:   https://$DOMAIN"
 echo "  API:      https://$DOMAIN/api"
-echo "  下载页:   https://$DOMAIN/download"
 echo ""
 echo "常用命令:"
 echo "  查看日志:    cd $PROJECT_DIR && docker compose -f docker-compose.prod.yml logs -f"
