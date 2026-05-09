@@ -114,6 +114,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
     generateHistoricalBills: false
   });
   const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
+  const [customFees, setCustomFees] = useState<Array<{ id: string; name: string; amount: string }>>([]);
   const [terminatingLease, setTerminatingLease] = useState<Lease>();
   const [previousReadings, setPreviousReadings] = useState({ previousWater: 0, previousPower: 0 });
   const [terminationForm, setTerminationForm] = useState<TerminationForm>({
@@ -198,6 +199,7 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
       powerUnitPrice: String(selectedRoom.apartment?.powerUnitPrice ?? 0)
     }));
     setSelectedFeeIds([]);
+    setCustomFees([]);
   }, [selectedRoom]);
 
   const updateRoom = async () => {
@@ -242,9 +244,14 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
       return setNotice("请填写租客、电话和租金");
     }
     const feeItems = selectedRoom.apartment?.feeItems ?? [];
-    const fees = feeItems
-      .filter((item) => selectedFeeIds.includes(item.id))
-      .map((item) => ({ feeItemId: item.id, name: item.spec ? `${item.name} ${item.spec}` : item.name, amount: Number(item.amount) }));
+    const fees = [
+      ...feeItems
+        .filter((item) => selectedFeeIds.includes(item.id))
+        .map((item) => ({ feeItemId: item.id, name: item.spec ? `${item.name} ${item.spec}` : item.name, amount: Number(item.amount) })),
+      ...customFees
+        .filter((item) => item.name.trim() && item.amount.trim())
+        .map((item) => ({ name: item.name.trim(), amount: Number(item.amount) }))
+    ];
     try {
       await mobileApi("/leases", token, apiOptions(organizationId, "POST", {
         roomId: selectedRoom.id,
@@ -264,6 +271,8 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
       }));
       setNotice("签约完成，水电单价和费用项已带入租约");
       setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true, generateHistoricalBills: false }));
+      setSelectedFeeIds([]);
+      setCustomFees([]);
       setEditingRoomId(undefined);
       setLeaseRoomId(undefined);
       await loadRooms();
@@ -555,7 +564,10 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         variant="drawer"
         title="签约入住"
         subtitle={leaseRoom ? `${leaseRoom.apartment?.name} · ${leaseRoom.roomNo}` : undefined}
-        onClose={() => setLeaseRoomId(undefined)}
+        onClose={() => {
+          setLeaseRoomId(undefined);
+          setCustomFees([]);
+        }}
         footer={(
           <Button onPress={createLease} icon="document-text-outline">确认签约</Button>
         )}
@@ -658,6 +670,21 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
             </Card>
           </PressableScale>
         ))}
+        {customFees.length > 0 ? <Text style={styles.label}>其他费用</Text> : null}
+        {customFees.map((item, index) => (
+          <View key={item.id} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+            <View style={{ flex: 1 }}>
+              <Input placeholder="费用名称" value={item.name} onChangeText={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, name: value } : f)))} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input placeholder="金额" value={item.amount} keyboardType="numeric" onChangeText={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, amount: value } : f)))} />
+            </View>
+            <PressableScale onPress={() => setCustomFees((old) => old.filter((_, i) => i !== index))}>
+              <Text style={styles.smallDangerText}>删除</Text>
+            </PressableScale>
+          </View>
+        ))}
+        <Button variant="secondary" size="small" onPress={() => setCustomFees((old) => [...old, { id: `${Date.now()}-${old.length}`, name: "", amount: "" }])} icon="add-circle-outline">添加其他费用</Button>
       </TaskSheet>
       <TaskSheet
         visible={Boolean(terminatingLease)}
