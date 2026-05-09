@@ -146,7 +146,11 @@
                 const doc = parser.parseFromString(html, 'text/html');
                 const links = Array.from(doc.querySelectorAll('a'));
                 const apkLinks = links
-                    .map(a => a.href)
+                    .map(a => {
+                        const href = a.getAttribute('href') || '';
+                        if (href.startsWith('http') || href.startsWith('/')) return href;
+                        return '/apk/' + href;
+                    })
                     .filter(href => href.endsWith('.apk'))
                     .sort().reverse();
 
