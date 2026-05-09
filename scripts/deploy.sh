@@ -285,6 +285,8 @@ sudo mkdir -p /var/www/certbot
 # 清理旧的双域名配置（如果存在）
 sudo rm -f /etc/nginx/sites-enabled/tenant-hub-api
 sudo rm -f /etc/nginx/sites-available/tenant-hub-api
+sudo rm -f /etc/nginx/sites-enabled/tenant-hub-ops
+sudo rm -f /etc/nginx/sites-available/tenant-hub-ops
 
 # 生成单域名统一配置
 sed -e "s|DOMAIN|$DOMAIN|g" -e "s|PROJECT_DIR|$PROJECT_DIR|g" "$PROJECT_DIR/scripts/nginx-site.conf" | sudo tee /etc/nginx/sites-available/tenant-hub > /dev/null
@@ -343,6 +345,68 @@ else
         echo "  3. 手动执行: sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email $EMAIL"
         echo ""
     fi
+fi
+
+# 确保 Nginx 443 SSL 配置存在
+cert_path="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+key_path="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+nginx_conf="/etc/nginx/sites-available/tenant-hub"
+
+if [ -f "$cert_path" ] && [ -f "$key_path" ] && ! grep -q "listen 443 ssl" "$nginx_conf" 2>/dev/null; then
+    info "证书已存在但 Nginx 缺少 443 配置，自动添加..."
+    sudo tee -a "$nginx_conf" > /dev/null << EOF
+
+server {
+    listen 443 ssl;
+    server_name $DOMAIN;
+
+    ssl_certificate $cert_path;
+    ssl_certificate_key $key_path;
+
+    # API 后端代理
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 60s;
+    }
+
+    # 运营端 Web
+    location / {
+        proxy_pass http://127.0.0.1:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # APK 下载目录
+    location /apk/ {
+        alias $PROJECT_DIR/apk/;
+        autoindex on;
+        autoindex_exact_size off;
+        autoindex_localtime on;
+        add_header Cache-Control "public, max-age=86400";
+
+        location ~* \.apk$ {
+            add_header Content-Type application/vnd.android.package-archive;
+            add_header Content-Disposition "attachment";
+        }
+    }
+
+    # 下载页面
+    location = /download {
+        alias $PROJECT_DIR/apk/index.html;
+        add_header Cache-Control "no-cache";
+    }
+}
+EOF
+    sudo nginx -t && sudo systemctl reload nginx
+    ok "443 SSL 配置已添加并生效"
 fi
 
 # ============================================
