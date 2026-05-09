@@ -45,6 +45,17 @@ PLATFORM_ADMIN_PASSWORD="管理员密码"
 
 ## 五、执行部署脚本
 
+> ⚠️ **重要：先确认 DNS 已生效**
+>
+> `deploy.sh` 会在脚本内部检查域名解析是否指向本机 IP。如果 DNS 未生效，脚本会**跳过 HTTPS 证书申请**，避免触发 Let's Encrypt 速率限制。
+>
+> 部署前建议先验证：
+> ```bash
+> dig +short api.your.domain
+> dig +short www.your.domain
+> ```
+> 确保输出为你的服务器公网 IP。
+
 ```bash
 cd ~/tenant-hub
 bash scripts/deploy.sh \
@@ -59,7 +70,7 @@ bash scripts/deploy.sh \
 3. 校验 .env.production
 4. 构建并启动 Docker 服务（PostgreSQL + API + ops-web）
 5. 配置 Nginx 反向代理
-6. 自动申请 HTTPS 证书（DNS 生效后）
+6. 自动申请 HTTPS 证书（仅在 DNS 已生效时）
 
 ## 六、验证部署
 ```bash
@@ -73,12 +84,28 @@ curl -I https://www.your.domain
 curl -I https://www.your.domain/download
 ```
 
-常见问题
-｜问题｜解决｜
-----
-｜DNS 未生效导致 SSL 申请失败｜等待 DNS 生效后，手动执行：sudo certbot --nginx -d api.your.domain -d www.your.domain --non-interactive --agree-tos --email 你的邮箱@example.com｜
-｜Docker 命令需 sudo｜脚本安装 Docker 后会将当前用户加入 docker 组，执行 newgrp docker 或重新登录 SSH 即可｜
-｜证书续期｜Certbot 已自动配置定时任务，可测试：sudo certbot renew --dry-run｜
+## 常见问题
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| **部署后 HTTPS 无法访问**（443 Connection Refused） | DNS 未生效时，脚本为保护 Let's Encrypt 配额会**跳过证书申请** | 等待 DNS 生效后手动申请：<br>`sudo certbot --nginx -d api.your.domain -d www.your.domain --non-interactive --agree-tos --email 你的邮箱@example.com`<br>申请后 certbot 会自动修改 Nginx 配置添加 443 监听，执行 `sudo nginx -t && sudo systemctl reload nginx` 即可 |
+| Docker 命令需 sudo | 脚本安装 Docker 后将当前用户加入 docker 组，但当前 SSH 会话未刷新组权限 | 执行 `newgrp docker` 或重新登录 SSH |
+| 证书续期 | — | Certbot 已自动配置定时任务，可测试：`sudo certbot renew --dry-run` |
+
+### 关于「DNS 未生效时跳过证书申请」的设计说明
+
+`deploy.sh` 在第 6 步会尝试通过 `getent hosts` / `dig +short` 查询域名解析的 IP。如果查询结果不等于本机公网/内网 IP，脚本会判定 DNS 未就绪，输出：
+
+```
+域名 DNS 未正确指向本机，跳过证书申请
+```
+
+这是有意为之的防护策略：
+- Let's Encrypt 的 HTTP-01 挑战要求域名必须解析到本机 80 端口
+- 若强制申请，certbot 会失败并计入**速率限制**（同一域名每小时最多 5 次失败）
+- 因此脚本选择保守策略：跳过申请，让用户在 DNS 生效后手动执行
+
+**经验总结**：新域名刚配置 A 记录后，全球 DNS 生效通常需要 5 分钟~数小时。建议在部署前先 `dig +short` 确认，或部署后若看到「跳过证书申请」提示，直接手动执行 certbot 即可，无需重新跑完整部署脚本。
 
 后续更新
 ```bash
