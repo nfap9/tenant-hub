@@ -40,6 +40,7 @@ type LeaseForm = {
   waterUnitPrice: string;
   powerUnitPrice: string;
   autoRenew: boolean;
+  generateHistoricalBills: boolean;
 };
 
 type TerminationForm = {
@@ -109,7 +110,8 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
     depositAmount: "",
     waterUnitPrice: "0",
     powerUnitPrice: "0",
-    autoRenew: true
+    autoRenew: true,
+    generateHistoricalBills: false
   });
   const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
   const [terminatingLease, setTerminatingLease] = useState<Lease>();
@@ -257,10 +259,11 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
         waterUnitPrice: Number(leaseForm.waterUnitPrice || 0),
         powerUnitPrice: Number(leaseForm.powerUnitPrice || 0),
         autoRenew: leaseForm.autoRenew,
+        generateHistoricalBills: leaseForm.generateHistoricalBills,
         fees
       }));
       setNotice("签约完成，水电单价和费用项已带入租约");
-      setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true }));
+      setLeaseForm((old) => ({ ...old, tenantName: "", tenantPhone: "", rentAmount: "", depositAmount: "", graceDays: "0", autoRenew: true, generateHistoricalBills: false }));
       setEditingRoomId(undefined);
       setLeaseRoomId(undefined);
       await loadRooms();
@@ -622,6 +625,28 @@ export default function RoomsScreen({ token, organizationId, currentMembership, 
             <Input placeholder="元/度" value={leaseForm.powerUnitPrice} keyboardType="numeric" onChangeText={(value) => setLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
           </View>
         </View>
+        {new Date(leaseForm.startDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0) ? (
+          <View style={styles.formGrid}>
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>历史账单</Text>
+              <View style={styles.segment}>
+                {[false, true].map((item) => (
+                  <View
+                    key={String(item)}
+                    style={[styles.segmentItem, leaseForm.generateHistoricalBills === item && styles.segmentItemActive]}
+                  >
+                    <Text
+                      style={[styles.segmentText, leaseForm.generateHistoricalBills === item && styles.segmentTextActive]}
+                      onPress={() => setLeaseForm((old) => ({ ...old, generateHistoricalBills: item }))}
+                    >
+                      {item ? "生成全部" : "仅当前期"}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        ) : null}
         {(leaseRoom?.apartment?.feeItems ?? []).length ? <Text style={styles.label}>选择费用</Text> : null}
         {(leaseRoom?.apartment?.feeItems ?? []).map((item) => (
           <PressableScale key={item.id} onPress={() => toggleFee(item)}>

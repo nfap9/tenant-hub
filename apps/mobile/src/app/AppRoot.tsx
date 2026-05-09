@@ -20,7 +20,7 @@ import { useAppSession } from "./useAppSession";
 export default function AppRoot() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [active, setActive] = useState<TabKey>("home");
-  const [billsInitialTab, setBillsInitialTab] = useState<BillTabKey>("monthly");
+  const [billsInitialTab, setBillsInitialTab] = useState<BillTabKey>("unpaid");
   const [billsInitialAction, setBillsInitialAction] = useState<BillActionKey>();
   const [billsTabRequestKey, setBillsTabRequestKey] = useState(0);
   const [roomsInitialAction, setRoomsInitialAction] = useState<RoomActionKey>();
@@ -47,7 +47,7 @@ export default function AppRoot() {
 
   const openTab = useCallback((key: TabKey) => {
     if (key === "bills") {
-      setBillsInitialTab("monthly");
+      setBillsInitialTab("unpaid");
       setBillsInitialAction(undefined);
       setBillsTabRequestKey((value) => value + 1);
     }
@@ -60,7 +60,7 @@ export default function AppRoot() {
 
   const navigateFromHome = useCallback((intent: HomeNavigationIntent) => {
     if (intent.tab === "bills") {
-      setBillsInitialTab(intent.billsTab ?? "monthly");
+      setBillsInitialTab(intent.billsTab ?? "unpaid");
       setBillsInitialAction(intent.billsAction);
       setBillsTabRequestKey((value) => value + 1);
     }

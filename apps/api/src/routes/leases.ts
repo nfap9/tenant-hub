@@ -51,12 +51,13 @@ leaseRouter.post(
         waterUnitPrice: amountSchema,
         powerUnitPrice: amountSchema,
         autoRenew: z.boolean().default(false),
-        fees: z.array(z.object({ feeItemId: z.string().optional(), type: feeItemTypeSchema, name: z.string().min(1), amount: amountSchema })).default([])
+        fees: z.array(z.object({ feeItemId: z.string().optional(), type: feeItemTypeSchema, name: z.string().min(1), amount: amountSchema })).default([]),
+        generateHistoricalBills: z.boolean().default(false)
       })
       .refine((data) => data.endDate >= data.startDate, { path: ["endDate"], message: "租约结束日期不能早于开始日期" })
       .parse(req.body);
 
-    const { fees, roomId, ...leaseData } = input;
+    const { fees, roomId, generateHistoricalBills, ...leaseData } = input;
     const room = await prisma.room.findFirst({
       where: { id: roomId, apartment: { organizationId: req.organizationId! } },
       include: { apartment: { select: { id: true } } }
@@ -83,7 +84,7 @@ leaseRouter.post(
     });
     await prisma.room.update({ where: { id: roomId }, data: { status: "OCCUPIED" } });
     const isHistorical = startOfLeaseDay(input.startDate).isBefore(startOfLeaseDay(new Date()), "day");
-    await generateLeaseBills(lease.id, new Date(), { onlyCurrentPeriod: isHistorical });
+    await generateLeaseBills(lease.id, new Date(), { onlyCurrentPeriod: isHistorical && !generateHistoricalBills });
     ok(res, withLeaseLifecycle(lease));
   })
 );

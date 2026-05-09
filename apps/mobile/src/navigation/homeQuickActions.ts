@@ -1,7 +1,7 @@
 import type { IconName } from "../components/ui/Icon";
 import type { TabKey } from "../types/navigation";
 
-export type BillTabKey = "monthly" | "meter" | "review";
+export type BillTabKey = "unpaid" | "pending" | "all";
 export type BillActionKey = "payment";
 export type RoomActionKey = "lease";
 
@@ -24,7 +24,7 @@ export const homeQuickActions: HomeQuickAction[] = [
     key: "payment",
     title: "登记收款",
     icon: "cash-outline",
-    intent: { tab: "bills", billsTab: "monthly", billsAction: "payment" }
+    intent: { tab: "bills", billsTab: "unpaid", billsAction: "payment" }
   },
   {
     key: "lease",
@@ -36,6 +36,6 @@ export const homeQuickActions: HomeQuickAction[] = [
     key: "meter",
     title: "抄表",
     icon: "speedometer-outline",
-    intent: { tab: "bills", billsTab: "meter" }
+    intent: { tab: "bills", billsTab: "pending" }
   }
 ];

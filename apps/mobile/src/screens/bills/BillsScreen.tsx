@@ -7,7 +7,7 @@ import { Badge, Button, Card, EmptyState, Input } from "../../components/ui";
 import type { BillActionKey, BillTabKey } from "../../navigation/homeQuickActions";
 import { mobileApi, mobileText } from "../../services";
 import { styles } from "../../theme/styles";
-import type { Bill, BillStatus, MeterReading, MeterType, MonthlyBill, Room } from "../../types";
+import type { Bill, BillStatus, MeterType, MonthlyBill, Room } from "../../types";
 import { getPaymentAmountError } from "./billPayment";
 import { getMonthlyBillCardSummary, sortMonthlyBillsForList } from "./billPresentation";
 
@@ -20,7 +20,7 @@ type Props = {
   tabRequestKey?: number;
 };
 
-type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail";
+type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail" | "deleteConfirm" | "deleteChildConfirm";
 
 type ReadingForm = {
   roomId: string;
@@ -76,38 +76,65 @@ const billModeText = (bill: Bill) => (bill.mode === "PREPAID" ? "预付" : "后�
 const remainingAmount = (bill: MonthlyBill) => Number(bill.totalAmount) - Number(bill.paidAmount);
 const roomKeyForBill = (bill: MonthlyBill) => bill.lease?.roomId ?? bill.lease?.room?.id ?? bill.lease?.room?.roomNo ?? bill.id;
 
-export default function BillsScreen({ token, organizationId, setNotice, initialTab = "monthly", initialAction, tabRequestKey = 0 }: Props) {
+const tabConfig: Array<{ key: BillTabKey; label: string }> = [
+  { key: "unpaid", label: "待支付" },
+  { key: "pending", label: "待处理" },
+  { key: "all", label: "全部" }
+];
+
+export default function BillsScreen({ token, organizationId, setNotice, initialTab = "unpaid", initialAction, tabRequestKey = 0 }: Props) {
   const [tab, setTab] = useState<BillTabKey>(initialTab);
   const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
-  const [readings, setReadings] = useState<MeterReading[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [pendingAction, setPendingAction] = useState<BillActionKey>();
   const [activeLayer, setActiveLayer] = useState<BillLayer>();
   const [selectedMonthlyBillId, setSelectedMonthlyBillId] = useState("");
+  const [selectedChildBillId, setSelectedChildBillId] = useState("");
   const [paymentRoomId, setPaymentRoomId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<BillStatus | "">("");
   const [readingForm, setReadingForm] = useState<ReadingForm>({ roomId: "", meterType: "WATER", readingDate: today(), value: "", note: "" });
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
   const [utilityForm, setUtilityForm] = useState<UtilityForm>({ billId: "", previousWater: "", currentWater: "", previousPower: "", currentPower: "" });
   const [utilityCsv, setUtilityCsv] = useState("");
 
-  const unpaidTotal = useMemo(
-    () => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID").reduce((sum, bill) => sum + remainingAmount(bill), 0),
+  const unpaidMonthlyBills = useMemo(
+    () => monthlyBills.filter((bill) => bill.status === "UNPAID" || bill.status === "PARTIAL_PAID"),
     [monthlyBills]
   );
+  const unpaidTotal = useMemo(
+    () => unpaidMonthlyBills.reduce((sum, bill) => sum + remainingAmount(bill), 0),
+    [unpaidMonthlyBills]
+  );
   const selectedMonthlyBill = useMemo(() => monthlyBills.find((bill) => bill.id === selectedMonthlyBillId), [monthlyBills, selectedMonthlyBillId]);
-  const unpaidBills = useMemo(() => monthlyBills.filter((bill) => bill.status !== "PAID" && bill.status !== "VOID"), [monthlyBills]);
-  const visibleMonthlyBills = useMemo(() => sortMonthlyBillsForList(monthlyBills), [monthlyBills]);
   const roomById = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms]);
-  const paymentBills = useMemo(() => sortMonthlyBillsForList(unpaidBills), [unpaidBills]);
+  const paymentBills = useMemo(() => sortMonthlyBillsForList(unpaidMonthlyBills), [unpaidMonthlyBills]);
   const selectedPaymentBill = useMemo(() => monthlyBills.find((bill) => bill.id === paymentForm.monthlyBillId), [monthlyBills, paymentForm.monthlyBillId]);
   const selectorRooms = useMemo<SelectorRoom[]>(
     () => rooms.map((room) => ({ id: room.id, apartmentName: room.apartment?.name ?? "未关联公寓", roomNo: room.roomNo })),
     [rooms]
   );
   const paymentRoomBills = useMemo(() => paymentBills.filter((bill) => roomKeyForBill(bill) === paymentRoomId), [paymentBills, paymentRoomId]);
+
+  const filteredAllBills = useMemo(() => {
+    let result = [...monthlyBills];
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (bill) =>
+          bill.tenantName?.toLowerCase().includes(q) ||
+          bill.lease?.room?.roomNo?.toLowerCase().includes(q) ||
+          bill.lease?.tenantPhone?.includes(q)
+      );
+    }
+    if (statusFilter) {
+      result = result.filter((bill) => bill.status === statusFilter);
+    }
+    return sortMonthlyBillsForList(result);
+  }, [monthlyBills, searchQuery, statusFilter]);
 
   const setPaymentBill = (bill: MonthlyBill) => {
     const isPayable = bill.status !== "PAID" && bill.status !== "VOID";
@@ -143,16 +170,14 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
     setLoaded(false);
     try {
       const nextMonthlyBills = await mobileApi<MonthlyBill[]>("/bills/monthly", token, apiOptions(organizationId));
-      const [failedBills, billingBills, nextReadings, nextRooms] = await Promise.all([
+      const [failedBills, billingBills, nextRooms] = await Promise.all([
         mobileApi<Bill[]>("/bills?status=FAILED", token, apiOptions(organizationId)),
         mobileApi<Bill[]>("/bills?status=BILLING", token, apiOptions(organizationId)),
-        mobileApi<MeterReading[]>("/bills/meter-readings", token, apiOptions(organizationId)),
         mobileApi<Room[]>("/apartments/rooms", token, apiOptions(organizationId))
       ]);
       const postpaidReviewBills = [...failedBills, ...billingBills].filter((bill) => bill.mode === "POSTPAID");
       setMonthlyBills(nextMonthlyBills);
       setReviewBills(postpaidReviewBills);
-      setReadings(nextReadings);
       setRooms(nextRooms);
       setReadingForm((old) => ({ ...old, roomId: old.roomId || nextRooms[0]?.id || "" }));
       setPaymentForm((old) => ({ ...old, monthlyBillId: old.monthlyBillId || nextMonthlyBills.find((bill) => bill.status !== "PAID")?.id || "" }));
@@ -281,6 +306,31 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
     }
   };
 
+  const deleteMonthlyBill = async (id: string) => {
+    if (!organizationId) return;
+    try {
+      await mobileApi(`/bills/monthly/${id}`, token, apiOptions(organizationId, "DELETE"));
+      setNotice("月度账单已删除");
+      setActiveLayer(undefined);
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "删除失败");
+    }
+  };
+
+  const deleteChildBill = async (id: string) => {
+    if (!organizationId) return;
+    try {
+      await mobileApi(`/bills/${id}`, token, apiOptions(organizationId, "DELETE"));
+      setNotice("账单已删除");
+      setActiveLayer(undefined);
+      setSelectedChildBillId("");
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "删除失败");
+    }
+  };
+
   if (!organizationId) {
     return (
       <Card>
@@ -292,58 +342,81 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
   return (
     <>
       <View style={styles.statRow}>
-        <Card padding="md" gap={8} style={{ flex: 1 }}>
-          <Text style={styles.statLabel}>月度账单</Text>
-          <Text style={styles.statValue}>{monthlyBills.length}</Text>
-        </Card>
-        <Card padding="md" gap={8} style={{ flex: 1 }}>
-          <Text style={styles.statLabel}>待收金额</Text>
-          <Text style={styles.statValue}>¥{money(unpaidTotal)}</Text>
-        </Card>
-        <Card padding="md" gap={8} style={{ flex: 1 }}>
-          <Text style={styles.statLabel}>待处理</Text>
-          <Text style={styles.statValue}>{reviewBills.length}</Text>
-        </Card>
+        {tab === "unpaid" ? (
+          <>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
+              <Text style={styles.statLabel}>待支付账单</Text>
+              <Text style={styles.statValue}>{unpaidMonthlyBills.length}</Text>
+            </Card>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
+              <Text style={styles.statLabel}>待收金额</Text>
+              <Text style={styles.statValue}>¥{money(unpaidTotal)}</Text>
+            </Card>
+          </>
+        ) : tab === "pending" ? (
+          <Card padding="md" gap={8} style={{ flex: 1 }}>
+            <Text style={styles.statLabel}>待处理账单</Text>
+            <Text style={styles.statValue}>{reviewBills.length}</Text>
+          </Card>
+        ) : (
+          <>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
+              <Text style={styles.statLabel}>全部账单</Text>
+              <Text style={styles.statValue}>{monthlyBills.length}</Text>
+            </Card>
+            <Card padding="md" gap={8} style={{ flex: 1 }}>
+              <Text style={styles.statLabel}>待收金额</Text>
+              <Text style={styles.statValue}>¥{money(unpaidTotal)}</Text>
+            </Card>
+          </>
+        )}
       </View>
 
       <View style={styles.segment}>
-        {([
-          ["monthly", "月度账单"],
-          ["meter", "抄表"],
-          ["review", "出账处理"]
-        ] as Array<[BillTabKey, string]>).map(([key, label]) => (
+        {tabConfig.map(({ key, label }) => (
           <View key={key} style={[styles.segmentItem, tab === key && styles.segmentItemActive]}>
-            <Text style={[styles.segmentText, tab === key && styles.segmentTextActive]} onPress={() => setTab(key)}>{label}</Text>
+            <Text style={[styles.segmentText, tab === key && styles.segmentTextActive]} onPress={() => setTab(key)}>
+              {label}
+            </Text>
           </View>
         ))}
       </View>
 
       <Card
-        title={tab === "monthly" ? "收款单" : tab === "meter" ? "提前抄表" : "人工处理"}
+        title={tab === "unpaid" ? "待支付账单" : tab === "pending" ? "待处理账单" : "全部账单"}
         headerAction={
           <View style={{ flexDirection: "row", gap: 8 }}>
-            {tab === "monthly" ? (
-              <Button variant="secondary" size="small" onPress={openPayment} icon="cash-outline">登记收款</Button>
+            {tab === "unpaid" ? (
+              <Button variant="secondary" size="small" onPress={openPayment} icon="cash-outline">
+                登记收款
+              </Button>
+            ) : null}
+            {tab === "pending" ? (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Button size="small" onPress={() => setActiveLayer("reading")} icon="create-outline">
+                  录入读数
+                </Button>
+                <Button variant="secondary" size="small" onPress={exportUtilityCsv} icon="download-outline">
+                  导出
+                </Button>
+                <Button variant="secondary" size="small" onPress={() => setActiveLayer("utilityImport")} icon="cloud-upload-outline">
+                  导入
+                </Button>
+              </View>
             ) : null}
             <Button variant="ghost" size="small" loading={loading} disabled={loading} onPress={loadData} icon="refresh-outline">
               {loading ? "刷新中" : "刷新"}
             </Button>
           </View>
         }
-      >
-        {tab === "meter" ? (
-          <View style={styles.roomActions}>
-            <Button size="small" onPress={() => setActiveLayer("reading")} icon="create-outline">录入读数</Button>
-            <Button variant="secondary" size="small" onPress={exportUtilityCsv} icon="download-outline">导出</Button>
-            <Button variant="secondary" size="small" onPress={() => setActiveLayer("utilityImport")} icon="cloud-upload-outline">导入</Button>
-          </View>
-        ) : null}
-      </Card>
+      />
 
-      {tab === "monthly" ? (
+      {tab === "unpaid" ? (
         <>
-          {monthlyBills.length === 0 ? <EmptyState icon="📄" title="暂无月度账单" subtitle="先录入水电读数，再生成账单" /> : null}
-          {visibleMonthlyBills.map((bill) => {
+          {unpaidMonthlyBills.length === 0 ? (
+            <EmptyState icon="📄" title="暂无待支付账单" subtitle="所有账单均已结清或暂无账单" />
+          ) : null}
+          {sortMonthlyBillsForList(unpaidMonthlyBills).map((bill) => {
             const summary = getMonthlyBillCardSummary(bill);
             return (
               <Card key={bill.id} variant="outline" padding="md" gap={12} onPress={() => openMonthlyDetail(bill)}>
@@ -371,23 +444,120 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         </>
       ) : null}
 
+      {tab === "pending" ? (
+        <>
+          {reviewBills.length === 0 ? (
+            <EmptyState icon="📄" title="没有待处理账单" subtitle="暂无出账失败的水电账单" />
+          ) : null}
+          {reviewBills.map((bill) => (
+            <Card key={bill.id} variant="outline" padding="md" gap={12}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.cardTitle}>{bill.lease?.tenantName ?? "租客"} · {bill.lease?.room?.roomNo ?? "房间"}</Text>
+                  <Text style={styles.muted}>{day(bill.periodStart)} 至 {day(bill.periodEnd)}</Text>
+                </View>
+                <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
+              </View>
+              <Text style={styles.smallDangerText}>{bill.failureReason ?? "需要补录或修正水电读数"}</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Button variant="secondary" size="small" onPress={() => retryBill(bill)} icon="refresh-outline">
+                  重新出账
+                </Button>
+                <Button size="small" onPress={() => openUtilityReading(bill)} icon="create-outline">
+                  录入本期水电
+                </Button>
+              </View>
+            </Card>
+          ))}
+        </>
+      ) : null}
+
+      {tab === "all" ? (
+        <>
+          <View style={{ gap: 8 }}>
+            <Input placeholder="搜索租客姓名、房间号或手机号" value={searchQuery} onChangeText={setSearchQuery} />
+            <View style={styles.segment}>
+              {(["", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"] as const).map((status) => (
+                <View key={status || "all"} style={[styles.segmentItem, statusFilter === status && styles.segmentItemActive]}>
+                  <Text
+                    style={[styles.segmentText, statusFilter === status && styles.segmentTextActive]}
+                    onPress={() => setStatusFilter(status)}
+                  >
+                    {status ? statusLabels[status] : "全部状态"}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+          {filteredAllBills.length === 0 ? (
+            <EmptyState icon="📄" title="未找到账单" subtitle="尝试调整搜索条件或过滤状态" />
+          ) : null}
+          {filteredAllBills.map((bill) => {
+            const summary = getMonthlyBillCardSummary(bill);
+            return (
+              <Card key={bill.id} variant="outline" padding="md" gap={12} onPress={() => openMonthlyDetail(bill)}>
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <Text style={styles.cardTitle}>{summary.title}</Text>
+                    <Text style={styles.muted}>{summary.meta}</Text>
+                  </View>
+                  <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
+                </View>
+                <View style={styles.billAmountRow}>
+                  <Text style={styles.billAmount}>¥{money(summary.totalAmount)}</Text>
+                  <View style={styles.billSummaryAside}>
+                    <Text style={styles.muted}>剩余 ¥{money(summary.remainingAmount)}</Text>
+                    <Text style={styles.muted}>已收 ¥{money(summary.paidAmount)}</Text>
+                  </View>
+                </View>
+                <View style={styles.billCardFooter}>
+                  <Text style={styles.fieldLabel}>{summary.detailCountText}</Text>
+                  <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                    {bill.status !== "PAID" ? (
+                      <Text
+                        style={styles.smallDangerText}
+                        onPress={() => {
+                          setSelectedMonthlyBillId(bill.id);
+                          setActiveLayer("deleteConfirm");
+                        }}
+                      >
+                        删除
+                      </Text>
+                    ) : null}
+                    <Text style={styles.link}>查看详情</Text>
+                  </View>
+                </View>
+              </Card>
+            );
+          })}
+        </>
+      ) : null}
+
       <TaskSheet
         visible={activeLayer === "monthlyDetail" && !!selectedMonthlyBill}
         variant="drawer"
         title="账单详情"
         subtitle={selectedMonthlyBill ? `${selectedMonthlyBill.tenantName} · ${day(selectedMonthlyBill.billingDate)}` : ""}
         onClose={() => setActiveLayer(undefined)}
-        footer={selectedMonthlyBill && selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID" ? (
-          <Button onPress={submitPayment} icon="cash-outline">确认收款</Button>
-        ) : undefined}
+        footer={
+          selectedMonthlyBill && selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID" ? (
+            <Button onPress={submitPayment} icon="cash-outline">
+              确认收款
+            </Button>
+          ) : undefined
+        }
       >
         {selectedMonthlyBill ? (
           <>
             <View style={styles.detailPanel}>
               <View style={styles.sectionHeader}>
                 <View>
-                  <Text style={styles.cardTitle}>{selectedMonthlyBill.lease?.room?.roomNo ?? "房间"} · 到期 {day(selectedMonthlyBill.dueDate)}</Text>
-                  <Text style={styles.muted}>应收 ¥{money(selectedMonthlyBill.totalAmount)} · 已收 ¥{money(selectedMonthlyBill.paidAmount)}</Text>
+                  <Text style={styles.cardTitle}>
+                    {selectedMonthlyBill.lease?.room?.roomNo ?? "房间"} · 到期 {day(selectedMonthlyBill.dueDate)}
+                  </Text>
+                  <Text style={styles.muted}>
+                    应收 ¥{money(selectedMonthlyBill.totalAmount)} · 已收 ¥{money(selectedMonthlyBill.paidAmount)}
+                  </Text>
                 </View>
                 <Badge tone={toneForBillStatus(selectedMonthlyBill.status)}>{statusLabels[selectedMonthlyBill.status]}</Badge>
               </View>
@@ -398,7 +568,11 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                 <View style={styles.formGrid}>
                   <View style={styles.formField}>
                     <Text style={styles.fieldLabel}>金额</Text>
-                    <Input keyboardType="numeric" value={paymentForm.amount} onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
+                    <Input
+                      keyboardType="numeric"
+                      value={paymentForm.amount}
+                      onChangeText={(value) => setPaymentForm((old) => ({ ...old, amount: value }))}
+                    />
                   </View>
                   <View style={styles.formField}>
                     <Text style={styles.fieldLabel}>方式</Text>
@@ -411,8 +585,23 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
             {(selectedMonthlyBill.bills ?? []).map((child) => (
               <View key={child.id} style={styles.billDetailBlock}>
                 <View style={styles.billLine}>
-                  <Text style={styles.muted}>{billModeText(child)} · {day(child.periodStart)} 至 {day(child.periodEnd)}</Text>
-                  <Text style={styles.cardStat}>¥{money(child.totalAmount)}</Text>
+                  <Text style={styles.muted}>
+                    {billModeText(child)} · {day(child.periodStart)} 至 {day(child.periodEnd)}
+                  </Text>
+                  <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                    <Text style={styles.cardStat}>¥{money(child.totalAmount)}</Text>
+                    {child.status !== "PAID" ? (
+                      <Text
+                        style={styles.smallDangerText}
+                        onPress={() => {
+                          setSelectedChildBillId(child.id);
+                          setActiveLayer("deleteChildConfirm");
+                        }}
+                      >
+                        删除
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
                 {(child.items ?? []).map((item) => (
                   <View key={item.id} style={styles.billItemLine}>
@@ -421,7 +610,9 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                   </View>
                 ))}
                 {child.mode === "POSTPAID" ? (
-                  <Button variant="secondary" size="small" onPress={() => openUtilityReading(child)} icon="create-outline">录入本期水电</Button>
+                  <Button variant="secondary" size="small" onPress={() => openUtilityReading(child)} icon="create-outline">
+                    录入本期水电
+                  </Button>
                 ) : null}
               </View>
             ))}
@@ -430,7 +621,9 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                 <Text style={styles.fieldLabel}>收款记录</Text>
                 {(selectedMonthlyBill.payments ?? []).map((payment) => (
                   <View key={payment.id} style={styles.billItemLine}>
-                    <Text style={styles.muted}>{day(payment.paidAt)} · {payment.method}</Text>
+                    <Text style={styles.muted}>
+                      {day(payment.paidAt)} · {payment.method}
+                    </Text>
                     <Text style={styles.cardStat}>¥{money(payment.amount)}</Text>
                   </View>
                 ))}
@@ -442,29 +635,13 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         ) : null}
       </TaskSheet>
 
-      {tab === "meter" ? (
-        <>
-          {readings.slice(0, 12).map((reading) => (
-            <View key={reading.id} style={styles.readingRow}>
-              <View>
-                <Text style={styles.cardTitle}>{reading.room?.roomNo ?? "房间"} · {meterLabels[reading.meterType]}</Text>
-                <Text style={styles.muted}>{day(reading.readingDate)} · {reading.lease?.tenantName ?? "未关联租约"}</Text>
-              </View>
-              <Text style={styles.billAmount}>{money(reading.value)}</Text>
-            </View>
-          ))}
-        </>
-      ) : null}
-
       <TaskSheet
         visible={activeLayer === "payment"}
         variant="drawer"
         title="登记收款"
         subtitle={selectedPaymentBill ? `${selectedPaymentBill.tenantName} · 剩余 ¥${money(remainingAmount(selectedPaymentBill))}` : "选择公寓和房间账单"}
         onClose={() => setActiveLayer(undefined)}
-        footer={(
-          <Button onPress={submitPayment} icon="cash-outline">确认收款</Button>
-        )}
+        footer={<Button onPress={submitPayment} icon="cash-outline">确认收款</Button>}
       >
         <RoomBillSelector
           rooms={selectorRooms}
@@ -522,9 +699,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         title="录入读数"
         subtitle="选择房间、水电类型并填写本次读数"
         onClose={() => setActiveLayer(undefined)}
-        footer={(
-          <Button onPress={submitReading} icon="save-outline">保存读数</Button>
-        )}
+        footer={<Button onPress={submitReading} icon="save-outline">保存读数</Button>}
       >
         <View style={styles.formGrid}>
           <View style={styles.formField}>
@@ -539,7 +714,10 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         <View style={styles.segment}>
           {(["WATER", "POWER"] as MeterType[]).map((meterType) => (
             <View key={meterType} style={[styles.segmentItem, readingForm.meterType === meterType && styles.segmentItemActive]}>
-              <Text style={[styles.segmentText, readingForm.meterType === meterType && styles.segmentTextActive]} onPress={() => setReadingForm((old) => ({ ...old, meterType }))}>
+              <Text
+                style={[styles.segmentText, readingForm.meterType === meterType && styles.segmentTextActive]}
+                onPress={() => setReadingForm((old) => ({ ...old, meterType }))}
+              >
                 {meterLabels[meterType]}
               </Text>
             </View>
@@ -553,35 +731,13 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         <Input placeholder="备注" value={readingForm.note} onChangeText={(value) => setReadingForm((old) => ({ ...old, note: value }))} />
       </TaskSheet>
 
-      {tab === "review" ? (
-        <>
-          {reviewBills.length === 0 ? <EmptyState icon="📄" title="没有出账失败的后付费账单" /> : null}
-          {reviewBills.map((bill) => (
-            <Card key={bill.id} variant="outline" padding="md" gap={12}>
-              <View style={styles.sectionHeader}>
-                <View>
-                  <Text style={styles.cardTitle}>{bill.lease?.tenantName ?? "租客"} · {bill.lease?.room?.roomNo ?? "房间"}</Text>
-                  <Text style={styles.muted}>{day(bill.periodStart)} 至 {day(bill.periodEnd)}</Text>
-                </View>
-                <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
-              </View>
-              <Text style={styles.smallDangerText}>{bill.failureReason ?? "需要补录或修正水电读数"}</Text>
-              <Button variant="secondary" size="small" onPress={() => retryBill(bill)} icon="refresh-outline">重新出账并生成月度账单</Button>
-              <Button size="small" onPress={() => openUtilityReading(bill)} icon="create-outline">直接录入水电读数</Button>
-            </Card>
-          ))}
-        </>
-      ) : null}
-
       <TaskSheet
         visible={activeLayer === "utility"}
         variant="drawer"
         title="录入本期水电"
         subtitle="按账单填写上期和本期读数"
         onClose={() => setActiveLayer(undefined)}
-        footer={(
-          <Button onPress={submitUtilityReading} icon="save-outline">保存水电读数</Button>
-        )}
+        footer={<Button onPress={submitUtilityReading} icon="save-outline">保存水电读数</Button>}
       >
         <View style={styles.formGrid}>
           <View style={styles.formField}>
@@ -609,11 +765,14 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         title="导入水电读数"
         subtitle="粘贴从导出模板填写后的 CSV 内容"
         onClose={() => setActiveLayer(undefined)}
-        footer={(
-          <Button onPress={importUtilityCsv} icon="checkmark-outline">确认导入</Button>
-        )}
+        footer={<Button onPress={importUtilityCsv} icon="checkmark-outline">确认导入</Button>}
       >
-        <Input multiline value={utilityCsv} onChangeText={setUtilityCsv} placeholder="billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因" />
+        <Input
+          multiline
+          value={utilityCsv}
+          onChangeText={setUtilityCsv}
+          placeholder="billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因"
+        />
       </TaskSheet>
 
       <TaskSheet
@@ -624,6 +783,38 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         onClose={() => setActiveLayer(undefined)}
       >
         <Input multiline value={utilityCsv} onChangeText={setUtilityCsv} />
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "deleteConfirm"}
+        variant="drawer"
+        title="删除月度账单"
+        subtitle="此操作将同时删除该月度账单下的所有子账单及收款记录，不可恢复"
+        onClose={() => setActiveLayer(undefined)}
+        footer={
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button variant="secondary" onPress={() => setActiveLayer(undefined)}>取消</Button>
+            <Button variant="danger" onPress={() => deleteMonthlyBill(selectedMonthlyBillId)}>确认删除</Button>
+          </View>
+        }
+      >
+        <Text style={styles.muted}>请确认是否删除该账单？</Text>
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "deleteChildConfirm"}
+        variant="drawer"
+        title="删除子账单"
+        subtitle="此操作将删除该子账单及其收款记录，不可恢复"
+        onClose={() => setActiveLayer(undefined)}
+        footer={
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button variant="secondary" onPress={() => setActiveLayer(undefined)}>取消</Button>
+            <Button variant="danger" onPress={() => deleteChildBill(selectedChildBillId)}>确认删除</Button>
+          </View>
+        }
+      >
+        <Text style={styles.muted}>请确认是否删除该子账单？</Text>
       </TaskSheet>
     </>
   );

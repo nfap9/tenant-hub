@@ -148,7 +148,7 @@ const classifyFeeItemType = (name: string) => {
   return "OTHER" as const;
 };
 
-const refreshMonthlyBillTotals = async (monthlyBillId: string) => {
+export const refreshMonthlyBillTotals = async (monthlyBillId: string) => {
   const monthlyBill = await prisma.monthlyBill.findUnique({
     where: { id: monthlyBillId },
     include: { bills: true, payments: true }

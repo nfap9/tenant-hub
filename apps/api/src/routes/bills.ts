@@ -9,6 +9,7 @@ import {
   recordBillPayment,
   recordMonthlyBillPayment,
   refreshBillTotals,
+  refreshMonthlyBillTotals,
   retryPostpaidBillAndMonthlyBill,
   tryCreateMonthlyBill
 } from "../services/billing.js";
@@ -346,5 +347,59 @@ billRouter.post(
   asyncHandler(async (req, res) => {
     const input = z.object({ amount: z.coerce.number().positive(), method: z.string().min(1), note: z.string().optional() }).parse(req.body);
     ok(res, await recordBillPayment({ billId: req.params.id, organizationId: req.organizationId!, userId: req.user!.id, ...input }));
+  })
+);
+
+billRouter.delete(
+  "/:id",
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { items: true, payments: true }
+    });
+    if (!bill) throw new HttpError(404, "账单不存在");
+    if (bill.status === "PAID") throw new HttpError(400, "已结清账单不能删除");
+
+    const monthlyBillId = bill.monthlyBillId;
+    await prisma.$transaction([
+      prisma.payment.deleteMany({ where: { billId: bill.id } }),
+      prisma.bill.delete({ where: { id: bill.id } })
+    ]);
+
+    if (monthlyBillId) {
+      const remainingBills = await prisma.bill.count({ where: { monthlyBillId } });
+      if (remainingBills === 0) {
+        await prisma.payment.deleteMany({ where: { monthlyBillId } });
+        await prisma.monthlyBill.delete({ where: { id: monthlyBillId } });
+      } else {
+        await refreshMonthlyBillTotals(monthlyBillId);
+      }
+    }
+
+    ok(res, { deleted: true });
+  })
+);
+
+billRouter.delete(
+  "/monthly/:id",
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const monthlyBill = await prisma.monthlyBill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { bills: true, payments: true }
+    });
+    if (!monthlyBill) throw new HttpError(404, "月度账单不存在");
+    if (monthlyBill.status === "PAID") throw new HttpError(400, "已结清月度账单不能删除");
+
+    const billIds = monthlyBill.bills.map((b) => b.id);
+    await prisma.$transaction([
+      prisma.payment.deleteMany({ where: { billId: { in: billIds } } }),
+      prisma.bill.deleteMany({ where: { id: { in: billIds } } }),
+      prisma.payment.deleteMany({ where: { monthlyBillId: monthlyBill.id } }),
+      prisma.monthlyBill.delete({ where: { id: monthlyBill.id } })
+    ]);
+
+    ok(res, { deleted: true });
   })
 );
