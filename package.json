@@ -18,7 +18,8 @@
     "mobile:build:apk": "pnpm --filter @tenant-hub/mobile android:apk",
     "mobile:test": "pnpm --filter @tenant-hub/mobile test",
     "mobile:typecheck": "pnpm --filter @tenant-hub/mobile typecheck",
-    "mobile:lint": "pnpm --filter @tenant-hub/mobile lint"
+    "mobile:lint": "pnpm --filter @tenant-hub/mobile lint",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20"
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "globals": "^17.6.0",
+    "husky": "^9.1.7",
     "typescript-eslint": "^8.59.2"
   }
 }
