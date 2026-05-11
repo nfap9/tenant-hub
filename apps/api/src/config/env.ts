@@ -1,5 +1,11 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { z } from "zod";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// Ensure .env is loaded from repo root even when cwd is a workspace (e.g. pnpm -r test)
+config({ path: resolve(__dirname, "../../../../.env") });
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
