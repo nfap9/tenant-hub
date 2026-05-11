@@ -39,7 +39,7 @@ type RoomForm = {
   status: RoomStatus;
 };
 
-type ApartmentLayer = "expense" | "roomSingle" | "roomBatch" | "roomEdit" | "roomDelete";
+type ApartmentLayer = "expense" | "roomSingle" | "roomBatch" | "roomEdit" | "roomDelete" | "apartmentDelete";
 
 const emptyApartmentForm: ApartmentForm = {
   name: "",
@@ -299,6 +299,20 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
     resetRoomWork();
     setDetailTab("expenses");
     setMode("list");
+  };
+
+  const deleteApartment = async () => {
+    if (!organizationId || !selectedApartment) return;
+    if (!canManageApartment) return setNotice("当前角色没有管理公寓权限");
+    try {
+      await mobileApi(`/apartments/${selectedApartment.id}`, token, apiOptions(organizationId, "DELETE"));
+      setNotice("公寓已删除");
+      setActiveLayer(undefined);
+      backToList();
+      await loadApartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "删除公寓失败");
+    }
   };
 
   const addExpense = async (apartmentId = expenseApartmentId ?? selectedApartment?.id) => {
@@ -574,7 +588,12 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
           <Card
             title={selectedApartment.name}
             subtitle={selectedApartment.location}
-            headerAction={canManageApartment ? <Button variant="secondary" size="small" onPress={() => setMode("edit")} icon="create-outline">编辑</Button> : undefined}
+            headerAction={canManageApartment ? (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Button variant="secondary" size="small" onPress={() => setMode("edit")} icon="create-outline">编辑</Button>
+                <Button variant="danger" size="small" onPress={() => setActiveLayer("apartmentDelete")} icon="trash-outline">删除</Button>
+              </View>
+            ) : undefined}
           >
             <View style={styles.segment}>
               <View style={[styles.segmentItem, detailTab === "expenses" && styles.segmentItemActive]}>
@@ -807,6 +826,22 @@ export default function ApartmentsScreen({ token, organizationId, currentMembers
         ) : null}
       >
         <Text style={styles.muted}>删除后房间资料不可恢复，请确认当前房间没有有效租约。</Text>
+      </TaskSheet>
+
+      <TaskSheet
+        visible={activeLayer === "apartmentDelete"}
+        variant="dialog"
+        title="删除公寓"
+        subtitle={selectedApartment ? `${selectedApartment.name} · ${selectedApartment.location}` : undefined}
+        onClose={() => setActiveLayer(undefined)}
+        footer={selectedApartment ? (
+          <View style={styles.roomActions}>
+            <Button variant="danger" size="small" onPress={deleteApartment} icon="trash-outline">确认删除</Button>
+            <Button variant="ghost" size="small" onPress={() => setActiveLayer(undefined)} icon="close-outline">取消</Button>
+          </View>
+        ) : null}
+      >
+        <Text style={styles.muted}>删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。</Text>
       </TaskSheet>
     </>
   );

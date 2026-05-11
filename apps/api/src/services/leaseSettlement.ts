@@ -199,6 +199,26 @@ export const createLeaseSettlement = async ({
       ]
     });
 
+    // 结清该租约下所有未结清账单
+    const pendingMonthlyBills = await tx.monthlyBill.findMany({
+      where: { leaseId: lease.id, status: { notIn: ["PAID", "VOID"] } }
+    });
+    for (const monthlyBill of pendingMonthlyBills) {
+      const remaining = new Prisma.Decimal(monthlyBill.totalAmount).minus(monthlyBill.paidAmount);
+      if (remaining.greaterThan(0)) {
+        await tx.payment.create({
+          data: {
+            monthlyBillId: monthlyBill.id,
+            userId,
+            amount: remaining,
+            method: "退租自动结清",
+            note: "退租结算时自动结清未收账单"
+          }
+        });
+      }
+      await tx.monthlyBill.update({ where: { id: monthlyBill.id }, data: { status: "PAID", paidAmount: monthlyBill.totalAmount } });
+    }
+
     await tx.lease.update({
       where: { id: lease.id },
       data: { status: "TERMINATED", terminationType: input.type, terminationReason: input.reason, terminatedAt: input.terminatedAt }

@@ -20,7 +20,7 @@ type Props = {
   tabRequestKey?: number;
 };
 
-type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail" | "deleteConfirm" | "deleteChildConfirm";
+type BillLayer = "payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail" | "deleteConfirm" | "deleteChildConfirm" | "editBillItem";
 
 type ReadingForm = {
   roomId: string;
@@ -93,6 +93,7 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
   const [activeLayer, setActiveLayer] = useState<BillLayer>();
   const [selectedMonthlyBillId, setSelectedMonthlyBillId] = useState("");
   const [selectedChildBillId, setSelectedChildBillId] = useState("");
+  const [editingBillItem, setEditingBillItem] = useState<{ id: string; billId: string; name: string; amount: string; note: string }>();
   const [paymentRoomId, setPaymentRoomId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BillStatus | "">("");
@@ -328,6 +329,21 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
       await loadData();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "删除失败");
+    }
+  };
+
+  const updateBillItem = async () => {
+    if (!organizationId || !editingBillItem) return;
+    try {
+      await mobileApi(`/bills/${editingBillItem.billId}/items/${editingBillItem.id}`, token, apiOptions(organizationId, "PUT", {
+        amount: Number(editingBillItem.amount),
+        note: editingBillItem.note.trim() || undefined
+      }));
+      setNotice("账单项目已更新");
+      setEditingBillItem(undefined);
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "更新失败");
     }
   };
 
@@ -605,8 +621,18 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
                 </View>
                 {(child.items ?? []).map((item) => (
                   <View key={item.id} style={styles.billItemLine}>
-                    <Text style={styles.muted}>{item.name}</Text>
-                    <Text style={styles.muted}>¥{money(item.amount)}</Text>
+                    <Text style={styles.muted}>{item.name}{item.note ? ` · ${item.note}` : ""}</Text>
+                    <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                      <Text style={styles.muted}>¥{money(item.amount)}</Text>
+                      {child.status !== "PAID" ? (
+                        <Text
+                          style={styles.smallDangerText}
+                          onPress={() => setEditingBillItem({ id: item.id, billId: child.id, name: item.name, amount: String(item.amount), note: item.note ?? "" })}
+                        >
+                          修改
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
                 ))}
                 {child.mode === "POSTPAID" ? (
@@ -815,6 +841,29 @@ export default function BillsScreen({ token, organizationId, setNotice, initialT
         }
       >
         <Text style={styles.muted}>请确认是否删除该子账单？</Text>
+      </TaskSheet>
+
+      <TaskSheet
+        visible={Boolean(editingBillItem)}
+        variant="dialog"
+        title={editingBillItem ? `修改 ${editingBillItem.name}` : "修改账单项目"}
+        onClose={() => setEditingBillItem(undefined)}
+        footer={(
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button variant="secondary" onPress={() => setEditingBillItem(undefined)}>取消</Button>
+            <Button onPress={updateBillItem} icon="save-outline">保存</Button>
+          </View>
+        )}
+      >
+        <View style={{ gap: 12 }}>
+          <View style={styles.formGrid}>
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>金额</Text>
+              <Input keyboardType="numeric" value={editingBillItem?.amount} onChangeText={(value) => setEditingBillItem((old) => old ? { ...old, amount: value } : undefined)} />
+            </View>
+          </View>
+          <Input placeholder="备注（可选）" value={editingBillItem?.note} onChangeText={(value) => setEditingBillItem((old) => old ? { ...old, note: value } : undefined)} />
+        </View>
       </TaskSheet>
     </>
   );

@@ -81,6 +81,44 @@ leaseRouter.post(
   })
 );
 
+leaseRouter.put(
+  "/:id",
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        rentAmount: amountSchema.optional(),
+        depositAmount: amountSchema.optional(),
+        waterUnitPrice: amountSchema.optional(),
+        powerUnitPrice: amountSchema.optional(),
+        fees: z.array(z.object({ type: feeItemTypeSchema, name: z.string().min(1), amount: amountSchema })).optional()
+      })
+      .parse(req.body);
+
+    const lease = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { fees: true }
+    });
+    if (!lease) throw new HttpError(404, "租约不存在");
+    if (lease.status !== "ACTIVE") throw new HttpError(400, "仅有效租约可以变更");
+
+    const { fees, ...leaseData } = input;
+    const updated = await prisma.$transaction(async (tx) => {
+      if (fees) {
+        await tx.leaseFee.deleteMany({ where: { leaseId: lease.id } });
+        await tx.leaseFee.createMany({ data: fees.map((fee) => ({ ...fee, leaseId: lease.id })) });
+      }
+      return tx.lease.update({
+        where: { id: lease.id },
+        data: leaseData,
+        include: leaseInclude
+      });
+    });
+
+    ok(res, withLeaseLifecycle(updated));
+  })
+);
+
 leaseRouter.post(
   "/:id/terminate",
   requirePermission(PERMISSIONS.LEASE_MANAGE),
