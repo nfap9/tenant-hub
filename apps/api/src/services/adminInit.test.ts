@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ensurePlatformAdmin } from "./adminInit.js";
+import { ensurePlatformAdmin, ensureSystemSettings } from "./adminInit.js";
 
 vi.mock("bcryptjs", () => ({
   default: {
@@ -51,6 +51,42 @@ describe("admin init", () => {
         passwordHash: "hashed-password",
         platformRole: "SUPER_ADMIN"
       })
+    });
+  });
+
+  describe("ensureSystemSettings", () => {
+    it("should create missing settings", async () => {
+      const mockFindUnique = vi.fn(async () => null);
+      const mockCreate = vi.fn();
+
+      await ensureSystemSettings({
+        prisma: { systemSetting: { findUnique: mockFindUnique, create: mockCreate } } as never
+      });
+
+      expect(mockFindUnique).toHaveBeenCalledTimes(2);
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ key: "quota_limit_enabled" })
+        })
+      );
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ key: "platform_info" })
+        })
+      );
+    });
+
+    it("should skip existing settings", async () => {
+      const mockFindUnique = vi.fn(async () => ({ id: "setting-1", key: "quota_limit_enabled", value: { enabled: false } }));
+      const mockCreate = vi.fn();
+
+      await ensureSystemSettings({
+        prisma: { systemSetting: { findUnique: mockFindUnique, create: mockCreate } } as never
+      });
+
+      expect(mockFindUnique).toHaveBeenCalledTimes(2);
+      expect(mockCreate).not.toHaveBeenCalled();
     });
   });
 });

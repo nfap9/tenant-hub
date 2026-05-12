@@ -2,11 +2,12 @@ import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 import { app } from "./app.js";
 import { ensureSystemRoles } from "./services/roles.js";
-import { ensurePlatformAdmin } from "./services/adminInit.js";
+import { ensurePlatformAdmin, ensureSystemSettings } from "./services/adminInit.js";
 import { startScheduler } from "./services/scheduler.js";
 
 await ensureSystemRoles();
 await ensurePlatformAdmin();
+await ensureSystemSettings();
 
 const server = app.listen(env.PORT, () => {
   console.info(`[TenantHub] API listening on http://localhost:${env.PORT}`);
