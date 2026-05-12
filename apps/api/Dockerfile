@@ -20,6 +20,7 @@ RUN pnpm --filter @tenant-hub/api prisma generate
 RUN pnpm --filter @tenant-hub/api build
 
 FROM base AS production
+ENV HUSKY=0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/api/prisma apps/api/prisma
