@@ -1,7 +1,7 @@
 FROM node:22-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && apk add --no-cache openssl wget
+RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories && corepack enable && apk add --no-cache openssl wget
 WORKDIR /app
 
 FROM base AS deps

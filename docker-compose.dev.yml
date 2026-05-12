@@ -23,7 +23,7 @@ services:
       dockerfile: apps/api/Dockerfile
       target: development
     container_name: tenant-hub-api
-    command: sh -c "pnpm --filter @tenant-hub/api prisma generate && pnpm --filter @tenant-hub/api dev"
+    command: sh -c "pnpm --filter @tenant-hub/api prisma generate && pnpm --filter @tenant-hub/api prisma migrate deploy && pnpm --filter @tenant-hub/api dev"
     environment:
       NODE_ENV: development
       PORT: ${PORT:-4000}
