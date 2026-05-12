@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { AuthPage } from "./AuthPage";
 
 vi.mock("../api/client", () => ({
-  api: vi.fn()
+  api: vi.fn(() => Promise.resolve({ name: "Tenant Hub" }))
 }));
 
 describe("AuthPage", () => {

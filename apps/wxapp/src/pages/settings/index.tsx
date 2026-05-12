@@ -8,7 +8,7 @@ import type { OrgInvite } from '../../types/domain';
 import './index.scss';
 
 export default function SettingsPage() {
-  const { session, memberships, currentOrgId, currentMembership, setCurrentOrgId, members, roles, signOut, reload } = useAppSession();
+  const { session, memberships, currentOrgId, currentMembership, setCurrentOrgId, members, roles, signOut, reload, platformInfo } = useAppSession();
   const canManageOrg = useHasPermission("org:manage");
   const canManageMember = useHasPermission("member:manage");
 
@@ -102,7 +102,7 @@ export default function SettingsPage() {
     return (
       <View className="page-container">
         <Card>
-          <EmptyState emoji="🏢" title="还没有组织" subtitle="创建或加入一个组织，开始使用 Tenant Hub" />
+          <EmptyState emoji="🏢" title="还没有组织" subtitle={`创建或加入一个组织，开始使用 ${platformInfo.name}`} />
         </Card>
 
         <Card title="创建组织">

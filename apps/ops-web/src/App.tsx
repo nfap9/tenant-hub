@@ -24,6 +24,7 @@ export default function App() {
   const [platformRole, setPlatformRole] = useState("NONE");
   const [active, setActive] = useState("dashboard");
   const [loading, setLoading] = useState(false);
+  const [platformName, setPlatformName] = useState("Tenant Hub");
   const [messageApi, contextHolder] = message.useMessage();
 
   const refreshMe = useCallback(async () => {
@@ -42,9 +43,19 @@ export default function App() {
     }
   }, [messageApi]);
 
+  const loadPlatformInfo = useCallback(async () => {
+    try {
+      const info = await api<{ name: string }>("/platform/info");
+      if (info.name) setPlatformName(info.name);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     refreshMe();
-  }, [refreshMe]);
+    loadPlatformInfo();
+  }, [refreshMe, loadPlatformInfo]);
 
   if (!session.token) {
     return (
@@ -106,7 +117,7 @@ export default function App() {
       <div className="workspace">
         {contextHolder}
         <div className="topbar">
-          <Typography.Text style={{ color: "white", fontSize: 18, fontWeight: 700 }}>Tenant Hub 运营端</Typography.Text>
+          <Typography.Text style={{ color: "white", fontSize: 18, fontWeight: 700 }}>{platformName} 运营端</Typography.Text>
           <Button
             icon={<LogoutOutlined />}
             onClick={() => {
@@ -129,7 +140,7 @@ export default function App() {
       {contextHolder}
       <div className="topbar">
         <Space>
-          <Typography.Text style={{ color: "white", fontSize: 18, fontWeight: 700 }}>Tenant Hub 运营端</Typography.Text>
+          <Typography.Text style={{ color: "white", fontSize: 18, fontWeight: 700 }}>{platformName} 运营端</Typography.Text>
           <Typography.Text style={{ color: "#cfe8df" }}>{loading ? "校验登录中" : session.user?.username}</Typography.Text>
         </Space>
         <Button

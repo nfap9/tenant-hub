@@ -1,10 +1,19 @@
 import { Button, Form, Input, Segmented, Space, Tabs, message } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, type Session } from "../api/client";
 
 export function AuthPage({ onAuthed }: { onAuthed: (session: Session) => void }) {
   const [mode, setMode] = useState<"password" | "otp">("password");
+  const [platformName, setPlatformName] = useState("Tenant Hub");
   const [messageApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    api<{ name: string }>("/platform/info")
+      .then((info) => {
+        if (info.name) setPlatformName(info.name);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const sendOtp = async (phone: string, purpose: "REGISTER" | "LOGIN") => {
     try {
@@ -19,7 +28,7 @@ export function AuthPage({ onAuthed }: { onAuthed: (session: Session) => void })
     <div className="auth-shell">
       {contextHolder}
       <div className="auth-panel">
-        <h1 className="brand">Tenant Hub</h1>
+        <h1 className="brand">{platformName}</h1>
         <Tabs
           items={[
             {

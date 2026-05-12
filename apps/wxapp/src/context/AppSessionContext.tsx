@@ -10,6 +10,12 @@ export type MobileSession = {
   user: { id: string; phone: string; username: string };
 };
 
+export type PlatformInfo = {
+  name: string;
+  logoUrl: string;
+  contactPhone: string;
+};
+
 type AppSessionContextType = {
   session: MobileSession | undefined;
   memberships: Membership[];
@@ -24,6 +30,7 @@ type AppSessionContextType = {
   signOut: () => void;
   reload: () => Promise<void>;
   loading: boolean;
+  platformInfo: PlatformInfo;
 };
 
 const AppSessionContext = createContext<AppSessionContextType | undefined>(undefined);
@@ -37,6 +44,7 @@ export function AppSessionProvider({ children }) {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
+  const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({ name: 'Tenant Hub', logoUrl: '', contactPhone: '' });
 
   const token = session?.token;
   const currentMembership = useMemo(
@@ -134,6 +142,18 @@ export function AppSessionProvider({ children }) {
     } catch {}
   }, []);
 
+  // 启动时：加载平台信息（无需登录）
+  useEffect(() => {
+    apiClient<PlatformInfo>("/platform/info")
+      .then((info) => {
+        if (info.name) {
+          setPlatformInfo(info);
+          Taro.setNavigationBarTitle({ title: info.name });
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
   // 启动时：检查登录状态，无 token 则跳登录页，有 token 则加载用户信息
   useEffect(() => {
     const init = async () => {
@@ -174,8 +194,9 @@ export function AppSessionProvider({ children }) {
       signOut,
       reload,
       loading,
+      platformInfo,
     }),
-    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, setCurrentOrgId, signIn, signOut, reload]
+    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, platformInfo, setCurrentOrgId, signIn, signOut, reload]
   );
 
   return (

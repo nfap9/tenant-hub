@@ -5,6 +5,7 @@ import { Button, Input, Card } from '../../components/ui';
 import { apiClient } from '../../api/client';
 import { useAppSession } from '../../context/AppSessionContext';
 import { showToast } from '../../components/Toast';
+import { useEffect } from 'react';
 
 type LoginMode = 'password' | 'code';
 type AuthMode = 'login' | 'register';
@@ -32,7 +33,13 @@ function useCountdown() {
 }
 
 export default function LoginPage() {
-  const { signIn } = useAppSession();
+  const { signIn, platformInfo } = useAppSession();
+
+  useEffect(() => {
+    if (platformInfo.name) {
+      Taro.setNavigationBarTitle({ title: platformInfo.name });
+    }
+  }, [platformInfo.name]);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [mode, setMode] = useState<LoginMode>('password');
   const [phone, setPhone] = useState('');
@@ -129,7 +136,7 @@ export default function LoginPage() {
     <View style={{ padding: '48rpx', minHeight: '100vh', backgroundColor: '#115e59' }}>
       <View style={{ marginTop: '160rpx', marginBottom: '80rpx' }}>
         <Text style={{ fontSize: '52rpx', fontWeight: 'bold', color: '#fff' }}>
-          Tenant Hub
+          {platformInfo.name}
         </Text>
         <Text style={{ fontSize: '28rpx', color: '#5eead4', marginTop: '16rpx' }}>
           {isRegister ? '注册后即可开始管理你的公寓' : '给二房东和小型物业公司的移动经营台'}
