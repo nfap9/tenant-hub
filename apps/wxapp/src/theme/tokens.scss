@@ -1,0 +1,118 @@
+:root,
+page {
+  // Brand
+  --color-primary: #0d9488;
+  --color-primary-dark: #115e59;
+  --color-primary-light: #ccfbf1;
+  --color-primary-lighter: #e6fffa;
+  --color-primary-lightest: #f0fdfa;
+
+  // Accent
+  --color-accent: #f59e0b;
+
+  // Backgrounds
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-warm: #fafaf9;
+
+  // Text
+  --color-text: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+  --color-text-placeholder: #94a3b8;
+
+  // Status
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-danger: #ef4444;
+  --color-danger-light: #fee2e2;
+  --color-neutral: #64748b;
+  --color-neutral-light: #f1f5f9;
+
+  // Borders
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-border-lighter: #f8fafc;
+
+  // Spacing (4px base grid, rpx units)
+  --spacing-0: 0;
+  --spacing-0-5: 2rpx;
+  --spacing-1: 4rpx;
+  --spacing-1-5: 6rpx;
+  --spacing-2: 8rpx;
+  --spacing-2-5: 10rpx;
+  --spacing-3: 12rpx;
+  --spacing-3-5: 14rpx;
+  --spacing-4: 16rpx;
+  --spacing-4-5: 18rpx;
+  --spacing-5: 20rpx;
+  --spacing-6: 24rpx;
+  --spacing-7: 28rpx;
+  --spacing-8: 32rpx;
+  --spacing-10: 40rpx;
+  --spacing-12: 48rpx;
+  --spacing-16: 64rpx;
+  --spacing-20: 80rpx;
+  --spacing-24: 96rpx;
+
+  // Typography
+  --font-size-hero: 68rpx;
+  --font-size-h1: 60rpx;
+  --font-size-h2: 48rpx;
+  --font-size-h3: 42rpx;
+  --font-size-h4: 36rpx;
+  --font-size-h5: 34rpx;
+  --font-size-h6: 32rpx;
+  --font-size-body-large: 30rpx;
+  --font-size-body: 28rpx;
+  --font-size-body-small: 26rpx;
+  --font-size-label: 26rpx;
+  --font-size-label-small: 24rpx;
+  --font-size-caption: 22rpx;
+  --font-size-stat: 40rpx;
+  --font-size-metric: 48rpx;
+
+  // Line heights
+  --line-height-hero: 80rpx;
+  --line-height-h1: 72rpx;
+  --line-height-h2: 60rpx;
+  --line-height-h3: 52rpx;
+  --line-height-h4: 48rpx;
+  --line-height-h5: 44rpx;
+  --line-height-h6: 44rpx;
+  --line-height-body-large: 42rpx;
+  --line-height-body: 38rpx;
+  --line-height-body-small: 36rpx;
+  --line-height-label: 36rpx;
+  --line-height-label-small: 32rpx;
+  --line-height-caption: 30rpx;
+  --line-height-stat: 52rpx;
+  --line-height-metric: 60rpx;
+
+  // Font weights
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+
+  // Radii
+  --radius-none: 0;
+  --radius-sm: 8rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  --radius-xl: 32rpx;
+  --radius-2xl: 40rpx;
+  --radius-full: 999rpx;
+
+  // Shadows (CSS box-shadow)
+  --shadow-subtle: 0 4rpx 16rpx rgba(16, 37, 34, 0.04);
+  --shadow-card: 0 8rpx 24rpx rgba(16, 37, 34, 0.06);
+  --shadow-elevated: 0 16rpx 32rpx rgba(16, 37, 34, 0.10);
+  --shadow-float: 0 24rpx 40rpx rgba(16, 37, 34, 0.14);
+
+  // Layout
+  --layout-tab-bar-height: 112rpx;
+  --layout-header-height: 112rpx;
+  --layout-content-bottom-padding: 184rpx;
+  --layout-max-modal-width: 640rpx;
+}

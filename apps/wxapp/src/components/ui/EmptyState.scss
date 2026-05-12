@@ -1,0 +1,26 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-16) var(--spacing-6);
+  gap: var(--spacing-3);
+
+  &__emoji {
+    font-size: 64rpx;
+    margin-bottom: var(--spacing-3);
+  }
+  &__title {
+    font-size: var(--font-size-h5);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-secondary);
+  }
+  &__subtitle {
+    font-size: var(--font-size-body-small);
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+  &__action {
+    margin-top: var(--spacing-4);
+  }
+}

@@ -1,0 +1,106 @@
+.task-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+
+  &--active {
+    pointer-events: auto;
+
+    .task-sheet__overlay {
+      opacity: 1;
+    }
+    .task-sheet__content--drawer {
+      transform: translateY(0);
+    }
+    .task-sheet__content--dialog {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  &__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(16, 37, 34, 0.42);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  &__content {
+    position: relative;
+    background-color: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s, opacity 0.3s;
+
+    &--drawer {
+      margin-top: auto;
+      max-height: 90vh;
+      min-height: 62vh;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      transform: translateY(100%);
+    }
+
+    &--dialog {
+      margin: auto;
+      max-height: 78vh;
+      width: calc(100% - var(--spacing-10));
+      max-width: var(--layout-max-modal-width);
+      border-radius: var(--radius-md);
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: var(--spacing-4);
+    border-bottom: 1rpx solid var(--color-border-light);
+  }
+
+  &__title-block {
+    flex: 1;
+  }
+
+  &__title {
+    font-size: var(--font-size-h4);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+  }
+
+  &__subtitle {
+    font-size: var(--font-size-body-small);
+    color: var(--color-text-muted);
+    margin-top: var(--spacing-1);
+  }
+
+  &__close {
+    padding: var(--spacing-2) var(--spacing-3);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-body-small);
+  }
+
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-4);
+  }
+
+  &__footer {
+    padding: var(--spacing-4);
+    border-top: 1rpx solid var(--color-border-light);
+    display: flex;
+    gap: var(--spacing-3);
+  }
+}

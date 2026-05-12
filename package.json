@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/ops-web dev",
     "dev:mobile": "pnpm --filter @tenant-hub/mobile dev",
+    "dev:wxapp": "pnpm --filter @tenant-hub/wxapp dev:weapp",
+    "build:wxapp": "pnpm --filter @tenant-hub/wxapp build:weapp",
     "build": "pnpm -r build",
     "check": "pnpm test && pnpm typecheck && pnpm lint && pnpm build",
     "lint": "pnpm -r lint",
