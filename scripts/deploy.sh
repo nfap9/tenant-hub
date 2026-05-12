@@ -387,18 +387,18 @@ echo "=========================================="
 HEALTH_OK=false
 OPS_OK=false
 
-# API 健康检查（通过 Nginx 代理路径访问）
-API_URL="http://localhost/api/health"
-if curl -fsS -H "Host: $DOMAIN" "$API_URL" &>/dev/null; then
-    ok "API 健康检查: $API_URL → $(curl -fsS -H "Host: $DOMAIN" "$API_URL")"
+# API 健康检查（直接访问容器端口，绕过 nginx 重定向）
+API_URL="http://localhost:4000/health"
+if curl -fsS "$API_URL" &>/dev/null; then
+    ok "API 健康检查: $API_URL → $(curl -fsS "$API_URL")"
     HEALTH_OK=true
 else
     err "API 健康检查失败"
 fi
 
-# 运营端检查（通过 nginx 容器访问）
-OPS_URL="http://localhost"
-if curl -fsS -o /dev/null -H "Host: $DOMAIN" -I "$OPS_URL" &>/dev/null; then
+# 运营端检查（通过 nginx 容器访问，跟随重定向）
+OPS_URL="https://localhost"
+if curl -fsSL -o /dev/null -H "Host: $DOMAIN" -k -I "$OPS_URL" &>/dev/null; then
     ok "运营端访问: $OPS_URL → HTTP 200"
     OPS_OK=true
 else
