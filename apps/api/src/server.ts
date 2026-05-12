@@ -3,6 +3,7 @@ import { prisma } from "./config/prisma.js";
 import { app } from "./app.js";
 import { ensureSystemRoles } from "./services/roles.js";
 import { ensurePlatformAdmin } from "./services/adminInit.js";
+import { startScheduler } from "./services/scheduler.js";
 
 await ensureSystemRoles();
 await ensurePlatformAdmin();
@@ -10,6 +11,10 @@ await ensurePlatformAdmin();
 const server = app.listen(env.PORT, () => {
   console.info(`[TenantHub] API listening on http://localhost:${env.PORT}`);
 });
+
+if (env.SCHEDULER_ENABLED === "true") {
+  startScheduler();
+}
 
 let shuttingDown = false;
 const shutdown = async () => {

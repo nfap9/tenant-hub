@@ -363,6 +363,19 @@ billRouter.put(
     if (billItem.bill.status === "PAID") throw new HttpError(400, "已结清账单不能修改");
     await prisma.billItem.update({ where: { id: billItem.id }, data: input });
     await refreshBillTotals(billItem.billId);
+    await prisma.auditLog.create({
+      data: {
+        organizationId: req.organizationId!,
+        tableName: "BillItem",
+        recordId: billItem.id,
+        action: "UPDATE",
+        fieldName: "amount",
+        oldValue: JSON.stringify({ amount: billItem.amount.toString(), note: billItem.note }),
+        newValue: JSON.stringify(input),
+        userId: req.user!.id,
+        ipAddress: req.ip ?? null
+      }
+    });
     ok(res, { updated: true });
   })
 );

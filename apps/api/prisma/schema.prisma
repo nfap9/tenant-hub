@@ -112,6 +112,14 @@ enum SettlementPaymentDirection {
   REFUND
 }
 
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
 model User {
   id           String       @id @default(cuid())
   phone        String       @unique
@@ -127,6 +135,7 @@ model User {
   createdOrgInvites OrgInvite[] @relation("OrgInviteCreatedBy")
   usedOrgInvites    OrgInvite[] @relation("OrgInviteUsedBy")
   settlementPayments SettlementPayment[]
+  auditLogs    AuditLog[]
 }
 
 model OtpCode {
@@ -160,6 +169,7 @@ model Organization {
   subscriptions Subscription[]
   invites       OrgInvite[]
   settlements   LeaseSettlement[]
+  auditLogs     AuditLog[]
 }
 
 model Role {
@@ -224,6 +234,7 @@ model Apartment {
   powerUnitPrice  Decimal      @default(0) @db.Decimal(10, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
   organization   Organization @relation(fields: [organizationId], references: [id])
   rooms          Room[]
   expenses       ApartmentExpense[]
@@ -237,6 +248,7 @@ model ApartmentExpense {
   amount      Decimal   @db.Decimal(12, 2)
   spentAt     DateTime
   note        String?
+  deletedAt   DateTime?
   apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
 }
 
@@ -250,6 +262,7 @@ model Room {
   status      RoomStatus @default(VACANT)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
   apartment   Apartment  @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   leases      Lease[]
   meterReadings MeterReading[]
@@ -279,6 +292,7 @@ model Lease {
   terminatedAt      DateTime?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+  deletedAt         DateTime?
   organization      Organization     @relation(fields: [organizationId], references: [id])
   room              Room             @relation(fields: [roomId], references: [id])
   fees              LeaseFee[]
@@ -316,6 +330,7 @@ model LeaseSettlement {
   status                  SettlementStatus @default(PENDING)
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
+  deletedAt               DateTime?
   organization            Organization     @relation(fields: [organizationId], references: [id])
   lease                   Lease            @relation(fields: [leaseId], references: [id])
   room                    Room             @relation(fields: [roomId], references: [id])
@@ -334,6 +349,7 @@ model SettlementPayment {
   paidAt       DateTime                   @default(now())
   method       String
   note         String?
+  deletedAt    DateTime?
   settlement   LeaseSettlement            @relation(fields: [settlementId], references: [id], onDelete: Cascade)
   user         User                       @relation(fields: [userId], references: [id])
 
@@ -346,6 +362,7 @@ model LeaseFee {
   type      BillItemType       @default(OTHER)
   name      String
   amount    Decimal           @db.Decimal(10, 2)
+  deletedAt DateTime?
   lease     Lease             @relation(fields: [leaseId], references: [id], onDelete: Cascade)
 }
 
@@ -365,6 +382,7 @@ model Bill {
   failureReason  String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
   organization   Organization @relation(fields: [organizationId], references: [id])
   lease          Lease        @relation(fields: [leaseId], references: [id])
   monthlyBill    MonthlyBill? @relation(fields: [monthlyBillId], references: [id])
@@ -390,21 +408,25 @@ model BillItem {
   waterUnitPrice Decimal?     @db.Decimal(10, 2)
   powerUnitPrice Decimal?     @db.Decimal(10, 2)
   note           String?
+  deletedAt      DateTime?
   bill           Bill         @relation(fields: [billId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  billId    String?
-  monthlyBillId String?
-  userId    String
-  amount    Decimal  @db.Decimal(12, 2)
-  paidAt    DateTime @default(now())
-  method    String
-  note      String?
-  bill      Bill?    @relation(fields: [billId], references: [id])
-  monthlyBill MonthlyBill? @relation(fields: [monthlyBillId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  id             String        @id @default(cuid())
+  billId         String?
+  monthlyBillId  String?
+  userId         String
+  amount         Decimal       @db.Decimal(12, 2)
+  paidAt         DateTime      @default(now())
+  method         String
+  note           String?
+  status         PaymentStatus @default(COMPLETED)
+  refundedAmount Decimal       @default(0) @db.Decimal(12, 2)
+  deletedAt      DateTime?
+  bill           Bill?         @relation(fields: [billId], references: [id])
+  monthlyBill    MonthlyBill?  @relation(fields: [monthlyBillId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 }
 
 model MonthlyBill {
@@ -420,6 +442,7 @@ model MonthlyBill {
   paidAmount     Decimal      @default(0) @db.Decimal(12, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
   organization   Organization @relation(fields: [organizationId], references: [id])
   lease          Lease        @relation(fields: [leaseId], references: [id])
   bills          Bill[]
@@ -443,6 +466,7 @@ model MeterReading {
   note           String?
   createdById    String?
   createdAt      DateTime           @default(now())
+  deletedAt      DateTime?
   organization   Organization       @relation(fields: [organizationId], references: [id])
   apartment      Apartment          @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   room           Room               @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -486,6 +510,26 @@ model OrgQuotaPackage {
   reason         String?
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  tableName      String
+  recordId       String
+  action         String
+  fieldName      String?
+  oldValue       String?
+  newValue       String?
+  userId         String
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, tableName, recordId])
+  @@index([createdAt])
 }
 
 model SystemSetting {

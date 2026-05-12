@@ -212,7 +212,8 @@ export const createLeaseSettlement = async ({
             userId,
             amount: remaining,
             method: "退租自动结清",
-            note: "退租结算时自动结清未收账单"
+            note: "退租结算时自动结清未收账单",
+            status: "COMPLETED"
           }
         });
       }

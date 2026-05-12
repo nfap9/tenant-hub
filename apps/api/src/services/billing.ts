@@ -489,7 +489,7 @@ export const recordMonthlyBillPayment = async ({
     const billRemaining = remainingAmountFor(bill);
     if (billRemaining.lessThanOrEqualTo(0)) continue;
     const billAmount = unapplied.greaterThan(billRemaining) ? billRemaining : unapplied;
-    payments.push(await prisma.payment.create({ data: { billId: bill.id, monthlyBillId, userId, amount: billAmount, method, note } }));
+    payments.push(await prisma.payment.create({ data: { billId: bill.id, monthlyBillId, userId, amount: billAmount, method, note, status: "COMPLETED" } }));
     unapplied = unapplied.minus(billAmount);
   }
 
@@ -521,7 +521,7 @@ export const recordBillPayment = async ({
   if (bill.monthlyBill?.payments.length) throw new HttpError(400, "所属月度账单已有收款，请继续按月度账单收款");
   assertBillPaymentAllowed({ ...bill, amount });
 
-  const payment = await prisma.payment.create({ data: { billId, userId, amount, method, note } });
+  const payment = await prisma.payment.create({ data: { billId, userId, amount, method, note, status: "COMPLETED" } });
   await refreshBillTotals(billId);
   return payment;
 };

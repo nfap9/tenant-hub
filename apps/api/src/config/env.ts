@@ -21,7 +21,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
   PLATFORM_ADMIN_PHONE: z.string().default(""),
-  PLATFORM_ADMIN_PASSWORD: z.string().default("")
+  PLATFORM_ADMIN_PASSWORD: z.string().default(""),
+  SCHEDULER_ENABLED: z.enum(["true", "false"]).default("true")
 }).superRefine((value, ctx) => {
   if (value.NODE_ENV !== "production") return;
   if (value.JWT_SECRET === "tenant-hub-dev-secret") {
