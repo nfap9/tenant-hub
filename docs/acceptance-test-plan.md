@@ -9,7 +9,7 @@
 - API 健康检查：`http://localhost:4000/health`
 - API 基础地址：`http://localhost:4000/api`
 - 运营端：`http://localhost:5173`
-- 移动端本地开发：`cd apps/mobile && pnpm web`
+- 小程序本地开发：`pnpm dev:wxapp`（需配合微信开发者工具）
 
 ### 测试数据
 
@@ -90,7 +90,7 @@ curl -I http://localhost:5173
 
 步骤：
 
-1. 打开移动端 Web 预览（如未运行，执行 `cd apps/mobile && pnpm web`）。
+1. 打开微信小程序预览（如未运行，执行 `pnpm dev:wxapp` 并在微信开发者工具中打开项目）。
 2. 切换到注册。
 3. 输入业主手机号、用户名、密码、确认密码。
 4. 点击获取验证码。

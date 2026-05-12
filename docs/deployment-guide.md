@@ -149,11 +149,4 @@ git pull origin main
 bash scripts/deploy.sh --domain www.your.domain --email 你的邮箱@example.com
 ```
 
-如需构建并上传 APK：
-
-```bash
-pnpm mobile:build:apk
-# 本地构建后上传
-scp apps/mobile/android/app/build/outputs/apk/release/app-release.apk \
-  root@your-server-ip:~/tenant-hub/apk/tenant-hub-v1.0.0.apk
-```
+小程序端通过 Taro 构建后，在微信开发者工具上传代码并提交审核。

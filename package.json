@@ -5,7 +5,6 @@
   "description": "轻量化公寓管理系统 monorepo",
   "scripts": {
     "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/ops-web dev",
-    "dev:mobile": "pnpm --filter @tenant-hub/mobile dev",
     "dev:wxapp": "pnpm --filter @tenant-hub/wxapp dev:weapp",
     "build:wxapp": "pnpm --filter @tenant-hub/wxapp build:weapp",
     "build": "pnpm -r build",
@@ -17,10 +16,6 @@
     "format:check": "pnpm -r format:check",
     "db:generate": "pnpm --filter @tenant-hub/api prisma generate",
     "db:migrate": "pnpm --filter @tenant-hub/api prisma migrate dev",
-    "mobile:build:apk": "pnpm --filter @tenant-hub/mobile android:apk",
-    "mobile:test": "pnpm --filter @tenant-hub/mobile test",
-    "mobile:typecheck": "pnpm --filter @tenant-hub/mobile typecheck",
-    "mobile:lint": "pnpm --filter @tenant-hub/mobile lint",
     "prepare": "husky",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
