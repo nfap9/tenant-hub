@@ -259,6 +259,18 @@ docker rmi tenant-hub-ops-web-build >/dev/null 2>&1 || true
 ok "ops-web 构建完成"
 
 info "[6/6] 启动 Docker 服务..."
+
+# 检查系统 nginx 是否占用 80/443 端口（nginx 容器需要这些端口）
+if systemctl is-active --quiet nginx 2>/dev/null; then
+    warn "检测到系统 nginx 正在运行，将自动停止并禁用..."
+    sudo systemctl stop nginx
+    sudo systemctl disable nginx
+    ok "系统 nginx 已停止并禁用"
+fi
+
+# 确保 nginx 容器重新创建，避免旧容器端口绑定残留问题
+$DOCKER_CMD compose -f docker-compose.prod.yml rm -sf nginx >/dev/null 2>&1 || true
+
 $DOCKER_CMD compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 
 ok "Docker 服务已启动"
@@ -331,14 +343,6 @@ else
         echo "  3. 手动执行: sudo certbot certonly --webroot -w /var/www/certbot -d $DOMAIN --non-interactive --agree-tos --email $EMAIL"
         echo ""
     fi
-fi
-
-# 检查系统 nginx 是否占用 80/443 端口（nginx 容器需要这些端口）
-if sudo ss -tlnp | grep -q ":80\|:443"; then
-    warn "检测到系统服务占用了 80/443 端口"
-    echo "新架构中 nginx 运行在 Docker 容器中，需要独占 80/443 端口。"
-    echo "请手动执行: sudo systemctl stop nginx && sudo systemctl disable nginx"
-    echo ""
 fi
 
 # ============================================
