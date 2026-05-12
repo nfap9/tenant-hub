@@ -283,6 +283,27 @@ docker compose -f docker-compose.dev.yml restart api
   - `MeterReading`, `Plan`, `Subscription`, `OrgQuotaPackage`, `SystemSetting`
 - **重要枚举**：`BillStatus`, `LeaseStatus`, `RentCycle`, `BillItemType`, `PlatformRole`, `MeterType`, `MeterReadingSource`…
 
+### 8.1 Schema 变更规范（必须遵守）
+
+> **任何对 `schema.prisma` 的修改，必须通过 `prisma migrate dev` 生成 migration 文件，禁止在生产环境使用 `prisma db push`。**
+
+**正确流程**：
+1. 修改 `schema.prisma`
+2. 确保本地 PostgreSQL 已启动（`docker compose -f docker-compose.dev.yml up postgres`）
+3. 运行 `pnpm --filter @tenant-hub/api prisma migrate dev --name <描述性名称>`
+4. 检查生成的 `migrations/YYYYMMDDHHMMSS_<name>/migration.sql` 是否合理
+5. 将 migration 文件与 schema 变更一起提交到 Git
+
+**为什么重要**：
+- 生产环境的 Docker 容器启动时执行的是 `prisma migrate deploy`，它只运行 `migrations/` 目录中已有的 migration 文件
+- 如果只有 schema 变更而没有对应的 migration 文件，生产数据库将永远不会被更新，导致运行时查询不存在的字段（如 `deletedAt`）而抛出 500 错误
+- `prisma db push` 适合本地快速原型开发，但它不会生成 migration 文件，也无法在生产环境追踪和回滚变更
+
+**禁止事项**：
+- ❌ 直接修改 `schema.prisma` 后提交代码，不生成 migration
+- ❌ 在生产环境容器内使用 `prisma db push`
+- ❌ 手动修改 `migrations/` 目录中的 SQL 文件后，不重新验证迁移是否能干净执行
+
 ---
 
 ## 9. CI/CD
