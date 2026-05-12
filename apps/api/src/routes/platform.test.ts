@@ -3,13 +3,13 @@ import request from "supertest";
 import { app } from "../app.js";
 import { prisma } from "../config/prisma.js";
 
-describe("GET /platform/info", () => {
+describe("GET /api/platform/info", () => {
   beforeEach(async () => {
     await prisma.systemSetting.deleteMany({ where: { key: "platform_info" } });
   });
 
   it("returns defaults when platform_info is not set", async () => {
-    const res = await request(app).get("/platform/info");
+    const res = await request(app).get("/api/platform/info");
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       data: { name: "Tenant Hub", logoUrl: "", contactPhone: "" }
@@ -25,7 +25,7 @@ describe("GET /platform/info", () => {
       }
     });
 
-    const res = await request(app).get("/platform/info");
+    const res = await request(app).get("/api/platform/info");
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       data: { name: "安居管家", logoUrl: "https://example.com/logo.png", contactPhone: "400-123-4567" }
@@ -41,7 +41,7 @@ describe("GET /platform/info", () => {
       }
     });
 
-    const res = await request(app).get("/platform/info");
+    const res = await request(app).get("/api/platform/info");
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       data: { name: "Tenant Hub", logoUrl: "https://example.com/logo.png", contactPhone: "" }

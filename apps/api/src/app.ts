@@ -34,5 +34,5 @@ app.use("/api/apartments", apartmentRouter);
 app.use("/api/leases", leaseRouter);
 app.use("/api/bills", billRouter);
 app.use("/api/admin", adminRouter);
-app.use("/platform", platformRouter);
+app.use("/api/platform", platformRouter);
 app.use(errorHandler);
