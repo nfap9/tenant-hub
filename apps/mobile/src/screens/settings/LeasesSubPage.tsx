@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, View } from "react-native";
-import { Badge, Button, Card, EmptyState, Input } from "../../components/ui";
-import { mobileApi } from "../../services";
-import { styles } from "../../theme/styles";
-import type { Lease, LeaseStatus } from "../../types";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
+import { Badge, Button, Card, EmptyState, Input } from '../../components/ui';
+import { mobileApi } from '../../services';
+import { styles } from '../../theme/styles';
+import type { Lease, LeaseStatus } from '../../types';
 
-type LeaseFilter = "ALL" | "ACTIVE" | "AUTO_RENEWING" | "EXPIRING" | "TERMINATED";
+type LeaseFilter = 'ALL' | 'ACTIVE' | 'AUTO_RENEWING' | 'EXPIRING' | 'TERMINATED';
 
 type Props = {
   token: string;
@@ -15,21 +15,21 @@ type Props = {
 };
 
 const filters: Array<{ key: LeaseFilter; label: string }> = [
-  { key: "ALL", label: "全部" },
-  { key: "ACTIVE", label: "有效" },
-  { key: "AUTO_RENEWING", label: "自动续约" },
-  { key: "EXPIRING", label: "近到期" },
-  { key: "TERMINATED", label: "已终止" }
+  { key: 'ALL', label: '全部' },
+  { key: 'ACTIVE', label: '有效' },
+  { key: 'AUTO_RENEWING', label: '自动续约' },
+  { key: 'EXPIRING', label: '近到期' },
+  { key: 'TERMINATED', label: '已终止' },
 ];
 
 const statusLabels: Record<LeaseStatus, string> = {
-  ACTIVE: "有效",
-  TERMINATED: "已终止",
-  EXPIRED: "已到期"
+  ACTIVE: '有效',
+  TERMINATED: '已终止',
+  EXPIRED: '已到期',
 };
 
 const apiOptions = (organizationId: string): RequestInit => ({
-  headers: { "x-organization-id": organizationId }
+  headers: { 'x-organization-id': organizationId },
 });
 
 const money = (value?: string | number) => Number(value ?? 0).toFixed(2);
@@ -42,29 +42,33 @@ const daysUntil = (value: string) => {
 
 export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }: Props) {
   const [leases, setLeases] = useState<Lease[]>([]);
-  const [filter, setFilter] = useState<LeaseFilter>("ALL");
-  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<LeaseFilter>('ALL');
+  const [query, setQuery] = useState('');
 
   const loadLeases = useCallback(async () => {
     if (!currentOrgId) return;
-    const data = await mobileApi<Lease[]>("/leases", token, apiOptions(currentOrgId));
+    const data = await mobileApi<Lease[]>('/leases', token, apiOptions(currentOrgId));
     setLeases(data);
   }, [currentOrgId, token]);
 
   useEffect(() => {
-    loadLeases().catch((error) => setNotice(error.message));
+    loadLeases().catch(error => setNotice(error.message));
   }, [loadLeases, setNotice]);
 
   const visibleLeases = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return leases.filter((lease) => {
-      const expiringSoon = lease.status === "ACTIVE" && !lease.isAutoRenewalPeriod && daysUntil(lease.endDate) >= 0 && daysUntil(lease.endDate) <= 30;
+    return leases.filter(lease => {
+      const expiringSoon =
+        lease.status === 'ACTIVE' &&
+        !lease.isAutoRenewalPeriod &&
+        daysUntil(lease.endDate) >= 0 &&
+        daysUntil(lease.endDate) <= 30;
       const matchesFilter =
-        filter === "ALL" ||
-        (filter === "ACTIVE" && lease.status === "ACTIVE") ||
-        (filter === "AUTO_RENEWING" && Boolean(lease.isAutoRenewalPeriod)) ||
-        (filter === "EXPIRING" && expiringSoon) ||
-        (filter === "TERMINATED" && lease.status !== "ACTIVE");
+        filter === 'ALL' ||
+        (filter === 'ACTIVE' && lease.status === 'ACTIVE') ||
+        (filter === 'AUTO_RENEWING' && Boolean(lease.isAutoRenewalPeriod)) ||
+        (filter === 'EXPIRING' && expiringSoon) ||
+        (filter === 'TERMINATED' && lease.status !== 'ACTIVE');
 
       if (!matchesFilter) return false;
       if (!normalizedQuery) return true;
@@ -73,29 +77,41 @@ export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }
         lease.tenantName,
         lease.tenantPhone,
         lease.room?.roomNo,
-        lease.room?.apartment?.name
+        lease.room?.apartment?.name,
       ]
         .filter(Boolean)
-        .join(" ")
+        .join(' ')
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
   }, [filter, leases, query]);
 
-  const activeCount = leases.filter((lease) => lease.status === "ACTIVE").length;
-  const autoRenewingCount = leases.filter((lease) => lease.isAutoRenewalPeriod).length;
-  const expiringCount = leases.filter((lease) => lease.status === "ACTIVE" && !lease.isAutoRenewalPeriod && daysUntil(lease.endDate) >= 0 && daysUntil(lease.endDate) <= 30).length;
+  const activeCount = leases.filter(lease => lease.status === 'ACTIVE').length;
+  const autoRenewingCount = leases.filter(lease => lease.isAutoRenewalPeriod).length;
+  const expiringCount = leases.filter(
+    lease =>
+      lease.status === 'ACTIVE' &&
+      !lease.isAutoRenewalPeriod &&
+      daysUntil(lease.endDate) >= 0 &&
+      daysUntil(lease.endDate) <= 30,
+  ).length;
 
   return (
     <>
       <View style={styles.subPageHeader}>
-        <Button variant="ghost" size="small" onPress={onBack} icon="arrow-back-outline">返回</Button>
+        <Button variant="ghost" size="small" onPress={onBack} icon="arrow-back-outline">
+          返回
+        </Button>
         <Text style={styles.sectionTitle}>所有租约</Text>
       </View>
 
       {!currentOrgId ? (
         <Card>
-          <EmptyState icon="🏢" title="尚未选择组织" subtitle="请先从右上角用户菜单中选择一个组织" />
+          <EmptyState
+            icon="🏢"
+            title="尚未选择组织"
+            subtitle="请先从右上角用户菜单中选择一个组织"
+          />
         </Card>
       ) : (
         <>
@@ -116,11 +132,11 @@ export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }
 
           <Input placeholder="搜索租客、电话、房间号或公寓" value={query} onChangeText={setQuery} />
 
-          <View style={[styles.filterBar, { flexWrap: "wrap" }]}>
-            {filters.map((item) => (
+          <View style={[styles.filterBar, { flexWrap: 'wrap' }]}>
+            {filters.map(item => (
               <Button
                 key={item.key}
-                variant={filter === item.key ? "primary" : "ghost"}
+                variant={filter === item.key ? 'primary' : 'ghost'}
                 size="small"
                 onPress={() => setFilter(item.key)}
               >
@@ -130,20 +146,27 @@ export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }
           </View>
 
           <View style={styles.roomGrid}>
-            {visibleLeases.map((lease) => (
+            {visibleLeases.map(lease => (
               <Card key={lease.id} variant="outline" padding="md" gap={10}>
                 <View style={styles.roomHeader}>
                   <View>
-                    <Text style={styles.cardTitle}>{lease.room?.apartment?.name ?? "未关联公寓"} · {lease.room?.roomNo ?? "未关联房间"}</Text>
-                    <Text style={styles.muted}>{lease.tenantName} · {lease.tenantPhone}</Text>
+                    <Text style={styles.cardTitle}>
+                      {lease.room?.apartment?.name ?? '未关联公寓'} ·{' '}
+                      {lease.room?.roomNo ?? '未关联房间'}
+                    </Text>
+                    <Text style={styles.muted}>
+                      {lease.tenantName} · {lease.tenantPhone}
+                    </Text>
                   </View>
-                  <Badge tone={lease.status === "ACTIVE" ? "warning" : "neutral"}>
-                    {lease.isAutoRenewalPeriod ? "自动续约中" : statusLabels[lease.status]}
+                  <Badge tone={lease.status === 'ACTIVE' ? 'warning' : 'neutral'}>
+                    {lease.isAutoRenewalPeriod ? '自动续约中' : statusLabels[lease.status]}
                   </Badge>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.muted}>租期</Text>
-                  <Text style={styles.muted}>{dateOnly(lease.startDate)} 至 {dateOnly(lease.endDate)}</Text>
+                  <Text style={styles.muted}>
+                    {dateOnly(lease.startDate)} 至 {dateOnly(lease.endDate)}
+                  </Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.muted}>租金</Text>
@@ -151,7 +174,14 @@ export default function LeasesSubPage({ token, currentOrgId, setNotice, onBack }
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.muted}>交租</Text>
-                  <Text style={styles.muted}>{lease.cycle === "MONTHLY" ? "月付" : lease.cycle === "QUARTERLY" ? "季付" : "年付"} · 宽限 {lease.graceDays ?? 0} 天</Text>
+                  <Text style={styles.muted}>
+                    {lease.cycle === 'MONTHLY'
+                      ? '月付'
+                      : lease.cycle === 'QUARTERLY'
+                        ? '季付'
+                        : '年付'}{' '}
+                    · 宽限 {lease.graceDays ?? 0} 天
+                  </Text>
                 </View>
               </Card>
             ))}

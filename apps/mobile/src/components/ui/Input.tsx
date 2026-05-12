@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { TextInput, type TextInputProps, type ViewStyle } from "react-native";
-import { colors, radii, spacing, typography } from "../../theme/tokens";
+import { useState } from 'react';
+import { TextInput, type TextInputProps, type ViewStyle } from 'react-native';
+import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 type Props = TextInputProps & {
   style?: ViewStyle;
@@ -14,11 +14,11 @@ export function Input({ style, error = false, placeholderTextColor, ...props }: 
     <TextInput
       {...props}
       placeholderTextColor={placeholderTextColor ?? colors.textPlaceholder}
-      onFocus={(e) => {
+      onFocus={e => {
         setFocused(true);
         props.onFocus?.(e);
       }}
-      onBlur={(e) => {
+      onBlur={e => {
         setFocused(false);
         props.onBlur?.(e);
       }}
@@ -34,9 +34,9 @@ export function Input({ style, error = false, placeholderTextColor, ...props }: 
           color: colors.text,
           fontSize: typography.body.fontSize,
           lineHeight: typography.body.lineHeight,
-          textAlignVertical: props.multiline ? "top" : "center"
+          textAlignVertical: props.multiline ? 'top' : 'center',
         },
-        style
+        style,
       ]}
     />
   );

@@ -1,9 +1,9 @@
-import type { IconName } from "../components/ui/Icon";
-import type { TabKey } from "../types/navigation";
+import type { IconName } from '../components/ui/Icon';
+import type { TabKey } from '../types/navigation';
 
-export type BillTabKey = "unpaid" | "pending" | "all";
-export type BillActionKey = "payment";
-export type RoomActionKey = "lease";
+export type BillTabKey = 'unpaid' | 'pending' | 'all';
+export type BillActionKey = 'payment';
+export type RoomActionKey = 'lease';
 
 export type HomeNavigationIntent = {
   tab: TabKey;
@@ -21,21 +21,21 @@ export type HomeQuickAction = {
 
 export const homeQuickActions: HomeQuickAction[] = [
   {
-    key: "payment",
-    title: "登记收款",
-    icon: "cash-outline",
-    intent: { tab: "bills", billsTab: "unpaid", billsAction: "payment" }
+    key: 'payment',
+    title: '登记收款',
+    icon: 'cash-outline',
+    intent: { tab: 'bills', billsTab: 'unpaid', billsAction: 'payment' },
   },
   {
-    key: "lease",
-    title: "签约入住",
-    icon: "create-outline",
-    intent: { tab: "rooms", roomsAction: "lease" }
+    key: 'lease',
+    title: '签约入住',
+    icon: 'create-outline',
+    intent: { tab: 'rooms', roomsAction: 'lease' },
   },
   {
-    key: "meter",
-    title: "抄表",
-    icon: "speedometer-outline",
-    intent: { tab: "bills", billsTab: "pending" }
-  }
+    key: 'meter',
+    title: '抄表',
+    icon: 'speedometer-outline',
+    intent: { tab: 'bills', billsTab: 'pending' },
+  },
 ];

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, View } from "react-native";
-import { Badge, Button, Card, EmptyState, Icon } from "../../components/ui";
-import { homeQuickActions, type HomeNavigationIntent } from "../../navigation/homeQuickActions";
-import { mobileApi } from "../../services";
-import { colors } from "../../theme/tokens";
-import { styles } from "../../theme/styles";
-import type { Apartment, Bill, Lease, MonthlyBill, Room } from "../../types";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
+import { Badge, Button, Card, EmptyState, Icon } from '../../components/ui';
+import { homeQuickActions, type HomeNavigationIntent } from '../../navigation/homeQuickActions';
+import { mobileApi } from '../../services';
+import { colors } from '../../theme/tokens';
+import { styles } from '../../theme/styles';
+import type { Apartment, Bill, Lease, MonthlyBill, Room } from '../../types';
 
 type Props = {
   token: string;
@@ -14,7 +14,7 @@ type Props = {
   onNavigate: (_intent: HomeNavigationIntent) => void;
 };
 
-type TodoTone = "danger" | "warning" | "calm";
+type TodoTone = 'danger' | 'warning' | 'calm';
 
 type TodoItem = {
   key: string;
@@ -24,10 +24,10 @@ type TodoItem = {
   tone: TodoTone;
 };
 
-const apiOptions = (organizationId: string, method = "GET", body?: unknown): RequestInit => ({
+const apiOptions = (organizationId: string, method = 'GET', body?: unknown): RequestInit => ({
   method,
-  headers: { "x-organization-id": organizationId },
-  ...(body ? { body: JSON.stringify(body) } : {})
+  headers: { 'x-organization-id': organizationId },
+  ...(body ? { body: JSON.stringify(body) } : {}),
 });
 
 const money = (value?: string | number) => Number(value ?? 0).toFixed(2);
@@ -48,26 +48,35 @@ const daysUntil = (value: string) => {
 };
 const monthlyAmount = (value: string | number, cycle?: string) => {
   const amount = Number(value ?? 0);
-  if (cycle === "QUARTERLY") return amount / 3;
-  if (cycle === "YEARLY") return amount / 12;
+  if (cycle === 'QUARTERLY') return amount / 3;
+  if (cycle === 'YEARLY') return amount / 12;
   return amount;
 };
-const activeLeaseOf = (room: Room) => room.leases?.find((lease) => lease.status === "ACTIVE");
+const activeLeaseOf = (room: Room) => room.leases?.find(lease => lease.status === 'ACTIVE');
 const leaseMonthlyIncome = (lease: Lease) => {
   const rent = monthlyAmount(lease.rentAmount, lease.cycle);
-  const fees = (lease.fees ?? []).reduce((sum, fee) => sum + monthlyAmount(fee.amount, lease.cycle), 0);
+  const fees = (lease.fees ?? []).reduce(
+    (sum, fee) => sum + monthlyAmount(fee.amount, lease.cycle),
+    0,
+  );
   return rent + fees;
 };
-const isUnpaid = (bill: MonthlyBill) => bill.status !== "PAID" && bill.status !== "VOID";
-const isOverdue = (bill: MonthlyBill) => isUnpaid(bill) && bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
+const isUnpaid = (bill: MonthlyBill) => bill.status !== 'PAID' && bill.status !== 'VOID';
+const isOverdue = (bill: MonthlyBill) =>
+  isUnpaid(bill) && bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
 
 const todoTone = (tone: TodoTone) => {
-  if (tone === "danger") return "danger" as const;
-  if (tone === "warning") return "warning" as const;
-  return "primary" as const;
+  if (tone === 'danger') return 'danger' as const;
+  if (tone === 'warning') return 'warning' as const;
+  return 'primary' as const;
 };
 
-export default function HomeScreen({ token, organizationId, setNotice, onNavigate: _onNavigate }: Props) {
+export default function HomeScreen({
+  token,
+  organizationId,
+  setNotice,
+  onNavigate: _onNavigate,
+}: Props) {
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
@@ -78,19 +87,20 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
     if (!organizationId) return;
     setLoading(true);
     try {
-      const [nextApartments, nextRooms, nextMonthlyBills, failedBills, billingBills] = await Promise.all([
-        mobileApi<Apartment[]>("/apartments", token, apiOptions(organizationId)),
-        mobileApi<Room[]>("/apartments/rooms", token, apiOptions(organizationId)),
-        mobileApi<MonthlyBill[]>("/bills/monthly", token, apiOptions(organizationId)),
-        mobileApi<Bill[]>("/bills?status=FAILED", token, apiOptions(organizationId)),
-        mobileApi<Bill[]>("/bills?status=BILLING", token, apiOptions(organizationId))
-      ]);
+      const [nextApartments, nextRooms, nextMonthlyBills, failedBills, billingBills] =
+        await Promise.all([
+          mobileApi<Apartment[]>('/apartments', token, apiOptions(organizationId)),
+          mobileApi<Room[]>('/apartments/rooms', token, apiOptions(organizationId)),
+          mobileApi<MonthlyBill[]>('/bills/monthly', token, apiOptions(organizationId)),
+          mobileApi<Bill[]>('/bills?status=FAILED', token, apiOptions(organizationId)),
+          mobileApi<Bill[]>('/bills?status=BILLING', token, apiOptions(organizationId)),
+        ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
       setMonthlyBills(nextMonthlyBills);
-      setReviewBills([...failedBills, ...billingBills].filter((bill) => bill.mode === "POSTPAID"));
+      setReviewBills([...failedBills, ...billingBills].filter(bill => bill.mode === 'POSTPAID'));
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "首页数据加载失败");
+      setNotice(error instanceof Error ? error.message : '首页数据加载失败');
     } finally {
       setLoading(false);
     }
@@ -100,28 +110,33 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
     loadData();
   }, [loadData]);
 
-  const activeLeases = useMemo(() => rooms.flatMap((room) => room.leases ?? []).filter((lease) => lease.status === "ACTIVE"), [rooms]);
-  const occupiedCount = rooms.filter((room) => room.status === "OCCUPIED").length;
-  const vacantCount = rooms.filter((room) => room.status === "VACANT").length;
+  const activeLeases = useMemo(
+    () => rooms.flatMap(room => room.leases ?? []).filter(lease => lease.status === 'ACTIVE'),
+    [rooms],
+  );
+  const occupiedCount = rooms.filter(room => room.status === 'OCCUPIED').length;
+  const vacantCount = rooms.filter(room => room.status === 'VACANT').length;
   const occupancyRate = rooms.length ? Math.round((occupiedCount / rooms.length) * 100) : 0;
   const monthlyIncome = activeLeases.reduce((sum, lease) => sum + leaseMonthlyIncome(lease), 0);
   const thisMonthExpense = apartments
-    .flatMap((apartment) => apartment.expenses ?? [])
-    .filter((expense) => isThisMonth(expense.spentAt))
+    .flatMap(apartment => apartment.expenses ?? [])
+    .filter(expense => isThisMonth(expense.spentAt))
     .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
-  const unpaidTotal = monthlyBills.filter(isUnpaid).reduce((sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount), 0);
+  const unpaidTotal = monthlyBills
+    .filter(isUnpaid)
+    .reduce((sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount), 0);
   const paidThisMonth = monthlyBills
-    .filter((bill) => isThisMonth(bill.billingDate))
+    .filter(bill => isThisMonth(bill.billingDate))
     .reduce((sum, bill) => sum + Number(bill.paidAmount ?? 0), 0);
   const overdueBills = monthlyBills.filter(isOverdue);
   const expiringLeases = activeLeases
-    .map((lease) => ({ lease, remainingDays: daysUntil(lease.endDate) }))
-    .filter((item) => item.remainingDays >= 0 && item.remainingDays <= 30)
+    .map(lease => ({ lease, remainingDays: daysUntil(lease.endDate) }))
+    .filter(item => item.remainingDays >= 0 && item.remainingDays <= 30)
     .sort((left, right) => left.remainingDays - right.remainingDays);
   const topApartments = apartments
-    .map((apartment) => {
+    .map(apartment => {
       const apartmentRooms = apartment.rooms ?? [];
-      const apartmentOccupied = apartmentRooms.filter((room) => room.status === "OCCUPIED").length;
+      const apartmentOccupied = apartmentRooms.filter(room => room.status === 'OCCUPIED').length;
       const apartmentIncome = apartmentRooms.reduce((sum, room) => {
         const lease = activeLeaseOf(room);
         return lease ? sum + leaseMonthlyIncome(lease) : sum;
@@ -133,40 +148,40 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
   const todos: TodoItem[] = [
     overdueBills.length
       ? {
-          key: "overdue",
-          title: "逾期账单",
+          key: 'overdue',
+          title: '逾期账单',
           detail: `${overdueBills.length} 张账单已过应收日，剩余待收 ¥${compactMoney(overdueBills.reduce((sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount), 0))}`,
-          badge: "收款",
-          tone: "danger"
+          badge: '收款',
+          tone: 'danger',
         }
       : undefined,
     reviewBills.length
       ? {
-          key: "review",
-          title: "后付费出账处理",
+          key: 'review',
+          title: '后付费出账处理',
           detail: `${reviewBills.length} 张水电账单需要补读数或重新出账`,
-          badge: "出账",
-          tone: "warning"
+          badge: '出账',
+          tone: 'warning',
         }
       : undefined,
     expiringLeases.length
       ? {
-          key: "lease",
-          title: "租约即将到期",
+          key: 'lease',
+          title: '租约即将到期',
           detail: `${expiringLeases[0].lease.tenantName} ${expiringLeases[0].remainingDays} 天后到期，共 ${expiringLeases.length} 份需跟进`,
-          badge: "续租",
-          tone: "warning"
+          badge: '续租',
+          tone: 'warning',
         }
       : undefined,
     vacantCount
       ? {
-          key: "vacant",
-          title: "空房可出租",
+          key: 'vacant',
+          title: '空房可出租',
           detail: `${vacantCount} 间空房可继续签约，当前出租率 ${occupancyRate}%`,
-          badge: "招租",
-          tone: "calm"
+          badge: '招租',
+          tone: 'calm',
         }
-      : undefined
+      : undefined,
   ].filter(Boolean) as TodoItem[];
 
   if (!organizationId) {
@@ -185,8 +200,15 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
             <Text style={styles.homeEyebrow}>本月经营概览</Text>
             <Text style={styles.homeHeroValue}>¥{compactMoney(monthlyIncome)}</Text>
           </View>
-          <Button variant="secondary" size="small" loading={loading} disabled={loading} onPress={loadData} icon="refresh-outline">
-            {loading ? "刷新中" : "刷新"}
+          <Button
+            variant="secondary"
+            size="small"
+            loading={loading}
+            disabled={loading}
+            onPress={loadData}
+            icon="refresh-outline"
+          >
+            {loading ? '刷新中' : '刷新'}
           </Button>
         </View>
         <View style={styles.homeHeroGrid}>
@@ -222,7 +244,7 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
 
       <Card title="常用操作" subtitle="快速进入高频功能">
         <View style={styles.quickActionGrid}>
-          {homeQuickActions.map((action) => (
+          {homeQuickActions.map(action => (
             <View key={action.key} style={styles.quickActionCard}>
               <View style={styles.quickActionIcon}>
                 <Icon name={action.icon} size={22} color={colors.primary} />
@@ -245,7 +267,9 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
             </View>
             <View style={styles.homeApartmentStat}>
               <Text style={styles.cardStat}>¥{compactMoney(apartmentIncome)}</Text>
-              <Text style={styles.statLabel}>{apartmentOccupied}/{apartmentRooms.length} 间</Text>
+              <Text style={styles.statLabel}>
+                {apartmentOccupied}/{apartmentRooms.length} 间
+              </Text>
             </View>
           </View>
         ))}
@@ -255,7 +279,7 @@ export default function HomeScreen({ token, organizationId, setNotice, onNavigat
         {todos.length === 0 ? (
           <EmptyState icon="✅" title="暂无紧急待办" subtitle="经营状态稳定" />
         ) : null}
-        {todos.map((todo) => (
+        {todos.map(todo => (
           <View key={todo.key} style={styles.todoItem}>
             <View style={styles.todoContent}>
               <Text style={styles.cardTitle}>{todo.title}</Text>

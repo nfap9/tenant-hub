@@ -1,14 +1,20 @@
-import { Text, View } from "react-native";
-import { colors, radii, spacing } from "../theme/tokens";
-import { Icon } from "../components/ui/Icon";
-import { PressableScale } from "../components/ui/PressableScale";
-import type { TabKey } from "../types/navigation";
-import { tabItems } from "./tabs";
+import { Text, View } from 'react-native';
+import { colors, radii, spacing } from '../theme/tokens';
+import { Icon } from '../components/ui/Icon';
+import { PressableScale } from '../components/ui/PressableScale';
+import type { TabKey } from '../types/navigation';
+import { tabItems } from './tabs';
 
-export default function MainTabBar({ active, onChange }: { active: TabKey; onChange: (key: TabKey) => void }) {
+export default function MainTabBar({
+  active,
+  onChange,
+}: {
+  active: TabKey;
+  onChange: (key: TabKey) => void;
+}) {
   return (
     <View style={styles.tabbar}>
-      {tabItems.map((tab) => {
+      {tabItems.map(tab => {
         const isActive = active === tab.key;
         return (
           <PressableScale
@@ -17,7 +23,11 @@ export default function MainTabBar({ active, onChange }: { active: TabKey; onCha
             onPress={() => onChange(tab.key)}
             style={[styles.tab, isActive && styles.tabActive]}
           >
-            <Icon name={isActive ? tab.iconActive : tab.icon} size={22} color={isActive ? colors.white : colors.textPlaceholder} />
+            <Icon
+              name={isActive ? tab.iconActive : tab.icon}
+              size={22}
+              color={isActive ? colors.white : colors.textPlaceholder}
+            />
             <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
           </PressableScale>
         );
@@ -28,7 +38,7 @@ export default function MainTabBar({ active, onChange }: { active: TabKey; onCha
 
 const styles = {
   tabbar: {
-    position: "absolute" as const,
+    position: 'absolute' as const,
     left: 0,
     right: 0,
     bottom: 0,
@@ -38,18 +48,18 @@ const styles = {
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.borderLighter,
-    flexDirection: "row" as const,
-    gap: spacing[1.5]
+    flexDirection: 'row' as const,
+    gap: spacing[1.5],
   },
   tab: {
     flex: 1,
     borderRadius: radii.md,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     gap: spacing[0.5],
-    paddingVertical: spacing[1]
+    paddingVertical: spacing[1],
   },
   tabActive: { backgroundColor: colors.primary },
   tabText: { color: colors.textPlaceholder, fontSize: 12, lineHeight: 16 },
-  tabTextActive: { color: colors.white, fontWeight: "700" as const }
+  tabTextActive: { color: colors.white, fontWeight: '700' as const },
 };

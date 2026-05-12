@@ -1,5 +1,5 @@
-import { StyleSheet } from "react-native";
-import { colors, layout, radii, shadows, spacing, typography } from "./tokens";
+import { StyleSheet } from 'react-native';
+import { colors, layout, radii, shadows, spacing, typography } from './tokens';
 
 export const styles = StyleSheet.create({
   // ============================================
@@ -10,7 +10,7 @@ export const styles = StyleSheet.create({
   content: {
     padding: spacing[4],
     gap: spacing[3],
-    paddingBottom: layout.contentBottomPadding
+    paddingBottom: layout.contentBottomPadding,
   },
 
   // ============================================
@@ -20,29 +20,29 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing[5],
     paddingVertical: spacing[3],
     backgroundColor: colors.primaryDark,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing[3]
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing[3],
   },
 
   headerTitleBlock: { flex: 1, minWidth: 0 },
 
   headerTitle: { ...typography.h5, color: colors.white },
 
-  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing[2], flexShrink: 0 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], flexShrink: 0 },
 
   // ============================================
   // User pill & avatar
   // ============================================
   userPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing[2],
     padding: spacing[1],
     paddingRight: spacing[2.5],
     borderRadius: radii.full,
-    backgroundColor: colors.primaryDark
+    backgroundColor: colors.primaryDark,
   },
 
   avatar: {
@@ -50,15 +50,15 @@ export const styles = StyleSheet.create({
     height: 32,
     borderRadius: radii.full,
     backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center"
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  avatarText: { color: colors.primaryDark, fontWeight: "700" },
+  avatarText: { color: colors.primaryDark, fontWeight: '700' },
 
   userPillText: { maxWidth: 112 },
 
-  userName: { color: colors.white, fontWeight: "700" },
+  userName: { color: colors.white, fontWeight: '700' },
 
   userOrgName: { color: colors.accentLight, fontSize: typography.caption.fontSize, marginTop: 1 },
 
@@ -66,7 +66,7 @@ export const styles = StyleSheet.create({
   // User menu dropdown
   // ============================================
   userMenu: {
-    position: "absolute",
+    position: 'absolute',
     top: layout.headerHeight + spacing[1.5],
     right: spacing[3],
     zIndex: 10,
@@ -77,7 +77,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
     ...shadows.elevated,
-    gap: spacing[2]
+    gap: spacing[2],
   },
 
   userMenuName: { color: colors.text, ...typography.h6 },
@@ -93,23 +93,23 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing[2]
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing[2],
   },
 
   menuOrgItemActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
 
-  menuOrgName: { color: colors.text, fontWeight: "700" },
+  menuOrgName: { color: colors.text, fontWeight: '700' },
 
-  menuLogout: { minHeight: 36, alignItems: "center", justifyContent: "center" },
+  menuLogout: { minHeight: 36, alignItems: 'center', justifyContent: 'center' },
 
   // ============================================
   // Login
   // ============================================
   loginShell: { flex: 1, backgroundColor: colors.primaryDark },
 
-  loginContent: { flexGrow: 1, justifyContent: "center", padding: spacing[4.5], gap: spacing[3] },
+  loginContent: { flexGrow: 1, justifyContent: 'center', padding: spacing[4.5], gap: spacing[3] },
 
   loginContentCompact: { paddingVertical: spacing[2.5], gap: spacing[2] },
 
@@ -126,7 +126,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     borderRadius: radii.lg,
     gap: spacing[1.5],
-    ...shadows.elevated
+    ...shadows.elevated,
   },
 
   // ============================================
@@ -141,7 +141,7 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: colors.primaryLightest,
     color: colors.primary,
-    ...typography.bodySmall
+    ...typography.bodySmall,
   },
 
   label: { color: colors.textSecondary, ...typography.bodySmall },
@@ -156,12 +156,12 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
     color: colors.text,
     backgroundColor: colors.surface,
-    ...typography.body
+    ...typography.body,
   },
 
-  textarea: { minHeight: 88, paddingTop: spacing[3], textAlignVertical: "top" },
+  textarea: { minHeight: 88, paddingTop: spacing[3], textAlignVertical: 'top' },
 
-  codeRow: { flexDirection: "row", gap: spacing[2] },
+  codeRow: { flexDirection: 'row', gap: spacing[2] },
 
   codeInput: { flex: 1 },
 
@@ -174,9 +174,9 @@ export const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radii.md,
     backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing[3]
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing[3],
   },
 
   buttonDisabled: { opacity: 0.48 },
@@ -188,14 +188,14 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing[3]
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing[3],
   },
 
   secondaryButtonText: { color: colors.primary, ...typography.body },
 
-  switchAuthButton: { minHeight: 28, alignItems: "center", justifyContent: "center" },
+  switchAuthButton: { minHeight: 28, alignItems: 'center', justifyContent: 'center' },
 
   switchAuthText: { color: colors.primary, ...typography.bodySmall },
 
@@ -205,8 +205,8 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center"
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   smallButton: {
@@ -215,10 +215,10 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
-    backgroundColor: colors.surface
+    backgroundColor: colors.surface,
   },
 
   smallButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
@@ -233,13 +233,18 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.danger,
-    alignItems: "center",
-    justifyContent: "center"
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   smallDangerText: { color: colors.danger, ...typography.bodySmall },
 
-  backButton: { paddingHorizontal: spacing[2.5], paddingVertical: spacing[1.5], borderRadius: radii.md, backgroundColor: colors.primaryLightest },
+  backButton: {
+    paddingHorizontal: spacing[2.5],
+    paddingVertical: spacing[1.5],
+    borderRadius: radii.md,
+    backgroundColor: colors.primaryLightest,
+  },
 
   backButtonText: { color: colors.primary, ...typography.bodySmall },
 
@@ -247,9 +252,9 @@ export const styles = StyleSheet.create({
     minHeight: 34,
     paddingHorizontal: spacing[3],
     borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primaryLight
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
   },
 
   refreshButtonText: { color: colors.text, ...typography.bodySmall },
@@ -264,17 +269,17 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
     gap: spacing[2.5],
-    ...shadows.card
+    ...shadows.card,
   },
 
   card: {
     padding: spacing[3.5],
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: spacing[3],
-    ...shadows.card
+    ...shadows.card,
   },
 
   detailPanel: {
@@ -283,7 +288,7 @@ export const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    gap: spacing[2]
+    gap: spacing[2],
   },
 
   apartmentListCard: {
@@ -292,7 +297,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.borderLight,
     borderRadius: radii.lg,
     gap: spacing[2.5],
-    backgroundColor: colors.surfaceWarm2
+    backgroundColor: colors.surfaceWarm2,
   },
 
   roomCard: {
@@ -300,10 +305,14 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
     gap: spacing[2.5],
-    ...shadows.card
+    ...shadows.card,
   },
 
-  roomCardActive: { borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.primaryLightest },
+  roomCardActive: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLightest,
+  },
 
   billCard: {
     padding: spacing[3.5],
@@ -312,7 +321,7 @@ export const styles = StyleSheet.create({
     gap: spacing[2.5],
     borderWidth: 1,
     borderColor: colors.borderLight,
-    ...shadows.subtle
+    ...shadows.subtle,
   },
 
   planCard: {
@@ -321,7 +330,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.borderLight,
     borderRadius: radii.lg,
     gap: spacing[2.5],
-    backgroundColor: colors.surfaceWarm2
+    backgroundColor: colors.surfaceWarm2,
   },
 
   planCardActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
@@ -332,7 +341,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.borderLight,
     borderRadius: radii.lg,
     gap: spacing[2.5],
-    backgroundColor: colors.surfaceWarm2
+    backgroundColor: colors.surfaceWarm2,
   },
 
   leaseCandidateCard: {
@@ -341,11 +350,11 @@ export const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing[3],
-    ...shadows.subtle
+    ...shadows.subtle,
   },
 
   // ============================================
@@ -367,12 +376,17 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.primaryLighter,
     color: colors.primary,
     ...typography.bodySmall,
-    fontWeight: "700"
+    fontWeight: '700',
   },
 
   noticeText: { color: colors.text, ...typography.bodyLarge },
 
-  emptyText: { color: colors.textPlaceholder, textAlign: "center", marginTop: spacing[6], ...typography.body },
+  emptyText: {
+    color: colors.textPlaceholder,
+    textAlign: 'center',
+    marginTop: spacing[6],
+    ...typography.body,
+  },
 
   // ============================================
   // Status badges (legacy — migrate to <Badge>)
@@ -382,8 +396,8 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing[0.5],
     borderRadius: radii.full,
     fontSize: 12,
-    fontWeight: "700",
-    overflow: "hidden"
+    fontWeight: '700',
+    overflow: 'hidden',
   },
 
   statusVacant: { backgroundColor: colors.successLight, color: colors.success },
@@ -401,8 +415,8 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.primaryLighter,
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "700",
-    overflow: "hidden"
+    fontWeight: '700',
+    overflow: 'hidden',
   },
 
   todoBadgeDanger: { backgroundColor: colors.dangerLight, color: colors.danger },
@@ -415,19 +429,19 @@ export const styles = StyleSheet.create({
   // Segment control
   // ============================================
   segment: {
-    flexDirection: "row",
+    flexDirection: 'row',
     padding: spacing[0.75],
     borderRadius: radii.md,
     backgroundColor: colors.neutralLight,
-    gap: spacing[0.75]
+    gap: spacing[0.75],
   },
 
   segmentItem: {
     flex: 1,
     minHeight: 36,
     borderRadius: radii.sm,
-    alignItems: "center",
-    justifyContent: "center"
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   segmentItemActive: { backgroundColor: colors.surface },
@@ -439,15 +453,28 @@ export const styles = StyleSheet.create({
   // ============================================
   // Metrics & stats
   // ============================================
-  metricRow: { flexDirection: "row", gap: spacing[2.5] },
+  metricRow: { flexDirection: 'row', gap: spacing[2.5] },
 
-  metric: { flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing[3], ...shadows.card },
+  metric: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing[3],
+    ...shadows.card,
+  },
 
   metricValue: { marginTop: spacing[1], ...typography.metric, color: colors.text },
 
-  statRow: { flexDirection: "row", gap: spacing[2.5] },
+  statRow: { flexDirection: 'row', gap: spacing[2.5] },
 
-  statBlock: { flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing[3.5], gap: spacing[1.5], ...shadows.card },
+  statBlock: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing[3.5],
+    gap: spacing[1.5],
+    ...shadows.card,
+  },
 
   statValue: { ...typography.stat, color: colors.text },
 
@@ -457,7 +484,7 @@ export const styles = StyleSheet.create({
   // Tab bar
   // ============================================
   tabbar: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
     bottom: layout.tabBarBottomOffset,
@@ -466,17 +493,23 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.borderLighter,
-    flexDirection: "row",
-    gap: spacing[1.5]
+    flexDirection: 'row',
+    gap: spacing[1.5],
   },
 
-  tab: { flex: 1, borderRadius: radii.md, alignItems: "center", justifyContent: "center", gap: spacing[0.5] },
+  tab: {
+    flex: 1,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[0.5],
+  },
 
   tabActive: { backgroundColor: colors.primary },
 
   tabText: { color: colors.textPlaceholder, fontSize: 12, lineHeight: 16 },
 
-  tabTextActive: { color: colors.white, fontWeight: "700" },
+  tabTextActive: { color: colors.white, fontWeight: '700' },
 
   // ============================================
   // Home screen
@@ -485,7 +518,7 @@ export const styles = StyleSheet.create({
     padding: spacing[4],
     borderRadius: radii.lg,
     backgroundColor: colors.primaryDark,
-    gap: spacing[3.5]
+    gap: spacing[3.5],
   },
 
   homeEyebrow: { color: colors.accent, ...typography.labelSmall },
@@ -493,12 +526,12 @@ export const styles = StyleSheet.create({
   homeHeroValue: { marginTop: spacing[1], color: colors.white, ...typography.h1 },
 
   homeHeroGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: spacing[2.5],
     paddingTop: spacing[3],
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.22)"
+    borderTopColor: 'rgba(255,255,255,0.22)',
   },
 
   homeHeroLabel: { color: colors.accentLight, ...typography.labelSmall },
@@ -509,11 +542,11 @@ export const styles = StyleSheet.create({
     padding: spacing[3.5],
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing[2.5],
-    ...shadows.subtle
+    ...shadows.subtle,
   },
 
   todoContent: { flex: 1, gap: spacing[1] },
@@ -522,21 +555,21 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing[2.5],
     borderTopWidth: 1,
     borderTopColor: colors.divider,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing[3]
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[3],
   },
 
   homeApartmentMain: { flex: 1, gap: spacing[0.75] },
 
-  homeApartmentStat: { alignItems: "flex-end", gap: spacing[0.75] },
+  homeApartmentStat: { alignItems: 'flex-end', gap: spacing[0.75] },
 
   quickActionTitle: { color: colors.textMuted, ...typography.labelSmall },
 
-  quickActionGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[3] },
+  quickActionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[3] },
 
-  quickActionCard: { width: 64, alignItems: "center", gap: spacing[1.5] },
+  quickActionCard: { width: 64, alignItems: 'center', gap: spacing[1.5] },
 
   quickActionIcon: {
     width: 44,
@@ -545,26 +578,31 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.primaryLightest,
-    alignItems: "center",
-    justifyContent: "center"
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  quickActionIconText: { color: colors.primary, fontSize: 18, fontWeight: "700" },
+  quickActionIconText: { color: colors.primary, fontSize: 18, fontWeight: '700' },
 
-  quickActionLabel: { color: colors.text, fontSize: 12, fontWeight: "700", textAlign: "center" },
+  quickActionLabel: { color: colors.text, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   // ============================================
   // Rooms screen
   // ============================================
   roomGrid: { gap: spacing[2.5] },
 
-  roomHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
+  roomHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
 
-  roomHeaderBadges: { alignItems: "flex-end", gap: spacing[1], flexShrink: 0 },
+  roomHeaderBadges: { alignItems: 'flex-end', gap: spacing[1], flexShrink: 0 },
 
-  roomActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  roomActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
 
-  filterBar: { flexDirection: "row", gap: spacing[2] },
+  filterBar: { flexDirection: 'row', gap: spacing[2] },
 
   filterButton: {
     paddingHorizontal: spacing[3],
@@ -572,7 +610,7 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface
+    backgroundColor: colors.surface,
   },
 
   filterButtonActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
@@ -588,22 +626,27 @@ export const styles = StyleSheet.create({
     padding: spacing[3.5],
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing[3],
-    ...shadows.card
+    ...shadows.card,
   },
 
-  settingItemText: { color: colors.text, ...typography.bodyLarge, fontWeight: "700" },
+  settingItemText: { color: colors.text, ...typography.bodyLarge, fontWeight: '700' },
 
-  subPageHeader: { flexDirection: "row", alignItems: "center", gap: spacing[2], marginBottom: spacing[1] },
+  subPageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginBottom: spacing[1],
+  },
 
-  planHeader: { flexDirection: "row", justifyContent: "space-between", gap: spacing[3] },
+  planHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing[3] },
 
   planPrice: { marginTop: spacing[1], color: colors.primary, ...typography.h4 },
 
-  quotaRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  quotaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
 
   quotaText: {
     paddingHorizontal: spacing[2],
@@ -612,33 +655,55 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.background,
     color: colors.textSecondary,
     fontSize: 12,
-    overflow: "hidden"
+    overflow: 'hidden',
   },
 
   // ============================================
   // Bills
   // ============================================
-  billAmountRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: spacing[3] },
+  billAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: spacing[3],
+  },
 
-  billSummaryAside: { alignItems: "flex-end", gap: spacing[0.5] },
+  billSummaryAside: { alignItems: 'flex-end', gap: spacing[0.5] },
 
   billCardFooter: {
     paddingTop: spacing[2],
     borderTopWidth: 1,
     borderTopColor: colors.divider,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing[3]
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[3],
   },
 
   billAmount: { color: colors.text, ...typography.stat },
 
-  billLine: { paddingVertical: spacing[2], borderTopWidth: 1, borderTopColor: colors.divider, flexDirection: "row", justifyContent: "space-between", gap: spacing[2.5] },
+  billLine: {
+    paddingVertical: spacing[2],
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing[2.5],
+  },
 
-  billDetailBlock: { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing[2], gap: spacing[1.5] },
+  billDetailBlock: {
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    paddingTop: spacing[2],
+    gap: spacing[1.5],
+  },
 
-  billItemLine: { flexDirection: "row", justifyContent: "space-between", gap: spacing[2.5], paddingLeft: spacing[2] },
+  billItemLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing[2.5],
+    paddingLeft: spacing[2],
+  },
 
   billChoiceList: { gap: spacing[2] },
 
@@ -648,23 +713,29 @@ export const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing[3],
-    ...shadows.subtle
+    ...shadows.subtle,
   },
 
   // ============================================
   // Form layout
   // ============================================
-  formGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  formGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
 
   formField: { flexGrow: 1, flexBasis: 104, gap: spacing[1] },
 
-  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing[2.5], flexWrap: "wrap" },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[2.5],
+    flexWrap: 'wrap',
+  },
 
-  detailRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing[3] },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing[3] },
 
   // ============================================
   // Org & members
@@ -674,16 +745,16 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderRadius: radii.lg,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing[3]
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing[3],
   },
 
   orgOptionActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
 
-  memberHeader: { flexDirection: "row", justifyContent: "space-between", gap: spacing[3] },
+  memberHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing[3] },
 
-  roleActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  roleActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
 
   // ============================================
   // Batch rooms
@@ -694,10 +765,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
     backgroundColor: colors.surfaceWarm2,
-    gap: spacing[2]
+    gap: spacing[2],
   },
 
-  batchRoomGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  batchRoomGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
 
   batchRoomButton: {
     minWidth: 62,
@@ -706,9 +777,9 @@ export const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surface
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
   },
 
   batchRoomButtonActive: { borderColor: colors.primary, backgroundColor: colors.primary },
@@ -726,10 +797,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
     backgroundColor: colors.surfaceWarm2,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing[2.5]
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[2.5],
   },
 
   feeItemActive: { borderColor: colors.primary, backgroundColor: colors.primaryLightest },
@@ -741,16 +812,16 @@ export const styles = StyleSheet.create({
     flex: 1,
     padding: spacing[4],
     backgroundColor: colors.overlayHeavy,
-    justifyContent: "center"
+    justifyContent: 'center',
   },
 
   modalCard: {
-    maxHeight: "88%",
+    maxHeight: '88%',
     padding: spacing[3.5],
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
     gap: spacing[2.5],
-    ...shadows.float
+    ...shadows.float,
   },
 
   modalScrollContent: { gap: spacing[2.5] },
@@ -760,9 +831,9 @@ export const styles = StyleSheet.create({
   // ============================================
   taskSheetOverlay: { flex: 1, backgroundColor: colors.overlayHeavy },
 
-  taskSheetOverlay_drawer: { justifyContent: "flex-end" },
+  taskSheetOverlay_drawer: { justifyContent: 'flex-end' },
 
-  taskSheetOverlay_dialog: { justifyContent: "center", padding: spacing[4.5] },
+  taskSheetOverlay_dialog: { justifyContent: 'center', padding: spacing[4.5] },
 
   taskSheetCard: { backgroundColor: colors.surface, gap: spacing[2.5], padding: spacing[3.5] },
 
@@ -771,34 +842,39 @@ export const styles = StyleSheet.create({
     minHeight: layout.minSheetHeight,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
-    ...shadows.float
+    ...shadows.float,
   },
 
   taskSheetCard_dialog: {
-    maxHeight: "78%",
+    maxHeight: '78%',
     borderRadius: radii.lg,
-    ...shadows.float
+    ...shadows.float,
   },
 
   taskSheetTitleBlock: { flex: 1, gap: spacing[0.5] },
 
   taskSheetContent: { gap: spacing[2.5], paddingBottom: spacing[0.5] },
 
-  taskSheetFooter: { gap: spacing[2], paddingTop: spacing[2], borderTopWidth: 1, borderTopColor: colors.divider },
+  taskSheetFooter: {
+    gap: spacing[2],
+    paddingTop: spacing[2],
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
 
   // ============================================
   // Date field (legacy — migrate styling)
   // ============================================
-  dateFieldWrap: { position: "relative", flexGrow: 1, flexBasis: 104 },
+  dateFieldWrap: { position: 'relative', flexGrow: 1, flexBasis: 104 },
 
-  dateField: { justifyContent: "center" },
+  dateField: { justifyContent: 'center' },
 
   dateFieldText: { color: colors.text },
 
   dateFieldPlaceholder: { color: colors.textPlaceholder },
 
   datePickerPanel: {
-    position: "absolute",
+    position: 'absolute',
     top: 48,
     left: 0,
     zIndex: 30,
@@ -808,10 +884,15 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    ...shadows.elevated
+    ...shadows.elevated,
   },
 
-  datePickerHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing[2] },
+  datePickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing[2],
+  },
 
   datePickerTitle: { color: colors.text, ...typography.body },
 
@@ -819,18 +900,30 @@ export const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primaryLightest
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLightest,
   },
 
-  datePickerNavText: { color: colors.primary, fontSize: 22, lineHeight: 24, fontWeight: "700" },
+  datePickerNavText: { color: colors.primary, fontSize: 22, lineHeight: 24, fontWeight: '700' },
 
-  datePickerGrid: { flexDirection: "row", flexWrap: "wrap" },
+  datePickerGrid: { flexDirection: 'row', flexWrap: 'wrap' },
 
-  datePickerWeekday: { width: "14.2857%", paddingVertical: spacing[1], textAlign: "center", color: colors.textMuted, ...typography.labelSmall },
+  datePickerWeekday: {
+    width: '14.2857%',
+    paddingVertical: spacing[1],
+    textAlign: 'center',
+    color: colors.textMuted,
+    ...typography.labelSmall,
+  },
 
-  datePickerDay: { width: "14.2857%", height: 32, alignItems: "center", justifyContent: "center", borderRadius: radii.md },
+  datePickerDay: {
+    width: '14.2857%',
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+  },
 
   datePickerDayActive: { backgroundColor: colors.primary },
 
@@ -842,18 +935,18 @@ export const styles = StyleSheet.create({
     flex: 1,
     padding: spacing[4.5],
     backgroundColor: colors.overlay,
-    alignItems: "center",
-    justifyContent: "center"
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   datePickerModalPanel: {
     width: 320,
-    maxWidth: "100%",
+    maxWidth: '100%',
     padding: spacing[3],
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    ...shadows.float
-  }
+    ...shadows.float,
+  },
 });

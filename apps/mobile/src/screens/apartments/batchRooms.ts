@@ -26,15 +26,14 @@ export const buildBatchRoomNos = ({ startFloor, endFloor, roomCount }: BatchRoom
 
   for (let floor = firstFloor; floor <= lastFloor; floor += 1) {
     for (let roomIndex = 1; roomIndex <= count; roomIndex += 1) {
-      roomNos.push(`${floor}${String(roomIndex).padStart(2, "0")}`);
+      roomNos.push(`${floor}${String(roomIndex).padStart(2, '0')}`);
     }
   }
 
   return roomNos;
 };
 
-export const toggleBatchRoomSelection = (selectedRoomNos: string[], roomNo: string) => (
+export const toggleBatchRoomSelection = (selectedRoomNos: string[], roomNo: string) =>
   selectedRoomNos.includes(roomNo)
-    ? selectedRoomNos.filter((item) => item !== roomNo)
-    : [...selectedRoomNos, roomNo]
-);
+    ? selectedRoomNos.filter(item => item !== roomNo)
+    : [...selectedRoomNos, roomNo];

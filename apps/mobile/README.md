@@ -92,6 +92,7 @@ keytool -genkeypair -v -storetype PKCS12 -keystore my-release-key.keystore -alia
 2. 配置签名（三选一）：
 
 - **方式 A：gradle.properties**（不推荐提交到 git）
+
   ```properties
   ANDROID_RELEASE_STORE_FILE=my-release-key.keystore
   ANDROID_RELEASE_KEY_ALIAS=my-key-alias

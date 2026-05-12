@@ -1,1 +1,1 @@
-export type TabKey = "home" | "rooms" | "bills" | "apartments" | "settings";
+export type TabKey = 'home' | 'rooms' | 'bills' | 'apartments' | 'settings';

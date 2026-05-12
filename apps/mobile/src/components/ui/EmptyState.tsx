@@ -1,6 +1,6 @@
-import { Text, View } from "react-native";
-import { colors, spacing, typography } from "../../theme/tokens";
-import { Button } from "./Button";
+import { Text, View } from 'react-native';
+import { colors, spacing, typography } from '../../theme/tokens';
+import { Button } from './Button';
 
 type Props = {
   icon?: string;
@@ -10,13 +10,26 @@ type Props = {
   onAction?: () => void;
 };
 
-export function EmptyState({ icon = "📭", title = "暂无数据", subtitle, actionLabel, onAction }: Props) {
+export function EmptyState({
+  icon = '📭',
+  title = '暂无数据',
+  subtitle,
+  actionLabel,
+  onAction,
+}: Props) {
   return (
-    <View style={{ alignItems: "center", paddingVertical: spacing[10], gap: spacing[2] }}>
+    <View style={{ alignItems: 'center', paddingVertical: spacing[10], gap: spacing[2] }}>
       <Text style={{ fontSize: 40 }}>{icon}</Text>
       <Text style={{ color: colors.text, ...typography.h5, marginTop: spacing[2] }}>{title}</Text>
       {subtitle ? (
-        <Text style={{ color: colors.textMuted, ...typography.bodySmall, textAlign: "center", maxWidth: 280 }}>
+        <Text
+          style={{
+            color: colors.textMuted,
+            ...typography.bodySmall,
+            textAlign: 'center',
+            maxWidth: 280,
+          }}
+        >
           {subtitle}
         </Text>
       ) : null}

@@ -1,4 +1,4 @@
-export type { MobileSession } from "./auth";
+export type { MobileSession } from './auth';
 export type {
   Apartment,
   ApartmentExpense,
@@ -25,6 +25,6 @@ export type {
   RoomStatus,
   Subscription,
   SubscriptionOverview,
-  TerminationType
-} from "./domain";
-export type { TabKey } from "./navigation";
+  TerminationType,
+} from './domain';
+export type { TabKey } from './navigation';

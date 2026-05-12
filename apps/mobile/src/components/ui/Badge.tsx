@@ -1,5 +1,5 @@
-import { Text, View, type ViewStyle } from "react-native";
-import { radii, spacing, toneColors, type Tone } from "../../theme/tokens";
+import { Text, View, type ViewStyle } from 'react-native';
+import { radii, spacing, toneColors, type Tone } from '../../theme/tokens';
 
 type Props = {
   children: string;
@@ -7,7 +7,7 @@ type Props = {
   style?: ViewStyle;
 };
 
-export function Badge({ children, tone = "neutral", style }: Props) {
+export function Badge({ children, tone = 'neutral', style }: Props) {
   const { bg, text } = toneColors(tone);
 
   return (
@@ -18,17 +18,17 @@ export function Badge({ children, tone = "neutral", style }: Props) {
           paddingVertical: spacing[1],
           borderRadius: radii.full,
           backgroundColor: bg,
-          alignSelf: "flex-start"
+          alignSelf: 'flex-start',
         },
-        style
+        style,
       ]}
     >
       <Text
         style={{
           color: text,
           fontSize: 12,
-          fontWeight: "700",
-          lineHeight: 16
+          fontWeight: '700',
+          lineHeight: 16,
         }}
       >
         {children}

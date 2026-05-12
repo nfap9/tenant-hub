@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../constants/config";
+import { API_BASE_URL } from '../constants/config';
 
 const parseJsonBody = (text: string): Record<string, unknown> => {
   if (!text) return {};
@@ -9,16 +9,21 @@ const parseJsonBody = (text: string): Record<string, unknown> => {
   }
 };
 
-const errorMessage = (body: Record<string, unknown>) => (typeof body.error === "string" && body.error.trim() ? body.error : "请求失败");
+const errorMessage = (body: Record<string, unknown>) =>
+  typeof body.error === 'string' && body.error.trim() ? body.error : '请求失败';
 
-export async function mobileApi<T>(path: string, token?: string, options: RequestInit = {}): Promise<T> {
+export async function mobileApi<T>(
+  path: string,
+  token?: string,
+  options: RequestInit = {},
+): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...options.headers
-    }
+      ...options.headers,
+    },
   });
   const text = await response.text();
   const body = parseJsonBody(text);
@@ -26,13 +31,17 @@ export async function mobileApi<T>(path: string, token?: string, options: Reques
   return body.data as T;
 }
 
-export async function mobileText(path: string, token?: string, options: RequestInit = {}): Promise<string> {
+export async function mobileText(
+  path: string,
+  token?: string,
+  options: RequestInit = {},
+): Promise<string> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
       ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...options.headers
-    }
+      ...options.headers,
+    },
   });
   const text = await response.text();
   if (!response.ok) {

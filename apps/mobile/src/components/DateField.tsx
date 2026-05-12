@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
-import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { Modal, Platform, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { PressableScale } from "./ui/PressableScale";
-import { styles } from "../theme/styles";
+import { useMemo, useState } from 'react';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Modal, Platform, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { PressableScale } from './ui/PressableScale';
+import { styles } from '../theme/styles';
 
 type Props = {
   value: string;
@@ -18,13 +18,15 @@ const toDate = (value: string) => {
 
 const toDateString = (date: Date) => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
 const sameDate = (left: Date, right: Date) =>
-  left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
+  left.getFullYear() === right.getFullYear() &&
+  left.getMonth() === right.getMonth() &&
+  left.getDate() === right.getDate();
 
 const monthTitle = (date: Date) => `${date.getFullYear()}年${date.getMonth() + 1}月`;
 
@@ -33,11 +35,14 @@ const monthDays = (month: Date) => {
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   return [
     ...Array.from({ length: firstDay.getDay() }, () => undefined),
-    ...Array.from({ length: daysInMonth }, (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1))
+    ...Array.from(
+      { length: daysInMonth },
+      (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1),
+    ),
   ];
 };
 
-export function DateField({ value, onChange, placeholder = "选择日期", style }: Props) {
+export function DateField({ value, onChange, placeholder = '选择日期', style }: Props) {
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => toDate(value));
   const selectedDate = toDate(value);
@@ -45,37 +50,58 @@ export function DateField({ value, onChange, placeholder = "选择日期", style
 
   const openPicker = () => {
     setVisibleMonth(toDate(value));
-    setOpen((current) => !current);
+    setOpen(current => !current);
   };
 
   const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === "android") setOpen(false);
-    if (event.type === "dismissed" || !selectedDate) return;
+    if (Platform.OS === 'android') setOpen(false);
+    if (event.type === 'dismissed' || !selectedDate) return;
     onChange(toDateString(selectedDate));
   };
 
-  if (Platform.OS === "web") {
+  if (Platform.OS === 'web') {
     return (
       <View style={[styles.dateFieldWrap, style]}>
         <PressableScale scale={0.98} style={[styles.input, styles.dateField]} onPress={openPicker}>
-          <Text style={value ? styles.dateFieldText : styles.dateFieldPlaceholder}>{value || placeholder}</Text>
+          <Text style={value ? styles.dateFieldText : styles.dateFieldPlaceholder}>
+            {value || placeholder}
+          </Text>
         </PressableScale>
         {open ? (
-          <Modal transparent animationType="fade" visible={open} onRequestClose={() => setOpen(false)}>
+          <Modal
+            transparent
+            animationType="fade"
+            visible={open}
+            onRequestClose={() => setOpen(false)}
+          >
             <PressableScale style={styles.datePickerModalOverlay} onPress={() => setOpen(false)}>
               <View style={styles.datePickerModalPanel}>
                 <View style={styles.datePickerHeader}>
-                  <PressableScale scale={0.9} style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
+                  <PressableScale
+                    scale={0.9}
+                    style={styles.datePickerNav}
+                    onPress={() =>
+                      setVisibleMonth(date => new Date(date.getFullYear(), date.getMonth() - 1, 1))
+                    }
+                  >
                     <Text style={styles.datePickerNavText}>‹</Text>
                   </PressableScale>
                   <Text style={styles.datePickerTitle}>{monthTitle(visibleMonth)}</Text>
-                  <PressableScale scale={0.9} style={styles.datePickerNav} onPress={() => setVisibleMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}>
+                  <PressableScale
+                    scale={0.9}
+                    style={styles.datePickerNav}
+                    onPress={() =>
+                      setVisibleMonth(date => new Date(date.getFullYear(), date.getMonth() + 1, 1))
+                    }
+                  >
                     <Text style={styles.datePickerNavText}>›</Text>
                   </PressableScale>
                 </View>
                 <View style={styles.datePickerGrid}>
-                  {["日", "一", "二", "三", "四", "五", "六"].map((item) => (
-                    <Text key={item} style={styles.datePickerWeekday}>{item}</Text>
+                  {['日', '一', '二', '三', '四', '五', '六'].map(item => (
+                    <Text key={item} style={styles.datePickerWeekday}>
+                      {item}
+                    </Text>
                   ))}
                   {days.map((day, index) => (
                     <PressableScale
@@ -88,8 +114,20 @@ export function DateField({ value, onChange, placeholder = "选择日期", style
                         setOpen(false);
                       }}
                     >
-                      <View style={[styles.datePickerDay, day && sameDate(day, selectedDate) && styles.datePickerDayActive]}>
-                        <Text style={[styles.datePickerDayText, day && sameDate(day, selectedDate) && styles.datePickerDayTextActive]}>{day?.getDate() ?? ""}</Text>
+                      <View
+                        style={[
+                          styles.datePickerDay,
+                          day && sameDate(day, selectedDate) && styles.datePickerDayActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.datePickerDayText,
+                            day && sameDate(day, selectedDate) && styles.datePickerDayTextActive,
+                          ]}
+                        >
+                          {day?.getDate() ?? ''}
+                        </Text>
                       </View>
                     </PressableScale>
                   ))}
@@ -104,14 +142,20 @@ export function DateField({ value, onChange, placeholder = "选择日期", style
 
   return (
     <>
-      <PressableScale scale={0.98} style={[styles.input, styles.dateField, style]} onPress={() => setOpen(true)}>
-        <Text style={value ? styles.dateFieldText : styles.dateFieldPlaceholder}>{value || placeholder}</Text>
+      <PressableScale
+        scale={0.98}
+        style={[styles.input, styles.dateField, style]}
+        onPress={() => setOpen(true)}
+      >
+        <Text style={value ? styles.dateFieldText : styles.dateFieldPlaceholder}>
+          {value || placeholder}
+        </Text>
       </PressableScale>
       {open ? (
         <DateTimePicker
           value={toDate(value)}
           mode="date"
-          display={Platform.OS === "ios" ? "inline" : "default"}
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
           onChange={handleChange}
         />
       ) : null}

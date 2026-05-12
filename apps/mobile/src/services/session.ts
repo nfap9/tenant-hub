@@ -1,6 +1,6 @@
-import type { MobileSession } from "../types/auth";
+import type { MobileSession } from '../types/auth';
 
-const MOBILE_SESSION_KEY = "tenantHubMobileSession";
+const MOBILE_SESSION_KEY = 'tenantHubMobileSession';
 
 type WebStorage = {
   getItem: (key: string) => string | null;

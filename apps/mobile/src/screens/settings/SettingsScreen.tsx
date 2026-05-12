@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { Text, View } from "react-native";
-import { Card, Icon, PressableScale } from "../../components/ui";
-import { colors, spacing } from "../../theme/tokens";
-import { styles } from "../../theme/styles";
-import type { Membership, OrgMember, OrgRole } from "../../types";
-import AccountSettingsSubPage from "./AccountSettingsSubPage";
-import LeasesSubPage from "./LeasesSubPage";
-import OrganizationSettingsSubPage from "./OrganizationSettingsSubPage";
-import PlanPurchaseSubPage from "./PlanPurchaseSubPage";
+import { useState } from 'react';
+import { Text, View } from 'react-native';
+import { Card, Icon, PressableScale } from '../../components/ui';
+import { colors, spacing } from '../../theme/tokens';
+import { styles } from '../../theme/styles';
+import type { Membership, OrgMember, OrgRole } from '../../types';
+import AccountSettingsSubPage from './AccountSettingsSubPage';
+import LeasesSubPage from './LeasesSubPage';
+import OrganizationSettingsSubPage from './OrganizationSettingsSubPage';
+import PlanPurchaseSubPage from './PlanPurchaseSubPage';
 
-type SettingsSubPage = "menu" | "leases" | "team" | "account" | "plan";
+type SettingsSubPage = 'menu' | 'leases' | 'team' | 'account' | 'plan';
 
 type SettingsScreenProps = {
   token: string;
@@ -26,11 +26,15 @@ type SettingsScreenProps = {
   reload: () => Promise<void>;
 };
 
-const settingsItems: Array<{ key: SettingsSubPage; label: string; icon: "document-text-outline" | "people-outline" | "lock-closed-outline" | "diamond-outline" }> = [
-  { key: "leases", label: "所有租约", icon: "document-text-outline" },
-  { key: "team", label: "团队管理", icon: "people-outline" },
-  { key: "account", label: "账号设置", icon: "lock-closed-outline" },
-  { key: "plan", label: "付费计划", icon: "diamond-outline" }
+const settingsItems: Array<{
+  key: SettingsSubPage;
+  label: string;
+  icon: 'document-text-outline' | 'people-outline' | 'lock-closed-outline' | 'diamond-outline';
+}> = [
+  { key: 'leases', label: '所有租约', icon: 'document-text-outline' },
+  { key: 'team', label: '团队管理', icon: 'people-outline' },
+  { key: 'account', label: '账号设置', icon: 'lock-closed-outline' },
+  { key: 'plan', label: '付费计划', icon: 'diamond-outline' },
 ];
 
 export default function SettingsScreen({
@@ -45,12 +49,12 @@ export default function SettingsScreen({
   orgName,
   setOrgName,
   setNotice,
-  reload
+  reload,
 }: SettingsScreenProps) {
-  const [subPage, setSubPage] = useState<SettingsSubPage>("menu");
-  const backToMenu = () => setSubPage("menu");
+  const [subPage, setSubPage] = useState<SettingsSubPage>('menu');
+  const backToMenu = () => setSubPage('menu');
 
-  if (subPage === "team") {
+  if (subPage === 'team') {
     return (
       <OrganizationSettingsSubPage
         token={token}
@@ -70,15 +74,22 @@ export default function SettingsScreen({
     );
   }
 
-  if (subPage === "leases") {
-    return <LeasesSubPage token={token} currentOrgId={currentOrgId} setNotice={setNotice} onBack={backToMenu} />;
+  if (subPage === 'leases') {
+    return (
+      <LeasesSubPage
+        token={token}
+        currentOrgId={currentOrgId}
+        setNotice={setNotice}
+        onBack={backToMenu}
+      />
+    );
   }
 
-  if (subPage === "account") {
+  if (subPage === 'account') {
     return <AccountSettingsSubPage token={token} setNotice={setNotice} onBack={backToMenu} />;
   }
 
-  if (subPage === "plan") {
+  if (subPage === 'plan') {
     return (
       <PlanPurchaseSubPage
         token={token}
@@ -93,11 +104,17 @@ export default function SettingsScreen({
 
   return (
     <View style={{ gap: styles.content.gap }}>
-      {settingsItems.map((item) => (
+      {settingsItems.map(item => (
         <PressableScale key={item.key} onPress={() => setSubPage(item.key)}>
           <Card padding="md" gap={0}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing[3] }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3] }}>
                 <Icon name={item.icon} size={22} color={colors.primary} />
                 <Text style={styles.settingItemText}>{item.label}</Text>
               </View>

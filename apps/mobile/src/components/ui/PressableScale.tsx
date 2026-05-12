@@ -1,5 +1,11 @@
-import { useRef, type ReactNode } from "react";
-import { Animated, Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import { useRef, type ReactNode } from 'react';
+import {
+  Animated,
+  Pressable,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -17,7 +23,7 @@ export function PressableScale({ children, style, scale = 0.97, ...props }: Prop
       toValue: scale,
       friction: 5,
       tension: 300,
-      useNativeDriver: true
+      useNativeDriver: true,
     }).start();
   };
 
@@ -26,7 +32,7 @@ export function PressableScale({ children, style, scale = 0.97, ...props }: Prop
       toValue: 1,
       friction: 5,
       tension: 300,
-      useNativeDriver: true
+      useNativeDriver: true,
     }).start();
   };
 
