@@ -251,9 +251,9 @@ fi
 info "构建 ops-web 静态文件..."
 docker build --target build -f apps/ops-web/Dockerfile \
   --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
-  -t tenant-hub-ops-web-build . >/dev/null 2>&1
+  -t tenant-hub-ops-web-build .
 docker create --name ops-web-extract tenant-hub-ops-web-build >/dev/null
-docker cp ops-web-extract:/app/apps/ops-web/dist "$PROJECT_DIR/apps/ops-web/dist" >/dev/null
+docker cp ops-web-extract:/app/apps/ops-web/dist "$PROJECT_DIR/apps/ops-web/dist"
 docker rm ops-web-extract >/dev/null
 docker rmi tenant-hub-ops-web-build >/dev/null 2>&1 || true
 ok "ops-web 构建完成"
