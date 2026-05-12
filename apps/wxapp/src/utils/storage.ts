@@ -1,41 +1,24 @@
-const SESSION_KEY = 'tenantHubSession';
+import Taro from '@tarojs/taro';
 
-export const storage = {
-  getItem<T>(key: string): T | undefined {
-    try {
-      const raw = wx.getStorageSync(key);
-      return raw ? (JSON.parse(raw) as T) : undefined;
-    } catch {
-      return undefined;
-    }
-  },
-
-  setItem<T>(key: string, value: T): void {
-    try {
-      wx.setStorageSync(key, JSON.stringify(value));
-    } catch {
-      // Silent fail
-    }
-  },
-
-  removeItem(key: string): void {
-    try {
-      wx.removeStorageSync(key);
-    } catch {
-      // Silent fail
-    }
-  },
-
-  // Convenience aliases for session
-  getSession<T>(): T | undefined {
-    return this.getItem<T>(SESSION_KEY);
-  },
-
-  setSession<T>(value: T): void {
-    this.setItem(SESSION_KEY, value);
-  },
-
-  clearSession(): void {
-    this.removeItem(SESSION_KEY);
-  }
+export type WxappSession = {
+  token: string;
+  user: { id: string; phone: string; username: string };
 };
+
+const SESSION_KEY = 'tenantHubWxappSession';
+
+export function getSession(): WxappSession | undefined {
+  try {
+    return Taro.getStorageSync(SESSION_KEY) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function setSession(session: WxappSession): void {
+  Taro.setStorageSync(SESSION_KEY, session);
+}
+
+export function clearSession(): void {
+  Taro.removeStorageSync(SESSION_KEY);
+}

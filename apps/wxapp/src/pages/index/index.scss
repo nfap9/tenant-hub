@@ -1,0 +1,152 @@
+@import "../../theme/tokens.scss";
+
+.page-container {
+  padding: 16px;
+  padding-bottom: 32px;
+  background: var(--th-background);
+  min-height: 100vh;
+}
+
+.home-hero {
+  background: linear-gradient(135deg, var(--th-primary) 0%, var(--th-primary-dark) 100%);
+  border-radius: var(--th-radius-lg);
+  padding: 20px 16px;
+  margin-bottom: 16px;
+  color: white;
+}
+
+.home-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.home-eyebrow {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.home-hero-value {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.home-hero-grid {
+  display: flex;
+  gap: 16px;
+}
+
+.home-hero-cell {
+  flex: 1;
+}
+
+.home-hero-label {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+.home-hero-metric {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.stat-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--th-text-muted);
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--th-text);
+}
+
+.quick-action-grid {
+  display: flex;
+  gap: 12px;
+}
+
+.quick-action-card {
+  flex: 1;
+  background: var(--th-border-light);
+  border-radius: var(--th-radius-md);
+  padding: 16px 8px;
+  text-align: center;
+}
+
+.quick-action-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.quick-action-label {
+  font-size: 13px;
+  color: var(--th-text-secondary);
+}
+
+.home-apartment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--th-border-light);
+}
+
+.home-apartment-row:last-child {
+  border-bottom: none;
+}
+
+.home-apartment-main {
+  flex: 1;
+}
+
+.home-apartment-stat {
+  text-align: right;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--th-text);
+}
+
+.card-stat {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--th-primary);
+}
+
+.text-muted {
+  font-size: 13px;
+  color: var(--th-text-muted);
+}
+
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--th-border-light);
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-content {
+  flex: 1;
+  margin-right: 12px;
+}

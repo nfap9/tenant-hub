@@ -1,0 +1,166 @@
+@import "../../theme/tokens.scss";
+
+.page-container {
+  padding: 16px;
+  padding-bottom: 32px;
+  background: var(--th-background);
+  min-height: 100vh;
+}
+
+.sub-page-header {
+  margin-bottom: 12px;
+}
+
+.apartment-card {
+  background: var(--th-surface);
+  border-radius: var(--th-radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--th-border);
+}
+
+.apartment-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--th-text);
+}
+
+.card-stat {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--th-primary);
+}
+
+.text-muted {
+  font-size: 13px;
+  color: var(--th-text-muted);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.section-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--th-text-secondary);
+  margin: 12px 0 8px;
+}
+
+.form-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-grid input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.field-label {
+  font-size: 13px;
+  color: var(--th-text-secondary);
+  margin-bottom: 6px;
+  margin-top: 8px;
+}
+
+.action-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.action-row-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.segment {
+  display: flex;
+  background: var(--th-border-light);
+  border-radius: var(--th-radius-md);
+  padding: 4px;
+  margin-top: 12px;
+}
+
+.segment-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: var(--th-radius-sm);
+}
+
+.segment-item--active {
+  background: var(--th-surface);
+}
+
+.segment-text {
+  font-size: 14px;
+  color: var(--th-text-muted);
+}
+
+.segment-text--active {
+  color: var(--th-primary);
+  font-weight: 600;
+}
+
+.detail-panel {
+  padding: 8px 0;
+}
+
+.room-card {
+  background: var(--th-surface);
+  border-radius: var(--th-radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--th-border);
+}
+
+.room-card--active {
+  border: 1.5px solid var(--th-primary);
+  background: var(--th-primary-light);
+}
+
+.room-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.layout-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.batch-room-panel {
+  background: var(--th-border-light);
+  border-radius: var(--th-radius-md);
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.batch-room-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.form-panel {
+  margin-top: 16px;
+}

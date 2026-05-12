@@ -1,14 +1,697 @@
-import { View } from '@tarojs/components';
-import { EmptyState } from '../../components/ui';
+import { useState, useMemo, useCallback } from 'react';
+import { View, Text, Input } from '@tarojs/components';
+import Taro, { useDidShow } from '@tarojs/taro';
+import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
+import { apiClient } from '../../api/client';
+import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { money, optionalNumber, optionalText, toFacilityArray, facilitiesText } from '../../utils/format';
+import { buildBatchRoomNos, toggleBatchRoomSelection } from '../../utils/batchRooms';
+import type { Apartment, Room, RoomStatus } from '../../types/domain';
+import './index.scss';
+
+const emptyApartmentForm = {
+  name: "",
+  location: "",
+  floors: "",
+  landArea: "",
+  totalArea: "",
+  landlordName: "",
+  landlordPhone: "",
+  contractStart: "",
+  contractEnd: "",
+  rentAmount: "",
+  waterUnitPrice: "0",
+  powerUnitPrice: "0"
+};
+
+const emptyRoomForm = {
+  roomNo: "",
+  layout: "单间",
+  area: "",
+  facilities: "",
+  status: "VACANT" as RoomStatus
+};
+
+const statusLabels: Record<RoomStatus, string> = {
+  VACANT: "空闲",
+  RESERVED: "预留",
+  OCCUPIED: "已租",
+  MAINTENANCE: "维修"
+};
+
+const toneForStatus: Record<RoomStatus, "success" | "neutral" | "warning" | "danger"> = {
+  VACANT: "success",
+  RESERVED: "neutral",
+  OCCUPIED: "warning",
+  MAINTENANCE: "danger"
+};
+
+const roomStatuses: RoomStatus[] = ["VACANT", "RESERVED", "OCCUPIED", "MAINTENANCE"];
+const roomLayoutOptions = ["单间", "一房一厅", "两房一厅", "三房一厅", "四房一厅", "五房一厅", "六房一厅"];
+
+const isThisMonth = (value?: string) => {
+  if (!value) return false;
+  const date = new Date(value);
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+};
+
+const monthlyAmount = (value: string | number, cycle?: string) => {
+  const amount = Number(value ?? 0);
+  if (cycle === "QUARTERLY") return amount / 3;
+  if (cycle === "YEARLY") return amount / 12;
+  return amount;
+};
+
+const apartmentMonthlyIncome = (apartment: Apartment) =>
+  (apartment.rooms ?? []).reduce((sum, room) => {
+    const activeLease = room.leases?.find((lease) => lease.status === "ACTIVE");
+    if (!activeLease) return sum;
+    const leaseMonthlyRent = monthlyAmount(activeLease.rentAmount, activeLease.cycle);
+    const leaseMonthlyFees = (activeLease.fees ?? []).reduce((feeSum, fee) => feeSum + monthlyAmount(fee.amount, activeLease.cycle), 0);
+    return sum + leaseMonthlyRent + leaseMonthlyFees;
+  }, 0);
+
+const apartmentMonthlyExpense = (apartment: Apartment) =>
+  (apartment.expenses ?? []).filter((expense) => isThisMonth(expense.spentAt)).reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
+
+const contractText = (apartment: Apartment) => {
+  const start = apartment.contractStart ? apartment.contractStart.slice(0, 10) : "";
+  const end = apartment.contractEnd ? apartment.contractEnd.slice(0, 10) : "";
+  if (!start && !end) return "未维护";
+  return `${start || "未填"} 至 ${end || "未填"}`;
+};
 
 export default function ApartmentsPage() {
-  return (
-    <View style={{ padding: 'var(--spacing-4)' }}>
-      <EmptyState
-        emoji="🏢"
-        title="公寓管理"
-        subtitle="这里将展示公寓列表和房间管理功能"
-      />
-    </View>
+  const { currentOrgId } = useAppSession();
+  const canManageApartment = useHasPermission("apartment:manage");
+  const canManageRoom = useHasPermission("room:manage");
+
+  const [apartments, setApartments] = useState<Apartment[]>([]);
+  const [selectedId, setSelectedId] = useState<string>();
+  const [mode, setMode] = useState<"list" | "detail" | "edit" | "create">("list");
+  const [detailTab, setDetailTab] = useState<"expenses" | "rooms">("expenses");
+  const [layer, setLayer] = useState<"expense" | "roomSingle" | "roomBatch" | "roomEdit" | "roomDelete" | "apartmentDelete" | undefined>();
+  const [expenseApartmentId, setExpenseApartmentId] = useState<string>();
+  const [editingRoomId, setEditingRoomId] = useState<string>();
+  const [deleteRoomId, setDeleteRoomId] = useState<string>();
+  const [form, setForm] = useState(emptyApartmentForm);
+  const [roomForm, setRoomForm] = useState(emptyRoomForm);
+  const [expense, setExpense] = useState({ name: "", amount: "", spentAt: new Date().toISOString().slice(0, 10), note: "" });
+  const [batchStartFloor, setBatchStartFloor] = useState("2");
+  const [batchEndFloor, setBatchEndFloor] = useState("4");
+  const [batchRoomCount, setBatchRoomCount] = useState("4");
+  const [selectedBatchRoomNos, setSelectedBatchRoomNos] = useState<string[]>([]);
+  const [batchLayout, setBatchLayout] = useState("单间");
+  const [batchArea, setBatchArea] = useState("");
+  const [batchFacilities, setBatchFacilities] = useState("床,衣柜,空调,热水器");
+  const [saving, setSaving] = useState(false);
+
+  const selectedApartment = useMemo(() => apartments.find((item) => item.id === selectedId), [apartments, selectedId]);
+  const apartmentRooms = useMemo(
+    () => [...(selectedApartment?.rooms ?? [])].sort((left, right) => left.roomNo.localeCompare(right.roomNo, "zh-Hans-CN")),
+    [selectedApartment]
   );
+  const editingRoom = useMemo(() => apartmentRooms.find((room) => room.id === editingRoomId), [apartmentRooms, editingRoomId]);
+  const deletingRoom = useMemo(() => apartmentRooms.find((room) => room.id === deleteRoomId), [apartmentRooms, deleteRoomId]);
+  const expenseApartment = useMemo(() => apartments.find((item) => item.id === expenseApartmentId) ?? selectedApartment, [apartments, expenseApartmentId, selectedApartment]);
+  const generatedBatchRoomNos = useMemo(
+    () => buildBatchRoomNos({ startFloor: batchStartFloor, endFloor: batchEndFloor, roomCount: batchRoomCount }),
+    [batchStartFloor, batchEndFloor, batchRoomCount]
+  );
+
+  const loadApartments = useCallback(async () => {
+    if (!currentOrgId) return;
+    try {
+      const data = await apiClient<Apartment[]>("/apartments", { organizationId: currentOrgId });
+      setApartments(data);
+      setSelectedId((old) => (old && data.some((item) => item.id === old) ? old : undefined));
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "加载失败", icon: "none" });
+    }
+  }, [currentOrgId]);
+
+  useDidShow(() => {
+    loadApartments();
+  });
+
+  const updateForm = (key: keyof typeof form, value: string) => setForm((old) => ({ ...old, [key]: value }));
+  const updateRoomForm = (key: keyof typeof roomForm, value: string | RoomStatus) => setRoomForm((old) => ({ ...old, [key]: value }));
+
+  const resetRoomWork = () => {
+    setLayer(undefined);
+    setEditingRoomId(undefined);
+    setDeleteRoomId(undefined);
+    setRoomForm(emptyRoomForm);
+  };
+
+  const backToList = () => {
+    setSelectedId(undefined);
+    setLayer(undefined);
+    setExpenseApartmentId(undefined);
+    resetRoomWork();
+    setDetailTab("expenses");
+    setMode("list");
+  };
+
+  const openDetail = (apartmentId: string) => {
+    setSelectedId(apartmentId);
+    setLayer(undefined);
+    setExpenseApartmentId(undefined);
+    resetRoomWork();
+    setDetailTab("expenses");
+    setMode("detail");
+  };
+
+  const saveApartment = async () => {
+    if (!currentOrgId) return Taro.showToast({ title: "请先选择组织", icon: "none" });
+    if (!canManageApartment) return Taro.showToast({ title: "当前角色没有管理公寓权限", icon: "none" });
+    if (!form.name.trim() || !form.location.trim()) return Taro.showToast({ title: "请填写公寓名称和位置", icon: "none" });
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        location: form.location.trim(),
+        floors: Number(form.floors || 1),
+        landArea: optionalNumber(form.landArea),
+        totalArea: optionalNumber(form.totalArea),
+        landlordName: optionalText(form.landlordName),
+        landlordPhone: optionalText(form.landlordPhone),
+        contractStart: optionalText(form.contractStart),
+        contractEnd: optionalText(form.contractEnd),
+        rentAmount: optionalNumber(form.rentAmount),
+        waterUnitPrice: Number(form.waterUnitPrice || 0),
+        powerUnitPrice: Number(form.powerUnitPrice || 0)
+      };
+      const path = selectedApartment ? `/apartments/${selectedApartment.id}` : "/apartments";
+      const method = selectedApartment ? "PUT" : "POST";
+      const saved = await apiClient<Apartment>(path, { method, body: payload, organizationId: currentOrgId });
+      Taro.showToast({ title: selectedApartment ? "公寓信息已更新" : "公寓已创建", icon: "success" });
+      setSelectedId(saved.id);
+      await loadApartments();
+      setMode("detail");
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "保存失败", icon: "none" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteApartment = async () => {
+    if (!currentOrgId || !selectedApartment) return;
+    if (!canManageApartment) return Taro.showToast({ title: "当前角色没有管理公寓权限", icon: "none" });
+    try {
+      await apiClient(`/apartments/${selectedApartment.id}`, { method: "DELETE", organizationId: currentOrgId });
+      Taro.showToast({ title: "公寓已删除", icon: "success" });
+      setLayer(undefined);
+      backToList();
+      await loadApartments();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "删除公寓失败", icon: "none" });
+    }
+  };
+
+  const addExpense = async () => {
+    const apartmentId = expenseApartmentId ?? selectedApartment?.id;
+    if (!currentOrgId || !apartmentId) return;
+    if (!canManageApartment) return Taro.showToast({ title: "当前角色没有管理公寓权限", icon: "none" });
+    if (!expense.name.trim() || !expense.amount.trim()) return Taro.showToast({ title: "请填写花费名称和金额", icon: "none" });
+    try {
+      await apiClient(`/apartments/${apartmentId}/expenses`, {
+        method: "POST",
+        body: { name: expense.name.trim(), amount: Number(expense.amount), spentAt: expense.spentAt, note: optionalText(expense.note) },
+        organizationId: currentOrgId
+      });
+      setExpense({ name: "", amount: "", spentAt: new Date().toISOString().slice(0, 10), note: "" });
+      setLayer(undefined);
+      setExpenseApartmentId(undefined);
+      Taro.showToast({ title: "经营花费已记录", icon: "success" });
+      await loadApartments();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "记录花费失败", icon: "none" });
+    }
+  };
+
+  const createRoom = async () => {
+    if (!currentOrgId || !selectedApartment) return;
+    if (!canManageRoom) return Taro.showToast({ title: "当前角色没有管理房间权限", icon: "none" });
+    if (!roomForm.roomNo.trim() || !roomForm.layout.trim()) return Taro.showToast({ title: "请填写房间号和户型", icon: "none" });
+    try {
+      const result = await apiClient<{ count: number }>(`/apartments/${selectedApartment.id}/rooms/batch`, {
+        method: "POST",
+        body: {
+          rooms: [{
+            roomNo: roomForm.roomNo.trim(),
+            layout: roomForm.layout.trim(),
+            area: optionalNumber(roomForm.area),
+            facilities: toFacilityArray(roomForm.facilities)
+          }]
+        },
+        organizationId: currentOrgId
+      });
+      Taro.showToast({ title: result.count > 0 ? "房间已添加" : "房间号已存在，未重复创建", icon: "success" });
+      resetRoomWork();
+      await loadApartments();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "添加房间失败", icon: "none" });
+    }
+  };
+
+  const updateRoom = async () => {
+    if (!currentOrgId || !editingRoomId) return;
+    if (!canManageRoom) return Taro.showToast({ title: "当前角色没有管理房间权限", icon: "none" });
+    if (!roomForm.roomNo.trim() || !roomForm.layout.trim()) return Taro.showToast({ title: "请填写房间号和户型", icon: "none" });
+    try {
+      await apiClient(`/apartments/rooms/${editingRoomId}`, {
+        method: "PUT",
+        body: {
+          roomNo: roomForm.roomNo.trim(),
+          layout: roomForm.layout.trim(),
+          area: optionalNumber(roomForm.area),
+          facilities: toFacilityArray(roomForm.facilities),
+          status: roomForm.status
+        },
+        organizationId: currentOrgId
+      });
+      Taro.showToast({ title: "房间信息已更新", icon: "success" });
+      resetRoomWork();
+      await loadApartments();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "更新房间失败", icon: "none" });
+    }
+  };
+
+  const deleteRoom = async (room: Room) => {
+    if (!currentOrgId) return;
+    if (!canManageRoom) return Taro.showToast({ title: "当前角色没有管理房间权限", icon: "none" });
+    if (room.status === "OCCUPIED") return Taro.showToast({ title: "已租房间不能删除，请先退租", icon: "none" });
+    try {
+      await apiClient(`/apartments/rooms/${room.id}`, { method: "DELETE", organizationId: currentOrgId });
+      Taro.showToast({ title: "房间已删除", icon: "success" });
+      resetRoomWork();
+      await loadApartments();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "删除房间失败", icon: "none" });
+    }
+  };
+
+  const addBatchRooms = async () => {
+    if (!currentOrgId || !selectedApartment) return;
+    if (!canManageRoom) return Taro.showToast({ title: "当前角色没有管理房间权限", icon: "none" });
+    const selectedRoomNos = generatedBatchRoomNos.filter((roomNo) => selectedBatchRoomNos.includes(roomNo));
+    if (generatedBatchRoomNos.length === 0) return Taro.showToast({ title: "请输入有效的楼层范围和房间数量", icon: "none" });
+    if (selectedRoomNos.length === 0) return Taro.showToast({ title: "请至少选择一个房间号", icon: "none" });
+    const facilities = toFacilityArray(batchFacilities);
+    try {
+      await apiClient(`/apartments/${selectedApartment.id}/rooms/batch`, {
+        method: "POST",
+        body: {
+          rooms: selectedRoomNos.map((roomNo) => ({
+            roomNo,
+            layout: batchLayout.trim() || "未配置",
+            area: optionalNumber(batchArea),
+            facilities
+          }))
+        },
+        organizationId: currentOrgId
+      });
+      resetRoomWork();
+      Taro.showToast({ title: `已提交 ${selectedRoomNos.length} 间房间，重复房间会自动跳过`, icon: "success" });
+      await loadApartments();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "批量添加房间失败", icon: "none" });
+    }
+  };
+
+  if (!currentOrgId) {
+    return (
+      <View className="page-container">
+        <Card><EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
+      </View>
+    );
+  }
+
+  // ========== LIST MODE ==========
+  if (mode === "list") {
+    return (
+      <View className="page-container">
+        <Card
+          title="公寓列表"
+          headerAction={canManageApartment ? <Button variant="secondary" size="small" onClick={() => { setSelectedId(undefined); setForm(emptyApartmentForm); setMode("create"); }}>新建</Button> : undefined}
+        >
+          {apartments.length === 0 ? (
+            <EmptyState emoji="🏢" title="暂无公寓" subtitle="点击新建开始维护" action={<Button onClick={() => { setSelectedId(undefined); setForm(emptyApartmentForm); setMode("create"); }}>新建公寓</Button>} />
+          ) : null}
+          {apartments.map((item) => {
+            const rooms = item.rooms ?? [];
+            const occupied = rooms.filter((room) => room.status === "OCCUPIED").length;
+            const monthlyIncome = apartmentMonthlyIncome(item);
+            const monthlyExpense = apartmentMonthlyExpense(item);
+            return (
+              <View key={item.id} className="apartment-card" onClick={() => openDetail(item.id)}>
+                <View className="apartment-card-header">
+                  <View>
+                    <Text className="card-title">{item.name}</Text>
+                    <Text className="text-muted">{item.location}</Text>
+                  </View>
+                  <Text className="card-stat">{occupied}/{rooms.length} 间在租</Text>
+                </View>
+                <View className="detail-row">
+                  <Text className="text-muted">{item.floors} 层 · 总面积 {item.totalArea ?? "未填"}㎡</Text>
+                  <Text className="text-muted">水 {money(item.waterUnitPrice)} / 电 {money(item.powerUnitPrice)}</Text>
+                </View>
+                <View className="detail-row">
+                  <Text className="card-stat">本月收入 ¥{money(monthlyIncome)}</Text>
+                  <Text className="text-muted">本月花费 ¥{money(monthlyExpense)}</Text>
+                </View>
+                {canManageApartment ? (
+                  <View onClick={(e) => { e.stopPropagation(); setExpenseApartmentId(item.id); setLayer("expense"); }}>
+                    <Button variant="ghost" size="small">记录花费</Button>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </Card>
+
+        {/* Expense Layer */}
+        {layer === "expense" && (
+          <View className="form-panel">
+            <Card title="记录花费" subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : undefined}>
+              <View className="form-grid">
+                <Input placeholder="花费名称" value={expense.name} onInput={(e) => setExpense((old) => ({ ...old, name: e.detail.value }))} />
+                <Input placeholder="金额" type="number" value={expense.amount} onInput={(e) => setExpense((old) => ({ ...old, amount: e.detail.value }))} />
+                <Input placeholder="日期" value={expense.spentAt} onInput={(e) => setExpense((old) => ({ ...old, spentAt: e.detail.value }))} />
+              </View>
+              <Input placeholder="备注" value={expense.note} onInput={(e) => setExpense((old) => ({ ...old, note: e.detail.value }))} />
+              <View className="action-row">
+                <Button onClick={addExpense}>保存花费</Button>
+                <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
+              </View>
+            </Card>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // ========== CREATE / EDIT MODE ==========
+  if (mode === "create" || mode === "edit") {
+    return (
+      <View className="page-container">
+        <View className="sub-page-header">
+          <Button variant="ghost" size="small" onClick={mode === "create" ? backToList : () => setMode("detail")}>
+            {mode === "create" ? "返回公寓列表" : "返回公寓详情"}
+          </Button>
+        </View>
+        <Card title={mode === "create" ? "新建公寓" : "编辑公寓信息"}>
+          <Input placeholder="公寓名称" value={form.name} onInput={(e) => updateForm("name", e.detail.value)} />
+          <Input placeholder="位置" value={form.location} onInput={(e) => updateForm("location", e.detail.value)} />
+          <View className="form-grid">
+            <Input placeholder="楼层数 例如 6" type="number" value={form.floors} onInput={(e) => updateForm("floors", e.detail.value)} />
+            <Input placeholder="占地面积 ㎡" type="number" value={form.landArea} onInput={(e) => updateForm("landArea", e.detail.value)} />
+            <Input placeholder="总面积 ㎡" type="number" value={form.totalArea} onInput={(e) => updateForm("totalArea", e.detail.value)} />
+          </View>
+          <Text className="section-label">上游信息</Text>
+          <Input placeholder="房东姓名" value={form.landlordName} onInput={(e) => updateForm("landlordName", e.detail.value)} />
+          <Input placeholder="联系方式" value={form.landlordPhone} onInput={(e) => updateForm("landlordPhone", e.detail.value)} />
+          <View className="form-grid">
+            <Input placeholder="合同开始" value={form.contractStart} onInput={(e) => updateForm("contractStart", e.detail.value)} />
+            <Input placeholder="合同结束" value={form.contractEnd} onInput={(e) => updateForm("contractEnd", e.detail.value)} />
+            <Input placeholder="上游租金 每期金额" type="number" value={form.rentAmount} onInput={(e) => updateForm("rentAmount", e.detail.value)} />
+          </View>
+          <Text className="section-label">水电单价</Text>
+          <View className="form-grid">
+            <Input placeholder="水费单价 元/吨" type="number" value={form.waterUnitPrice} onInput={(e) => updateForm("waterUnitPrice", e.detail.value)} />
+            <Input placeholder="电费单价 元/度" type="number" value={form.powerUnitPrice} onInput={(e) => updateForm("powerUnitPrice", e.detail.value)} />
+          </View>
+          <Button loading={saving} disabled={saving} onClick={saveApartment}>
+            {mode === "create" ? "创建公寓" : "保存公寓信息"}
+          </Button>
+        </Card>
+      </View>
+    );
+  }
+
+  // ========== DETAIL MODE ==========
+  if (mode === "detail" && selectedApartment) {
+    const apartmentVacantRooms = apartmentRooms.filter((room) => room.status === "VACANT").length;
+    const apartmentOccupiedRooms = apartmentRooms.filter((room) => room.status === "OCCUPIED").length;
+
+    return (
+      <View className="page-container">
+        <View className="sub-page-header">
+          <Button variant="ghost" size="small" onClick={backToList}>返回公寓列表</Button>
+        </View>
+
+        <Card
+          title={selectedApartment.name}
+          subtitle={selectedApartment.location}
+          headerAction={canManageApartment ? (
+            <View className="action-row-inline">
+              <Button variant="secondary" size="small" onClick={() => setMode("edit")}>编辑</Button>
+              <Button variant="danger" size="small" onClick={() => setLayer("apartmentDelete")}>删除</Button>
+            </View>
+          ) : undefined}
+        >
+          <View className="segment">
+            <View className={`segment-item ${detailTab === "expenses" ? "segment-item--active" : ""}`} onClick={() => { resetRoomWork(); setDetailTab("expenses"); }}>
+              <Text className={`segment-text ${detailTab === "expenses" ? "segment-text--active" : ""}`}>公寓详情</Text>
+            </View>
+            <View className={`segment-item ${detailTab === "rooms" ? "segment-item--active" : ""}`} onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); setDetailTab("rooms"); }}>
+              <Text className={`segment-text ${detailTab === "rooms" ? "segment-text--active" : ""}`}>房间列表</Text>
+            </View>
+          </View>
+        </Card>
+
+        {detailTab === "expenses" ? (
+          <>
+            <Card>
+              <View className="detail-panel">
+                <View className="detail-row">
+                  <Text className="text-muted">楼层/面积</Text>
+                  <Text className="card-title">{selectedApartment.floors} 层 · 占地 {selectedApartment.landArea ?? "未填"}㎡ · 总 {selectedApartment.totalArea ?? "未填"}㎡</Text>
+                </View>
+                <View className="detail-row">
+                  <Text className="text-muted">上游房东</Text>
+                  <Text className="card-title">{selectedApartment.landlordName || "未维护"} · {selectedApartment.landlordPhone || "未维护"}</Text>
+                </View>
+                <View className="detail-row">
+                  <Text className="text-muted">合同期</Text>
+                  <Text className="text-muted">{contractText(selectedApartment)}</Text>
+                </View>
+                <View className="detail-row">
+                  <Text className="text-muted">上游租金</Text>
+                  <Text className="card-stat">¥{money(selectedApartment.rentAmount)}</Text>
+                </View>
+                <View className="detail-row">
+                  <Text className="text-muted">水电单价</Text>
+                  <Text className="text-muted">水 ¥{money(selectedApartment.waterUnitPrice)} · 电 ¥{money(selectedApartment.powerUnitPrice)}</Text>
+                </View>
+                <View className="detail-row">
+                  <Text className="text-muted">房间数量</Text>
+                  <Text className="card-stat">{selectedApartment.rooms?.length ?? 0} 间</Text>
+                </View>
+              </View>
+            </Card>
+
+            <Card
+              title="经营花费"
+              subtitle="每月经营支出从这里快速记录"
+              headerAction={canManageApartment ? <Button variant="secondary" size="small" onClick={() => { setExpenseApartmentId(selectedApartment.id); setLayer("expense"); }}>记录花费</Button> : undefined}
+            >
+              {(selectedApartment.expenses ?? []).slice(0, 4).map((item) => (
+                <View className="detail-row" key={item.id}>
+                  <Text className="text-muted">{item.name} · {item.spentAt.slice(0, 10)}</Text>
+                  <Text className="card-stat">¥{money(item.amount)}</Text>
+                </View>
+              ))}
+              {(selectedApartment.expenses ?? []).length === 0 ? <Text className="text-muted">暂无经营花费记录</Text> : null}
+            </Card>
+          </>
+        ) : null}
+
+        {detailTab === "rooms" ? (
+          <Card
+            title="房间列表"
+            subtitle={`共 ${apartmentRooms.length} 间 · 空闲 ${apartmentVacantRooms} 间 · 已租 ${apartmentOccupiedRooms} 间`}
+            headerAction={canManageRoom ? (
+              <View className="action-row-inline">
+                <Button variant="secondary" size="small" onClick={() => { setRoomForm(emptyRoomForm); setEditingRoomId(undefined); setDeleteRoomId(undefined); setLayer("roomSingle"); }}>新增房间</Button>
+                <Button variant="secondary" size="small" onClick={() => { setRoomForm(emptyRoomForm); setEditingRoomId(undefined); setDeleteRoomId(undefined); setSelectedBatchRoomNos(buildBatchRoomNos({ startFloor: batchStartFloor, endFloor: batchEndFloor, roomCount: batchRoomCount })); setLayer("roomBatch"); }}>批量添加</Button>
+              </View>
+            ) : undefined}
+          >
+            {apartmentRooms.map((room) => (
+              <View key={room.id} className={`room-card ${(editingRoomId === room.id || deleteRoomId === room.id) ? 'room-card--active' : ''}`}>
+                <View className="room-card-header">
+                  <View>
+                    <Text className="card-title">{room.roomNo}</Text>
+                    <Text className="text-muted">{room.layout} · {room.area ?? "未填"}㎡</Text>
+                  </View>
+                  <Badge tone={toneForStatus[room.status]}>{statusLabels[room.status]}</Badge>
+                </View>
+                <Text className="text-muted">{facilitiesText(room.facilities)}</Text>
+                {canManageRoom ? (
+                  <View className="action-row-inline">
+                    <Button variant="secondary" size="small" onClick={() => {
+                      setRoomForm({ roomNo: room.roomNo, layout: room.layout, area: room.area ? String(room.area) : "", facilities: room.facilities?.join(",") ?? "", status: room.status });
+                      setDeleteRoomId(undefined);
+                      setEditingRoomId(room.id);
+                      setLayer("roomEdit");
+                    }}>编辑</Button>
+                    <Button variant="danger" size="small" disabled={room.status === "OCCUPIED"} onClick={() => { setEditingRoomId(undefined); setDeleteRoomId(room.id); setLayer("roomDelete"); }}>删除</Button>
+                  </View>
+                ) : null}
+              </View>
+            ))}
+            {apartmentRooms.length === 0 ? <Text className="text-muted">暂无房间，可以新增单个房间或批量添加</Text> : null}
+          </Card>
+        ) : null}
+
+        {/* Expense Layer */}
+        {layer === "expense" && (
+          <View className="form-panel">
+            <Card title="记录花费" subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : undefined}>
+              <View className="form-grid">
+                <Input placeholder="花费名称" value={expense.name} onInput={(e) => setExpense((old) => ({ ...old, name: e.detail.value }))} />
+                <Input placeholder="金额" type="number" value={expense.amount} onInput={(e) => setExpense((old) => ({ ...old, amount: e.detail.value }))} />
+                <Input placeholder="日期 YYYY-MM-DD" value={expense.spentAt} onInput={(e) => setExpense((old) => ({ ...old, spentAt: e.detail.value }))} />
+              </View>
+              <Input placeholder="备注" value={expense.note} onInput={(e) => setExpense((old) => ({ ...old, note: e.detail.value }))} />
+              <View className="action-row">
+                <Button onClick={addExpense}>保存花费</Button>
+                <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Room Single Layer */}
+        {layer === "roomSingle" && (
+          <View className="form-panel">
+            <Card title="新增房间" subtitle={selectedApartment.name}>
+              <View className="form-grid">
+                <Input placeholder="房间号" value={roomForm.roomNo} onInput={(e) => updateRoomForm("roomNo", e.detail.value)} />
+                <Input placeholder="面积 ㎡" type="number" value={roomForm.area} onInput={(e) => updateRoomForm("area", e.detail.value)} />
+              </View>
+              <Text className="field-label">户型</Text>
+              <View className="layout-selector">
+                {roomLayoutOptions.map((layout) => (
+                  <Button key={layout} variant={roomForm.layout === layout ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("layout", layout)}>{layout}</Button>
+                ))}
+              </View>
+              <Input placeholder="设施，用逗号分隔" value={roomForm.facilities} onInput={(e) => updateRoomForm("facilities", e.detail.value)} />
+              <View className="action-row">
+                <Button onClick={createRoom}>保存房间</Button>
+                <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Room Batch Layer */}
+        {layer === "roomBatch" && (
+          <View className="form-panel">
+            <Card title="批量添加房间" subtitle={selectedApartment.name}>
+              <View className="form-grid">
+                <Input placeholder="开始楼层" type="number" value={batchStartFloor} onInput={(e) => setBatchStartFloor(e.detail.value)} />
+                <Input placeholder="结束楼层" type="number" value={batchEndFloor} onInput={(e) => setBatchEndFloor(e.detail.value)} />
+                <Input placeholder="每层房间数" type="number" value={batchRoomCount} onInput={(e) => setBatchRoomCount(e.detail.value)} />
+              </View>
+              <View className="batch-room-panel">
+                <View className="detail-row">
+                  <Text className="field-label">生成房间号</Text>
+                  <Text className="text-muted">已选 {selectedBatchRoomNos.length}/{generatedBatchRoomNos.length}</Text>
+                </View>
+                {generatedBatchRoomNos.length > 0 ? (
+                  <View className="batch-room-grid">
+                    {generatedBatchRoomNos.map((roomNo) => {
+                      const selected = selectedBatchRoomNos.includes(roomNo);
+                      return (
+                        <Button key={roomNo} variant={selected ? "primary" : "ghost"} size="small" onClick={() => setSelectedBatchRoomNos((old) => toggleBatchRoomSelection(old, roomNo))}>
+                          {roomNo}
+                        </Button>
+                      );
+                    })}
+                  </View>
+                ) : <Text className="text-muted">输入有效的楼层范围和每层房间数后会自动生成房间号</Text>}
+              </View>
+              <Text className="field-label">户型</Text>
+              <View className="layout-selector">
+                {roomLayoutOptions.map((layout) => (
+                  <Button key={layout} variant={batchLayout === layout ? "primary" : "ghost"} size="small" onClick={() => setBatchLayout(layout)}>{layout}</Button>
+                ))}
+              </View>
+              <View className="form-grid">
+                <Input placeholder="面积 ㎡" type="number" value={batchArea} onInput={(e) => setBatchArea(e.detail.value)} />
+              </View>
+              <Input placeholder="设施，用逗号分隔" value={batchFacilities} onInput={(e) => setBatchFacilities(e.detail.value)} />
+              <View className="action-row">
+                <Button onClick={addBatchRooms}>确认添加房间</Button>
+                <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Room Edit Layer */}
+        {layer === "roomEdit" && (
+          <View className="form-panel">
+            <Card title="编辑房间" subtitle={editingRoom ? `${editingRoom.roomNo} · ${editingRoom.layout}` : undefined}>
+              <View className="form-grid">
+                <Input placeholder="房间号" value={roomForm.roomNo} onInput={(e) => updateRoomForm("roomNo", e.detail.value)} />
+                <Input placeholder="面积 ㎡" type="number" value={roomForm.area} onInput={(e) => updateRoomForm("area", e.detail.value)} />
+              </View>
+              <Text className="field-label">户型</Text>
+              <View className="layout-selector">
+                {roomLayoutOptions.map((layout) => (
+                  <Button key={layout} variant={roomForm.layout === layout ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("layout", layout)}>{layout}</Button>
+                ))}
+              </View>
+              <Input placeholder="设施，用逗号分隔" value={roomForm.facilities} onInput={(e) => updateRoomForm("facilities", e.detail.value)} />
+              <Text className="field-label">状态</Text>
+              <View className="layout-selector">
+                {roomStatuses.map((status) => (
+                  <Button key={status} variant={roomForm.status === status ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("status", status)}>{statusLabels[status]}</Button>
+                ))}
+              </View>
+              <View className="action-row">
+                <Button onClick={updateRoom}>保存修改</Button>
+                <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Room Delete Layer */}
+        {layer === "roomDelete" && deletingRoom && (
+          <View className="form-panel">
+            <Card title="删除房间" subtitle={`${deletingRoom.roomNo} · ${deletingRoom.layout}`}>
+              <Text className="text-muted">删除后房间资料不可恢复，请确认当前房间没有有效租约。</Text>
+              <View className="action-row">
+                <Button variant="danger" size="small" onClick={() => deleteRoom(deletingRoom)}>确认删除</Button>
+                <Button variant="ghost" size="small" onClick={resetRoomWork}>取消</Button>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Apartment Delete Layer */}
+        {layer === "apartmentDelete" && (
+          <View className="form-panel">
+            <Card title="删除公寓" subtitle={`${selectedApartment.name} · ${selectedApartment.location}`}>
+              <Text className="text-muted">删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。</Text>
+              <View className="action-row">
+                <Button variant="danger" size="small" onClick={deleteApartment}>确认删除</Button>
+                <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
+              </View>
+            </Card>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  return null;
 }

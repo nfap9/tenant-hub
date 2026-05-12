@@ -3,7 +3,7 @@ import { View, Text } from '@tarojs/components';
 import { switchTab } from '@tarojs/taro';
 import { Button, Input, Card } from '../../components/ui';
 import { apiClient } from '../../api/client';
-import { storage } from '../../utils/storage';
+import { setSession } from '../../utils/storage';
 import { showToast } from '../../components/Toast';
 
 type LoginMode = 'password' | 'otp';
@@ -38,11 +38,10 @@ export default function LoginPage() {
 
       const session = await apiClient<{ token: string; user: { id: string; username: string; phone: string } }>(
         endpoint,
-        undefined,
         { method: 'POST', body }
       );
 
-      storage.setSession(session);
+      setSession(session);
       showToast('登录成功', 'success');
       switchTab({ url: '/pages/index/index' });
     } catch (e) {

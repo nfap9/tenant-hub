@@ -27,7 +27,7 @@ export function Input({
         className="input"
         value={value}
         placeholder={placeholder}
-        type={password ? 'password' : type}
+        type={type}
         password={password}
         onInput={(e) => onChange(e.detail.value)}
       />
