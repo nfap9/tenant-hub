@@ -18,6 +18,7 @@ coverage/
 !.env.production.example
 apps/api/.env
 apps/ops-web/.env
+apps/wxapp/project.config.json
 
 # Logs
 *.log
