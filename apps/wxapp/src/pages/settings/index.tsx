@@ -1,19 +1,24 @@
 import { useState, useCallback } from 'react';
-import { View, Text, Input } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import { View, Text } from '@tarojs/components';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Input } from '../../components/ui';
 import type { OrgInvite } from '../../types/domain';
 import './index.scss';
 
 export default function SettingsPage() {
-  const { session, memberships, currentOrgId, currentMembership, setCurrentOrgId, members, roles, signOut } = useAppSession();
+  const { session, memberships, currentOrgId, currentMembership, setCurrentOrgId, members, roles, signOut, reload } = useAppSession();
   const canManageOrg = useHasPermission("org:manage");
   const canManageMember = useHasPermission("member:manage");
 
   const [invites, setInvites] = useState<OrgInvite[]>([]);
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
+  const [showJoinOrg, setShowJoinOrg] = useState(false);
+  const [orgName, setOrgName] = useState('');
+  const [orgDescription, setOrgDescription] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
 
   const loadInvites = useCallback(async () => {
     if (!currentOrgId) return;
@@ -27,6 +32,10 @@ export default function SettingsPage() {
 
   useDidShow(() => {
     loadInvites();
+  });
+
+  usePullDownRefresh(() => {
+    Promise.all([reload(), loadInvites()]).finally(() => Taro.stopPullDownRefresh());
   });
 
   const createInvite = async () => {
@@ -48,6 +57,88 @@ export default function SettingsPage() {
   const copyInviteCode = (code: string) => {
     Taro.setClipboardData({ data: code });
   };
+
+  const createOrganization = async () => {
+    if (!orgName.trim()) {
+      Taro.showToast({ title: "请输入组织名称", icon: "none" });
+      return;
+    }
+    try {
+      await apiClient('/organizations', {
+        method: 'POST',
+        body: { name: orgName.trim(), description: orgDescription.trim() || undefined }
+      });
+      Taro.showToast({ title: '组织创建成功', icon: 'success' });
+      setShowCreateOrg(false);
+      setOrgName('');
+      setOrgDescription('');
+      await reload();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : '创建失败', icon: 'none' });
+    }
+  };
+
+  const joinOrganization = async () => {
+    if (!inviteCode.trim()) {
+      Taro.showToast({ title: "请输入邀请码", icon: "none" });
+      return;
+    }
+    try {
+      await apiClient('/organizations/join', {
+        method: 'POST',
+        body: { inviteCode: inviteCode.trim() }
+      });
+      Taro.showToast({ title: '加入组织成功', icon: 'success' });
+      setShowJoinOrg(false);
+      setInviteCode('');
+      await reload();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : '加入失败', icon: 'none' });
+    }
+  };
+
+  // 无组织引导
+  if (memberships.length === 0) {
+    return (
+      <View className="page-container">
+        <Card>
+          <EmptyState emoji="🏢" title="还没有组织" subtitle="创建或加入一个组织，开始使用 Tenant Hub" />
+        </Card>
+
+        <Card title="创建组织">
+          <View style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
+            <Input
+              label="组织名称"
+              value={orgName}
+              onChange={setOrgName}
+              placeholder="例如：阳光公寓"
+            />
+            <Input
+              label="组织描述（可选）"
+              value={orgDescription}
+              onChange={setOrgDescription}
+              placeholder="简要描述你的组织"
+            />
+            <Button onClick={createOrganization}>创建组织</Button>
+          </View>
+        </Card>
+
+        <Card title="加入组织">
+          <View style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
+            <Input
+              label="邀请码"
+              value={inviteCode}
+              onChange={setInviteCode}
+              placeholder="请输入 8 位邀请码"
+            />
+            <Button variant="secondary" onClick={joinOrganization}>加入组织</Button>
+          </View>
+        </Card>
+
+        <Button variant="danger" onClick={signOut}>退出登录</Button>
+      </View>
+    );
+  }
 
   return (
     <View className="page-container">
@@ -80,6 +171,31 @@ export default function SettingsPage() {
           <Text className="text-muted">权限</Text>
           <Text className="text-muted">{currentMembership?.role.permissions.length} 项</Text>
         </View>
+        <View style={{ marginTop: 'var(--spacing-4)', display: 'flex', gap: 'var(--spacing-3)' }}>
+          <Button variant="secondary" size="small" onClick={() => setShowCreateOrg(true)}>创建组织</Button>
+          <Button variant="ghost" size="small" onClick={() => setShowJoinOrg(true)}>加入组织</Button>
+        </View>
+
+        {showCreateOrg && (
+          <View className="form-panel" style={{ marginTop: 'var(--spacing-4)' }}>
+            <Input label="组织名称" value={orgName} onChange={setOrgName} placeholder="例如：阳光公寓" />
+            <Input label="组织描述（可选）" value={orgDescription} onChange={setOrgDescription} placeholder="简要描述你的组织" />
+            <View className="action-row">
+              <Button size="small" onClick={createOrganization}>创建</Button>
+              <Button variant="ghost" size="small" onClick={() => { setShowCreateOrg(false); setOrgName(''); setOrgDescription(''); }}>取消</Button>
+            </View>
+          </View>
+        )}
+
+        {showJoinOrg && (
+          <View className="form-panel" style={{ marginTop: 'var(--spacing-4)' }}>
+            <Input label="邀请码" value={inviteCode} onChange={setInviteCode} placeholder="请输入 8 位邀请码" />
+            <View className="action-row">
+              <Button size="small" onClick={joinOrganization}>加入</Button>
+              <Button variant="ghost" size="small" onClick={() => { setShowJoinOrg(false); setInviteCode(''); }}>取消</Button>
+            </View>
+          </View>
+        )}
       </Card>
 
       <Card title="组织成员" subtitle={`共 ${members.length} 人`}>

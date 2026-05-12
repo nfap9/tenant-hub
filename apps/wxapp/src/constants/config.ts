@@ -1,5 +1,33 @@
-export const getApiBaseUrl = () => {
-  // 小程序无法使用环境变量，这里通过条件编译或固定值处理
-  // 开发环境默认使用 localhost 代理，生产环境需配置真实域名
-  return "http://localhost:4000/api";
-};
+import Taro from '@tarojs/taro';
+
+/**
+ * 获取 API 基础 URL
+ * - 生产环境（release）：使用真实域名（需在部署前修改）
+ * - 开发/体验版：默认使用 localhost 代理，也可通过 storage 动态配置
+ */
+export function getApiBaseUrl(): string {
+  try {
+    // 正式版小程序返回生产域名
+    const info = Taro.getAccountInfoSync?.();
+    if (info?.miniProgram?.envVersion === 'release') {
+      return 'https://api.tenanthub.example.com/api'; // 部署前替换为真实域名
+    }
+  } catch {
+    // 非小程序环境（如 H5 预览）忽略
+  }
+
+  // 开发环境允许通过 storage 覆盖（方便切换测试环境）
+  try {
+    const devUrl = Taro.getStorageSync('tenantHubDevApiUrl');
+    if (devUrl) return devUrl;
+  } catch {}
+
+  return 'http://localhost:4000/api';
+}
+
+/**
+ * 动态设置开发环境 API URL（仅开发版有效）
+ */
+export function setDevApiBaseUrl(url: string): void {
+  Taro.setStorageSync('tenantHubDevApiUrl', url);
+}

@@ -20,7 +20,7 @@ type AppSessionContextType = {
   roles: OrgRole[];
   notice: string;
   setNotice: (n: string) => void;
-  signIn: (s: MobileSession) => void;
+  signIn: (s: MobileSession) => Promise<void>;
   signOut: () => void;
   reload: () => Promise<void>;
   loading: boolean;
@@ -35,7 +35,8 @@ export function AppSessionProvider({ children }) {
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [roles, setRoles] = useState<OrgRole[]>([]);
   const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const token = session?.token;
   const currentMembership = useMemo(
@@ -45,7 +46,10 @@ export function AppSessionProvider({ children }) {
 
   const loadMe = useCallback(
     async (nextToken = token) => {
-      if (!nextToken) return;
+      if (!nextToken) {
+        setMemberships([]);
+        return;
+      }
       try {
         const me = await apiClient<{ user: MobileSession["user"]; memberships: Membership[] }>("/auth/me");
         setMemberships(me.memberships);
@@ -55,7 +59,10 @@ export function AppSessionProvider({ children }) {
             : me.memberships[0]?.organization.id
         );
       } catch (e) {
-        setNotice(e instanceof Error ? e.message : "加载用户信息失败");
+        // 401 已在 apiClient 中处理（跳转登录页），其他错误显示提示
+        if (e instanceof Error && !e.message.includes('登录已过期')) {
+          setNotice(e.message || "加载用户信息失败");
+        }
       }
     },
     [token]
@@ -76,7 +83,9 @@ export function AppSessionProvider({ children }) {
         setMembers(nextMembers);
         setRoles(nextRoles);
       } catch (e) {
-        setNotice(e instanceof Error ? e.message : "加载组织数据失败");
+        if (e instanceof Error && !e.message.includes('登录已过期')) {
+          setNotice(e.message || "加载组织数据失败");
+        }
       }
     },
     [currentOrgId, token]
@@ -88,10 +97,10 @@ export function AppSessionProvider({ children }) {
   }, []);
 
   const signIn = useCallback(
-    (nextSession: MobileSession) => {
+    async (nextSession: MobileSession) => {
       setSession(nextSession);
       setSessionState(nextSession);
-      loadMe(nextSession.token).catch((error) => setNotice(error.message));
+      await loadMe(nextSession.token);
     },
     [loadMe]
   );
@@ -104,6 +113,7 @@ export function AppSessionProvider({ children }) {
     setMembers([]);
     setRoles([]);
     Taro.removeStorageSync('tenantHubCurrentOrgId');
+    Taro.reLaunch({ url: '/pages/login/index' });
   }, []);
 
   const reload = useCallback(async () => {
@@ -116,6 +126,7 @@ export function AppSessionProvider({ children }) {
     }
   }, [loadMe, loadOrgData]);
 
+  // 启动时：从 storage 恢复 orgId
   useEffect(() => {
     try {
       const savedOrgId = Taro.getStorageSync('tenantHubCurrentOrgId');
@@ -123,12 +134,27 @@ export function AppSessionProvider({ children }) {
     } catch {}
   }, []);
 
+  // 启动时：检查登录状态，无 token 则跳登录页，有 token 则加载用户信息
   useEffect(() => {
-    if (session?.token) {
-      loadMe(session.token).catch((error) => setNotice(error.message));
-    }
+    const init = async () => {
+      const s = getSession();
+      if (!s?.token) {
+        setLoading(false);
+        setAuthChecked(true);
+        Taro.reLaunch({ url: '/pages/login/index' });
+        return;
+      }
+      try {
+        await loadMe(s.token);
+      } finally {
+        setLoading(false);
+        setAuthChecked(true);
+      }
+    };
+    init();
   }, []);
 
+  // token/组织变化时加载组织数据
   useEffect(() => {
     loadOrgData().catch((error) => setNotice(error.message));
   }, [loadOrgData]);

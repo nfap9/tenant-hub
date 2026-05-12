@@ -1,9 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text, Input } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { getApiBaseUrl } from '../../constants/config';
+import { Button, Card, EmptyState, Badge, Input as UiInput } from '../../components/ui';
+import { NoOrganization } from '../../components/NoOrganization';
 import { money, day, today } from '../../utils/format';
 import type { Bill, BillStatus, MonthlyBill, MeterType, Room } from '../../types/domain';
 import './index.scss';
@@ -77,7 +79,7 @@ export default function BillsPage() {
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
-  const [layer, setLayer] = useState<"payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail" | "deleteConfirm" | "deleteChildConfirm" | undefined>();
+  const [layer, setLayer] = useState<"payment" | "reading" | "utility" | "utilityImport" | "utilityExport" | "monthlyDetail" | "deleteConfirm" | "deleteChildConfirm" | "editBillItem" | undefined>();
   const [selectedMonthlyBillId, setSelectedMonthlyBillId] = useState("");
   const [selectedChildBillId, setSelectedChildBillId] = useState("");
   const [paymentRoomId, setPaymentRoomId] = useState("");
@@ -87,6 +89,7 @@ export default function BillsPage() {
   const [paymentForm, setPaymentForm] = useState({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
   const [utilityForm, setUtilityForm] = useState({ billId: "", previousWater: "", currentWater: "", previousPower: "", currentPower: "" });
   const [utilityCsv, setUtilityCsv] = useState("");
+  const [editingBillItem, setEditingBillItem] = useState<{ id: string; billId: string; name: string; amount: string; note: string } | undefined>();
 
   const unpaidMonthlyBills = useMemo(() => monthlyBills.filter((bill) => bill.status === "UNPAID" || bill.status === "PARTIAL_PAID"), [monthlyBills]);
   const unpaidTotal = useMemo(() => unpaidMonthlyBills.reduce((sum, bill) => sum + remainingAmount(bill), 0), [unpaidMonthlyBills]);
@@ -132,6 +135,10 @@ export default function BillsPage() {
 
   useDidShow(() => {
     loadData();
+  });
+
+  usePullDownRefresh(() => {
+    loadData().finally(() => Taro.stopPullDownRefresh());
   });
 
   const setPaymentBill = (bill: MonthlyBill) => {
@@ -246,7 +253,7 @@ export default function BillsPage() {
     if (!currentOrgId) return;
     try {
       const res = await Taro.request({
-        url: `http://localhost:4000/api/bills/utility/pending-export`,
+        url: `${getApiBaseUrl()}/bills/utility/pending-export`,
         header: { authorization: `Bearer ${(await import('../../utils/storage')).getSession()?.token}`, "x-organization-id": currentOrgId }
       });
       setUtilityCsv(typeof res.data === "string" ? res.data : "");
@@ -295,12 +302,25 @@ export default function BillsPage() {
     }
   };
 
+  const updateBillItem = async () => {
+    if (!currentOrgId || !editingBillItem) return;
+    try {
+      await apiClient(`/bills/${editingBillItem.billId}/items/${editingBillItem.id}`, {
+        method: "PUT",
+        organizationId: currentOrgId,
+        body: { amount: Number(editingBillItem.amount), note: editingBillItem.note.trim() || undefined }
+      });
+      Taro.showToast({ title: "账单项目已更新", icon: "success" });
+      setEditingBillItem(undefined);
+      setLayer("monthlyDetail");
+      await loadData();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : "更新失败", icon: "none" });
+    }
+  };
+
   if (!currentOrgId) {
-    return (
-      <View className="page-container">
-        <Card><EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
-      </View>
-    );
+    return <NoOrganization />;
   }
 
   return (
@@ -605,7 +625,20 @@ export default function BillsPage() {
                 {(child.items ?? []).map((item) => (
                   <View key={item.id} className="detail-row">
                     <Text className="text-muted">{item.name}{item.note ? ` · ${item.note}` : ""}</Text>
-                    <Text className="text-muted">¥{money(item.amount)}</Text>
+                    <View className="action-row-inline">
+                      <Text className="text-muted">¥{money(item.amount)}</Text>
+                      {child.status !== "PAID" ? (
+                        <Text
+                          className="link-text"
+                          onClick={() => {
+                            setEditingBillItem({ id: item.id, billId: child.id, name: item.name, amount: String(item.amount), note: item.note ?? "" });
+                            setLayer("editBillItem");
+                          }}
+                        >
+                          修改
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
                 ))}
                 {child.mode === "POSTPAID" ? <Button variant="secondary" size="small" onClick={() => openUtilityReading(child)}>录入本期水电</Button> : null}
@@ -650,6 +683,37 @@ export default function BillsPage() {
             <View className="action-row">
               <Button variant="danger" size="small" onClick={() => deleteChildBill(selectedChildBillId)}>确认删除</Button>
               <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
+            </View>
+          </Card>
+        </View>
+      )}
+
+      {/* Edit Bill Item */}
+      {layer === "editBillItem" && editingBillItem && (
+        <View className="form-panel">
+          <Card title={`修改 ${editingBillItem.name}`}>
+            <View style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
+              <View>
+                <Text style={{ fontSize: 'var(--font-size-caption)', fontWeight: 600, color: 'var(--color-text)', marginBottom: 'var(--spacing-2)' }}>金额</Text>
+                <UiInput
+                  value={editingBillItem.amount}
+                  onChange={(value) => setEditingBillItem((old) => old ? { ...old, amount: value } : undefined)}
+                  type="digit"
+                  placeholder="输入金额"
+                />
+              </View>
+              <View>
+                <Text style={{ fontSize: 'var(--font-size-caption)', fontWeight: 600, color: 'var(--color-text)', marginBottom: 'var(--spacing-2)' }}>备注</Text>
+                <UiInput
+                  value={editingBillItem.note}
+                  onChange={(value) => setEditingBillItem((old) => old ? { ...old, note: value } : undefined)}
+                  placeholder="备注（可选）"
+                />
+              </View>
+            </View>
+            <View className="action-row">
+              <Button variant="secondary" size="small" onClick={() => { setEditingBillItem(undefined); setLayer("monthlyDetail"); }}>取消</Button>
+              <Button size="small" onClick={updateBillItem}>保存</Button>
             </View>
           </Card>
         </View>

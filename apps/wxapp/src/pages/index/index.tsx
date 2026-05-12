@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { NoOrganization } from '../../components/NoOrganization';
 import { money, compactMoney, isThisMonth, daysUntil, monthlyAmount } from '../../utils/format';
 import type { Apartment, Room, Lease, MonthlyBill, Bill } from '../../types/domain';
 import './index.scss';
@@ -78,6 +79,10 @@ export default function Index() {
     loadData();
   });
 
+  usePullDownRefresh(() => {
+    loadData().finally(() => Taro.stopPullDownRefresh());
+  });
+
   const activeLeases = useMemo(() => rooms.flatMap((room) => room.leases ?? []).filter((lease) => lease.status === "ACTIVE"), [rooms]);
   const occupiedCount = rooms.filter((room) => room.status === "OCCUPIED").length;
   const vacantCount = rooms.filter((room) => room.status === "VACANT").length;
@@ -149,13 +154,7 @@ export default function Index() {
   ].filter(Boolean) as TodoItem[];
 
   if (!currentOrgId) {
-    return (
-      <View className="page-container">
-        <Card>
-          <EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" />
-        </Card>
-      </View>
-    );
+    return <NoOrganization />;
   }
 
   return (

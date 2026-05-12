@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, Input } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge } from '../../components/ui';
@@ -8,7 +8,7 @@ import type { OrgMember, OrgRole } from '../../types/domain';
 import './index.scss';
 
 export default function OrganizationPage() {
-  const { currentOrgId, members, roles, currentMembership } = useAppSession();
+  const { currentOrgId, members, roles, currentMembership, reload } = useAppSession();
   const canManageOrg = useHasPermission("org:manage");
   const canManageMember = useHasPermission("member:manage");
 
@@ -22,6 +22,10 @@ export default function OrganizationPage() {
     if (currentMembership?.organization.name) {
       setOrgName(currentMembership.organization.name);
     }
+  });
+
+  usePullDownRefresh(() => {
+    reload().finally(() => Taro.stopPullDownRefresh());
   });
 
   const updateOrgName = async () => {

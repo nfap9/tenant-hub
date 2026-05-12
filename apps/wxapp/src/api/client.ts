@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro';
 import { getApiBaseUrl } from '../constants/config';
-import { getSession } from '../utils/storage';
+import { getSession, clearSession } from '../utils/storage';
 
 export type ApiOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -9,10 +9,13 @@ export type ApiOptions = {
   organizationId?: string;
 };
 
+let isRedirecting = false;
+
 export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const session = getSession();
   const token = session?.token;
   const url = `${getApiBaseUrl()}${path}`;
+
   const res = await Taro.request({
     url,
     method: options.method || 'GET',
@@ -24,9 +27,26 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
       ...options.headers,
     },
   });
+
+  // 401 未授权：自动清除 session 并跳转到登录页
+  if (res.statusCode === 401) {
+    clearSession();
+    if (!isRedirecting) {
+      isRedirecting = true;
+      // 延迟一点，避免连续多个 401 请求导致多次跳转
+      setTimeout(() => {
+        Taro.reLaunch({ url: '/pages/login/index' }).finally(() => {
+          isRedirecting = false;
+        });
+      }, 100);
+    }
+    throw new Error('登录已过期，请重新登录');
+  }
+
   if (!res.statusCode || res.statusCode >= 400) {
     const errorData = typeof res.data === 'string' ? { error: res.data } : (res.data as { error?: string }) || {};
     throw new Error(errorData.error || `请求失败 (${res.statusCode})`);
   }
+
   return (res.data as { data: T }).data;
 }

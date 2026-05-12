@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text, Input } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { NoOrganization } from '../../components/NoOrganization';
 import { money, today, nextYear, numberValue } from '../../utils/format';
 import type { Room, RoomStatus, Lease, RentCycle, BillItemType, TerminationType } from '../../types/domain';
 import './index.scss';
@@ -98,6 +99,10 @@ export default function RoomsPage() {
 
   useDidShow(() => {
     loadRooms();
+  });
+
+  usePullDownRefresh(() => {
+    loadRooms().finally(() => Taro.stopPullDownRefresh());
   });
 
   const updateRoom = async () => {
@@ -305,11 +310,7 @@ export default function RoomsPage() {
   };
 
   if (!currentOrgId) {
-    return (
-      <View className="page-container">
-        <Card><EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
-      </View>
-    );
+    return <NoOrganization />;
   }
 
   return (

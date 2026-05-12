@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text, Input } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { NoOrganization } from '../../components/NoOrganization';
 import { money, optionalNumber, optionalText, toFacilityArray, facilitiesText } from '../../utils/format';
 import { buildBatchRoomNos, toggleBatchRoomSelection } from '../../utils/batchRooms';
 import type { Apartment, Room, RoomStatus } from '../../types/domain';
@@ -133,6 +134,10 @@ export default function ApartmentsPage() {
 
   useDidShow(() => {
     loadApartments();
+  });
+
+  usePullDownRefresh(() => {
+    loadApartments().finally(() => Taro.stopPullDownRefresh());
   });
 
   const updateForm = (key: keyof typeof form, value: string) => setForm((old) => ({ ...old, [key]: value }));
@@ -324,11 +329,7 @@ export default function ApartmentsPage() {
   };
 
   if (!currentOrgId) {
-    return (
-      <View className="page-container">
-        <Card><EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
-      </View>
-    );
+    return <NoOrganization />;
   }
 
   // ========== LIST MODE ==========

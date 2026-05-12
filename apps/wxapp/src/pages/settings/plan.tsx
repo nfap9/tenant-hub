@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Card, EmptyState, Badge, Button } from '../../components/ui';
@@ -28,6 +28,10 @@ export default function PlanPage() {
 
   useDidShow(() => {
     loadData();
+  });
+
+  usePullDownRefresh(() => {
+    loadData().finally(() => Taro.stopPullDownRefresh());
   });
 
   const subscribePlan = async (planId: string) => {

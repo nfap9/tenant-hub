@@ -2,7 +2,7 @@
   "miniprogramRoot": "dist/",
   "projectname": "tenant-hub-wxapp",
   "description": "Tenant Hub WeChat Mini Program",
-  "appid": "touristappid",
+  "appid": "",
   "setting": {
     "urlCheck": true,
     "es6": true,
@@ -39,7 +39,12 @@
     "disableUseStrict": false,
     "minifyWXML": true,
     "showES6CompileOption": false,
-    "useCompilerPlugins": false
+    "useCompilerPlugins": false,
+    "compileWorklet": false,
+    "localPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true
   },
   "compileType": "miniprogram",
   "libVersion": "3.3.0",
@@ -47,5 +52,7 @@
     "ignore": [],
     "include": []
   },
-  "condition": {}
+  "condition": {},
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
 }
