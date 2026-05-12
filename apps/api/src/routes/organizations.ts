@@ -7,7 +7,7 @@ import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.j
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
-import { assertOrganizationQuota, lockOrganizationQuota } from "../services/quotas.js";
+import { assertOrganizationQuota, isQuotaLimitEnabled, lockOrganizationQuota } from "../services/quotas.js";
 import { assertInviteJoinable, buildInviteExpiry, generateInviteCode, normalizeInviteCode } from "../services/orgInvites.js";
 
 export const orgRouter = Router();
@@ -133,7 +133,7 @@ orgRouter.get(
   "/:organizationId/subscription",
   requireOrg,
   asyncHandler(async (req, res) => {
-    const [subscription, usage, quotaPackages] = await Promise.all([
+    const [subscription, usage, quotaPackages, quotaLimitEnabled] = await Promise.all([
       prisma.subscription.findFirst({
         where: {
           organizationId: req.organizationId!,
@@ -150,7 +150,8 @@ orgRouter.get(
       prisma.orgQuotaPackage.findMany({
         where: { organizationId: req.organizationId! },
         orderBy: { createdAt: "desc" }
-      })
+      }),
+      isQuotaLimitEnabled()
     ]);
 
     const extraQuota = quotaPackages.reduce(
@@ -162,7 +163,7 @@ orgRouter.get(
       { apartmentQuota: 0, roomQuota: 0, memberQuota: 0 }
     );
 
-    ok(res, { subscription, usage: usage._count, extraQuota, quotaPackages });
+    ok(res, { subscription, usage: usage._count, extraQuota, quotaPackages, quotaLimitEnabled });
   })
 );
 

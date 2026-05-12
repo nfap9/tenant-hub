@@ -28,7 +28,37 @@ export const lockOrganizationQuota = async (db: Prisma.TransactionClient, organi
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`quota:${organizationId}`}))`;
 };
 
+export const isQuotaLimitEnabled = async (db: PrismaLike = prisma) => {
+  const setting = await db.systemSetting.findUnique({ where: { key: "quota_limit_enabled" } });
+  if (!setting) return true;
+  return !!((setting.value as any)?.enabled ?? true);
+};
+
 export const getOrganizationQuota = async (organizationId: string, db: PrismaLike = prisma) => {
+  const enabled = await isQuotaLimitEnabled(db);
+  if (!enabled) {
+    return {
+      subscription: {
+        id: "unlimited",
+        organizationId,
+        planId: "unlimited",
+        startsAt: new Date("2000-01-01"),
+        endsAt: null,
+        active: true,
+        plan: {
+          id: "unlimited",
+          name: "不限量",
+          apartmentLimit: Number.MAX_SAFE_INTEGER,
+          roomLimit: Number.MAX_SAFE_INTEGER,
+          memberLimit: Number.MAX_SAFE_INTEGER,
+          price: 0,
+          enabled: true
+        }
+      } as any,
+      extraQuota: { apartmentQuota: 0, roomQuota: 0, memberQuota: 0 }
+    };
+  }
+
   const [subscription, quotaPackages] = await Promise.all([
     db.subscription.findFirst({
       where: {
@@ -57,6 +87,9 @@ export const getOrganizationQuota = async (organizationId: string, db: PrismaLik
 };
 
 export const assertOrganizationQuota = async (organizationId: string, kind: QuotaKind, nextCount: number, db: PrismaLike = prisma) => {
+  const enabled = await isQuotaLimitEnabled(db);
+  if (!enabled) return;
+
   const quota = await getOrganizationQuota(organizationId, db);
   if (!quota) throw new HttpError(402, "请先购买套餐后再使用该功能");
 
