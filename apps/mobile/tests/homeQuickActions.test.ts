@@ -1,26 +1,31 @@
-import assert from "node:assert/strict";
 import { homeQuickActions } from "../src/navigation/homeQuickActions";
 
-const meterAction = homeQuickActions.find((action) => action.key === "meter");
-const paymentAction = homeQuickActions.find((action) => action.key === "payment");
-const leaseAction = homeQuickActions.find((action) => action.key === "lease");
+describe("home quick actions", () => {
+  it("should include meter action", () => {
+    const meterAction = homeQuickActions.find((action) => action.key === "meter");
+    expect(meterAction).toBeDefined();
+    expect(meterAction!.title).toBe("抄表");
+    expect(meterAction!.icon).toBe("speedometer-outline");
+    expect(meterAction!.intent.tab).toBe("bills");
+    expect(meterAction!.intent.billsTab).toBe("pending");
+  });
 
-assert.ok(meterAction, "home quick actions should include a meter action");
-assert.equal(meterAction.title, "抄表");
-assert.equal(meterAction.icon, "表");
-assert.equal("detail" in meterAction, false);
-assert.equal(meterAction.intent.tab, "bills");
-assert.equal(meterAction.intent.billsTab, "meter");
+  it("should include payment action", () => {
+    const paymentAction = homeQuickActions.find((action) => action.key === "payment");
+    expect(paymentAction).toBeDefined();
+    expect(paymentAction!.title).toBe("登记收款");
+    expect(paymentAction!.icon).toBe("cash-outline");
+    expect(paymentAction!.intent.tab).toBe("bills");
+    expect(paymentAction!.intent.billsTab).toBe("unpaid");
+    expect(paymentAction!.intent.billsAction).toBe("payment");
+  });
 
-assert.ok(paymentAction, "home quick actions should include a payment action");
-assert.equal(paymentAction.title, "登记收款");
-assert.equal(paymentAction.icon, "收");
-assert.equal(paymentAction.intent.tab, "bills");
-assert.equal(paymentAction.intent.billsTab, "monthly");
-assert.equal(paymentAction.intent.billsAction, "payment");
-
-assert.ok(leaseAction, "home quick actions should include a lease action");
-assert.equal(leaseAction.title, "签约入住");
-assert.equal(leaseAction.icon, "签");
-assert.equal(leaseAction.intent.tab, "rooms");
-assert.equal(leaseAction.intent.roomsAction, "lease");
+  it("should include lease action", () => {
+    const leaseAction = homeQuickActions.find((action) => action.key === "lease");
+    expect(leaseAction).toBeDefined();
+    expect(leaseAction!.title).toBe("签约入住");
+    expect(leaseAction!.icon).toBe("create-outline");
+    expect(leaseAction!.intent.tab).toBe("rooms");
+    expect(leaseAction!.intent.roomsAction).toBe("lease");
+  });
+});

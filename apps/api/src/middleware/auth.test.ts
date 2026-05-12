@@ -1,22 +1,16 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { isTokenStaleForPasswordChange } from "./auth.js";
 
-assert.equal(
-  isTokenStaleForPasswordChange(new Date("2026-05-07T10:00:00.000Z"), null),
-  false,
-  "tokens should remain valid when the user has never changed password"
-);
+describe("auth middleware", () => {
+  it("should remain valid when the user has never changed password", () => {
+    expect(isTokenStaleForPasswordChange(new Date("2026-05-07T10:00:00.000Z"), null)).toBe(false);
+  });
 
-assert.equal(
-  isTokenStaleForPasswordChange(new Date("2026-05-07T10:00:00.000Z"), new Date("2026-05-07T10:00:02.000Z")),
-  true,
-  "tokens issued before a password change should be stale"
-);
+  it("should mark tokens issued before a password change as stale", () => {
+    expect(isTokenStaleForPasswordChange(new Date("2026-05-07T10:00:00.000Z"), new Date("2026-05-07T10:00:02.000Z"))).toBe(true);
+  });
 
-assert.equal(
-  isTokenStaleForPasswordChange(new Date("2026-05-07T10:00:00.000Z"), new Date("2026-05-07T10:00:00.500Z")),
-  false,
-  "same-second tokens should tolerate JWT iat second precision"
-);
-
-console.info("auth middleware tests passed");
+  it("should tolerate JWT iat second precision for same-second tokens", () => {
+    expect(isTokenStaleForPasswordChange(new Date("2026-05-07T10:00:00.000Z"), new Date("2026-05-07T10:00:00.500Z"))).toBe(false);
+  });
+});

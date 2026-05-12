@@ -1,26 +1,18 @@
-import assert from "node:assert/strict";
 import { mobileApi } from "../src/services/http";
 
-const originalFetch = globalThis.fetch;
+describe("http service", () => {
+  const originalFetch = globalThis.fetch;
 
-const mockFetch = (response: { ok: boolean; text: string }) => {
-  globalThis.fetch = (async () => ({
-    ok: response.ok,
-    text: async () => response.text
-  })) as typeof fetch;
-};
-
-const main = async () => {
-  try {
-    mockFetch({ ok: false, text: "<html>Bad gateway</html>" });
-
-    await assert.rejects(
-      () => mobileApi("/broken"),
-      (error) => error instanceof Error && error.message === "<html>Bad gateway</html>"
-    );
-  } finally {
+  afterEach(() => {
     globalThis.fetch = originalFetch;
-  }
-};
+  });
 
-main();
+  it("should throw with response text on non-ok responses", async () => {
+    globalThis.fetch = jest.fn(async () => ({
+      ok: false,
+      text: async () => "<html>Bad gateway</html>"
+    })) as unknown as typeof fetch;
+
+    await expect(mobileApi("/broken")).rejects.toThrow("<html>Bad gateway</html>");
+  });
+});

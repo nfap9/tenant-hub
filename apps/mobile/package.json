@@ -10,10 +10,10 @@
     "android:build:debug": "cd android && ./gradlew assembleDebug",
     "android:build:release": "cd android && ./gradlew assembleRelease",
     "android:apk": "pnpm android:build:release",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:legacy": "tsx tests/authInteraction.test.ts && tsx tests/batchRooms.test.ts && tsx tests/billPayment.test.ts && tsx tests/billPresentation.test.ts && tsx tests/billsScreenPaymentPlacement.test.ts && tsx tests/config.test.ts && tsx tests/homeQuickActions.test.ts && tsx tests/http.test.ts && tsx tests/leaseCandidates.test.ts && tsx tests/mobileInteractionLayering.test.ts && tsx tests/roomBillLabel.test.ts && tsx tests/sessionStorage.test.ts",
+
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",

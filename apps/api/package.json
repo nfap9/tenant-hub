@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
-    "test": "tsx src/config/env.test.ts && tsx src/middleware/auth.test.ts && tsx src/services/billing.test.ts && tsx src/services/billingPayments.test.ts && tsx src/services/csv.test.ts && tsx src/services/leaseLifecycle.test.ts && tsx src/services/orgInvites.test.ts && tsx src/services/leaseSettlement.test.ts && tsx src/services/utilityImport.test.ts",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prisma": "prisma"
   },
@@ -32,8 +33,12 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/ms": "^2.1.0",
     "@types/node": "^22.10.5",
+    "@types/supertest": "^7.2.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^9.17.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.5"
   }
 }

@@ -13,7 +13,9 @@ export const PERMISSIONS = {
   MEMBER_MANAGE: "member:manage"
 } as const;
 
-export const ensureSystemRoles = async () => {
+export const ensureSystemRoles = async (
+  db: Pick<typeof prisma, "role"> = prisma
+) => {
   const roles = [
     { code: "owner", name: "所有者", description: "组织所有权限", permissions: ["*"] },
     {
@@ -46,7 +48,7 @@ export const ensureSystemRoles = async () => {
 
   await Promise.all(
     roles.map((role) =>
-      prisma.role.upsert({
+      db.role.upsert({
         where: { code: role.code },
         create: { ...role, system: true },
         update: { name: role.name, description: role.description, permissions: role.permissions, system: true }

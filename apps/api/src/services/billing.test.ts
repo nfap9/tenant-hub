@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import {
   calculateBillingPeriods,
   calculateUtilityAmount,
@@ -11,96 +11,99 @@ import {
 
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
-const periods = calculateBillingPeriods({
-  leaseStartDate: date("2026-05-05"),
-  leaseEndDate: date("2026-12-04"),
-  cycle: "MONTHLY",
-  billingDate: date("2026-06-05")
+describe("billing", () => {
+  it("should calculate billing periods correctly", () => {
+    const periods = calculateBillingPeriods({
+      leaseStartDate: date("2026-05-05"),
+      leaseEndDate: date("2026-12-04"),
+      cycle: "MONTHLY",
+      billingDate: date("2026-06-05")
+    });
+
+    expect(periods.prepaid.start.toISOString()).toBe(date("2026-06-05").toISOString());
+    expect(periods.prepaid.end.toISOString()).toBe(date("2026-07-04").toISOString());
+    expect(periods.postpaid.start.toISOString()).toBe(date("2026-05-05").toISOString());
+    expect(periods.postpaid.end.toISOString()).toBe(date("2026-06-04").toISOString());
+  });
+
+  it("should not generate postpaid bill on first billing date", () => {
+    expect(shouldGeneratePostpaidBill({ leaseStartDate: date("2026-05-05"), billingDate: date("2026-05-05") })).toBe(false);
+  });
+
+  it("should generate postpaid bill on later billing dates", () => {
+    expect(shouldGeneratePostpaidBill({ leaseStartDate: date("2026-05-05"), billingDate: date("2026-06-05") })).toBe(true);
+  });
+
+  it("should include every rent day through today", () => {
+    expect(
+      getBillingDatesThrough({
+        leaseStartDate: date("2026-05-05"),
+        leaseEndDate: date("2026-12-04"),
+        cycle: "MONTHLY",
+        today: date("2026-07-10")
+      }).map((value) => value.toISOString())
+    ).toEqual([date("2026-05-05").toISOString(), date("2026-06-05").toISOString(), date("2026-07-05").toISOString()]);
+  });
+
+  it("should combine water and power usage for utility amount", () => {
+    expect(
+      calculateUtilityAmount({
+        previousWater: 10,
+        currentWater: 18,
+        waterUnitPrice: 4,
+        previousPower: 100,
+        currentPower: 160,
+        powerUnitPrice: 0.8
+      }).toString()
+    ).toBe("80");
+  });
+
+  it("should reject backwards water readings", () => {
+    expect(() =>
+      calculateUtilityAmount({
+        previousWater: 18,
+        currentWater: 10,
+        waterUnitPrice: 4,
+        previousPower: 100,
+        currentPower: 160,
+        powerUnitPrice: 0.8
+      })
+    ).toThrow(/水表本期读数不能小于上期读数/);
+  });
+
+  it("should generate bills for every current lease", async () => {
+    const result = await generateCurrentLeaseBills("org-a", date("2026-07-10"), {
+      findCurrentLeases: async (organizationId) => {
+        expect(organizationId).toBe("org-a");
+        return [{ id: "lease-a" }, { id: "lease-b" }] as unknown as Awaited<ReturnType<Parameters<typeof generateCurrentLeaseBills>[2]["findCurrentLeases"]>>;
+      },
+      generateLeaseBillsForLease: async (leaseId, today) => {
+        expect(today.toISOString()).toBe(date("2026-07-10").toISOString());
+        return leaseId === "lease-a" ? ["bill-a-1", "bill-a-2"] : ["bill-b-1"];
+      }
+    });
+
+    expect(result).toEqual({ leaseCount: 2, billIds: ["bill-a-1", "bill-a-2", "bill-b-1"] });
+  });
+
+  it("should return empty for organizations with no current leases", async () => {
+    const result = await generateCurrentLeaseBills("org-empty", date("2026-07-10"), {
+      findCurrentLeases: async () => [],
+      generateLeaseBillsForLease: async () => {
+        throw new Error("should not generate bills when there are no current leases");
+      }
+    });
+
+    expect(result).toEqual({ leaseCount: 0, billIds: [] });
+  });
+
+  it("should define current month bill window correctly", () => {
+    const currentMonthWindow = getCurrentMonthBillWindow(date("2026-07-10"));
+    expect(currentMonthWindow.start.toISOString()).toBe(date("2026-07-01").toISOString());
+    expect(currentMonthWindow.end.toISOString()).toBe(date("2026-08-01").toISOString());
+  });
+
+  it("should format bill month label correctly", () => {
+    expect(getBillMonthLabel(date("2026-07-01"))).toBe("2026年7月");
+  });
 });
-
-assert.equal(periods.prepaid.start.toISOString(), date("2026-06-05").toISOString(), "prepaid rent starts on the billing date");
-assert.equal(periods.prepaid.end.toISOString(), date("2026-07-04").toISOString(), "prepaid rent covers the next rent cycle");
-assert.equal(periods.postpaid.start.toISOString(), date("2026-05-05").toISOString(), "postpaid utilities start at the previous rent cycle");
-assert.equal(periods.postpaid.end.toISOString(), date("2026-06-04").toISOString(), "postpaid utilities end the day before the billing date");
-
-assert.equal(
-  shouldGeneratePostpaidBill({ leaseStartDate: date("2026-05-05"), billingDate: date("2026-05-05") }),
-  false,
-  "first billing date should not generate previous utilities"
-);
-assert.equal(
-  shouldGeneratePostpaidBill({ leaseStartDate: date("2026-05-05"), billingDate: date("2026-06-05") }),
-  true,
-  "later billing dates should generate previous utilities"
-);
-
-assert.deepEqual(
-  getBillingDatesThrough({
-    leaseStartDate: date("2026-05-05"),
-    leaseEndDate: date("2026-12-04"),
-    cycle: "MONTHLY",
-    today: date("2026-07-10")
-  }).map((value) => value.toISOString()),
-  [date("2026-05-05").toISOString(), date("2026-06-05").toISOString(), date("2026-07-05").toISOString()],
-  "billing dates should include every rent day through today"
-);
-
-assert.equal(
-  calculateUtilityAmount({
-    previousWater: 10,
-    currentWater: 18,
-    waterUnitPrice: 4,
-    previousPower: 100,
-    currentPower: 160,
-    powerUnitPrice: 0.8
-  }).toString(),
-  "80",
-  "utility amount should combine water and power usage"
-);
-
-assert.throws(
-  () =>
-    calculateUtilityAmount({
-      previousWater: 18,
-      currentWater: 10,
-      waterUnitPrice: 4,
-      previousPower: 100,
-      currentPower: 160,
-      powerUnitPrice: 0.8
-    }),
-  /水表本期读数不能小于上期读数/,
-  "water readings cannot go backwards"
-);
-
-const currentBillResult = await generateCurrentLeaseBills("org-a", date("2026-07-10"), {
-  findCurrentLeases: async (organizationId) => {
-    assert.equal(organizationId, "org-a", "current bill generation should query leases by organization");
-    return [{ id: "lease-a" }, { id: "lease-b" }];
-  },
-  generateLeaseBillsForLease: async (leaseId, today) => {
-    assert.equal(today.toISOString(), date("2026-07-10").toISOString(), "today should be passed through to every lease");
-    return leaseId === "lease-a" ? ["bill-a-1", "bill-a-2"] : ["bill-b-1"];
-  }
-});
-
-assert.deepEqual(
-  currentBillResult,
-  { leaseCount: 2, billIds: ["bill-a-1", "bill-a-2", "bill-b-1"] },
-  "current bill generation should generate every current lease and flatten bill ids"
-);
-
-const emptyCurrentBillResult = await generateCurrentLeaseBills("org-empty", date("2026-07-10"), {
-  findCurrentLeases: async () => [],
-  generateLeaseBillsForLease: async () => {
-    throw new Error("should not generate bills when there are no current leases");
-  }
-});
-
-assert.deepEqual(emptyCurrentBillResult, { leaseCount: 0, billIds: [] }, "empty organizations should return an empty generation summary");
-
-const currentMonthWindow = getCurrentMonthBillWindow(date("2026-07-10"));
-assert.equal(currentMonthWindow.start.toISOString(), date("2026-07-01").toISOString(), "current month bill window should start on the first day");
-assert.equal(currentMonthWindow.end.toISOString(), date("2026-08-01").toISOString(), "current month bill window should end at the next month start");
-assert.equal(getBillMonthLabel(date("2026-07-01")), "2026年7月", "bill month label should use the billing month");
-
-console.info("billing tests passed");

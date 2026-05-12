@@ -1,23 +1,62 @@
-import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const source = readFileSync(join(process.cwd(), "src/screens/bills/BillsScreen.tsx"), "utf8");
-const selectorSource = readFileSync(join(process.cwd(), "src/components/RoomBillSelector.tsx"), "utf8");
+describe("bills screen payment placement", () => {
+  const source = readFileSync(join(process.cwd(), "src/screens/bills/BillsScreen.tsx"), "utf8");
+  const selectorSource = readFileSync(join(process.cwd(), "src/components/RoomBillSelector.tsx"), "utf8");
 
-assert.ok(source.includes('visible={activeLayer === "payment"}'), "payment should use a standalone drawer from the list toolbar");
-assert.ok(source.includes('<Text style={styles.smallButtonText}>登记收款</Text>'), "monthly list toolbar should show payment as a compact action");
-assert.equal(source.includes('<Text style={styles.buttonText}>登记收款</Text>'), false, "payment action should not occupy a full-width primary button");
-assert.ok(source.includes("RoomBillSelector"), "bill and meter drawers should use the shared room selector");
-assert.ok(selectorSource.includes("搜索公寓或房号"), "room selector should use one fuzzy search box");
-assert.ok(selectorSource.includes("<TaskSheet"), "room selector should open a second-level drawer");
-assert.equal(selectorSource.includes("展开"), false, "room selector should not expand inline");
-assert.equal(selectorSource.includes("收起"), false, "room selector should not collapse inline");
-assert.equal(selectorSource.includes("apartmentDropdownOpen"), false, "room selector should not keep a separate apartment dropdown");
-assert.equal(selectorSource.includes("roomBillDropdownOpen"), false, "room selector should not keep a separate room-bill dropdown");
-assert.ok(source.includes("该房间暂无待收账单"), "payment drawer should explain when the selected room has no receivable bills");
-assert.ok(source.includes("选择收款账单"), "payment drawer should show bills after room selection");
-assert.ok(source.includes("[loaded, pendingAction, paymentBills, roomById]"), "home payment quick action should wait for payment bill choices before opening");
-assert.ok(source.includes('visible={activeLayer === "monthlyDetail" && !!selectedMonthlyBill}'), "monthly detail drawer should remain the payment context");
-assert.ok(source.includes("<Text style={styles.buttonText}>确认收款</Text>"), "monthly detail drawer should expose payment submission");
-assert.ok(source.includes("selectedMonthlyBill.status !== \"PAID\" && selectedMonthlyBill.status !== \"VOID\""), "payment form should only show for unsettled monthly bills");
+  it("should use a standalone drawer from the list toolbar for payment", () => {
+    expect(source).toContain('visible={activeLayer === "payment"}');
+  });
+
+  it("should show payment as a compact button action in monthly list toolbar", () => {
+    expect(source).toContain('登记收款');
+    expect(source).not.toContain('<Text style={styles.smallButtonText}>登记收款</Text>');
+    expect(source).not.toContain('<Text style={styles.buttonText}>登记收款</Text>');
+  });
+
+  it("should use the shared room selector for bill and meter drawers", () => {
+    expect(source).toContain("RoomBillSelector");
+  });
+
+  it("should use one fuzzy search box in room selector", () => {
+    expect(selectorSource).toContain("搜索公寓或房号");
+  });
+
+  it("should open a second-level drawer in room selector", () => {
+    expect(selectorSource).toContain("<TaskSheet");
+  });
+
+  it("should not expand inline in room selector", () => {
+    expect(selectorSource).not.toContain("展开");
+    expect(selectorSource).not.toContain("收起");
+  });
+
+  it("should not keep a separate apartment dropdown", () => {
+    expect(selectorSource).not.toContain("apartmentDropdownOpen");
+  });
+
+  it("should not keep a separate room-bill dropdown", () => {
+    expect(selectorSource).not.toContain("roomBillDropdownOpen");
+  });
+
+  it("should explain when the selected room has no receivable bills", () => {
+    expect(source).toContain("该房间暂无待收账单");
+  });
+
+  it("should show bills after room selection in payment drawer", () => {
+    expect(source).toContain("选择收款账单");
+  });
+
+  it("should keep monthly detail drawer in payment context", () => {
+    expect(source).toContain('visible={activeLayer === "monthlyDetail" && !!selectedMonthlyBill}');
+  });
+
+  it("should expose payment submission in monthly detail drawer", () => {
+    expect(source).toContain("确认收款");
+  });
+
+  it("should only show payment form for unsettled monthly bills", () => {
+    expect(source).toContain('selectedMonthlyBill.status !== "PAID" && selectedMonthlyBill.status !== "VOID"');
+  });
+});

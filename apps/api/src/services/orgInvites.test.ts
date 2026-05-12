@@ -1,51 +1,50 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { assertInviteJoinable, buildInviteExpiry, normalizeInviteCode } from "./orgInvites.js";
 
-const now = new Date("2026-05-05T12:00:00.000Z");
+describe("org invites", () => {
+  const now = new Date("2026-05-05T12:00:00.000Z");
 
-assert.equal(normalizeInviteCode(" abcd-1234 "), "ABCD1234", "invite code should ignore spaces and dashes");
+  it("should normalize invite code by ignoring spaces and dashes", () => {
+    expect(normalizeInviteCode(" abcd-1234 ")).toBe("ABCD1234");
+  });
 
-assert.equal(
-  buildInviteExpiry(now, 24).toISOString(),
-  "2026-05-06T12:00:00.000Z",
-  "invite expiry should be based on requested hours"
-);
+  it("should build invite expiry based on requested hours", () => {
+    expect(buildInviteExpiry(now, 24).toISOString()).toBe("2026-05-06T12:00:00.000Z");
+  });
 
-assert.doesNotThrow(() =>
-  assertInviteJoinable({
-    invite: { expiresAt: new Date("2026-05-05T12:01:00.000Z"), usedCount: 0, maxUses: 1, organization: { status: "ACTIVE" } },
-    now
-  })
-);
+  it("should allow joinable invites", () => {
+    expect(() =>
+      assertInviteJoinable({
+        invite: { expiresAt: new Date("2026-05-05T12:01:00.000Z"), usedCount: 0, maxUses: 1, organization: { status: "ACTIVE" } },
+        now
+      })
+    ).not.toThrow();
+  });
 
-assert.throws(
-  () =>
-    assertInviteJoinable({
-      invite: { expiresAt: new Date("2026-05-05T11:59:59.000Z"), usedCount: 0, maxUses: 1, organization: { status: "ACTIVE" } },
-      now
-    }),
-  /邀请码已过期/,
-  "expired invites should be rejected"
-);
+  it("should reject expired invites", () => {
+    expect(() =>
+      assertInviteJoinable({
+        invite: { expiresAt: new Date("2026-05-05T11:59:59.000Z"), usedCount: 0, maxUses: 1, organization: { status: "ACTIVE" } },
+        now
+      })
+    ).toThrow(/邀请码已过期/);
+  });
 
-assert.throws(
-  () =>
-    assertInviteJoinable({
-      invite: { expiresAt: new Date("2026-05-05T12:01:00.000Z"), usedCount: 1, maxUses: 1, organization: { status: "ACTIVE" } },
-      now
-    }),
-  /邀请码已被使用/,
-  "used invites should be rejected"
-);
+  it("should reject used invites", () => {
+    expect(() =>
+      assertInviteJoinable({
+        invite: { expiresAt: new Date("2026-05-05T12:01:00.000Z"), usedCount: 1, maxUses: 1, organization: { status: "ACTIVE" } },
+        now
+      })
+    ).toThrow(/邀请码已被使用/);
+  });
 
-assert.throws(
-  () =>
-    assertInviteJoinable({
-      invite: { expiresAt: new Date("2026-05-05T12:01:00.000Z"), usedCount: 0, maxUses: 1, organization: { status: "SUSPENDED" } },
-      now
-    }),
-  /组织不可加入/,
-  "inactive organizations should be rejected"
-);
-
-console.info("org invite tests passed");
+  it("should reject inactive organizations", () => {
+    expect(() =>
+      assertInviteJoinable({
+        invite: { expiresAt: new Date("2026-05-05T12:01:00.000Z"), usedCount: 0, maxUses: 1, organization: { status: "SUSPENDED" } },
+        now
+      })
+    ).toThrow(/组织不可加入/);
+  });
+});

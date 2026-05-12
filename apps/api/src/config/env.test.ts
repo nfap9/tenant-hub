@@ -1,34 +1,32 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { parseEnv } from "./env.js";
 
-assert.throws(
-  () =>
-    parseEnv({
-      DATABASE_URL: "postgresql://localhost/db",
-      NODE_ENV: "production"
-    }),
-  /JWT_SECRET/,
-  "production should require an explicit JWT secret"
-);
+describe("env config", () => {
+  it("should require an explicit JWT secret in production", () => {
+    expect(() =>
+      parseEnv({
+        DATABASE_URL: "postgresql://localhost/db",
+        NODE_ENV: "production"
+      })
+    ).toThrow(/JWT_SECRET/);
+  });
 
-assert.throws(
-  () =>
-    parseEnv({
-      DATABASE_URL: "postgresql://localhost/db",
-      NODE_ENV: "production",
-      JWT_SECRET: "tenant-hub-dev-secret"
-    }),
-  /JWT_SECRET/,
-  "production should reject the development JWT secret"
-);
+  it("should reject the development JWT secret in production", () => {
+    expect(() =>
+      parseEnv({
+        DATABASE_URL: "postgresql://localhost/db",
+        NODE_ENV: "production",
+        JWT_SECRET: "tenant-hub-dev-secret"
+      })
+    ).toThrow(/JWT_SECRET/);
+  });
 
-assert.equal(
-  parseEnv({
-    DATABASE_URL: "postgresql://localhost/db",
-    NODE_ENV: "development"
-  }).JWT_SECRET,
-  "tenant-hub-dev-secret",
-  "development may use the local JWT fallback"
-);
-
-console.info("env tests passed");
+  it("should allow the local JWT fallback in development", () => {
+    expect(
+      parseEnv({
+        DATABASE_URL: "postgresql://localhost/db",
+        NODE_ENV: "development"
+      }).JWT_SECRET
+    ).toBe("tenant-hub-dev-secret");
+  });
+});

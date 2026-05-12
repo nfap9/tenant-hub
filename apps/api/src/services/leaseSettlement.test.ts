@@ -1,42 +1,52 @@
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { calculateSettlementAmounts, getSettlementDirection, validateMoveOutReadings } from "./leaseSettlement.js";
 
-const base = {
-  depositAmount: 3000,
-  depositDeductionAmount: 500,
-  rentAdjustmentAmount: -300,
-  previousWater: 10,
-  currentWater: 18,
-  waterUnitPrice: 4,
-  previousPower: 100,
-  currentPower: 160,
-  powerUnitPrice: 0.8,
-  otherFeeAmount: 200
-};
+describe("lease settlement", () => {
+  const base = {
+    depositAmount: 3000,
+    depositDeductionAmount: 500,
+    rentAdjustmentAmount: -300,
+    previousWater: 10,
+    currentWater: 18,
+    waterUnitPrice: 4,
+    previousPower: 100,
+    currentPower: 160,
+    powerUnitPrice: 0.8,
+    otherFeeAmount: 200
+  };
 
-const result = calculateSettlementAmounts(base);
+  it("should calculate settlement amounts correctly", () => {
+    const result = calculateSettlementAmounts(base);
+    expect(result.utilityAmount.toString()).toBe("80");
+    expect(result.depositRefundAmount.toString()).toBe("2500");
+    expect(result.receivableAmount.toString()).toBe("780");
+    expect(result.refundableAmount.toString()).toBe("2800");
+    expect(result.netAmount.toString()).toBe("-2020");
+  });
 
-assert.equal(result.utilityAmount.toString(), "80", "utility amount should combine water and power");
-assert.equal(result.depositRefundAmount.toString(), "2500", "deposit refund should subtract deduction");
-assert.equal(result.receivableAmount.toString(), "780", "receivable should include deduction, utilities, and other fees");
-assert.equal(result.refundableAmount.toString(), "2800", "refundable should include deposit refund and rent refund");
-assert.equal(result.netAmount.toString(), "-2020", "net should be receivable minus refundable");
-assert.equal(getSettlementDirection(result.netAmount), "REFUND", "negative net means refund");
+  it("should determine refund direction for negative net", () => {
+    expect(getSettlementDirection(calculateSettlementAmounts(base).netAmount)).toBe("REFUND");
+  });
 
-const receivable = calculateSettlementAmounts({ ...base, rentAdjustmentAmount: 600, depositDeductionAmount: 3000 });
-assert.equal(receivable.netAmount.toString(), "3880", "positive net should be tenant receivable");
-assert.equal(getSettlementDirection(receivable.netAmount), "RECEIVE", "positive net means receive");
+  it("should determine receive direction for positive net", () => {
+    const receivable = calculateSettlementAmounts({ ...base, rentAdjustmentAmount: 600, depositDeductionAmount: 3000 });
+    expect(receivable.netAmount.toString()).toBe("3880");
+    expect(getSettlementDirection(receivable.netAmount)).toBe("RECEIVE");
+  });
 
-assert.equal(getSettlementDirection(0), "NONE", "zero net means settled");
+  it("should determine none direction for zero net", () => {
+    expect(getSettlementDirection(0)).toBe("NONE");
+  });
 
-assert.doesNotThrow(() => validateMoveOutReadings({ previousWater: 1, currentWater: 1, previousPower: 2, currentPower: 3 }));
-assert.throws(
-  () => validateMoveOutReadings({ previousWater: 2, currentWater: 1, previousPower: 2, currentPower: 3 }),
-  /退租水表读数不能小于上次读数/
-);
-assert.throws(
-  () => validateMoveOutReadings({ previousWater: 1, currentWater: 2, previousPower: 4, currentPower: 3 }),
-  /退租电表读数不能小于上次读数/
-);
+  it("should allow valid move-out readings", () => {
+    expect(() => validateMoveOutReadings({ previousWater: 1, currentWater: 1, previousPower: 2, currentPower: 3 })).not.toThrow();
+  });
 
-console.info("lease settlement tests passed");
+  it("should reject backwards water readings on move-out", () => {
+    expect(() => validateMoveOutReadings({ previousWater: 2, currentWater: 1, previousPower: 2, currentPower: 3 })).toThrow(/退租水表读数不能小于上次读数/);
+  });
+
+  it("should reject backwards power readings on move-out", () => {
+    expect(() => validateMoveOutReadings({ previousWater: 1, currentWater: 2, previousPower: 4, currentPower: 3 })).toThrow(/退租电表读数不能小于上次读数/);
+  });
+});
