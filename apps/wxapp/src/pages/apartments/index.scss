@@ -66,15 +66,10 @@
 }
 
 .form-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-3);
   margin-bottom: var(--spacing-3);
-}
-
-.form-grid input {
-  flex: 1;
-  min-width: 240rpx;
 }
 
 .field-label {

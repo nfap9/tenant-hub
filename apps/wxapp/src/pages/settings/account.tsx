@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card } from '../../components/ui';
+import { Button, Card, Input } from '../../components/ui';
 import './index.scss';
 
 export default function AccountPage() {
@@ -40,9 +40,9 @@ export default function AccountPage() {
       </Card>
 
       <Card title="修改密码">
-        <Input placeholder="当前密码" password value={oldPassword} onInput={(e) => setOldPassword(e.detail.value)} />
-        <Input placeholder="新密码" password value={newPassword} onInput={(e) => setNewPassword(e.detail.value)} />
-        <Input placeholder="确认新密码" password value={confirmPassword} onInput={(e) => setConfirmPassword(e.detail.value)} />
+        <Input label="当前密码" placeholder="请输入当前密码" password value={oldPassword} onChange={setOldPassword} />
+        <Input label="新密码" placeholder="请输入新密码" password value={newPassword} onChange={setNewPassword} />
+        <Input label="确认新密码" placeholder="再次输入新密码" password value={confirmPassword} onChange={setConfirmPassword} />
         <Button onClick={changePassword}>确认修改</Button>
       </Card>
     </View>

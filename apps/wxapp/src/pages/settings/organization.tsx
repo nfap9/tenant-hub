@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Input } from '../../components/ui';
 import type { OrgMember, OrgRole } from '../../types/domain';
 import './index.scss';
 
@@ -85,8 +85,7 @@ export default function OrganizationPage() {
   return (
     <View className="page-container">
       <Card title="组织信息">
-        <Text className="field-label">组织名称</Text>
-        <Input placeholder="组织名称" value={orgName} onInput={(e) => setOrgName(e.detail.value)} />
+        <Input label="组织名称" placeholder="请输入组织名称" value={orgName} onChange={setOrgName} />
         {canManageOrg ? <Button size="small" onClick={updateOrgName}>更新名称</Button> : null}
       </Card>
 

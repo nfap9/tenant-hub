@@ -125,15 +125,10 @@
 }
 
 .form-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-3);
   margin-bottom: var(--spacing-3);
-}
-
-.form-grid input, .form-grid view {
-  flex: 1;
-  min-width: 240rpx;
 }
 
 .field-label {
@@ -199,14 +194,16 @@
 }
 
 .custom-fee-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-2);
-  align-items: center;
+  align-items: end;
   margin-bottom: var(--spacing-2);
 }
 
-.custom-fee-row input {
-  flex: 1;
+.custom-fee-row .danger-text {
+  grid-column: 1 / -1;
+  justify-self: flex-end;
 }
 
 .danger-text {

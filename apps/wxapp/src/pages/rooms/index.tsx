@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { money, today, nextYear, numberValue } from '../../utils/format';
 import type { Room, RoomStatus, Lease, RentCycle, BillItemType, TerminationType } from '../../types/domain';
@@ -413,12 +413,12 @@ export default function RoomsPage() {
       {editingRoom && (
         <View className="form-panel">
           <Card title="编辑房间" subtitle={`${editingRoom.apartment?.name} · ${editingRoom.roomNo}`}>
-            <Input placeholder="房间号" value={roomForm.roomNo} onInput={(e) => setRoomForm((old) => ({ ...old, roomNo: e.detail.value }))} />
+            <Input label="房间号" placeholder="例如 301" value={roomForm.roomNo} onChange={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
             <View className="form-grid">
-              <Input placeholder="户型" value={roomForm.layout} onInput={(e) => setRoomForm((old) => ({ ...old, layout: e.detail.value }))} />
-              <Input placeholder="面积 ㎡" type="number" value={roomForm.area} onInput={(e) => setRoomForm((old) => ({ ...old, area: e.detail.value }))} />
+              <Input label="户型" placeholder="例如 单间" value={roomForm.layout} onChange={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
+              <Input label="面积" placeholder="平方米" type="number" value={roomForm.area} onChange={(value) => setRoomForm((old) => ({ ...old, area: value }))} />
             </View>
-            <Input placeholder="设施，用逗号分隔" value={roomForm.facilities} onInput={(e) => setRoomForm((old) => ({ ...old, facilities: e.detail.value }))} />
+            <Input label="设施" placeholder="用逗号分隔" value={roomForm.facilities} onChange={(value) => setRoomForm((old) => ({ ...old, facilities: value }))} />
             <View className="segment">
               {roomStatuses.map((item) => (
                 <View key={item} className={`segment-item ${roomForm.status === item ? 'segment-item--active' : ''}`} onClick={() => setRoomForm((old) => ({ ...old, status: item }))}>
@@ -438,18 +438,18 @@ export default function RoomsPage() {
       {leaseRoom && (
         <View className="form-panel">
           <Card title="签约入住" subtitle={`${leaseRoom.apartment?.name} · ${leaseRoom.roomNo}`}>
-            <Input placeholder="租客姓名" value={leaseForm.tenantName} onInput={(e) => setLeaseForm((old) => ({ ...old, tenantName: e.detail.value }))} />
-            <Input placeholder="租客电话" value={leaseForm.tenantPhone} onInput={(e) => setLeaseForm((old) => ({ ...old, tenantPhone: e.detail.value }))} />
+            <Input label="租客姓名" placeholder="请输入姓名" value={leaseForm.tenantName} onChange={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
+            <Input label="租客电话" placeholder="请输入手机号" value={leaseForm.tenantPhone} onChange={(value) => setLeaseForm((old) => ({ ...old, tenantPhone: value }))} />
             <View className="form-grid">
-              <Input placeholder="开始日期" value={leaseForm.startDate} onInput={(e) => setLeaseForm((old) => ({ ...old, startDate: e.detail.value }))} />
-              <Input placeholder="结束日期" value={leaseForm.endDate} onInput={(e) => setLeaseForm((old) => ({ ...old, endDate: e.detail.value }))} />
+              <DateField label="开始日期" placeholder="选择日期" value={leaseForm.startDate} onChange={(value) => setLeaseForm((old) => ({ ...old, startDate: value }))} />
+              <DateField label="结束日期" placeholder="选择日期" value={leaseForm.endDate} onChange={(value) => setLeaseForm((old) => ({ ...old, endDate: value }))} />
             </View>
             <View className="form-grid">
-              <Input placeholder="租金 每期金额" type="number" value={leaseForm.rentAmount} onInput={(e) => setLeaseForm((old) => ({ ...old, rentAmount: e.detail.value }))} />
-              <Input placeholder="押金" type="number" value={leaseForm.depositAmount} onInput={(e) => setLeaseForm((old) => ({ ...old, depositAmount: e.detail.value }))} />
+              <Input label="租金" placeholder="每期金额" type="number" value={leaseForm.rentAmount} onChange={(value) => setLeaseForm((old) => ({ ...old, rentAmount: value }))} />
+              <Input label="押金" placeholder="请输入押金" type="number" value={leaseForm.depositAmount} onChange={(value) => setLeaseForm((old) => ({ ...old, depositAmount: value }))} />
             </View>
             <View className="form-grid">
-              <Input placeholder="交租日后几日内" type="number" value={leaseForm.graceDays} onInput={(e) => setLeaseForm((old) => ({ ...old, graceDays: e.detail.value }))} />
+              <Input label="宽限天数" placeholder="交租日后几日内" type="number" value={leaseForm.graceDays} onChange={(value) => setLeaseForm((old) => ({ ...old, graceDays: value }))} />
             </View>
             <Text className="field-label">交租周期</Text>
             <View className="segment">
@@ -460,8 +460,8 @@ export default function RoomsPage() {
               ))}
             </View>
             <View className="form-grid">
-              <Input placeholder="水费单价" type="number" value={leaseForm.waterUnitPrice} onInput={(e) => setLeaseForm((old) => ({ ...old, waterUnitPrice: e.detail.value }))} />
-              <Input placeholder="电费单价" type="number" value={leaseForm.powerUnitPrice} onInput={(e) => setLeaseForm((old) => ({ ...old, powerUnitPrice: e.detail.value }))} />
+              <Input label="水费单价" placeholder="元/吨" type="number" value={leaseForm.waterUnitPrice} onChange={(value) => setLeaseForm((old) => ({ ...old, waterUnitPrice: value }))} />
+              <Input label="电费单价" placeholder="元/度" type="number" value={leaseForm.powerUnitPrice} onChange={(value) => setLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
             </View>
             <Text className="field-label">自动续约</Text>
             <View className="segment">
@@ -492,15 +492,15 @@ export default function RoomsPage() {
                     <Text className={selected ? "card-title" : "text-muted"}>{label}</Text>
                     <Text className={selected ? "card-stat" : "text-muted"}>{selected ? `¥${money(selected.amount)}` : "点击添加"}</Text>
                   </View>
-                  {selected ? <Input placeholder="输入金额" type="number" value={selected.amount} onInput={(e) => updatePresetFeeAmount(type, e.detail.value)} /> : null}
+                  {selected ? <Input label={`${label}金额`} placeholder="请输入金额" type="number" value={selected.amount} onChange={(value) => updatePresetFeeAmount(type, value)} /> : null}
                 </View>
               );
             })}
             {customFees.length > 0 ? <Text className="field-label">其他费用</Text> : null}
             {customFees.map((item, index) => (
               <View key={item.id} className="custom-fee-row">
-                <Input placeholder="费用名称" value={item.name} onInput={(e) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, name: e.detail.value } : f)))} />
-                <Input placeholder="金额" type="number" value={item.amount} onInput={(e) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, amount: e.detail.value } : f)))} />
+                <Input label="费用名称" placeholder="例如 网费" value={item.name} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, name: value } : f)))} />
+                <Input label="费用金额" placeholder="请输入金额" type="number" value={item.amount} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, amount: value } : f)))} />
                 <Text className="danger-text" onClick={() => setCustomFees((old) => old.filter((_, i) => i !== index))}>删除</Text>
               </View>
             ))}
@@ -518,12 +518,12 @@ export default function RoomsPage() {
         <View className="form-panel">
           <Card title="编辑租约" subtitle={`${editingLease.tenantName} · ${editingLease.room?.apartment?.name} · ${editingLease.room?.roomNo}`}>
             <View className="form-grid">
-              <Input placeholder="租金 每期金额" type="number" value={editLeaseForm.rentAmount} onInput={(e) => setEditLeaseForm((old) => ({ ...old, rentAmount: e.detail.value }))} />
-              <Input placeholder="押金" type="number" value={editLeaseForm.depositAmount} onInput={(e) => setEditLeaseForm((old) => ({ ...old, depositAmount: e.detail.value }))} />
+              <Input label="租金" placeholder="每期金额" type="number" value={editLeaseForm.rentAmount} onChange={(value) => setEditLeaseForm((old) => ({ ...old, rentAmount: value }))} />
+              <Input label="押金" placeholder="请输入押金" type="number" value={editLeaseForm.depositAmount} onChange={(value) => setEditLeaseForm((old) => ({ ...old, depositAmount: value }))} />
             </View>
             <View className="form-grid">
-              <Input placeholder="水费单价" type="number" value={editLeaseForm.waterUnitPrice} onInput={(e) => setEditLeaseForm((old) => ({ ...old, waterUnitPrice: e.detail.value }))} />
-              <Input placeholder="电费单价" type="number" value={editLeaseForm.powerUnitPrice} onInput={(e) => setEditLeaseForm((old) => ({ ...old, powerUnitPrice: e.detail.value }))} />
+              <Input label="水费单价" placeholder="元/吨" type="number" value={editLeaseForm.waterUnitPrice} onChange={(value) => setEditLeaseForm((old) => ({ ...old, waterUnitPrice: value }))} />
+              <Input label="电费单价" placeholder="元/度" type="number" value={editLeaseForm.powerUnitPrice} onChange={(value) => setEditLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
             </View>
             <Text className="field-label">费用项目</Text>
             {presetFeeTypes.map(({ type, label }) => {
@@ -534,15 +534,15 @@ export default function RoomsPage() {
                     <Text className={selected ? "card-title" : "text-muted"}>{label}</Text>
                     <Text className={selected ? "card-stat" : "text-muted"}>{selected ? `¥${money(selected.amount)}` : "点击添加"}</Text>
                   </View>
-                  {selected ? <Input placeholder="输入金额" type="number" value={selected.amount} onInput={(e) => updatePresetFeeAmount(type, e.detail.value)} /> : null}
+                  {selected ? <Input label={`${label}金额`} placeholder="请输入金额" type="number" value={selected.amount} onChange={(value) => updatePresetFeeAmount(type, value)} /> : null}
                 </View>
               );
             })}
             {customFees.length > 0 ? <Text className="field-label">其他费用</Text> : null}
             {customFees.map((item, index) => (
               <View key={item.id} className="custom-fee-row">
-                <Input placeholder="费用名称" value={item.name} onInput={(e) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, name: e.detail.value } : f)))} />
-                <Input placeholder="金额" type="number" value={item.amount} onInput={(e) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, amount: e.detail.value } : f)))} />
+                <Input label="费用名称" placeholder="例如 网费" value={item.name} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, name: value } : f)))} />
+                <Input label="费用金额" placeholder="请输入金额" type="number" value={item.amount} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, amount: value } : f)))} />
                 <Text className="danger-text" onClick={() => setCustomFees((old) => old.filter((_, i) => i !== index))}>删除</Text>
               </View>
             ))}
@@ -566,37 +566,34 @@ export default function RoomsPage() {
                 </View>
               ))}
             </View>
-            <Text className="field-label">退租日期</Text>
-            <Input placeholder="YYYY-MM-DD" value={terminationForm.terminatedAt} onInput={(e) => setTerminationForm((old) => ({ ...old, terminatedAt: e.detail.value }))} />
+            <DateField label="退租日期" placeholder="选择日期" value={terminationForm.terminatedAt} onChange={(value) => setTerminationForm((old) => ({ ...old, terminatedAt: value }))} />
             <View className="detail-panel">
               <View className="detail-row"><Text className="text-muted">原押金</Text><Text className="card-stat">¥{money(terminatingLease.depositAmount)}</Text></View>
               <View className="detail-row"><Text className="text-muted">预计退押金</Text><Text className="card-stat">¥{money(settlementPreview.depositRefund)}</Text></View>
             </View>
             <View className="form-grid">
-              <Input placeholder="押金扣款" type="number" value={terminationForm.depositDeductionAmount} onInput={(e) => setTerminationForm((old) => ({ ...old, depositDeductionAmount: e.detail.value }))} />
-              <Input placeholder="房租退补" type="number" value={terminationForm.rentAdjustmentAmount} onInput={(e) => setTerminationForm((old) => ({ ...old, rentAdjustmentAmount: e.detail.value }))} />
+              <Input label="押金扣款" placeholder="请输入金额" type="number" value={terminationForm.depositDeductionAmount} onChange={(value) => setTerminationForm((old) => ({ ...old, depositDeductionAmount: value }))} />
+              <Input label="房租退补" placeholder="正数补收，负数退款" type="number" value={terminationForm.rentAdjustmentAmount} onChange={(value) => setTerminationForm((old) => ({ ...old, rentAdjustmentAmount: value }))} />
             </View>
-            <Input placeholder="押金扣款原因" value={terminationForm.depositDeductionReason} onInput={(e) => setTerminationForm((old) => ({ ...old, depositDeductionReason: e.detail.value }))} />
+            <Input label="押金扣款原因" placeholder="可选" value={terminationForm.depositDeductionReason} onChange={(value) => setTerminationForm((old) => ({ ...old, depositDeductionReason: value }))} />
             <View className="form-grid">
               <View>
-                <Text className="field-label">退租水表读数</Text>
-                <Input placeholder="当前读数" type="number" value={terminationForm.currentWater} onInput={(e) => setTerminationForm((old) => ({ ...old, currentWater: e.detail.value }))} />
+                <Input label="退租水表读数" placeholder="当前读数" type="number" value={terminationForm.currentWater} onChange={(value) => setTerminationForm((old) => ({ ...old, currentWater: value }))} />
                 <Text className="text-muted">上次 {money(previousReadings.previousWater)}</Text>
               </View>
               <View>
-                <Text className="field-label">退租电表读数</Text>
-                <Input placeholder="当前读数" type="number" value={terminationForm.currentPower} onInput={(e) => setTerminationForm((old) => ({ ...old, currentPower: e.detail.value }))} />
+                <Input label="退租电表读数" placeholder="当前读数" type="number" value={terminationForm.currentPower} onChange={(value) => setTerminationForm((old) => ({ ...old, currentPower: value }))} />
                 <Text className="text-muted">上次 {money(previousReadings.previousPower)}</Text>
               </View>
             </View>
             <View className="form-grid">
-              <Input placeholder="其他费用" type="number" value={terminationForm.otherFeeAmount} onInput={(e) => setTerminationForm((old) => ({ ...old, otherFeeAmount: e.detail.value }))} />
+              <Input label="其他费用" placeholder="请输入金额" type="number" value={terminationForm.otherFeeAmount} onChange={(value) => setTerminationForm((old) => ({ ...old, otherFeeAmount: value }))} />
               <View>
                 <Text className="field-label">预估水电费</Text>
                 <Text className="card-stat">¥{money(settlementPreview.utility)}</Text>
               </View>
             </View>
-            <Input placeholder="其他费用说明" value={terminationForm.otherFeeReason} onInput={(e) => setTerminationForm((old) => ({ ...old, otherFeeReason: e.detail.value }))} />
+            <Input label="其他费用说明" placeholder="可选" value={terminationForm.otherFeeReason} onChange={(value) => setTerminationForm((old) => ({ ...old, otherFeeReason: value }))} />
             <View className="detail-panel">
               <View className="detail-row"><Text className="text-muted">应收</Text><Text className="card-stat">¥{money(settlementPreview.receivable)}</Text></View>
               <View className="detail-row"><Text className="text-muted">应退</Text><Text className="card-stat">¥{money(settlementPreview.refundable)}</Text></View>
@@ -606,7 +603,7 @@ export default function RoomsPage() {
                 </Text>
               </View>
             </View>
-            <Input placeholder="原因（可选）" value={terminationForm.reason} onInput={(e) => setTerminationForm((old) => ({ ...old, reason: e.detail.value }))} />
+            <Input label="退租原因" placeholder="可选" value={terminationForm.reason} onChange={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
             {terminatingLease?.isAutoRenewalPeriod ? <Text className="text-muted">当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}
             <View className="action-row">
               <Button variant="danger" onClick={terminateLease}>确认终止合约</Button>

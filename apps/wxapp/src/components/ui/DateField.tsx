@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Picker } from '@tarojs/components';
 import './DateField.scss';
 
@@ -12,6 +12,10 @@ export type DateFieldProps = {
 export function DateField({ value, onChange, placeholder = '选择日期', label }: DateFieldProps) {
   const [pickerValue, setPickerValue] = useState(value || '');
 
+  useEffect(() => {
+    setPickerValue(value || '');
+  }, [value]);
+
   const handleChange = (e: any) => {
     const date = e.detail.value as string;
     setPickerValue(date);
@@ -21,7 +25,7 @@ export function DateField({ value, onChange, placeholder = '选择日期', label
   return (
     <View className="date-field-wrapper">
       {label && <Text className="date-field__label">{label}</Text>}
-      <Picker mode="date" value={pickerValue} onChange={handleChange}>
+      <Picker className="date-field__picker" mode="date" value={pickerValue} onChange={handleChange}>
         <View className={`date-field ${value ? 'date-field--active' : ''}`}>
           <Text className="date-field__text">{value || placeholder}</Text>
         </View>

@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { money, optionalNumber, optionalText, toFacilityArray, facilitiesText } from '../../utils/format';
 import { buildBatchRoomNos, toggleBatchRoomSelection } from '../../utils/batchRooms';
@@ -380,11 +380,11 @@ export default function ApartmentsPage() {
           <View className="form-panel">
             <Card title="记录花费" subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : undefined}>
               <View className="form-grid">
-                <Input placeholder="花费名称" value={expense.name} onInput={(e) => setExpense((old) => ({ ...old, name: e.detail.value }))} />
-                <Input placeholder="金额" type="number" value={expense.amount} onInput={(e) => setExpense((old) => ({ ...old, amount: e.detail.value }))} />
-                <Input placeholder="日期" value={expense.spentAt} onInput={(e) => setExpense((old) => ({ ...old, spentAt: e.detail.value }))} />
+                <Input label="花费名称" placeholder="例如 维修材料" value={expense.name} onChange={(value) => setExpense((old) => ({ ...old, name: value }))} />
+                <Input label="金额" placeholder="请输入金额" type="number" value={expense.amount} onChange={(value) => setExpense((old) => ({ ...old, amount: value }))} />
+                <DateField label="日期" placeholder="选择日期" value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
               </View>
-              <Input placeholder="备注" value={expense.note} onInput={(e) => setExpense((old) => ({ ...old, note: e.detail.value }))} />
+              <Input label="备注" placeholder="可选" value={expense.note} onChange={(value) => setExpense((old) => ({ ...old, note: value }))} />
               <View className="action-row">
                 <Button onClick={addExpense}>保存花费</Button>
                 <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
@@ -406,25 +406,25 @@ export default function ApartmentsPage() {
           </Button>
         </View>
         <Card title={mode === "create" ? "新建公寓" : "编辑公寓信息"}>
-          <Input placeholder="公寓名称" value={form.name} onInput={(e) => updateForm("name", e.detail.value)} />
-          <Input placeholder="位置" value={form.location} onInput={(e) => updateForm("location", e.detail.value)} />
+          <Input label="公寓名称" placeholder="例如 阳光公寓" value={form.name} onChange={(value) => updateForm("name", value)} />
+          <Input label="位置" placeholder="请输入地址或片区" value={form.location} onChange={(value) => updateForm("location", value)} />
           <View className="form-grid">
-            <Input placeholder="楼层数 例如 6" type="number" value={form.floors} onInput={(e) => updateForm("floors", e.detail.value)} />
-            <Input placeholder="占地面积 ㎡" type="number" value={form.landArea} onInput={(e) => updateForm("landArea", e.detail.value)} />
-            <Input placeholder="总面积 ㎡" type="number" value={form.totalArea} onInput={(e) => updateForm("totalArea", e.detail.value)} />
+            <Input label="楼层数" placeholder="例如 6" type="number" value={form.floors} onChange={(value) => updateForm("floors", value)} />
+            <Input label="占地面积" placeholder="平方米" type="number" value={form.landArea} onChange={(value) => updateForm("landArea", value)} />
+            <Input label="总面积" placeholder="平方米" type="number" value={form.totalArea} onChange={(value) => updateForm("totalArea", value)} />
           </View>
           <Text className="section-label">上游信息</Text>
-          <Input placeholder="房东姓名" value={form.landlordName} onInput={(e) => updateForm("landlordName", e.detail.value)} />
-          <Input placeholder="联系方式" value={form.landlordPhone} onInput={(e) => updateForm("landlordPhone", e.detail.value)} />
+          <Input label="房东姓名" placeholder="请输入房东姓名" value={form.landlordName} onChange={(value) => updateForm("landlordName", value)} />
+          <Input label="联系方式" placeholder="请输入手机号" value={form.landlordPhone} onChange={(value) => updateForm("landlordPhone", value)} />
           <View className="form-grid">
-            <Input placeholder="合同开始" value={form.contractStart} onInput={(e) => updateForm("contractStart", e.detail.value)} />
-            <Input placeholder="合同结束" value={form.contractEnd} onInput={(e) => updateForm("contractEnd", e.detail.value)} />
-            <Input placeholder="上游租金 每期金额" type="number" value={form.rentAmount} onInput={(e) => updateForm("rentAmount", e.detail.value)} />
+            <DateField label="合同开始日期" placeholder="选择日期" value={form.contractStart} onChange={(value) => updateForm("contractStart", value)} />
+            <DateField label="合同结束日期" placeholder="选择日期" value={form.contractEnd} onChange={(value) => updateForm("contractEnd", value)} />
+            <Input label="上游租金" placeholder="每期金额" type="number" value={form.rentAmount} onChange={(value) => updateForm("rentAmount", value)} />
           </View>
           <Text className="section-label">水电单价</Text>
           <View className="form-grid">
-            <Input placeholder="水费单价 元/吨" type="number" value={form.waterUnitPrice} onInput={(e) => updateForm("waterUnitPrice", e.detail.value)} />
-            <Input placeholder="电费单价 元/度" type="number" value={form.powerUnitPrice} onInput={(e) => updateForm("powerUnitPrice", e.detail.value)} />
+            <Input label="水费单价" placeholder="元/吨" type="number" value={form.waterUnitPrice} onChange={(value) => updateForm("waterUnitPrice", value)} />
+            <Input label="电费单价" placeholder="元/度" type="number" value={form.powerUnitPrice} onChange={(value) => updateForm("powerUnitPrice", value)} />
           </View>
           <Button loading={saving} disabled={saving} onClick={saveApartment}>
             {mode === "create" ? "创建公寓" : "保存公寓信息"}
@@ -555,11 +555,11 @@ export default function ApartmentsPage() {
           <View className="form-panel">
             <Card title="记录花费" subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : undefined}>
               <View className="form-grid">
-                <Input placeholder="花费名称" value={expense.name} onInput={(e) => setExpense((old) => ({ ...old, name: e.detail.value }))} />
-                <Input placeholder="金额" type="number" value={expense.amount} onInput={(e) => setExpense((old) => ({ ...old, amount: e.detail.value }))} />
-                <Input placeholder="日期 YYYY-MM-DD" value={expense.spentAt} onInput={(e) => setExpense((old) => ({ ...old, spentAt: e.detail.value }))} />
+                <Input label="花费名称" placeholder="例如 维修材料" value={expense.name} onChange={(value) => setExpense((old) => ({ ...old, name: value }))} />
+                <Input label="金额" placeholder="请输入金额" type="number" value={expense.amount} onChange={(value) => setExpense((old) => ({ ...old, amount: value }))} />
+                <DateField label="日期" placeholder="选择日期" value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
               </View>
-              <Input placeholder="备注" value={expense.note} onInput={(e) => setExpense((old) => ({ ...old, note: e.detail.value }))} />
+              <Input label="备注" placeholder="可选" value={expense.note} onChange={(value) => setExpense((old) => ({ ...old, note: value }))} />
               <View className="action-row">
                 <Button onClick={addExpense}>保存花费</Button>
                 <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
@@ -573,8 +573,8 @@ export default function ApartmentsPage() {
           <View className="form-panel">
             <Card title="新增房间" subtitle={selectedApartment.name}>
               <View className="form-grid">
-                <Input placeholder="房间号" value={roomForm.roomNo} onInput={(e) => updateRoomForm("roomNo", e.detail.value)} />
-                <Input placeholder="面积 ㎡" type="number" value={roomForm.area} onInput={(e) => updateRoomForm("area", e.detail.value)} />
+                <Input label="房间号" placeholder="例如 301" value={roomForm.roomNo} onChange={(value) => updateRoomForm("roomNo", value)} />
+                <Input label="面积" placeholder="平方米" type="number" value={roomForm.area} onChange={(value) => updateRoomForm("area", value)} />
               </View>
               <Text className="field-label">户型</Text>
               <View className="layout-selector">
@@ -582,7 +582,7 @@ export default function ApartmentsPage() {
                   <Button key={layout} variant={roomForm.layout === layout ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("layout", layout)}>{layout}</Button>
                 ))}
               </View>
-              <Input placeholder="设施，用逗号分隔" value={roomForm.facilities} onInput={(e) => updateRoomForm("facilities", e.detail.value)} />
+              <Input label="设施" placeholder="用逗号分隔" value={roomForm.facilities} onChange={(value) => updateRoomForm("facilities", value)} />
               <View className="action-row">
                 <Button onClick={createRoom}>保存房间</Button>
                 <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
@@ -596,9 +596,9 @@ export default function ApartmentsPage() {
           <View className="form-panel">
             <Card title="批量添加房间" subtitle={selectedApartment.name}>
               <View className="form-grid">
-                <Input placeholder="开始楼层" type="number" value={batchStartFloor} onInput={(e) => setBatchStartFloor(e.detail.value)} />
-                <Input placeholder="结束楼层" type="number" value={batchEndFloor} onInput={(e) => setBatchEndFloor(e.detail.value)} />
-                <Input placeholder="每层房间数" type="number" value={batchRoomCount} onInput={(e) => setBatchRoomCount(e.detail.value)} />
+                <Input label="开始楼层" placeholder="例如 2" type="number" value={batchStartFloor} onChange={setBatchStartFloor} />
+                <Input label="结束楼层" placeholder="例如 4" type="number" value={batchEndFloor} onChange={setBatchEndFloor} />
+                <Input label="每层房间数" placeholder="例如 4" type="number" value={batchRoomCount} onChange={setBatchRoomCount} />
               </View>
               <View className="batch-room-panel">
                 <View className="detail-row">
@@ -625,9 +625,9 @@ export default function ApartmentsPage() {
                 ))}
               </View>
               <View className="form-grid">
-                <Input placeholder="面积 ㎡" type="number" value={batchArea} onInput={(e) => setBatchArea(e.detail.value)} />
+                <Input label="面积" placeholder="平方米" type="number" value={batchArea} onChange={setBatchArea} />
               </View>
-              <Input placeholder="设施，用逗号分隔" value={batchFacilities} onInput={(e) => setBatchFacilities(e.detail.value)} />
+              <Input label="设施" placeholder="用逗号分隔" value={batchFacilities} onChange={setBatchFacilities} />
               <View className="action-row">
                 <Button onClick={addBatchRooms}>确认添加房间</Button>
                 <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
@@ -641,8 +641,8 @@ export default function ApartmentsPage() {
           <View className="form-panel">
             <Card title="编辑房间" subtitle={editingRoom ? `${editingRoom.roomNo} · ${editingRoom.layout}` : undefined}>
               <View className="form-grid">
-                <Input placeholder="房间号" value={roomForm.roomNo} onInput={(e) => updateRoomForm("roomNo", e.detail.value)} />
-                <Input placeholder="面积 ㎡" type="number" value={roomForm.area} onInput={(e) => updateRoomForm("area", e.detail.value)} />
+                <Input label="房间号" placeholder="例如 301" value={roomForm.roomNo} onChange={(value) => updateRoomForm("roomNo", value)} />
+                <Input label="面积" placeholder="平方米" type="number" value={roomForm.area} onChange={(value) => updateRoomForm("area", value)} />
               </View>
               <Text className="field-label">户型</Text>
               <View className="layout-selector">
@@ -650,7 +650,7 @@ export default function ApartmentsPage() {
                   <Button key={layout} variant={roomForm.layout === layout ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("layout", layout)}>{layout}</Button>
                 ))}
               </View>
-              <Input placeholder="设施，用逗号分隔" value={roomForm.facilities} onInput={(e) => updateRoomForm("facilities", e.detail.value)} />
+              <Input label="设施" placeholder="用逗号分隔" value={roomForm.facilities} onChange={(value) => updateRoomForm("facilities", value)} />
               <Text className="field-label">状态</Text>
               <View className="layout-selector">
                 {roomStatuses.map((status) => (

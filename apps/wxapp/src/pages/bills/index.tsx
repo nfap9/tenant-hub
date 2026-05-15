@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { getApiBaseUrl } from '../../constants/config';
-import { Button, Card, EmptyState, Badge, Input as UiInput } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { money, day, today } from '../../utils/format';
 import type { Bill, BillStatus, MonthlyBill, MeterType, Room } from '../../types/domain';
@@ -418,7 +418,7 @@ export default function BillsPage() {
 
       {tab === "all" ? (
         <>
-          <Input placeholder="搜索租客姓名、房间号或手机号" value={searchQuery} onInput={(e) => setSearchQuery(e.detail.value)} />
+          <Input label="搜索账单" placeholder="租客姓名、房间号或手机号" value={searchQuery} onChange={setSearchQuery} />
           <View className="segment">
             {(["", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"] as const).map((status) => (
               <View key={status || "all"} className={`segment-item ${statusFilter === status ? 'segment-item--active' : ''}`} onClick={() => setStatusFilter(status)}>
@@ -486,10 +486,10 @@ export default function BillsPage() {
             {paymentRoomId && paymentRoomBills.length === 0 ? <Text className="text-muted">该房间暂无待收账单</Text> : null}
             <Text className="field-label">收款信息</Text>
             <View className="form-grid">
-              <Input placeholder="金额" type="number" value={paymentForm.amount} onInput={(e) => setPaymentForm((old) => ({ ...old, amount: e.detail.value }))} />
-              <Input placeholder="方式" value={paymentForm.method} onInput={(e) => setPaymentForm((old) => ({ ...old, method: e.detail.value }))} />
+              <Input label="收款金额" placeholder="请输入金额" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
+              <Input label="收款方式" placeholder="例如 线下收款" value={paymentForm.method} onChange={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
             </View>
-            <Input placeholder="备注" value={paymentForm.note} onInput={(e) => setPaymentForm((old) => ({ ...old, note: e.detail.value }))} />
+            <Input label="备注" placeholder="可选" value={paymentForm.note} onChange={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
             <View className="action-row">
               <Button onClick={submitPayment}>确认收款</Button>
               <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
@@ -519,10 +519,10 @@ export default function BillsPage() {
               ))}
             </View>
             <View className="form-grid">
-              <Input placeholder="日期 YYYY-MM-DD" value={readingForm.readingDate} onInput={(e) => setReadingForm((old) => ({ ...old, readingDate: e.detail.value }))} />
-              <Input placeholder="读数" type="number" value={readingForm.value} onInput={(e) => setReadingForm((old) => ({ ...old, value: e.detail.value }))} />
+              <DateField label="抄表日期" placeholder="选择日期" value={readingForm.readingDate} onChange={(value) => setReadingForm((old) => ({ ...old, readingDate: value }))} />
+              <Input label="读数" placeholder="请输入读数" type="number" value={readingForm.value} onChange={(value) => setReadingForm((old) => ({ ...old, value }))} />
             </View>
-            <Input placeholder="备注" value={readingForm.note} onInput={(e) => setReadingForm((old) => ({ ...old, note: e.detail.value }))} />
+            <Input label="备注" placeholder="可选" value={readingForm.note} onChange={(value) => setReadingForm((old) => ({ ...old, note: value }))} />
             <View className="action-row">
               <Button onClick={submitReading}>保存读数</Button>
               <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
@@ -537,22 +537,18 @@ export default function BillsPage() {
           <Card title="录入本期水电">
             <View className="form-grid">
               <View>
-                <Text className="field-label">上期水表</Text>
-                <Input placeholder="上期水表" type="number" value={utilityForm.previousWater} onInput={(e) => setUtilityForm((old) => ({ ...old, previousWater: e.detail.value }))} />
+                <Input label="上期水表" placeholder="请输入读数" type="number" value={utilityForm.previousWater} onChange={(value) => setUtilityForm((old) => ({ ...old, previousWater: value }))} />
               </View>
               <View>
-                <Text className="field-label">本期水表</Text>
-                <Input placeholder="本期水表" type="number" value={utilityForm.currentWater} onInput={(e) => setUtilityForm((old) => ({ ...old, currentWater: e.detail.value }))} />
+                <Input label="本期水表" placeholder="请输入读数" type="number" value={utilityForm.currentWater} onChange={(value) => setUtilityForm((old) => ({ ...old, currentWater: value }))} />
               </View>
             </View>
             <View className="form-grid">
               <View>
-                <Text className="field-label">上期电表</Text>
-                <Input placeholder="上期电表" type="number" value={utilityForm.previousPower} onInput={(e) => setUtilityForm((old) => ({ ...old, previousPower: e.detail.value }))} />
+                <Input label="上期电表" placeholder="请输入读数" type="number" value={utilityForm.previousPower} onChange={(value) => setUtilityForm((old) => ({ ...old, previousPower: value }))} />
               </View>
               <View>
-                <Text className="field-label">本期电表</Text>
-                <Input placeholder="本期电表" type="number" value={utilityForm.currentPower} onInput={(e) => setUtilityForm((old) => ({ ...old, currentPower: e.detail.value }))} />
+                <Input label="本期电表" placeholder="请输入读数" type="number" value={utilityForm.currentPower} onChange={(value) => setUtilityForm((old) => ({ ...old, currentPower: value }))} />
               </View>
             </View>
             <View className="action-row">
@@ -567,7 +563,7 @@ export default function BillsPage() {
       {layer === "utilityImport" && (
         <View className="form-panel">
           <Card title="导入水电读数">
-            <Input placeholder="粘贴 CSV 内容" style={{ minHeight: 120 }} value={utilityCsv} onInput={(e) => setUtilityCsv(e.detail.value)} />
+            <Input label="CSV 内容" placeholder="粘贴 CSV 内容" value={utilityCsv} onChange={setUtilityCsv} />
             <View className="action-row">
               <Button onClick={importUtilityCsv}>确认导入</Button>
               <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
@@ -606,10 +602,10 @@ export default function BillsPage() {
               <View className="detail-panel">
                 <Text className="field-label">登记收款</Text>
                 <View className="form-grid">
-                  <Input placeholder="金额" type="number" value={paymentForm.amount} onInput={(e) => setPaymentForm((old) => ({ ...old, amount: e.detail.value }))} />
-                  <Input placeholder="方式" value={paymentForm.method} onInput={(e) => setPaymentForm((old) => ({ ...old, method: e.detail.value }))} />
+                  <Input label="收款金额" placeholder="请输入金额" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
+                  <Input label="收款方式" placeholder="例如 线下收款" value={paymentForm.method} onChange={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
                 </View>
-                <Input placeholder="备注" value={paymentForm.note} onInput={(e) => setPaymentForm((old) => ({ ...old, note: e.detail.value }))} />
+                <Input label="备注" placeholder="可选" value={paymentForm.note} onChange={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
                 <Button onClick={submitPayment}>确认收款</Button>
               </View>
             ) : null}
@@ -694,8 +690,8 @@ export default function BillsPage() {
           <Card title={`修改 ${editingBillItem.name}`}>
             <View style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
               <View>
-                <Text style={{ fontSize: 'var(--font-size-caption)', fontWeight: 600, color: 'var(--color-text)', marginBottom: 'var(--spacing-2)' }}>金额</Text>
-                <UiInput
+                <Input
+                  label="金额"
                   value={editingBillItem.amount}
                   onChange={(value) => setEditingBillItem((old) => old ? { ...old, amount: value } : undefined)}
                   type="digit"
@@ -703,8 +699,8 @@ export default function BillsPage() {
                 />
               </View>
               <View>
-                <Text style={{ fontSize: 'var(--font-size-caption)', fontWeight: 600, color: 'var(--color-text)', marginBottom: 'var(--spacing-2)' }}>备注</Text>
-                <UiInput
+                <Input
+                  label="备注"
                   value={editingBillItem.note}
                   onChange={(value) => setEditingBillItem((old) => old ? { ...old, note: value } : undefined)}
                   placeholder="备注（可选）"
