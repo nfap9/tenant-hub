@@ -1,178 +1,220 @@
-@import "../../theme/tokens.scss";
+@use "../../theme/tokens.scss";
 
 .page-container {
-  padding: 16px;
-  padding-bottom: 32px;
-  background: var(--th-background);
-  min-height: 100vh;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(194, 65, 61, 0.1), transparent 220rpx),
+    linear-gradient(180deg, rgba(20, 108, 92, 0.08), rgba(243, 247, 245, 0) 360rpx);
 }
 
 .stat-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-5);
 }
 
 .stat-card {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-label {
-  font-size: 12px;
-  color: var(--th-text-muted);
+  display: block;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-1);
 }
 
 .stat-value {
-  font-size: 24px;
+  display: block;
+  font-size: var(--font-size-stat);
+  line-height: var(--line-height-stat);
   font-weight: 700;
-  color: var(--th-text);
+  color: var(--color-text);
 }
 
 .segment {
   display: flex;
-  background: var(--th-border-light);
-  border-radius: var(--th-radius-md);
-  padding: 4px;
-  margin-bottom: 16px;
+  background: rgba(220, 231, 226, 0.7);
+  border: 1rpx solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-1);
+  margin-bottom: var(--spacing-5);
+  overflow: hidden;
+  flex-wrap: wrap;
 }
 
 .segment-item {
   flex: 1;
   text-align: center;
-  padding: 8px 0;
-  border-radius: var(--th-radius-sm);
+  min-width: 128rpx;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
 }
 
 .segment-item--active {
-  background: var(--th-surface);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-subtle);
 }
 
 .segment-text {
-  font-size: 14px;
-  color: var(--th-text-muted);
+  display: block;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-muted);
 }
 
 .segment-text--active {
-  color: var(--th-primary);
+  color: var(--color-primary);
   font-weight: 600;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: var(--spacing-4);
 }
 
 .action-row-inline {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .bill-card {
-  background: var(--th-surface);
-  border-radius: var(--th-radius-md);
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid var(--th-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  margin-bottom: var(--spacing-4);
+  border: 1rpx solid var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
 .bill-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-3);
 }
 
 .card-title {
-  font-size: 15px;
+  display: block;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   font-weight: 600;
-  color: var(--th-text);
+  color: var(--color-text);
 }
 
 .card-stat {
-  font-size: 14px;
+  display: block;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   font-weight: 600;
-  color: var(--th-primary);
+  color: var(--color-primary);
 }
 
 .text-muted {
-  font-size: 13px;
-  color: var(--th-text-muted);
+  display: block;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-muted);
 }
 
 .danger-text {
-  font-size: 13px;
-  color: var(--th-danger);
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-danger);
 }
 
 .link-text {
-  font-size: 13px;
-  color: var(--th-primary);
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 .bill-amount-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 12px 0;
+  gap: var(--spacing-4);
+  margin: var(--spacing-4) 0;
 }
 
 .bill-amount {
-  font-size: 20px;
+  font-size: var(--font-size-h3);
+  line-height: var(--line-height-h3);
   font-weight: 700;
-  color: var(--th-text);
+  color: var(--color-text);
 }
 
 .bill-summary-aside {
   text-align: right;
+  min-width: 160rpx;
 }
 
 .bill-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 8px;
-  border-top: 1px solid var(--th-border-light);
+  gap: var(--spacing-4);
+  padding-top: var(--spacing-3);
+  border-top: 1rpx solid var(--color-border-light);
 }
 
 .field-label {
-  font-size: 13px;
-  color: var(--th-text-secondary);
+  display: block;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  margin-bottom: var(--spacing-2);
 }
 
 .form-panel {
-  margin-top: 16px;
+  margin-top: var(--spacing-5);
 }
 
 .form-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
 }
 
 .form-grid input, .form-grid view {
   flex: 1;
-  min-width: 120px;
+  min-width: 240rpx;
 }
 
 .detail-panel {
-  padding: 12px 0;
-  border-top: 1px solid var(--th-border-light);
+  padding: var(--spacing-4) 0;
+  border-top: 1rpx solid var(--color-border-light);
 }
 
 .bill-select-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  border: 1px solid var(--th-border);
-  border-radius: var(--th-radius-md);
-  margin-bottom: 8px;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  border: 1rpx solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-2);
+  background: var(--color-surface-tinted);
 }
 
 .bill-select-card--active {
-  background: var(--th-primary-light);
-  border-color: var(--th-primary);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
 }
 
 .action-row {
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-5);
+  flex-wrap: wrap;
 }

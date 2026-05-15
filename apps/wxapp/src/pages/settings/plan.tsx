@@ -6,6 +6,7 @@ import { apiClient } from '../../api/client';
 import { Card, EmptyState, Badge, Button } from '../../components/ui';
 import { day, money } from '../../utils/format';
 import type { Plan, SubscriptionOverview } from '../../types/domain';
+import './index.scss';
 
 export default function PlanPage() {
   const { currentOrgId } = useAppSession();
@@ -50,7 +51,7 @@ export default function PlanPage() {
   if (!currentOrgId) {
     return (
       <View className="page-container">
-        <Card><EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
+        <Card><EmptyState icon="apartment" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
       </View>
     );
   }
@@ -80,7 +81,7 @@ export default function PlanPage() {
             </View>
           </>
         ) : (
-          <EmptyState emoji="📦" title="暂无订阅" subtitle={quotaLimitEnabled ? "请选择一个套餐订阅" : "当前系统不限量使用"} />
+          <EmptyState icon="plan" title="暂无订阅" subtitle={quotaLimitEnabled ? "请选择一个套餐订阅" : "当前系统不限量使用"} />
         )}
       </Card>
 

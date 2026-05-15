@@ -5,10 +5,22 @@
   justify-content: center;
   padding: var(--spacing-16) var(--spacing-6);
   gap: var(--spacing-3);
+  background: linear-gradient(180deg, rgba(20, 108, 92, 0.04), rgba(255, 255, 255, 0));
+  border-radius: var(--radius-lg);
 
-  &__emoji {
-    font-size: 64rpx;
+  &__icon {
+    width: 104rpx;
+    height: 104rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    background: var(--color-primary-light);
+    border: 1rpx solid rgba(20, 108, 92, 0.12);
     margin-bottom: var(--spacing-3);
+  }
+  &__emoji {
+    font-size: 56rpx;
   }
   &__title {
     font-size: var(--font-size-h5);

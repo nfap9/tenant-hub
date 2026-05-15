@@ -6,6 +6,7 @@ import { apiClient } from '../../api/client';
 import { Card, EmptyState, Badge, Input } from '../../components/ui';
 import { money, day } from '../../utils/format';
 import type { Lease, LeaseStatus } from '../../types/domain';
+import './index.scss';
 
 const statusLabels: Record<LeaseStatus, string> = {
   ACTIVE: '生效中',
@@ -85,7 +86,7 @@ export default function LeasesPage() {
   if (!currentOrgId) {
     return (
       <View className="page-container">
-        <Card><EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
+        <Card><EmptyState icon="apartment" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
       </View>
     );
   }
@@ -98,25 +99,14 @@ export default function LeasesPage() {
           onChange={setSearch}
           placeholder="搜索租客、电话、房间号或公寓"
         />
-        <View style={{ display: 'flex', flexWrap: 'wrap', gap: '12rpx', marginTop: '24rpx' }}>
+        <View className="filter-bar">
           {(Object.keys(filterLabels) as LeaseFilter[]).map((key) => (
             <View
               key={key}
+              className={`filter-chip ${filter === key ? 'filter-chip--active' : ''}`}
               onClick={() => setFilter(key)}
-              style={{
-                padding: '12rpx 24rpx',
-                borderRadius: '32rpx',
-                backgroundColor: filter === key ? '#0d9488' : '#f1f5f9',
-                border: filter === key ? '2rpx solid #0d9488' : '2rpx solid #e2e8f0'
-              }}
             >
-              <Text style={{
-                fontSize: '24rpx',
-                color: filter === key ? '#fff' : '#64748b',
-                fontWeight: filter === key ? 'bold' : 'normal'
-              }}>
-                {filterLabels[key]}
-              </Text>
+              <Text className={`filter-chip__text ${filter === key ? 'filter-chip__text--active' : ''}`}>{filterLabels[key]}</Text>
             </View>
           ))}
         </View>
@@ -124,7 +114,7 @@ export default function LeasesPage() {
 
       <Card title="所有租约" subtitle={`共 ${filteredLeases.length} 份`}>
         {filteredLeases.length === 0 ? (
-          <EmptyState emoji="📄" title="暂无租约" subtitle={search ? '请尝试其他搜索条件' : '请到房间页签约入住'} />
+          <EmptyState icon="contract" title="暂无租约" subtitle={search ? '请尝试其他搜索条件' : '请到房间页签约入住'} />
         ) : null}
         {filteredLeases.map((lease) => (
           <View key={lease.id} className="lease-card">

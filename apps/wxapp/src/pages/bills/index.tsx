@@ -365,7 +365,7 @@ export default function BillsPage() {
 
       {tab === "unpaid" ? (
         <>
-          {unpaidMonthlyBills.length === 0 ? <EmptyState emoji="📄" title="暂无待支付账单" subtitle="所有账单均已结清或暂无账单" /> : null}
+          {unpaidMonthlyBills.length === 0 ? <EmptyState icon="bill" title="暂无待支付账单" subtitle="所有账单均已结清或暂无账单" /> : null}
           {sortMonthlyBillsForList(unpaidMonthlyBills).map((bill) => {
             const summary = getMonthlyBillCardSummary(bill);
             return (
@@ -396,7 +396,7 @@ export default function BillsPage() {
 
       {tab === "pending" ? (
         <>
-          {reviewBills.length === 0 ? <EmptyState emoji="📄" title="没有待处理账单" subtitle="暂无出账失败的水电账单" /> : null}
+          {reviewBills.length === 0 ? <EmptyState icon="check" title="没有待处理账单" subtitle="暂无出账失败的水电账单" /> : null}
           {reviewBills.map((bill) => (
             <View key={bill.id} className="bill-card">
               <View className="bill-card-header">
@@ -426,7 +426,7 @@ export default function BillsPage() {
               </View>
             ))}
           </View>
-          {filteredAllBills.length === 0 ? <EmptyState emoji="📄" title="未找到账单" subtitle="尝试调整搜索条件或过滤状态" /> : null}
+          {filteredAllBills.length === 0 ? <EmptyState icon="bill" title="未找到账单" subtitle="尝试调整搜索条件或过滤状态" /> : null}
           {filteredAllBills.map((bill) => {
             const summary = getMonthlyBillCardSummary(bill);
             return (

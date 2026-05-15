@@ -1,0 +1,52 @@
+@use "../../assets/icons/generated/tenant-icons.scss";
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "tenant-icons";
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  text-align: center;
+}
+
+.icon--sm {
+  font-size: 28rpx;
+}
+
+.icon--md {
+  font-size: 36rpx;
+}
+
+.icon--lg {
+  font-size: 48rpx;
+}
+
+.icon--xl {
+  font-size: 60rpx;
+}
+
+.icon--primary {
+  color: var(--color-primary);
+}
+
+.icon--muted {
+  color: var(--color-text-muted);
+}
+
+.icon--success {
+  color: var(--color-success);
+}
+
+.icon--warning {
+  color: var(--color-warning);
+}
+
+.icon--danger {
+  color: var(--color-danger);
+}
+
+.icon--inherit {
+  color: inherit;
+}

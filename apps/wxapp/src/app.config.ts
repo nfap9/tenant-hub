@@ -12,8 +12,8 @@ export default defineAppConfig({
     'pages/settings/plan'
   ],
   tabBar: {
-    color: '#94a3b8',
-    selectedColor: '#0d9488',
+    color: '#71827b',
+    selectedColor: '#146c5c',
     backgroundColor: '#ffffff',
     borderStyle: 'white',
     list: [
@@ -26,7 +26,7 @@ export default defineAppConfig({
   },
   window: {
     backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#115e59',
+    navigationBarBackgroundColor: '#0f4f45',
     navigationBarTitleText: 'Tenant Hub',
     navigationBarTextStyle: 'white'
   }

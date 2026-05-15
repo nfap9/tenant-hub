@@ -1,5 +1,7 @@
 import Taro from '@tarojs/taro';
 
+const normalizeLocalApiUrl = (url: string) => url.replace('http://localhost:', 'http://127.0.0.1:');
+
 /**
  * 获取 API 基础 URL
  * - 生产环境（release）：使用真实域名（需在部署前修改）
@@ -19,10 +21,10 @@ export function getApiBaseUrl(): string {
   // 开发环境允许通过 storage 覆盖（方便切换测试环境）
   try {
     const devUrl = Taro.getStorageSync('tenantHubDevApiUrl');
-    if (devUrl) return devUrl;
+    if (devUrl) return normalizeLocalApiUrl(devUrl);
   } catch {}
 
-  return 'http://localhost:4000/api';
+  return 'http://127.0.0.1:4000/api';
 }
 
 /**

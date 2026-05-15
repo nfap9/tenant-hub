@@ -11,6 +11,16 @@ export type ApiOptions = {
 
 let isRedirecting = false;
 
+const isLoginPageActive = () => {
+  try {
+    const pages = Taro.getCurrentPages?.() ?? [];
+    const current = pages[pages.length - 1];
+    return current?.route === 'pages/login/index';
+  } catch {
+    return false;
+  }
+};
+
 export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const session = getSession();
   const token = session?.token;
@@ -20,6 +30,7 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
     url,
     method: options.method || 'GET',
     data: options.body,
+    timeout: 10000,
     header: {
       'content-type': 'application/json',
       ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -31,7 +42,7 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
   // 401 未授权：自动清除 session 并跳转到登录页
   if (res.statusCode === 401) {
     clearSession();
-    if (!isRedirecting) {
+    if (!isRedirecting && !isLoginPageActive()) {
       isRedirecting = true;
       // 延迟一点，避免连续多个 401 请求导致多次跳转
       setTimeout(() => {

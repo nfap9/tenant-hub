@@ -35,6 +35,16 @@ type AppSessionContextType = {
 
 const AppSessionContext = createContext<AppSessionContextType | undefined>(undefined);
 
+const isLoginPageActive = () => {
+  try {
+    const pages = Taro.getCurrentPages?.() ?? [];
+    const current = pages[pages.length - 1];
+    return current?.route === 'pages/login/index';
+  } catch {
+    return false;
+  }
+};
+
 export function AppSessionProvider({ children }) {
   const [session, setSessionState] = useState<MobileSession | undefined>(() => getSession());
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -161,7 +171,9 @@ export function AppSessionProvider({ children }) {
       if (!s?.token) {
         setLoading(false);
         setAuthChecked(true);
-        Taro.reLaunch({ url: '/pages/login/index' });
+        if (!isLoginPageActive()) {
+          Taro.reLaunch({ url: '/pages/login/index' });
+        }
         return;
       }
       try {

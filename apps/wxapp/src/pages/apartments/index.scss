@@ -1,166 +1,187 @@
-@import "../../theme/tokens.scss";
+@use "../../theme/tokens.scss";
 
 .page-container {
-  padding: 16px;
-  padding-bottom: 32px;
-  background: var(--th-background);
-  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(20, 108, 92, 0.08), rgba(243, 247, 245, 0) 360rpx);
 }
 
 .sub-page-header {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-4);
 }
 
 .apartment-card {
-  background: var(--th-surface);
-  border-radius: var(--th-radius-md);
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid var(--th-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  margin-bottom: var(--spacing-4);
+  border: 1rpx solid var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
 .apartment-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-3);
 }
 
 .card-title {
-  font-size: 15px;
+  display: block;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   font-weight: 600;
-  color: var(--th-text);
+  color: var(--color-text);
 }
 
 .card-stat {
-  font-size: 14px;
+  display: block;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   font-weight: 600;
-  color: var(--th-primary);
+  color: var(--color-primary);
 }
 
 .text-muted {
-  font-size: 13px;
-  color: var(--th-text-muted);
+  display: block;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-muted);
 }
 
 .detail-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  gap: var(--spacing-4);
+  padding: var(--spacing-3) 0;
 }
 
 .section-label {
-  font-size: 14px;
+  display: block;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   font-weight: 600;
-  color: var(--th-text-secondary);
-  margin: 12px 0 8px;
+  color: var(--color-text-secondary);
+  margin: var(--spacing-4) 0 var(--spacing-2);
 }
 
 .form-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
 }
 
 .form-grid input {
   flex: 1;
-  min-width: 120px;
+  min-width: 240rpx;
 }
 
 .field-label {
-  font-size: 13px;
-  color: var(--th-text-secondary);
-  margin-bottom: 6px;
-  margin-top: 8px;
+  display: block;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  margin-bottom: var(--spacing-2);
+  margin-top: var(--spacing-3);
 }
 
 .action-row {
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-5);
+  flex-wrap: wrap;
 }
 
 .action-row-inline {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
 }
 
 .segment {
   display: flex;
-  background: var(--th-border-light);
-  border-radius: var(--th-radius-md);
-  padding: 4px;
-  margin-top: 12px;
+  background: rgba(220, 231, 226, 0.7);
+  border: 1rpx solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-1);
+  margin-top: var(--spacing-4);
+  overflow: hidden;
 }
 
 .segment-item {
   flex: 1;
   text-align: center;
-  padding: 8px 0;
-  border-radius: var(--th-radius-sm);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
 }
 
 .segment-item--active {
-  background: var(--th-surface);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-subtle);
 }
 
 .segment-text {
-  font-size: 14px;
-  color: var(--th-text-muted);
+  display: block;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-muted);
 }
 
 .segment-text--active {
-  color: var(--th-primary);
+  color: var(--color-primary);
   font-weight: 600;
 }
 
 .detail-panel {
-  padding: 8px 0;
+  padding: var(--spacing-4) 0;
 }
 
 .room-card {
-  background: var(--th-surface);
-  border-radius: var(--th-radius-md);
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid var(--th-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  margin-bottom: var(--spacing-4);
+  border: 1rpx solid var(--color-border);
+  box-shadow: var(--shadow-subtle);
 }
 
 .room-card--active {
-  border: 1.5px solid var(--th-primary);
-  background: var(--th-primary-light);
+  border-color: var(--color-primary);
+  background: linear-gradient(180deg, var(--color-primary-lightest), var(--color-surface));
 }
 
 .room-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-3);
 }
 
 .layout-selector {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
 }
 
 .batch-room-panel {
-  background: var(--th-border-light);
-  border-radius: var(--th-radius-md);
-  padding: 12px;
-  margin: 12px 0;
+  background: var(--color-primary-lightest);
+  border: 1rpx solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  margin: var(--spacing-4) 0;
 }
 
 .batch-room-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
 }
 
 .form-panel {
-  margin-top: 16px;
+  margin-top: var(--spacing-5);
 }

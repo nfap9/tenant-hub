@@ -102,7 +102,7 @@ export default function SettingsPage() {
     return (
       <View className="page-container">
         <Card>
-          <EmptyState emoji="🏢" title="还没有组织" subtitle={`创建或加入一个组织，开始使用 ${platformInfo.name}`} />
+          <EmptyState icon="apartment" title="还没有组织" subtitle={`创建或加入一个组织，开始使用 ${platformInfo.name}`} />
         </Card>
 
         <Card title="创建组织">

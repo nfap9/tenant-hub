@@ -4,3 +4,5 @@ export { Input } from './Input';
 export { Badge } from './Badge';
 export { EmptyState } from './EmptyState';
 export { DateField } from './DateField';
+export { Icon } from './Icon';
+export type { IconName } from './Icon';

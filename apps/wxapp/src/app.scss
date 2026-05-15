@@ -1,9 +1,24 @@
 @use "./theme/tokens.scss";
 
 page {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: var(--color-background);
+  font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+  background:
+    linear-gradient(180deg, rgba(20, 108, 92, 0.08) 0%, rgba(243, 247, 245, 0) 340rpx),
+    var(--color-background);
   color: var(--color-text);
   font-size: var(--font-size-body);
   line-height: var(--line-height-body);
+}
+
+view,
+text,
+input,
+textarea {
+  box-sizing: border-box;
+}
+
+.page-container {
+  min-height: 100vh;
+  padding: var(--spacing-5);
+  padding-bottom: var(--layout-content-bottom-padding);
 }

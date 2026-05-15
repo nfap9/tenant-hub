@@ -1,0 +1,102 @@
+@use "../../theme/tokens.scss";
+
+.login-page {
+  min-height: 100vh;
+  padding: 48rpx;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(199, 125, 44, 0.28), transparent 240rpx),
+    linear-gradient(155deg, var(--color-primary) 0%, var(--color-primary-dark) 78%);
+}
+
+.login-hero {
+  margin-top: 150rpx;
+  margin-bottom: 76rpx;
+}
+
+.login-hero__brand {
+  display: block;
+  font-size: 56rpx;
+  line-height: 68rpx;
+  font-weight: 700;
+  color: #fff;
+}
+
+.login-hero__subtitle {
+  display: block;
+  margin-top: var(--spacing-4);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.login-card__title {
+  display: block;
+  font-size: var(--font-size-h4);
+  line-height: var(--line-height-h4);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-1);
+}
+
+.login-card__subtitle {
+  display: block;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-8);
+}
+
+.login-segment {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-8);
+  background-color: rgba(220, 231, 226, 0.75);
+  border: 1rpx solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-1);
+}
+
+.login-segment__item {
+  flex: 1;
+  padding: var(--spacing-3) 0;
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.login-segment__item--active {
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-subtle);
+}
+
+.login-segment__text {
+  display: block;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  color: var(--color-text-muted);
+}
+
+.login-segment__text--active {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.login-otp {
+  margin-top: var(--spacing-4);
+}
+
+.login-switch {
+  text-align: center;
+  margin-top: var(--spacing-2);
+}
+
+.login-switch__text {
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-muted);
+}

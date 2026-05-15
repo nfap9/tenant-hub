@@ -1,16 +1,20 @@
 .card {
   background-color: var(--color-surface);
-  border-radius: var(--radius-md);
+  border: 1rpx solid rgba(220, 231, 226, 0.85);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-4);
+  overflow: hidden;
 
   &--default {
     box-shadow: var(--shadow-card);
   }
   &--warm {
-    background-color: var(--color-surface-warm);
+    background: linear-gradient(180deg, var(--color-surface-warm), var(--color-surface));
     box-shadow: var(--shadow-subtle);
   }
   &--outline {
-    border: 1rpx solid var(--color-border);
+    box-shadow: none;
+    border-color: var(--color-border-strong);
   }
   &--padding-sm {
     padding: var(--spacing-3);
@@ -26,19 +30,23 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: var(--spacing-3);
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
   }
   &__title-block {
     flex: 1;
+    min-width: 0;
   }
   &__title {
     font-size: var(--font-size-h5);
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
+    line-height: var(--line-height-h5);
   }
   &__subtitle {
     font-size: var(--font-size-body-small);
     color: var(--color-text-muted);
     margin-top: var(--spacing-1);
+    line-height: var(--line-height-body-small);
   }
 }

@@ -77,7 +77,7 @@ export default function OrganizationPage() {
   if (!currentOrgId) {
     return (
       <View className="page-container">
-        <Card><EmptyState emoji="🏢" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
+        <Card><EmptyState icon="apartment" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
       </View>
     );
   }

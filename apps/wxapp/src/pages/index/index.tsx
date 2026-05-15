@@ -3,7 +3,7 @@ import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Icon } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { money, compactMoney, isThisMonth, daysUntil, monthlyAmount } from '../../utils/format';
 import type { Apartment, Room, Lease, MonthlyBill, Bill } from '../../types/domain';
@@ -203,15 +203,15 @@ export default function Index() {
       <Card title="常用操作" subtitle="快速进入高频功能">
         <View className="quick-action-grid">
           <View className="quick-action-card" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
-            <View className="quick-action-icon">💰</View>
+            <View className="quick-action-icon"><Icon name="payment" size="lg" /></View>
             <Text className="quick-action-label">登记收款</Text>
           </View>
           <View className="quick-action-card" onClick={() => Taro.switchTab({ url: '/pages/rooms/index' })}>
-            <View className="quick-action-icon">📝</View>
+            <View className="quick-action-icon"><Icon name="contract" size="lg" /></View>
             <Text className="quick-action-label">签约入住</Text>
           </View>
           <View className="quick-action-card" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
-            <View className="quick-action-icon">⚡</View>
+            <View className="quick-action-icon"><Icon name="meter" size="lg" /></View>
             <Text className="quick-action-label">抄表录入</Text>
           </View>
         </View>
@@ -219,7 +219,7 @@ export default function Index() {
 
       <Card title="资产出租" subtitle={`${occupiedCount} 已租 · ${vacantCount} 空闲`}>
         {topApartments.length === 0 ? (
-          <EmptyState emoji="🏢" title="暂无公寓资产" subtitle="请先到公寓页添加" />
+          <EmptyState icon="apartment" title="暂无公寓资产" subtitle="请先到公寓页添加" />
         ) : null}
         {topApartments.map(({ apartment, apartmentRooms, apartmentOccupied, apartmentIncome }) => (
           <View key={apartment.id} className="home-apartment-row">
@@ -237,7 +237,7 @@ export default function Index() {
 
       <Card title="待办事项" subtitle={`${todos.length} 项`}>
         {todos.length === 0 ? (
-          <EmptyState emoji="✅" title="暂无紧急待办" subtitle="经营状态稳定" />
+          <EmptyState icon="check" title="暂无紧急待办" subtitle="经营状态稳定" />
         ) : null}
         {todos.map((todo) => (
           <View key={todo.key} className="todo-item">

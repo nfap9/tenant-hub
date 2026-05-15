@@ -1,0 +1,34 @@
+$tenant-icons-font: "tenant-icons";
+
+@font-face {
+    font-family: $tenant-icons-font;
+    src: url(".//tenant-icons.woff2?cc1229f77116b5cf06c79fbd05449a98") format("woff2");
+}
+
+.th-icon:before {
+    font-family: tenant-icons !important;
+    font-style: normal;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+$tenant-icons-map: (
+    "room": "\f101",
+    "plan": "\f102",
+    "payment": "\f103",
+    "meter": "\f104",
+    "contract": "\f105",
+    "check": "\f106",
+    "bill": "\f107",
+    "apartment": "\f108",
+);
+
+@each $name, $value in ($tenant-icons-map) {
+    .th-icon.th-icon-#{$name}:before {
+        content: $value;
+    }
+}

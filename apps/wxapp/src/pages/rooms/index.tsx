@@ -338,7 +338,7 @@ export default function RoomsPage() {
         ))}
       </View>
 
-      {visibleRooms.length === 0 ? <EmptyState emoji="🛏️" title="暂无房间" subtitle="请先到公寓页批量添加" /> : null}
+      {visibleRooms.length === 0 ? <EmptyState icon="room" title="暂无房间" subtitle="请先到公寓页批量添加" /> : null}
 
       {visibleRooms.map((room) => {
         const expanded = selectedId === room.id;

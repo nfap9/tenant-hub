@@ -6,6 +6,7 @@ import { apiClient } from '../../api/client';
 import { useAppSession } from '../../context/AppSessionContext';
 import { showToast } from '../../components/Toast';
 import { useEffect } from 'react';
+import './index.scss';
 
 type LoginMode = 'password' | 'code';
 type AuthMode = 'login' | 'register';
@@ -133,75 +134,36 @@ export default function LoginPage() {
   };
 
   return (
-    <View style={{ padding: '48rpx', minHeight: '100vh', backgroundColor: '#115e59' }}>
-      <View style={{ marginTop: '160rpx', marginBottom: '80rpx' }}>
-        <Text style={{ fontSize: '52rpx', fontWeight: 'bold', color: '#fff' }}>
-          {platformInfo.name}
-        </Text>
-        <Text style={{ fontSize: '28rpx', color: '#5eead4', marginTop: '16rpx' }}>
+    <View className="login-page">
+      <View className="login-hero">
+        <Text className="login-hero__brand">{platformInfo.name}</Text>
+        <Text className="login-hero__subtitle">
           {isRegister ? '注册后即可开始管理你的公寓' : '给二房东和小型物业公司的移动经营台'}
         </Text>
       </View>
 
       <Card variant="warm">
-        <Text style={{ fontSize: '36rpx', fontWeight: 'bold', color: '#1e293b', marginBottom: '8rpx' }}>
-          {isRegister ? '注册账号' : '欢迎回来'}
-        </Text>
-        <Text style={{ fontSize: '26rpx', color: '#64748b', marginBottom: '40rpx' }}>
-          {isRegister ? '手机号验证后即可创建账号' : '使用手机号登录你的公寓经营工作台'}
-        </Text>
+        <Text className="login-card__title">{isRegister ? '注册账号' : '欢迎回来'}</Text>
+        <Text className="login-card__subtitle">{isRegister ? '手机号验证后即可创建账号' : '使用手机号登录你的公寓经营工作台'}</Text>
 
         {!isRegister && (
-          <View style={{
-            display: 'flex',
-            gap: '16rpx',
-            marginBottom: '40rpx',
-            backgroundColor: '#f1f5f9',
-            borderRadius: '16rpx',
-            padding: '6rpx'
-          }}>
+          <View className="login-segment">
             <View
-              style={{
-                flex: 1,
-                padding: '20rpx 0',
-                borderRadius: '12rpx',
-                textAlign: 'center',
-                backgroundColor: mode === 'code' ? '#fff' : 'transparent',
-                boxShadow: mode === 'code' ? '0 2rpx 8rpx rgba(0,0,0,0.06)' : 'none'
-              }}
+              className={`login-segment__item ${mode === 'code' ? 'login-segment__item--active' : ''}`}
               onClick={() => setMode('code')}
             >
-              <Text style={{
-                fontSize: '28rpx',
-                fontWeight: mode === 'code' ? 'bold' : 'normal',
-                color: mode === 'code' ? '#0d9488' : '#64748b'
-              }}>
-                验证码登录
-              </Text>
+              <Text className={`login-segment__text ${mode === 'code' ? 'login-segment__text--active' : ''}`}>验证码登录</Text>
             </View>
             <View
-              style={{
-                flex: 1,
-                padding: '20rpx 0',
-                borderRadius: '12rpx',
-                textAlign: 'center',
-                backgroundColor: mode === 'password' ? '#fff' : 'transparent',
-                boxShadow: mode === 'password' ? '0 2rpx 8rpx rgba(0,0,0,0.06)' : 'none'
-              }}
+              className={`login-segment__item ${mode === 'password' ? 'login-segment__item--active' : ''}`}
               onClick={() => setMode('password')}
             >
-              <Text style={{
-                fontSize: '28rpx',
-                fontWeight: mode === 'password' ? 'bold' : 'normal',
-                color: mode === 'password' ? '#0d9488' : '#64748b'
-              }}>
-                密码登录
-              </Text>
+              <Text className={`login-segment__text ${mode === 'password' ? 'login-segment__text--active' : ''}`}>密码登录</Text>
             </View>
           </View>
         )}
 
-        <View style={{ display: 'flex', flexDirection: 'column', gap: '24rpx' }}>
+        <View className="login-form">
           <Input
             label="手机号"
             value={phone}
@@ -248,7 +210,7 @@ export default function LoginPage() {
                 placeholder="6 位验证码"
                 type="digit"
               />
-              <View style={{ marginTop: '16rpx' }}>
+              <View className="login-otp">
                 <Button
                   variant="secondary"
                   size="small"
@@ -266,13 +228,8 @@ export default function LoginPage() {
             {busy ? '处理中' : isRegister ? '注册并登录' : '登录'}
           </Button>
 
-          <View style={{ textAlign: 'center', marginTop: '8rpx' }}>
-            <Text
-              style={{ fontSize: '26rpx', color: '#64748b' }}
-              onClick={toggleAuthMode}
-            >
-              {isRegister ? '已有账号，去登录' : '注册新账号'}
-            </Text>
+          <View className="login-switch">
+            <Text className="login-switch__text" onClick={toggleAuthMode}>{isRegister ? '已有账号，去登录' : '注册新账号'}</Text>
           </View>
         </View>
       </Card>

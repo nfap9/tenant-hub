@@ -341,7 +341,7 @@ export default function ApartmentsPage() {
           headerAction={canManageApartment ? <Button variant="secondary" size="small" onClick={() => { setSelectedId(undefined); setForm(emptyApartmentForm); setMode("create"); }}>新建</Button> : undefined}
         >
           {apartments.length === 0 ? (
-            <EmptyState emoji="🏢" title="暂无公寓" subtitle="点击新建开始维护" action={<Button onClick={() => { setSelectedId(undefined); setForm(emptyApartmentForm); setMode("create"); }}>新建公寓</Button>} />
+            <EmptyState icon="apartment" title="暂无公寓" subtitle="点击新建开始维护" action={<Button onClick={() => { setSelectedId(undefined); setForm(emptyApartmentForm); setMode("create"); }}>新建公寓</Button>} />
           ) : null}
           {apartments.map((item) => {
             const rooms = item.rooms ?? [];

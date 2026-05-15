@@ -7,7 +7,7 @@ export function NoOrganization() {
     <View className="page-container">
       <Card>
         <EmptyState
-          emoji="🏢"
+          icon="apartment"
           title="还没有组织"
           subtitle="创建或加入一个组织后，即可开始管理公寓"
         />
