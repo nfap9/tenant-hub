@@ -3,7 +3,7 @@ import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Input, DateField, FacilitySelector } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { TaskSheet } from '../../components/TaskSheet';
 import { money, today, nextYear, numberValue } from '../../utils/format';
@@ -423,10 +423,10 @@ export default function RoomsPage() {
       >
             <Input label="房间号" placeholder="例如 301" value={roomForm.roomNo} onChange={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
             <View className="form-grid">
-              <Input label="户型" placeholder="例如 单间" value={roomForm.layout} onChange={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
+              <Input label="户型" placeholder="例如 开间" value={roomForm.layout} onChange={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
               <Input label="面积" placeholder="平方米" type="number" value={roomForm.area} onChange={(value) => setRoomForm((old) => ({ ...old, area: value }))} />
             </View>
-            <Input label="设施" placeholder="用逗号分隔" value={roomForm.facilities} onChange={(value) => setRoomForm((old) => ({ ...old, facilities: value }))} />
+            <FacilitySelector value={roomForm.facilities} onChange={(value) => setRoomForm((old) => ({ ...old, facilities: value }))} />
             <View className="segment">
               {roomStatuses.map((item) => (
                 <View key={item} className={`segment-item ${roomForm.status === item ? 'segment-item--active' : ''}`} onClick={() => setRoomForm((old) => ({ ...old, status: item }))}>

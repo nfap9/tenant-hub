@@ -3,7 +3,7 @@ import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
+import { Button, Card, EmptyState, Badge, Input, DateField, FacilitySelector } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { TaskSheet } from '../../components/TaskSheet';
 import { money, optionalNumber, optionalText, toFacilityArray, facilitiesText } from '../../utils/format';
@@ -28,7 +28,7 @@ const emptyApartmentForm = {
 
 const emptyRoomForm = {
   roomNo: "",
-  layout: "单间",
+  layout: "开间",
   area: "",
   facilities: "",
   status: "VACANT" as RoomStatus
@@ -49,7 +49,7 @@ const toneForStatus: Record<RoomStatus, "success" | "neutral" | "warning" | "dan
 };
 
 const roomStatuses: RoomStatus[] = ["VACANT", "RESERVED", "OCCUPIED", "MAINTENANCE"];
-const roomLayoutOptions = ["单间", "一房一厅", "两房一厅", "三房一厅", "四房一厅", "五房一厅", "六房一厅"];
+const roomLayoutOptions = ["开间", "一室一厅", "两室一厅", "两室两厅", "三室一厅", "三室两厅", "四室两厅"];
 
 const isThisMonth = (value?: string) => {
   if (!value) return false;
@@ -595,7 +595,7 @@ export default function ApartmentsPage() {
                   <Button key={layout} variant={roomForm.layout === layout ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("layout", layout)}>{layout}</Button>
                 ))}
               </View>
-              <Input label="设施" placeholder="用逗号分隔" value={roomForm.facilities} onChange={(value) => updateRoomForm("facilities", value)} />
+              <FacilitySelector value={roomForm.facilities} onChange={(value) => updateRoomForm("facilities", value)} />
         </TaskSheet>
 
         <TaskSheet
@@ -662,7 +662,7 @@ export default function ApartmentsPage() {
                   <Button key={layout} variant={roomForm.layout === layout ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("layout", layout)}>{layout}</Button>
                 ))}
               </View>
-              <Input label="设施" placeholder="用逗号分隔" value={roomForm.facilities} onChange={(value) => updateRoomForm("facilities", value)} />
+              <FacilitySelector value={roomForm.facilities} onChange={(value) => updateRoomForm("facilities", value)} />
               <Text className="field-label">状态</Text>
               <View className="layout-selector">
                 {roomStatuses.map((status) => (
