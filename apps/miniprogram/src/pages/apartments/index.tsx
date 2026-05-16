@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
@@ -7,7 +7,7 @@ import { Button, Card, EmptyState, Badge, Input, DateField } from '../../compone
 import { NoOrganization } from '../../components/NoOrganization';
 import { TaskSheet } from '../../components/TaskSheet';
 import { money, optionalNumber, optionalText, toFacilityArray, facilitiesText } from '../../utils/format';
-import { buildBatchRoomNos, toggleBatchRoomSelection } from '../../utils/batchRooms';
+import { buildBatchRoomNos, groupBatchRoomNosByFloor, toggleBatchRoomSelection } from '../../utils/batchRooms';
 import type { Apartment, Room, RoomStatus } from '../../types/domain';
 import './index.scss';
 
@@ -104,9 +104,6 @@ export default function ApartmentsPage() {
   const [batchEndFloor, setBatchEndFloor] = useState("4");
   const [batchRoomCount, setBatchRoomCount] = useState("4");
   const [selectedBatchRoomNos, setSelectedBatchRoomNos] = useState<string[]>([]);
-  const [batchLayout, setBatchLayout] = useState("单间");
-  const [batchArea, setBatchArea] = useState("");
-  const [batchFacilities, setBatchFacilities] = useState("床,衣柜,空调,热水器");
   const [saving, setSaving] = useState(false);
 
   const selectedApartment = useMemo(() => apartments.find((item) => item.id === selectedId), [apartments, selectedId]);
@@ -121,6 +118,15 @@ export default function ApartmentsPage() {
     () => buildBatchRoomNos({ startFloor: batchStartFloor, endFloor: batchEndFloor, roomCount: batchRoomCount }),
     [batchStartFloor, batchEndFloor, batchRoomCount]
   );
+  const selectedGeneratedBatchRoomNos = useMemo(
+    () => generatedBatchRoomNos.filter((roomNo) => selectedBatchRoomNos.includes(roomNo)),
+    [generatedBatchRoomNos, selectedBatchRoomNos]
+  );
+  const batchRoomGroups = useMemo(() => groupBatchRoomNosByFloor(generatedBatchRoomNos), [generatedBatchRoomNos]);
+
+  useEffect(() => {
+    setSelectedBatchRoomNos(generatedBatchRoomNos);
+  }, [generatedBatchRoomNos]);
 
   const loadApartments = useCallback(async () => {
     if (!currentOrgId) return;
@@ -304,25 +310,22 @@ export default function ApartmentsPage() {
   const addBatchRooms = async () => {
     if (!currentOrgId || !selectedApartment) return;
     if (!canManageRoom) return Taro.showToast({ title: "当前角色没有管理房间权限", icon: "none" });
-    const selectedRoomNos = generatedBatchRoomNos.filter((roomNo) => selectedBatchRoomNos.includes(roomNo));
     if (generatedBatchRoomNos.length === 0) return Taro.showToast({ title: "请输入有效的楼层范围和房间数量", icon: "none" });
-    if (selectedRoomNos.length === 0) return Taro.showToast({ title: "请至少选择一个房间号", icon: "none" });
-    const facilities = toFacilityArray(batchFacilities);
+    if (selectedGeneratedBatchRoomNos.length === 0) return Taro.showToast({ title: "请至少选择一个房间号", icon: "none" });
     try {
       await apiClient(`/apartments/${selectedApartment.id}/rooms/batch`, {
         method: "POST",
         body: {
-          rooms: selectedRoomNos.map((roomNo) => ({
+          rooms: selectedGeneratedBatchRoomNos.map((roomNo) => ({
             roomNo,
-            layout: batchLayout.trim() || "未配置",
-            area: optionalNumber(batchArea),
-            facilities
+            layout: "未配置",
+            facilities: []
           }))
         },
         organizationId: currentOrgId
       });
       resetRoomWork();
-      Taro.showToast({ title: `已提交 ${selectedRoomNos.length} 间房间，重复房间会自动跳过`, icon: "success" });
+      Taro.showToast({ title: `已提交 ${selectedGeneratedBatchRoomNos.length} 间房间，重复房间会自动跳过`, icon: "success" });
       await loadApartments();
     } catch (e) {
       Taro.showToast({ title: e instanceof Error ? e.message : "批量添加房间失败", icon: "none" });
@@ -614,31 +617,28 @@ export default function ApartmentsPage() {
               <View className="batch-room-panel">
                 <View className="detail-row">
                   <Text className="field-label">生成房间号</Text>
-                  <Text className="text-muted">已选 {selectedBatchRoomNos.length}/{generatedBatchRoomNos.length}</Text>
+                  <Text className="text-muted">已选 {selectedGeneratedBatchRoomNos.length}/{generatedBatchRoomNos.length}</Text>
                 </View>
                 {generatedBatchRoomNos.length > 0 ? (
-                  <View className="batch-room-grid">
-                    {generatedBatchRoomNos.map((roomNo) => {
-                      const selected = selectedBatchRoomNos.includes(roomNo);
-                      return (
-                        <Button key={roomNo} variant={selected ? "primary" : "ghost"} size="small" onClick={() => setSelectedBatchRoomNos((old) => toggleBatchRoomSelection(old, roomNo))}>
-                          {roomNo}
-                        </Button>
-                      );
-                    })}
+                  <View className="batch-room-groups">
+                    {batchRoomGroups.map((group) => (
+                      <View key={group.floor} className="batch-room-row">
+                        <Text className="batch-room-floor">{group.floor}层</Text>
+                        <View className="batch-room-grid">
+                          {group.roomNos.map((roomNo) => {
+                            const selected = selectedBatchRoomNos.includes(roomNo);
+                            return (
+                              <Button key={roomNo} variant={selected ? "primary" : "ghost"} size="small" onClick={() => setSelectedBatchRoomNos((old) => toggleBatchRoomSelection(old, roomNo))}>
+                                {roomNo}
+                              </Button>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    ))}
                   </View>
                 ) : <Text className="text-muted">输入有效的楼层范围和每层房间数后会自动生成房间号</Text>}
               </View>
-              <Text className="field-label">户型</Text>
-              <View className="layout-selector">
-                {roomLayoutOptions.map((layout) => (
-                  <Button key={layout} variant={batchLayout === layout ? "primary" : "ghost"} size="small" onClick={() => setBatchLayout(layout)}>{layout}</Button>
-                ))}
-              </View>
-              <View className="form-grid">
-                <Input label="面积" placeholder="平方米" type="number" value={batchArea} onChange={setBatchArea} />
-              </View>
-              <Input label="设施" placeholder="用逗号分隔" value={batchFacilities} onChange={setBatchFacilities} />
         </TaskSheet>
 
         <TaskSheet

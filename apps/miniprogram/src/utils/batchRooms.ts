@@ -25,6 +25,18 @@ export const buildBatchRoomNos = ({ startFloor, endFloor, roomCount }: { startFl
   return roomNos;
 };
 
+export const groupBatchRoomNosByFloor = (roomNos: string[]) =>
+  roomNos.reduce<Array<{ floor: string; roomNos: string[] }>>((groups, roomNo) => {
+    const floor = roomNo.slice(0, -2) || roomNo;
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup?.floor === floor) {
+      lastGroup.roomNos.push(roomNo);
+      return groups;
+    }
+    groups.push({ floor, roomNos: [roomNo] });
+    return groups;
+  }, []);
+
 export const toggleBatchRoomSelection = (selectedRoomNos: string[], roomNo: string) =>
   selectedRoomNos.includes(roomNo)
     ? selectedRoomNos.filter((item) => item !== roomNo)
