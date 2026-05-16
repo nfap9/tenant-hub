@@ -4,6 +4,62 @@
   background: linear-gradient(180deg, rgba(20, 108, 92, 0.08), rgba(243, 247, 245, 0) 360rpx);
 }
 
+.page-container--apartment-detail {
+  height: 100vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: var(--layout-page-padding);
+}
+
+.apartment-detail-fixed {
+  flex: 0 0 auto;
+}
+
+.apartment-detail-summary {
+  margin-bottom: var(--spacing-5);
+}
+
+.apartment-detail-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.apartment-info-card {
+  flex: 0 0 auto;
+  margin-bottom: var(--spacing-5);
+}
+
+.apartment-tab-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.apartment-tab-card .card__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.apartment-inner-list {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+  box-sizing: border-box;
+}
+
+.apartment-inner-list .room-card:last-child,
+.apartment-inner-list .expense-list-row:last-child {
+  margin-bottom: 0;
+}
+
 .apartment-card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
@@ -50,6 +106,10 @@
   align-items: center;
   gap: var(--spacing-4);
   padding: var(--spacing-3) 0;
+}
+
+.expense-list-row {
+  margin-bottom: var(--spacing-2);
 }
 
 .section-label {

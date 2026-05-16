@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text } from '@tarojs/components';
+import { ScrollView, View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
@@ -316,99 +316,103 @@ export default function RoomsPage() {
 
   return (
     <View className="page-container">
-      <View className="stat-row">
-        <Card className="stat-card">
-          <Text className="stat-label">全部房间</Text>
-          <Text className="stat-value">{rooms.length}</Text>
-        </Card>
-        <Card className="stat-card">
-          <Text className="stat-label">空闲</Text>
-          <Text className="stat-value">{vacantCount}</Text>
-        </Card>
-        <Card className="stat-card">
-          <Text className="stat-label">已租</Text>
-          <Text className="stat-value">{occupiedCount}</Text>
-        </Card>
+      <View className="rooms-fixed-header">
+        <View className="stat-row">
+          <Card className="stat-card">
+            <Text className="stat-label">全部房间</Text>
+            <Text className="stat-value">{rooms.length}</Text>
+          </Card>
+          <Card className="stat-card">
+            <Text className="stat-label">空闲</Text>
+            <Text className="stat-value">{vacantCount}</Text>
+          </Card>
+          <Card className="stat-card">
+            <Text className="stat-label">已租</Text>
+            <Text className="stat-value">{occupiedCount}</Text>
+          </Card>
+        </View>
+
+        <View className="filter-bar">
+          {filters.map((item) => (
+            <Button key={item} variant={filter === item ? "primary" : "ghost"} size="small" onClick={() => { setFilter(item); setSelectedId(undefined); setLeaseRoomId(undefined); setEditingRoomId(undefined); }}>
+              {item === "ALL" ? "全部" : statusLabels[item]}
+            </Button>
+          ))}
+        </View>
       </View>
 
-      <View className="filter-bar">
-        {filters.map((item) => (
-          <Button key={item} variant={filter === item ? "primary" : "ghost"} size="small" onClick={() => { setFilter(item); setSelectedId(undefined); setLeaseRoomId(undefined); setEditingRoomId(undefined); }}>
-            {item === "ALL" ? "全部" : statusLabels[item]}
-          </Button>
-        ))}
-      </View>
+      <ScrollView className="rooms-list" scrollY>
+        {visibleRooms.length === 0 ? <EmptyState icon="room" title="暂无房间" subtitle="请先到公寓页批量添加" /> : null}
 
-      {visibleRooms.length === 0 ? <EmptyState icon="room" title="暂无房间" subtitle="请先到公寓页批量添加" /> : null}
-
-      {visibleRooms.map((room) => {
-        const expanded = selectedId === room.id;
-        const roomActiveLease = room.leases?.find((item) => item.status === "ACTIVE");
-        return (
-          <View key={room.id} className={`room-card ${expanded ? 'room-card--active' : ''}`} onClick={() => {
-            setSelectedId(expanded ? undefined : room.id);
-            setEditingRoomId(undefined);
-          }}>
-            <View className="room-header">
-              <View>
-                <Text className="card-title">{room.apartment?.name} · {room.roomNo}</Text>
-                <Text className="text-muted">{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
-              </View>
-              <View className="room-badges">
-                <Badge tone={toneForStatus[room.status]}>{statusLabels[room.status]}</Badge>
-                {roomActiveLease?.currentMonthBillSettled ? <Badge tone="success">账单已结清</Badge> : null}
-              </View>
-            </View>
-            <Text className="text-muted">{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>
-
-            {expanded ? (
-              <>
-                <View className="detail-panel">
-                  <View className="detail-row">
-                    <Text className="text-muted">水电单价</Text>
-                    <Text className="text-muted">水 ¥{money(room.apartment?.waterUnitPrice)} · 电 ¥{money(room.apartment?.powerUnitPrice)}</Text>
-                  </View>
+        {visibleRooms.map((room) => {
+          const expanded = selectedId === room.id;
+          const roomActiveLease = room.leases?.find((item) => item.status === "ACTIVE");
+          return (
+            <View key={room.id} className={`room-card ${expanded ? 'room-card--active' : ''}`} onClick={() => {
+              setSelectedId(expanded ? undefined : room.id);
+              setEditingRoomId(undefined);
+            }}>
+              <View className="room-header">
+                <View>
+                  <Text className="card-title">{room.apartment?.name} · {room.roomNo}</Text>
+                  <Text className="text-muted">{room.layout} · {room.area ? `${room.area}㎡` : "未填面积"}</Text>
                 </View>
-                <View className="action-row-inline">
-                  {canManageRoom ? <Button variant="secondary" size="small" onClick={() => {
-                    setRoomForm({ roomNo: room.roomNo, layout: room.layout, area: room.area ? String(room.area) : "", facilities: room.facilities.join(","), status: room.status });
-                    setEditingRoomId(room.id);
-                  }}>编辑房间</Button> : null}
-                  {room.status === "VACANT" && canManageLease ? <Button size="small" onClick={() => { setSelectedId(room.id); setLeaseRoomId(room.id); setEditingRoomId(undefined); }}>签约入住</Button> : null}
-                  {canManageRoom ? (
-                    <View onClick={(e) => { e.stopPropagation(); Taro.showModal({ title: "删除房间", content: "删除后房间资料不可恢复，请确认当前房间没有有效租约。", confirmText: "确认删除", confirmColor: "#c2413d" }).then((res) => { if (res.confirm) deleteRoom(); }); }}>
-                      <Button variant="danger" size="small">删除房间</Button>
-                    </View>
-                  ) : null}
+                <View className="room-badges">
+                  <Badge tone={toneForStatus[room.status]}>{statusLabels[room.status]}</Badge>
+                  {roomActiveLease?.currentMonthBillSettled ? <Badge tone="success">账单已结清</Badge> : null}
                 </View>
+              </View>
+              <Text className="text-muted">{room.facilities.length ? room.facilities.join("、") : "暂无设施"}</Text>
 
-                {room.status === "OCCUPIED" && roomActiveLease ? (
+              {expanded ? (
+                <>
                   <View className="detail-panel">
-                    <Text className="section-label">在租信息</Text>
-                    <View className="detail-row"><Text className="text-muted">租客</Text><Text className="card-title">{roomActiveLease.tenantName}</Text></View>
-                    <View className="detail-row"><Text className="text-muted">租金</Text><Text className="card-stat">¥{money(roomActiveLease.rentAmount)}</Text></View>
-                    <View className="detail-row"><Text className="text-muted">合同期</Text><Text className="text-muted">{roomActiveLease.startDate.slice(0, 10)} 至 {roomActiveLease.endDate.slice(0, 10)}</Text></View>
-                    <View className="detail-row"><Text className="text-muted">交租周期</Text><Text className="text-muted">{cycleLabels[roomActiveLease.cycle]} · 宽限 {roomActiveLease.graceDays ?? 0} 天</Text></View>
-                    <View className="detail-row"><Text className="text-muted">自动续约</Text><Text className="text-muted">{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text></View>
-                    {canManageLease ? (
-                      <View className="action-row-inline">
-                        <Button variant="secondary" size="small" onClick={() => {
-                          setEditingLease(roomActiveLease);
-                          setEditLeaseForm({ rentAmount: String(roomActiveLease.rentAmount ?? ""), depositAmount: String(roomActiveLease.depositAmount ?? ""), waterUnitPrice: String(roomActiveLease.waterUnitPrice ?? 0), powerUnitPrice: String(roomActiveLease.powerUnitPrice ?? 0) });
-                          const fees = roomActiveLease.fees ?? [];
-                          setPresetFees(fees.filter((fee) => presetFeeTypes.some((p) => p.type === fee.type)).map((fee) => ({ type: fee.type, amount: String(fee.amount) })));
-                          setCustomFees(fees.filter((fee) => !presetFeeTypes.some((p) => p.type === fee.type)).map((fee) => ({ id: `${Date.now()}-${Math.random()}`, name: fee.name, amount: String(fee.amount) })));
-                        }}>编辑租约</Button>
-                        <Button variant="danger" size="small" onClick={() => openTermination(roomActiveLease)}>退租</Button>
+                    <View className="detail-row">
+                      <Text className="text-muted">水电单价</Text>
+                      <Text className="text-muted">水 ¥{money(room.apartment?.waterUnitPrice)} · 电 ¥{money(room.apartment?.powerUnitPrice)}</Text>
+                    </View>
+                  </View>
+                  <View className="action-row-inline">
+                    {canManageRoom ? <Button variant="secondary" size="small" onClick={() => {
+                      setRoomForm({ roomNo: room.roomNo, layout: room.layout, area: room.area ? String(room.area) : "", facilities: room.facilities.join(","), status: room.status });
+                      setEditingRoomId(room.id);
+                    }}>编辑房间</Button> : null}
+                    {room.status === "VACANT" && canManageLease ? <Button size="small" onClick={() => { setSelectedId(room.id); setLeaseRoomId(room.id); setEditingRoomId(undefined); }}>签约入住</Button> : null}
+                    {canManageRoom ? (
+                      <View onClick={(e) => { e.stopPropagation(); Taro.showModal({ title: "删除房间", content: "删除后房间资料不可恢复，请确认当前房间没有有效租约。", confirmText: "确认删除", confirmColor: "#c2413d" }).then((res) => { if (res.confirm) deleteRoom(); }); }}>
+                        <Button variant="danger" size="small">删除房间</Button>
                       </View>
                     ) : null}
                   </View>
-                ) : null}
-              </>
-            ) : null}
-          </View>
-        );
-      })}
+
+                  {room.status === "OCCUPIED" && roomActiveLease ? (
+                    <View className="detail-panel">
+                      <Text className="section-label">在租信息</Text>
+                      <View className="detail-row"><Text className="text-muted">租客</Text><Text className="card-title">{roomActiveLease.tenantName}</Text></View>
+                      <View className="detail-row"><Text className="text-muted">租金</Text><Text className="card-stat">¥{money(roomActiveLease.rentAmount)}</Text></View>
+                      <View className="detail-row"><Text className="text-muted">合同期</Text><Text className="text-muted">{roomActiveLease.startDate.slice(0, 10)} 至 {roomActiveLease.endDate.slice(0, 10)}</Text></View>
+                      <View className="detail-row"><Text className="text-muted">交租周期</Text><Text className="text-muted">{cycleLabels[roomActiveLease.cycle]} · 宽限 {roomActiveLease.graceDays ?? 0} 天</Text></View>
+                      <View className="detail-row"><Text className="text-muted">自动续约</Text><Text className="text-muted">{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text></View>
+                      {canManageLease ? (
+                        <View className="action-row-inline">
+                          <Button variant="secondary" size="small" onClick={() => {
+                            setEditingLease(roomActiveLease);
+                            setEditLeaseForm({ rentAmount: String(roomActiveLease.rentAmount ?? ""), depositAmount: String(roomActiveLease.depositAmount ?? ""), waterUnitPrice: String(roomActiveLease.waterUnitPrice ?? 0), powerUnitPrice: String(roomActiveLease.powerUnitPrice ?? 0) });
+                            const fees = roomActiveLease.fees ?? [];
+                            setPresetFees(fees.filter((fee) => presetFeeTypes.some((p) => p.type === fee.type)).map((fee) => ({ type: fee.type, amount: String(fee.amount) })));
+                            setCustomFees(fees.filter((fee) => !presetFeeTypes.some((p) => p.type === fee.type)).map((fee) => ({ id: `${Date.now()}-${Math.random()}`, name: fee.name, amount: String(fee.amount) })));
+                          }}>编辑租约</Button>
+                          <Button variant="danger" size="small" onClick={() => openTermination(roomActiveLease)}>退租</Button>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+            </View>
+          );
+        })}
+      </ScrollView>
 
       <TaskSheet
         visible={!!editingRoom}

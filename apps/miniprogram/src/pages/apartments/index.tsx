@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { View, Text } from '@tarojs/components';
+import { ScrollView, View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
@@ -445,34 +445,37 @@ export default function ApartmentsPage() {
     const apartmentOccupiedRooms = apartmentRooms.filter((room) => room.status === "OCCUPIED").length;
 
     return (
-      <View className="page-container">
-        <View className="sub-page-header">
-          <Button className="page-back-button" variant="ghost" size="small" onClick={backToList}>‹ 返回公寓列表</Button>
+      <View className="page-container page-container--apartment-detail">
+        <View className="apartment-detail-fixed">
+          <View className="sub-page-header">
+            <Button className="page-back-button" variant="ghost" size="small" onClick={backToList}>‹ 返回公寓列表</Button>
+          </View>
+
+          <Card
+            className="apartment-detail-summary"
+            title={selectedApartment.name}
+            subtitle={selectedApartment.location}
+            headerAction={canManageApartment ? (
+              <View className="action-row-inline">
+                <Button variant="secondary" size="small" onClick={() => setMode("edit")}>编辑</Button>
+                <Button variant="danger" size="small" onClick={() => setLayer("apartmentDelete")}>删除</Button>
+              </View>
+            ) : undefined}
+          >
+            <View className="segment">
+              <View className={`segment-item ${detailTab === "expenses" ? "segment-item--active" : ""}`} onClick={() => { resetRoomWork(); setDetailTab("expenses"); }}>
+                <Text className={`segment-text ${detailTab === "expenses" ? "segment-text--active" : ""}`}>公寓详情</Text>
+              </View>
+              <View className={`segment-item ${detailTab === "rooms" ? "segment-item--active" : ""}`} onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); setDetailTab("rooms"); }}>
+                <Text className={`segment-text ${detailTab === "rooms" ? "segment-text--active" : ""}`}>房间列表</Text>
+              </View>
+            </View>
+          </Card>
         </View>
 
-        <Card
-          title={selectedApartment.name}
-          subtitle={selectedApartment.location}
-          headerAction={canManageApartment ? (
-            <View className="action-row-inline">
-              <Button variant="secondary" size="small" onClick={() => setMode("edit")}>编辑</Button>
-              <Button variant="danger" size="small" onClick={() => setLayer("apartmentDelete")}>删除</Button>
-            </View>
-          ) : undefined}
-        >
-          <View className="segment">
-            <View className={`segment-item ${detailTab === "expenses" ? "segment-item--active" : ""}`} onClick={() => { resetRoomWork(); setDetailTab("expenses"); }}>
-              <Text className={`segment-text ${detailTab === "expenses" ? "segment-text--active" : ""}`}>公寓详情</Text>
-            </View>
-            <View className={`segment-item ${detailTab === "rooms" ? "segment-item--active" : ""}`} onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); setDetailTab("rooms"); }}>
-              <Text className={`segment-text ${detailTab === "rooms" ? "segment-text--active" : ""}`}>房间列表</Text>
-            </View>
-          </View>
-        </Card>
-
         {detailTab === "expenses" ? (
-          <>
-            <Card>
+          <View className="apartment-detail-content">
+            <Card className="apartment-info-card">
               <View className="detail-panel">
                 <View className="detail-row">
                   <Text className="text-muted">楼层/面积</Text>
@@ -502,23 +505,27 @@ export default function ApartmentsPage() {
             </Card>
 
             <Card
+              className="apartment-tab-card"
               title="经营花费"
               subtitle="每月经营支出从这里快速记录"
               headerAction={canManageApartment ? <Button variant="secondary" size="small" onClick={() => { setExpenseApartmentId(selectedApartment.id); setLayer("expense"); }}>记录花费</Button> : undefined}
             >
-              {(selectedApartment.expenses ?? []).slice(0, 4).map((item) => (
-                <View className="detail-row" key={item.id}>
-                  <Text className="text-muted">{item.name} · {item.spentAt.slice(0, 10)}</Text>
-                  <Text className="card-stat">¥{money(item.amount)}</Text>
-                </View>
-              ))}
-              {(selectedApartment.expenses ?? []).length === 0 ? <Text className="text-muted">暂无经营花费记录</Text> : null}
+              <ScrollView className="apartment-inner-list" scrollY>
+                {(selectedApartment.expenses ?? []).map((item) => (
+                  <View className="detail-row expense-list-row" key={item.id}>
+                    <Text className="text-muted">{item.name} · {item.spentAt.slice(0, 10)}</Text>
+                    <Text className="card-stat">¥{money(item.amount)}</Text>
+                  </View>
+                ))}
+                {(selectedApartment.expenses ?? []).length === 0 ? <Text className="text-muted">暂无经营花费记录</Text> : null}
+              </ScrollView>
             </Card>
-          </>
+          </View>
         ) : null}
 
         {detailTab === "rooms" ? (
           <Card
+            className="apartment-tab-card"
             title="房间列表"
             subtitle={`共 ${apartmentRooms.length} 间 · 空闲 ${apartmentVacantRooms} 间 · 已租 ${apartmentOccupiedRooms} 间`}
             headerAction={canManageRoom ? (
@@ -528,30 +535,32 @@ export default function ApartmentsPage() {
               </View>
             ) : undefined}
           >
-            {apartmentRooms.map((room) => (
-              <View key={room.id} className={`room-card ${(editingRoomId === room.id || deleteRoomId === room.id) ? 'room-card--active' : ''}`}>
-                <View className="room-card-header">
-                  <View>
-                    <Text className="card-title">{room.roomNo}</Text>
-                    <Text className="text-muted">{room.layout} · {room.area ?? "未填"}㎡</Text>
+            <ScrollView className="apartment-inner-list" scrollY>
+              {apartmentRooms.map((room) => (
+                <View key={room.id} className={`room-card ${(editingRoomId === room.id || deleteRoomId === room.id) ? 'room-card--active' : ''}`}>
+                  <View className="room-card-header">
+                    <View>
+                      <Text className="card-title">{room.roomNo}</Text>
+                      <Text className="text-muted">{room.layout} · {room.area ?? "未填"}㎡</Text>
+                    </View>
+                    <Badge tone={toneForStatus[room.status]}>{statusLabels[room.status]}</Badge>
                   </View>
-                  <Badge tone={toneForStatus[room.status]}>{statusLabels[room.status]}</Badge>
+                  <Text className="text-muted">{facilitiesText(room.facilities)}</Text>
+                  {canManageRoom ? (
+                    <View className="action-row-inline">
+                      <Button variant="secondary" size="small" onClick={() => {
+                        setRoomForm({ roomNo: room.roomNo, layout: room.layout, area: room.area ? String(room.area) : "", facilities: room.facilities?.join(",") ?? "", status: room.status });
+                        setDeleteRoomId(undefined);
+                        setEditingRoomId(room.id);
+                        setLayer("roomEdit");
+                      }}>编辑</Button>
+                      <Button variant="danger" size="small" disabled={room.status === "OCCUPIED"} onClick={() => { setEditingRoomId(undefined); setDeleteRoomId(room.id); setLayer("roomDelete"); }}>删除</Button>
+                    </View>
+                  ) : null}
                 </View>
-                <Text className="text-muted">{facilitiesText(room.facilities)}</Text>
-                {canManageRoom ? (
-                  <View className="action-row-inline">
-                    <Button variant="secondary" size="small" onClick={() => {
-                      setRoomForm({ roomNo: room.roomNo, layout: room.layout, area: room.area ? String(room.area) : "", facilities: room.facilities?.join(",") ?? "", status: room.status });
-                      setDeleteRoomId(undefined);
-                      setEditingRoomId(room.id);
-                      setLayer("roomEdit");
-                    }}>编辑</Button>
-                    <Button variant="danger" size="small" disabled={room.status === "OCCUPIED"} onClick={() => { setEditingRoomId(undefined); setDeleteRoomId(room.id); setLayer("roomDelete"); }}>删除</Button>
-                  </View>
-                ) : null}
-              </View>
-            ))}
-            {apartmentRooms.length === 0 ? <Text className="text-muted">暂无房间，可以新增单个房间或批量添加</Text> : null}
+              ))}
+              {apartmentRooms.length === 0 ? <Text className="text-muted">暂无房间，可以新增单个房间或批量添加</Text> : null}
+            </ScrollView>
           </Card>
         ) : null}
 

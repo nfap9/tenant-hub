@@ -2,6 +2,16 @@
 
 .page-container {
   background: linear-gradient(180deg, rgba(20, 108, 92, 0.08), rgba(243, 247, 245, 0) 360rpx);
+  height: 100vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: var(--layout-page-padding);
+}
+
+.rooms-fixed-header {
+  flex: 0 0 auto;
 }
 
 .stat-row {
@@ -36,6 +46,17 @@
   gap: var(--spacing-2);
   margin-bottom: var(--spacing-6);
   flex-wrap: wrap;
+}
+
+.rooms-list {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+  box-sizing: border-box;
+}
+
+.rooms-list .room-card:last-child {
+  margin-bottom: 0;
 }
 
 .room-card {
