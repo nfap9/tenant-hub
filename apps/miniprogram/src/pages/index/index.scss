@@ -116,6 +116,7 @@
 .quick-action-grid {
   display: flex;
   gap: var(--spacing-3);
+  margin-top: var(--spacing-2);
 }
 
 .quick-action-card {
@@ -155,7 +156,7 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-4);
-  padding: var(--spacing-4) 0;
+  padding: var(--spacing-6) 0;
   border-bottom: 1rpx solid var(--color-border-light);
 }
 
@@ -201,7 +202,7 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-3);
-  padding: var(--spacing-4) 0;
+  padding: var(--spacing-6) 0;
   border-bottom: 1rpx solid var(--color-border-light);
 }
 

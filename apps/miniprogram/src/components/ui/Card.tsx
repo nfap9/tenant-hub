@@ -36,7 +36,7 @@ export function Card({
           {headerAction && <View>{headerAction}</View>}
         </View>
       )}
-      <View>{children}</View>
+      <View className="card__body">{children}</View>
     </View>
   );
 }

@@ -9,7 +9,7 @@
 .stat-row {
   display: flex;
   gap: var(--spacing-3);
-  margin-bottom: var(--spacing-5);
+  margin-bottom: var(--spacing-6);
 }
 
 .stat-card {
@@ -39,7 +39,7 @@
   border: 1rpx solid var(--color-border-light);
   border-radius: var(--radius-lg);
   padding: var(--spacing-1);
-  margin-bottom: var(--spacing-5);
+  margin-bottom: var(--spacing-6);
   overflow: hidden;
   flex-wrap: wrap;
 }
@@ -181,8 +181,9 @@
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-3);
+  column-gap: var(--spacing-4);
+  row-gap: var(--spacing-6);
+  margin-bottom: var(--spacing-6);
 }
 
 .detail-panel {

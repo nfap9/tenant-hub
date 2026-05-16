@@ -22,3 +22,21 @@ textarea {
   padding: var(--spacing-5);
   padding-bottom: var(--layout-content-bottom-padding);
 }
+
+.form-panel .input-wrapper,
+.form-panel .date-field-wrapper,
+.form-panel .form-grid {
+  margin-bottom: var(--spacing-6);
+}
+
+.form-panel .field-label {
+  margin-top: var(--spacing-8);
+  margin-bottom: var(--spacing-4);
+}
+
+.form-panel .input-wrapper:last-child,
+.form-panel .date-field-wrapper:last-child,
+.form-panel .form-grid:last-child,
+.form-panel .field-label:last-child {
+  margin-bottom: 0;
+}

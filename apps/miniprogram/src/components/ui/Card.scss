@@ -2,7 +2,7 @@
   background-color: var(--color-surface);
   border: 1rpx solid rgba(220, 231, 226, 0.85);
   border-radius: var(--radius-lg);
-  margin-bottom: var(--spacing-4);
+  margin-bottom: var(--spacing-8);
   overflow: hidden;
 
   &--default {
@@ -31,22 +31,24 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--spacing-4);
-    margin-bottom: var(--spacing-4);
+    margin-bottom: var(--spacing-8);
   }
   &__title-block {
     flex: 1;
     min-width: 0;
   }
   &__title {
+    display: block;
     font-size: var(--font-size-h5);
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
     line-height: var(--line-height-h5);
   }
   &__subtitle {
+    display: block;
     font-size: var(--font-size-body-small);
     color: var(--color-text-muted);
-    margin-top: var(--spacing-1);
+    margin-top: var(--spacing-3);
     line-height: var(--line-height-body-small);
   }
 }
