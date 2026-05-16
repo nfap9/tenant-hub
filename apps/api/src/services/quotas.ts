@@ -30,8 +30,8 @@ export const lockOrganizationQuota = async (db: Prisma.TransactionClient, organi
 
 export const isQuotaLimitEnabled = async (db: PrismaLike = prisma) => {
   const setting = await db.systemSetting.findUnique({ where: { key: "quota_limit_enabled" } });
-  if (!setting) return true;
-  return !!((setting.value as any)?.enabled ?? true);
+  if (!setting) return false;
+  return !!((setting.value as any)?.enabled ?? false);
 };
 
 export const getOrganizationQuota = async (organizationId: string, db: PrismaLike = prisma) => {
@@ -100,4 +100,17 @@ export const assertOrganizationQuota = async (organizationId: string, kind: Quot
   if (nextCount > limit) {
     throw new HttpError(403, `${limitLabel[kind]}数量已达到套餐额度上限（${nextCount}/${limit}）`);
   }
+};
+
+export const enforceOrganizationQuota = async (
+  db: Prisma.TransactionClient,
+  organizationId: string,
+  kind: QuotaKind,
+  getNextCount: () => Promise<number>
+) => {
+  const enabled = await isQuotaLimitEnabled(db);
+  if (!enabled) return;
+
+  await lockOrganizationQuota(db, organizationId);
+  await assertOrganizationQuota(organizationId, kind, await getNextCount(), db);
 };

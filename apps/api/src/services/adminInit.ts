@@ -42,7 +42,7 @@ export async function ensureSystemSettings(
   const defaults: Array<{ key: string; value: object; description: string }> = [
     {
       key: "quota_limit_enabled",
-      value: { enabled: true },
+      value: { enabled: false },
       description: "是否开启用量限制：开启后用户需订阅套餐才能使用，关闭后所有用户不限量"
     },
     {

@@ -1,7 +1,67 @@
 @use "../../theme/tokens.scss";
 
 .page-container {
-  background: linear-gradient(180deg, rgba(20, 108, 92, 0.08), rgba(243, 247, 245, 0) 360rpx);
+  background: #f7faf8;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.profile-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 96rpx;
+}
+
+.profile-avatar__text {
+  display: block;
+  color: #fff;
+  font-size: 40rpx;
+  line-height: 48rpx;
+  font-weight: 700;
+}
+
+.profile-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  display: block;
+  font-size: var(--font-size-h4);
+  line-height: var(--line-height-h4);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.profile-phone {
+  display: block;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text-muted);
+}
+
+.profile-meta {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-5);
+}
+
+.profile-meta__item {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-light);
 }
 
 .detail-row {
@@ -74,25 +134,23 @@
 
 .segment {
   display: flex;
-  background: rgba(220, 231, 226, 0.7);
-  border: 1rpx solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-1);
-  margin: var(--spacing-3) 0;
+  gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
 .segment-item {
   flex: 1;
   text-align: center;
-  padding: var(--spacing-2) var(--spacing-3);
+  padding: var(--spacing-3);
   border-radius: var(--radius-md);
   min-width: 160rpx;
+  background: var(--color-neutral-light);
+  border: 1rpx solid transparent;
 }
 
 .segment-item--active {
   background: var(--color-surface);
-  box-shadow: var(--shadow-subtle);
+  border-color: var(--color-primary);
 }
 
 .segment-text {
@@ -109,7 +167,10 @@
 
 .settings-link {
   position: relative;
-  padding: var(--spacing-4) var(--spacing-8) var(--spacing-4) 0;
+  display: flex;
+  align-items: center;
+  min-height: 96rpx;
+  padding: var(--spacing-4) var(--spacing-8) var(--spacing-4) var(--spacing-2);
   border-bottom: 1rpx solid var(--color-border-light);
 }
 

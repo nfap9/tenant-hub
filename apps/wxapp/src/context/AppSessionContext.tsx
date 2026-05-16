@@ -31,6 +31,7 @@ type AppSessionContextType = {
   reload: () => Promise<void>;
   loading: boolean;
   platformInfo: PlatformInfo;
+  quotaLimitEnabled: boolean;
 };
 
 const AppSessionContext = createContext<AppSessionContextType | undefined>(undefined);
@@ -55,6 +56,7 @@ export function AppSessionProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({ name: 'Tenant Hub', logoUrl: '', contactPhone: '' });
+  const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
 
   const token = session?.token;
   const currentMembership = useMemo(
@@ -91,15 +93,18 @@ export function AppSessionProvider({ children }) {
       if (!token || !organizationId) {
         setMembers([]);
         setRoles([]);
+        setQuotaLimitEnabled(false);
         return;
       }
       try {
-        const [nextMembers, nextRoles] = await Promise.all([
+        const [nextMembers, nextRoles, quotaOverview] = await Promise.all([
           apiClient<OrgMember[]>(`/organizations/${organizationId}/members`, { organizationId }),
           apiClient<OrgRole[]>(`/organizations/${organizationId}/roles`, { organizationId }),
+          apiClient<{ quotaLimitEnabled?: boolean }>(`/organizations/${organizationId}/subscription`, { organizationId }),
         ]);
         setMembers(nextMembers);
         setRoles(nextRoles);
+        setQuotaLimitEnabled(quotaOverview.quotaLimitEnabled ?? false);
       } catch (e) {
         if (e instanceof Error && !e.message.includes('登录已过期')) {
           setNotice(e.message || "加载组织数据失败");
@@ -130,6 +135,7 @@ export function AppSessionProvider({ children }) {
     setCurrentOrgIdState(undefined);
     setMembers([]);
     setRoles([]);
+    setQuotaLimitEnabled(false);
     Taro.removeStorageSync('tenantHubCurrentOrgId');
     Taro.reLaunch({ url: '/pages/login/index' });
   }, []);
@@ -207,8 +213,9 @@ export function AppSessionProvider({ children }) {
       reload,
       loading,
       platformInfo,
+      quotaLimitEnabled,
     }),
-    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, platformInfo, setCurrentOrgId, signIn, signOut, reload]
+    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, platformInfo, quotaLimitEnabled, setCurrentOrgId, signIn, signOut, reload]
   );
 
   return (

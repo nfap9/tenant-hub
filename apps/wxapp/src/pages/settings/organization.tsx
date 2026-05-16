@@ -17,6 +17,9 @@ export default function OrganizationPage() {
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [transferPhone, setTransferPhone] = useState("");
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgDescription, setNewOrgDescription] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
 
   useDidShow(() => {
     if (currentMembership?.organization.name) {
@@ -74,10 +77,58 @@ export default function OrganizationPage() {
     }
   };
 
+  const createOrganization = async () => {
+    if (!newOrgName.trim()) {
+      Taro.showToast({ title: "请输入组织名称", icon: "none" });
+      return;
+    }
+    try {
+      await apiClient('/organizations', {
+        method: 'POST',
+        body: { name: newOrgName.trim(), description: newOrgDescription.trim() || undefined }
+      });
+      Taro.showToast({ title: '组织创建成功', icon: 'success' });
+      setNewOrgName('');
+      setNewOrgDescription('');
+      await reload();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : '创建失败', icon: 'none' });
+    }
+  };
+
+  const joinOrganization = async () => {
+    if (!inviteCode.trim()) {
+      Taro.showToast({ title: "请输入邀请码", icon: "none" });
+      return;
+    }
+    try {
+      await apiClient('/organizations/join', {
+        method: 'POST',
+        body: { inviteCode: inviteCode.trim() }
+      });
+      Taro.showToast({ title: '加入组织成功', icon: 'success' });
+      setInviteCode('');
+      await reload();
+    } catch (e) {
+      Taro.showToast({ title: e instanceof Error ? e.message : '加入失败', icon: 'none' });
+    }
+  };
+
   if (!currentOrgId) {
     return (
       <View className="page-container">
-        <Card><EmptyState icon="apartment" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
+        <Card><EmptyState icon="apartment" title="还没有组织" subtitle="创建或加入一个组织后即可开始管理公寓" /></Card>
+
+        <Card title="创建组织">
+          <Input label="组织名称" value={newOrgName} onChange={setNewOrgName} placeholder="例如：阳光公寓" />
+          <Input label="组织描述（可选）" value={newOrgDescription} onChange={setNewOrgDescription} placeholder="简要描述你的组织" />
+          <Button onClick={createOrganization}>创建组织</Button>
+        </Card>
+
+        <Card title="加入组织">
+          <Input label="邀请码" value={inviteCode} onChange={setInviteCode} placeholder="请输入 8 位邀请码" />
+          <Button variant="secondary" onClick={joinOrganization}>加入组织</Button>
+        </Card>
       </View>
     );
   }

@@ -67,7 +67,7 @@ describe("admin init", () => {
       expect(mockCreate).toHaveBeenCalledTimes(2);
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ key: "quota_limit_enabled" })
+          data: expect.objectContaining({ key: "quota_limit_enabled", value: { enabled: false } })
         })
       );
       expect(mockCreate).toHaveBeenCalledWith(

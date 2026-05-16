@@ -7,7 +7,7 @@ import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.j
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
-import { assertOrganizationQuota, isQuotaLimitEnabled, lockOrganizationQuota } from "../services/quotas.js";
+import { enforceOrganizationQuota, isQuotaLimitEnabled } from "../services/quotas.js";
 import { assertInviteJoinable, buildInviteExpiry, generateInviteCode, normalizeInviteCode } from "../services/orgInvites.js";
 
 export const orgRouter = Router();
@@ -57,13 +57,14 @@ orgRouter.post(
 
     const role = await prisma.role.findUniqueOrThrow({ where: { code: "readonly" } });
     const member = await prisma.$transaction(async (tx) => {
-      await lockOrganizationQuota(tx, invite.organizationId);
       const existingMember = await tx.orgMember.findUnique({
         where: { organizationId_userId: { organizationId: invite.organizationId, userId: req.user!.id } }
       });
-      const activeMemberCount = await tx.orgMember.count({ where: { organizationId: invite.organizationId, status: "ACTIVE" } });
       if (existingMember?.status === "ACTIVE") return existingMember;
-      await assertOrganizationQuota(invite.organizationId, "member", activeMemberCount + 1, tx);
+      await enforceOrganizationQuota(tx, invite.organizationId, "member", async () => {
+        const activeMemberCount = await tx.orgMember.count({ where: { organizationId: invite.organizationId, status: "ACTIVE" } });
+        return activeMemberCount + 1;
+      });
       const consumed = await tx.orgInvite.updateMany({
         where: { id: invite.id, usedCount: { lt: invite.maxUses } },
         data: {

@@ -12,18 +12,16 @@ export default function PlanPage() {
   const { currentOrgId } = useAppSession();
   const [overview, setOverview] = useState<SubscriptionOverview | undefined>();
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(true);
+  const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
     try {
-      const [ov, pl] = await Promise.all([
-        apiClient<{ subscription?: SubscriptionOverview["subscription"]; usage: SubscriptionOverview["usage"]; extraQuota: SubscriptionOverview["extraQuota"]; quotaLimitEnabled?: boolean }>(`/organizations/${currentOrgId}/subscription`, { organizationId: currentOrgId }),
-        apiClient<Plan[]>("/organizations/plans")
-      ]);
+      const ov = await apiClient<{ subscription?: SubscriptionOverview["subscription"]; usage: SubscriptionOverview["usage"]; extraQuota: SubscriptionOverview["extraQuota"]; quotaLimitEnabled?: boolean }>(`/organizations/${currentOrgId}/subscription`, { organizationId: currentOrgId });
+      const enabled = ov.quotaLimitEnabled ?? false;
       setOverview(ov);
-      setPlans(pl);
-      setQuotaLimitEnabled(ov.quotaLimitEnabled ?? true);
+      setQuotaLimitEnabled(enabled);
+      setPlans(enabled ? await apiClient<Plan[]>("/organizations/plans") : []);
     } catch (e) {
       Taro.showToast({ title: e instanceof Error ? e.message : "加载失败", icon: "none" });
     }
@@ -59,6 +57,27 @@ export default function PlanPage() {
   const subscription = overview?.subscription;
   const usage = overview?.usage;
   const extra = overview?.extraQuota;
+
+  if (!quotaLimitEnabled) {
+    return (
+      <View className="page-container">
+        <Card title="资源使用">
+          <EmptyState icon="plan" title="当前系统不限量使用" subtitle="无需订阅套餐即可创建和管理资源" />
+        </Card>
+
+        <Card title="用量统计">
+          <View className="detail-row">
+            <Text className="text-muted">公寓</Text>
+            <Text className="card-title">{usage?.apartments ?? 0} / 不限量</Text>
+          </View>
+          <View className="detail-row">
+            <Text className="text-muted">成员</Text>
+            <Text className="card-title">{usage?.members ?? 0} / 不限量</Text>
+          </View>
+        </Card>
+      </View>
+    );
+  }
 
   return (
     <View className="page-container">

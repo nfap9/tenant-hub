@@ -25,10 +25,10 @@ export function SystemSettingsPage() {
     setLoadingQuota(true);
     api<{ value?: QuotaLimitValue }>("/admin/settings/quota_limit_enabled")
       .then((data) => {
-        setQuotaLimitEnabled((data.value as QuotaLimitValue | undefined)?.enabled ?? true);
+        setQuotaLimitEnabled((data.value as QuotaLimitValue | undefined)?.enabled ?? false);
       })
       .catch(() => {
-        setQuotaLimitEnabled(true);
+        setQuotaLimitEnabled(false);
       })
       .finally(() => setLoadingQuota(false));
   }, []);

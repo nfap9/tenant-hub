@@ -7,7 +7,7 @@ import { HttpError, ok } from "../utils/http.js";
 import { PERMISSIONS } from "../services/roles.js";
 import { getBillMonthLabel, getCurrentMonthBillWindow } from "../services/billing.js";
 import { withLeaseLifecycle } from "../services/leaseLifecycle.js";
-import { assertOrganizationQuota, lockOrganizationQuota } from "../services/quotas.js";
+import { enforceOrganizationQuota } from "../services/quotas.js";
 
 export const apartmentRouter = Router();
 apartmentRouter.use(requireAuth, requireOrg);
@@ -134,9 +134,10 @@ apartmentRouter.post(
     ok(
       res,
       await prisma.$transaction(async (tx) => {
-        await lockOrganizationQuota(tx, req.organizationId!);
-        const apartmentCount = await tx.apartment.count({ where: { organizationId: req.organizationId! } });
-        await assertOrganizationQuota(req.organizationId!, "apartment", apartmentCount + 1, tx);
+        await enforceOrganizationQuota(tx, req.organizationId!, "apartment", async () => {
+          const apartmentCount = await tx.apartment.count({ where: { organizationId: req.organizationId! } });
+          return apartmentCount + 1;
+        });
         return tx.apartment.create({ data: { ...input, organizationId: req.organizationId! } });
       })
     );
@@ -198,14 +199,15 @@ apartmentRouter.post(
     ok(
       res,
       await prisma.$transaction(async (tx) => {
-        await lockOrganizationQuota(tx, req.organizationId!);
-        const existingRooms = await tx.room.findMany({
-          where: { apartment: { organizationId: req.organizationId! } },
-          select: { apartmentId: true, roomNo: true }
+        await enforceOrganizationQuota(tx, req.organizationId!, "room", async () => {
+          const existingRooms = await tx.room.findMany({
+            where: { apartment: { organizationId: req.organizationId! } },
+            select: { apartmentId: true, roomNo: true }
+          });
+          const existingKeys = new Set(existingRooms.map((room) => `${room.apartmentId}:${room.roomNo}`));
+          const newRoomCount = input.rooms.filter((room) => !existingKeys.has(`${req.params.id}:${room.roomNo}`)).length;
+          return existingRooms.length + newRoomCount;
         });
-        const existingKeys = new Set(existingRooms.map((room) => `${room.apartmentId}:${room.roomNo}`));
-        const newRoomCount = input.rooms.filter((room) => !existingKeys.has(`${req.params.id}:${room.roomNo}`)).length;
-        await assertOrganizationQuota(req.organizationId!, "room", existingRooms.length + newRoomCount, tx);
         return tx.room.createMany({
           data: input.rooms.map((room) => ({ ...room, apartmentId: req.params.id })),
           skipDuplicates: true
