@@ -5,8 +5,8 @@
   "description": "轻量化公寓管理系统 monorepo",
   "scripts": {
     "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/ops-web dev",
-    "dev:wxapp": "pnpm --filter @tenant-hub/wxapp dev:weapp",
-    "build:wxapp": "pnpm --filter @tenant-hub/wxapp build:weapp",
+    "dev:miniprogram": "pnpm --filter @tenant-hub/miniprogram dev:weapp",
+    "build:miniprogram": "pnpm --filter @tenant-hub/miniprogram build:weapp",
     "build": "pnpm -r build",
     "check": "pnpm test && pnpm typecheck && pnpm lint && pnpm build",
     "lint": "pnpm -r lint",

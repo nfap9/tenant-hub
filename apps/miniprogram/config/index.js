@@ -1,7 +1,7 @@
 const path = require('path');
 
 const config = {
-  projectName: 'wxapp',
+  projectName: 'miniprogram',
   date: '2026-5-12',
   designWidth: 750,
   deviceRatio: {

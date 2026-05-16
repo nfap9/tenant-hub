@@ -8,17 +8,17 @@ Improve small-program form usability by giving every business form input a persi
 
 The change focuses on the Taro WeChat mini-program. The affected pages are:
 
-- `apps/wxapp/src/pages/apartments/index.tsx`
-- `apps/wxapp/src/pages/rooms/index.tsx`
-- `apps/wxapp/src/pages/bills/index.tsx`
-- `apps/wxapp/src/pages/settings/account.tsx`
-- `apps/wxapp/src/pages/settings/organization.tsx`
+- `apps/miniprogram/src/pages/apartments/index.tsx`
+- `apps/miniprogram/src/pages/rooms/index.tsx`
+- `apps/miniprogram/src/pages/bills/index.tsx`
+- `apps/miniprogram/src/pages/settings/account.tsx`
+- `apps/miniprogram/src/pages/settings/organization.tsx`
 
 The login and settings home screens already use the shared `Input` component with labels and do not need behavior changes. Ops Web uses Ant Design `Form.Item` labels for most forms; search fields can continue relying on placeholder text because they are filter controls rather than data-entry forms.
 
 ## Design
 
-Use the existing shared `Input` component from `apps/wxapp/src/components/ui/Input.tsx`. It already supports `label`, `placeholder`, `type`, `password`, and `error`, and its styling matches the current mobile UI.
+Use the existing shared `Input` component from `apps/miniprogram/src/components/ui/Input.tsx`. It already supports `label`, `placeholder`, `type`, `password`, and `error`, and its styling matches the current mobile UI.
 
 Pages that currently import native Taro `Input` will switch business form fields to the shared `Input` component. The native import may still be used only if a field requires unsupported native props. Field labels will be stable nouns such as "公寓名称", "合同开始日期", "收款金额", and "退租水表读数". Placeholder text will remain as input hints or examples, such as "YYYY-MM-DD" or "用逗号分隔".
 
@@ -36,13 +36,13 @@ Existing segmented controls already have surrounding `field-label` text, so they
 Run TypeScript checks for the mini-program after implementation:
 
 ```bash
-pnpm --filter @tenant-hub/wxapp typecheck
+pnpm --filter @tenant-hub/miniprogram typecheck
 ```
 
 If a full build is practical in the local environment, also run:
 
 ```bash
-pnpm --filter @tenant-hub/wxapp build:weapp
+pnpm --filter @tenant-hub/miniprogram build:weapp
 ```
 
 Manual review should scan the changed pages and confirm labels remain visible after users type values into fields.

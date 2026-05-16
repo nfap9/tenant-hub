@@ -12,17 +12,17 @@
 
 ## File Structure
 
-- Modify `apps/wxapp/src/pages/apartments/index.tsx`: Replace native form inputs in apartment, expense, room, and batch-room panels with shared labeled inputs.
-- Modify `apps/wxapp/src/pages/rooms/index.tsx`: Replace native form inputs in room edit, lease create/edit, fee, and termination panels with shared labeled inputs.
-- Modify `apps/wxapp/src/pages/bills/index.tsx`: Replace native form inputs in payment, reading, utility, import, and bill-item edit panels with shared labeled inputs.
-- Modify `apps/wxapp/src/pages/settings/account.tsx`: Use shared labeled password inputs.
-- Modify `apps/wxapp/src/pages/settings/organization.tsx`: Use shared labeled organization-name input.
-- No new component is required because `apps/wxapp/src/components/ui/Input.tsx` already supports labels.
+- Modify `apps/miniprogram/src/pages/apartments/index.tsx`: Replace native form inputs in apartment, expense, room, and batch-room panels with shared labeled inputs.
+- Modify `apps/miniprogram/src/pages/rooms/index.tsx`: Replace native form inputs in room edit, lease create/edit, fee, and termination panels with shared labeled inputs.
+- Modify `apps/miniprogram/src/pages/bills/index.tsx`: Replace native form inputs in payment, reading, utility, import, and bill-item edit panels with shared labeled inputs.
+- Modify `apps/miniprogram/src/pages/settings/account.tsx`: Use shared labeled password inputs.
+- Modify `apps/miniprogram/src/pages/settings/organization.tsx`: Use shared labeled organization-name input.
+- No new component is required because `apps/miniprogram/src/components/ui/Input.tsx` already supports labels.
 
 ### Task 1: Apartments Form Labels
 
 **Files:**
-- Modify: `apps/wxapp/src/pages/apartments/index.tsx`
+- Modify: `apps/miniprogram/src/pages/apartments/index.tsx`
 
 - [ ] **Step 1: Update imports**
 
@@ -81,7 +81,7 @@ Use labels for room fields:
 ### Task 2: Rooms Form Labels
 
 **Files:**
-- Modify: `apps/wxapp/src/pages/rooms/index.tsx`
+- Modify: `apps/miniprogram/src/pages/rooms/index.tsx`
 
 - [ ] **Step 1: Update imports**
 
@@ -142,9 +142,9 @@ import { Button, Card, EmptyState, Badge, Input } from '../../components/ui';
 ### Task 3: Bills and Settings Form Labels
 
 **Files:**
-- Modify: `apps/wxapp/src/pages/bills/index.tsx`
-- Modify: `apps/wxapp/src/pages/settings/account.tsx`
-- Modify: `apps/wxapp/src/pages/settings/organization.tsx`
+- Modify: `apps/miniprogram/src/pages/bills/index.tsx`
+- Modify: `apps/miniprogram/src/pages/settings/account.tsx`
+- Modify: `apps/miniprogram/src/pages/settings/organization.tsx`
 
 - [ ] **Step 1: Convert bills imports**
 
@@ -202,7 +202,7 @@ import { Button, Card, EmptyState, Badge, Input } from '../../components/ui';
 Run:
 
 ```bash
-rg "placeholder=.*onInput|<Input placeholder" apps/wxapp/src/pages/apartments/index.tsx apps/wxapp/src/pages/rooms/index.tsx apps/wxapp/src/pages/bills/index.tsx apps/wxapp/src/pages/settings/account.tsx apps/wxapp/src/pages/settings/organization.tsx
+rg "placeholder=.*onInput|<Input placeholder" apps/miniprogram/src/pages/apartments/index.tsx apps/miniprogram/src/pages/rooms/index.tsx apps/miniprogram/src/pages/bills/index.tsx apps/miniprogram/src/pages/settings/account.tsx apps/miniprogram/src/pages/settings/organization.tsx
 ```
 
 Expected: No business form input remains without a `label` prop. Search fields may remain if intentionally left in list filters.
@@ -212,7 +212,7 @@ Expected: No business form input remains without a `label` prop. Search fields m
 Run:
 
 ```bash
-pnpm --filter @tenant-hub/wxapp typecheck
+pnpm --filter @tenant-hub/miniprogram typecheck
 ```
 
 Expected: Command exits with status 0.
@@ -222,7 +222,7 @@ Expected: Command exits with status 0.
 Run:
 
 ```bash
-pnpm --filter @tenant-hub/wxapp build:weapp
+pnpm --filter @tenant-hub/miniprogram build:weapp
 ```
 
 Expected: Command exits with status 0, unless local Taro/WeChat build dependencies are unavailable. If unavailable, record the exact failure.

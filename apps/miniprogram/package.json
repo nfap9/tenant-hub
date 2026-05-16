@@ -1,8 +1,8 @@
 {
-  "name": "@tenant-hub/wxapp",
+  "name": "@tenant-hub/miniprogram",
   "version": "1.0.0",
   "private": true,
-  "description": "Tenant Hub WeChat Mini Program",
+  "description": "Tenant Hub Mini Program Client",
   "templateInfo": {
     "name": "default",
     "typescript": true,

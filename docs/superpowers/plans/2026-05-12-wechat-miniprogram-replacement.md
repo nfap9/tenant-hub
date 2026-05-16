@@ -1,8 +1,8 @@
-# WeChat Mini Program Replacement Implementation Plan
+# Mini Program Client Replacement Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the React Native mobile app (`apps/mobile`) with a WeChat Mini Program (`apps/wxapp`) built on Taro 4 + React 18, maximizing code reuse from the existing RN business logic while rewriting UI components for the mini-program runtime.
+**Goal:** Replace the React Native mobile app (`apps/mobile`) with a multi-platform mini program client (`apps/miniprogram`) built on Taro 4 + React 18, maximizing code reuse from the existing RN business logic while rewriting UI components for the mini-program runtime.
 
 **Architecture:**
 - **Framework:** Taro 4.0 + React 18 + TypeScript
@@ -18,17 +18,17 @@
 
 ## Files
 
-- **Create:** `apps/wxapp/` entire project scaffold (Taro init + config + source files)
-- **Create:** `apps/wxapp/src/api/client.ts` — HTTP client wrapping `Taro.request`
-- **Create:** `apps/wxapp/src/utils/storage.ts` — `localStorage` replacement
-- **Create:** `apps/wxapp/src/theme/tokens.scss` — CSS Variables from existing `theme/tokens.ts`
-- **Create:** `apps/wxapp/src/components/ui/` — 6 atomic UI components
-- **Create:** `apps/wxapp/src/components/TaskSheet.tsx` — bottom sheet / dialog layer
-- **Create:** `apps/wxapp/src/components/Toast.tsx` — global toast notification
-- **Create:** `apps/wxapp/src/hooks/useAppSession.ts` — session/org/member state management
-- **Create:** `apps/wxapp/src/pages/*` — all business pages
-- **Modify:** `pnpm-workspace.yaml` — add `apps/wxapp` to workspaces
-- **Modify:** Root `package.json` — add `dev:wxapp` and `build:wxapp` scripts
+- **Create:** `apps/miniprogram/` entire project scaffold (Taro init + config + source files)
+- **Create:** `apps/miniprogram/src/api/client.ts` — HTTP client wrapping `Taro.request`
+- **Create:** `apps/miniprogram/src/utils/storage.ts` — `localStorage` replacement
+- **Create:** `apps/miniprogram/src/theme/tokens.scss` — CSS Variables from existing `theme/tokens.ts`
+- **Create:** `apps/miniprogram/src/components/ui/` — 6 atomic UI components
+- **Create:** `apps/miniprogram/src/components/TaskSheet.tsx` — bottom sheet / dialog layer
+- **Create:** `apps/miniprogram/src/components/Toast.tsx` — global toast notification
+- **Create:** `apps/miniprogram/src/hooks/useAppSession.ts` — session/org/member state management
+- **Create:** `apps/miniprogram/src/pages/*` — all business pages
+- **Modify:** `pnpm-workspace.yaml` — add `apps/miniprogram` to workspaces
+- **Modify:** Root `package.json` — add `dev:miniprogram` and `build:miniprogram` scripts
 
 ---
 
@@ -42,11 +42,11 @@ Run in repo root:
 
 ```bash
 cd apps
-npx @tarojs/cli@4 init wxapp
+npx @tarojs/cli@4 init miniprogram
 ```
 
 When prompted:
-- Project name: `wxapp`
+- Project name: `miniprogram`
 - Framework: **React**
 - TypeScript: **Yes**
 - CSS pre-processor: **Sass**
@@ -56,12 +56,12 @@ When prompted:
 - [ ] **Step 2: Verify project boots**
 
 ```bash
-cd wxapp
+cd miniprogram
 pnpm install
 pnpm dev:weapp
 ```
 
-Open WeChat DevTools, import `apps/wxapp/dist/`. Expected: default Taro welcome page renders.
+Open WeChat DevTools, import `apps/miniprogram/dist/`. Expected: default Taro welcome page renders.
 
 - [ ] **Step 3: Add to monorepo workspace**
 
@@ -72,28 +72,28 @@ packages:
   - "apps/*"
 ```
 
-If already present (it is), verify `apps/wxapp` is covered.
+If already present (it is), verify `apps/miniprogram` is covered.
 
 In root `package.json`, add scripts:
 
 ```json
 {
   "scripts": {
-    "dev:wxapp": "pnpm --filter @tenant-hub/wxapp dev:weapp",
-    "build:wxapp": "pnpm --filter @tenant-hub/wxapp build:weapp"
+    "dev:miniprogram": "pnpm --filter @tenant-hub/miniprogram dev:weapp",
+    "build:miniprogram": "pnpm --filter @tenant-hub/miniprogram build:weapp"
   }
 }
 ```
 
-Update `apps/wxapp/package.json` name to `@tenant-hub/wxapp`.
+Update `apps/miniprogram/package.json` name to `@tenant-hub/miniprogram`.
 
 - [ ] **Step 4: Configure Taro for monorepo**
 
-In `apps/wxapp/config/index.js`, ensure `alias` resolves `@/` to `src/`:
+In `apps/miniprogram/config/index.js`, ensure `alias` resolves `@/` to `src/`:
 
 ```js
 const config = {
-  projectName: 'wxapp',
+  projectName: 'miniprogram',
   date: '2026-5-12',
   designWidth: 750,
   deviceRatio: {
@@ -127,7 +127,7 @@ const config = {
 
 - [ ] **Step 5: Add TypeScript strict config**
 
-Ensure `apps/wxapp/tsconfig.json` extends root base:
+Ensure `apps/miniprogram/tsconfig.json` extends root base:
 
 ```json
 {
@@ -151,7 +151,7 @@ Ensure `apps/wxapp/tsconfig.json` extends root base:
 
 - [ ] **Step 1: Map existing tokens to CSS Variables**
 
-Create `apps/wxapp/src/theme/tokens.scss`:
+Create `apps/miniprogram/src/theme/tokens.scss`:
 
 ```scss
 // Brand
@@ -273,7 +273,7 @@ Create `apps/wxapp/src/theme/tokens.scss`:
 
 - [ ] **Step 2: Import tokens globally**
 
-In `apps/wxapp/src/app.scss`:
+In `apps/miniprogram/src/app.scss`:
 
 ```scss
 page {
@@ -289,7 +289,7 @@ page {
 
 - [ ] **Step 3: Verify tokens render**
 
-Create a temporary test page `apps/wxapp/src/pages/test/index.tsx`:
+Create a temporary test page `apps/miniprogram/src/pages/test/index.tsx`:
 
 ```tsx
 import { View, Text } from '@tarojs/components';
@@ -305,7 +305,7 @@ export default function TestPage() {
 }
 ```
 
-Add to `app.config.ts` pages array, run `pnpm dev:wxapp`, verify color renders as teal (#0d9488).
+Add to `app.config.ts` pages array, run `pnpm dev:miniprogram`, verify color renders as teal (#0d9488).
 
 ---
 
@@ -313,7 +313,7 @@ Add to `app.config.ts` pages array, run `pnpm dev:wxapp`, verify color renders a
 
 - [ ] **Step 1: Create storage utility**
 
-Create `apps/wxapp/src/utils/storage.ts`:
+Create `apps/miniprogram/src/utils/storage.ts`:
 
 ```typescript
 const SESSION_KEY = "tenantHubSession";
@@ -380,7 +380,7 @@ Open DevTools Console, expected: `Storage test: {foo: "bar"}`.
 
 - [ ] **Step 1: Reuse existing mobileApi logic**
 
-Create `apps/wxapp/src/api/client.ts`:
+Create `apps/miniprogram/src/api/client.ts`:
 
 ```typescript
 import Taro from '@tarojs/taro';
@@ -423,7 +423,7 @@ export async function apiClient<T>(
 
 - [ ] **Step 2: Add environment config**
 
-Create `apps/wxapp/src/constants/config.ts`:
+Create `apps/miniprogram/src/constants/config.ts`:
 
 ```typescript
 export const API_BASE_URL = 'http://localhost:4000/api';
@@ -436,11 +436,11 @@ Note: WeChat Mini Program requires HTTPS in production and must add the API doma
 
 ### Task 5: Atomic UI Components
 
-Create `apps/wxapp/src/components/ui/` with these 6 components, matching existing RN component APIs:
+Create `apps/miniprogram/src/components/ui/` with these 6 components, matching existing RN component APIs:
 
 - [ ] **Step 1: Button**
 
-Create `apps/wxapp/src/components/ui/Button.tsx`:
+Create `apps/miniprogram/src/components/ui/Button.tsx`:
 
 ```tsx
 import { View, Text } from '@tarojs/components';
@@ -482,7 +482,7 @@ export function Button({
 }
 ```
 
-Create `apps/wxapp/src/components/ui/Button.scss`:
+Create `apps/miniprogram/src/components/ui/Button.scss`:
 
 ```scss
 .btn {
@@ -530,7 +530,7 @@ Create `apps/wxapp/src/components/ui/Button.scss`:
 
 - [ ] **Step 2: Card**
 
-Create `apps/wxapp/src/components/ui/Card.tsx`:
+Create `apps/miniprogram/src/components/ui/Card.tsx`:
 
 ```tsx
 import { View, Text } from '@tarojs/components';
@@ -579,7 +579,7 @@ export function Card({
 
 - [ ] **Step 3: Input**
 
-Create `apps/wxapp/src/components/ui/Input.tsx`:
+Create `apps/miniprogram/src/components/ui/Input.tsx`:
 
 ```tsx
 import { View, Input as TaroInput, Text } from '@tarojs/components';
@@ -632,7 +632,7 @@ export function Input({
 
 - [ ] **Step 4: Badge**
 
-Create `apps/wxapp/src/components/ui/Badge.tsx`:
+Create `apps/miniprogram/src/components/ui/Badge.tsx`:
 
 ```tsx
 import { View, Text } from '@tarojs/components';
@@ -656,7 +656,7 @@ export function Badge({ children, tone = 'neutral' }: BadgeProps) {
 
 - [ ] **Step 5: Icon (iconfont)**
 
-Create `apps/wxapp/src/components/ui/Icon.tsx`:
+Create `apps/miniprogram/src/components/ui/Icon.tsx`:
 
 ```tsx
 import { Text } from '@tarojs/components';
@@ -712,7 +712,7 @@ export function Icon({ name, size = 20, color = 'var(--color-text)' }: IconProps
 }
 ```
 
-Note: Developer must upload iconfont files to `apps/wxapp/src/assets/iconfont/` and import in `app.scss`:
+Note: Developer must upload iconfont files to `apps/miniprogram/src/assets/iconfont/` and import in `app.scss`:
 
 ```scss
 @import "./assets/iconfont/iconfont.scss";
@@ -720,7 +720,7 @@ Note: Developer must upload iconfont files to `apps/wxapp/src/assets/iconfont/` 
 
 - [ ] **Step 6: EmptyState**
 
-Create `apps/wxapp/src/components/ui/EmptyState.tsx`:
+Create `apps/miniprogram/src/components/ui/EmptyState.tsx`:
 
 ```tsx
 import { View, Text } from '@tarojs/components';
@@ -747,7 +747,7 @@ export function EmptyState({ emoji = '📭', title, subtitle, action }: EmptySta
 
 - [ ] **Step 7: Index export**
 
-Create `apps/wxapp/src/components/ui/index.ts`:
+Create `apps/miniprogram/src/components/ui/index.ts`:
 
 ```typescript
 export { Button } from './Button';
@@ -768,7 +768,7 @@ Create a temporary showcase page `pages/showcase/index.tsx` rendering all 6 comp
 
 - [ ] **Step 1: TaskSheet (bottom drawer / dialog)**
 
-Create `apps/wxapp/src/components/TaskSheet.tsx`:
+Create `apps/miniprogram/src/components/TaskSheet.tsx`:
 
 ```tsx
 import { View, Text } from '@tarojs/components';
@@ -835,7 +835,7 @@ export function TaskSheet({
 }
 ```
 
-Create `apps/wxapp/src/components/TaskSheet.scss`:
+Create `apps/miniprogram/src/components/TaskSheet.scss`:
 
 ```scss
 .task-sheet {
@@ -942,7 +942,7 @@ Create `apps/wxapp/src/components/TaskSheet.scss`:
 
 - [ ] **Step 2: Toast**
 
-Create `apps/wxapp/src/components/Toast.tsx`:
+Create `apps/miniprogram/src/components/Toast.tsx`:
 
 ```tsx
 import Taro from '@tarojs/taro';
@@ -969,7 +969,7 @@ export function showToast(message: string, type: 'success' | 'error' | 'warning'
 
 - [ ] **Step 1: Configure app.config.ts**
 
-Create `apps/wxapp/src/app.config.ts`:
+Create `apps/miniprogram/src/app.config.ts`:
 
 ```typescript
 export default defineAppConfig({
@@ -1008,11 +1008,11 @@ export default defineAppConfig({
 });
 ```
 
-Note: TabBar icons must be placed in `apps/wxapp/src/assets/icons/` and referenced with relative paths.
+Note: TabBar icons must be placed in `apps/miniprogram/src/assets/icons/` and referenced with relative paths.
 
 - [ ] **Step 2: Create app.tsx entry**
 
-Create `apps/wxapp/src/app.tsx`:
+Create `apps/miniprogram/src/app.tsx`:
 
 ```tsx
 import { useLaunch, useShow } from '@tarojs/taro';
@@ -1048,7 +1048,7 @@ Implement pages in this order (least complex → most complex):
 
 - [ ] **Step 1: Create login page**
 
-`apps/wxapp/src/pages/login/index.tsx`:
+`apps/miniprogram/src/pages/login/index.tsx`:
 
 Port existing `LoginScreen.tsx` logic to Taro:
 - Phone + password / phone + OTP tabs
@@ -1073,7 +1073,7 @@ useLoad(() => {
 
 - [ ] **Step 3: End-to-end test login flow**
 
-Run `pnpm dev:wxapp`, open WeChat DevTools, verify:
+Run `pnpm dev:miniprogram`, open WeChat DevTools, verify:
 1. Unauthenticated user is redirected to login
 2. Login with valid credentials stores session
 3. Authenticated user lands on home tab
@@ -1084,7 +1084,7 @@ Run `pnpm dev:wxapp`, open WeChat DevTools, verify:
 
 - [ ] **Step 1: Port SettingsScreen menu shell**
 
-`apps/wxapp/src/pages/settings/index.tsx`:
+`apps/miniprogram/src/pages/settings/index.tsx`:
 
 Reuse existing menu items layout. Each item uses `Taro.navigateTo` to sub-page.
 
@@ -1259,7 +1259,7 @@ subPackages: [
 
 - [ ] **Step 2: Submit for review**
 
-- [ ] Build production: `pnpm build:wxapp`
+- [ ] Build production: `pnpm build:miniprogram`
 - [ ] Upload in WeChat DevTools
 - [ ] Fill app info in MP Admin
 - [ ] Submit for WeChat review (1–3 business days)
@@ -1271,12 +1271,12 @@ subPackages: [
 - [ ] **Step 1: Archive mobile app**
 
 - [ ] Update root `package.json` to remove `mobile:*` scripts or mark as deprecated
-- [ ] Update CI/CD (`.github/workflows/mobile-ci.yml`) to only trigger on `apps/wxapp/**` changes
+- [ ] Update CI/CD (`.github/workflows/mobile-ci.yml`) to only trigger on `apps/miniprogram/**` changes
 - [ ] Update `AGENTS.md` to reflect new architecture
 
 - [ ] **Step 2: Update documentation**
 
-- [ ] Add `apps/wxapp/README.md` with setup / dev / build instructions
+- [ ] Add `apps/miniprogram/README.md` with setup / dev / build instructions
 - [ ] Update root `README.md` to mention mini-program instead of RN app
 
 ---
@@ -1286,7 +1286,7 @@ subPackages: [
 - [ ] **Step 1: TypeScript check**
 
 ```bash
-pnpm --filter @tenant-hub/wxapp typecheck
+pnpm --filter @tenant-hub/miniprogram typecheck
 ```
 
 Expected: pass.
@@ -1294,15 +1294,15 @@ Expected: pass.
 - [ ] **Step 2: Build check**
 
 ```bash
-pnpm build:wxapp
+pnpm build:miniprogram
 ```
 
-Expected: completes without errors, `apps/wxapp/dist/` contains WeChat Mini Program bundle.
+Expected: completes without errors, `apps/miniprogram/dist/` contains mini program bundle.
 
 - [ ] **Step 3: Bundle size check**
 
 ```bash
-ls -lah apps/wxapp/dist/
+ls -lah apps/miniprogram/dist/
 ```
 
 Expected: main package < 2MB, total < 10MB.

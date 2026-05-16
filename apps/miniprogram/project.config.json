@@ -1,10 +1,10 @@
 {
   "miniprogramRoot": "dist/",
-  "projectname": "tenant-hub-wxapp",
-  "description": "Tenant Hub WeChat Mini Program",
-  "appid": "",
+  "projectname": "tenant-hub-miniprogram",
+  "description": "Tenant Hub Mini Program Client",
+  "appid": "wx766c2ae2817c6473",
   "setting": {
-    "urlCheck": true,
+    "urlCheck": false,
     "es6": true,
     "enhance": true,
     "postcss": true,

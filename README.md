@@ -4,7 +4,7 @@
 
 - `apps/api`：Node.js + Express + Prisma 5 + PostgreSQL
 - `apps/ops-web`：React 18 + Vite + Ant Design 5 平台运营端，仅用于系统配置、租户管理、套餐配置等
-- `apps/wxapp`：微信小程序（Taro 4 + React 18），用于组织、公寓、房间、租约、账单等业务管理
+- `apps/miniprogram`：小程序端（Taro 4 + React 18），用于组织、公寓、房间、租约、账单等业务管理
 
 ## 本地启动
 

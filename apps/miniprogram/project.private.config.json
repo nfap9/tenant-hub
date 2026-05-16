@@ -1,6 +1,6 @@
 {
   "libVersion": "3.16.0",
-  "projectname": "wxapp",
+  "projectname": "tenant-hub-miniprogram",
   "condition": {},
   "setting": {
     "urlCheck": false,
