@@ -134,8 +134,13 @@ page {
   --th-radius-lg: var(--radius-lg);
 
   // Layout
-  --layout-tab-bar-height: 112rpx;
+  --layout-page-padding: var(--spacing-5);
+  --layout-section-gap: var(--spacing-8);
+  --layout-content-gap: var(--spacing-6);
+  --layout-inline-gap: var(--spacing-3);
+  --layout-safe-area-bottom: env(safe-area-inset-bottom);
+  --layout-tab-bar-height: 124rpx;
   --layout-header-height: 112rpx;
-  --layout-content-bottom-padding: 184rpx;
+  --layout-content-bottom-padding: calc(var(--layout-tab-bar-height) + var(--layout-safe-area-bottom) + var(--spacing-12));
   --layout-max-modal-width: 640rpx;
 }

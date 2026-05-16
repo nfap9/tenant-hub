@@ -5,30 +5,10 @@ import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge, Icon } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
-import { money, compactMoney, isThisMonth, daysUntil, monthlyAmount } from '../../utils/format';
+import { compactMoney, isThisMonth, daysUntil, monthlyAmount } from '../../utils/format';
 import type { Apartment, Room, Lease, MonthlyBill, Bill } from '../../types/domain';
 import './index.scss';
 
-const statusPriority: Record<MonthlyBill["status"], number> = {
-  UNPAID: 0,
-  PARTIAL_PAID: 0,
-  BILLING: 1,
-  FAILED: 2,
-  DRAFT: 2,
-  PAID: 3,
-  VOID: 4
-};
-
-const sortMonthlyBillsForList = (bills: MonthlyBill[]) =>
-  [...bills].sort((left, right) => {
-    const priorityDiff = statusPriority[left.status] - statusPriority[right.status];
-    if (priorityDiff !== 0) return priorityDiff;
-    const dueDateDiff = new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime();
-    if (dueDateDiff !== 0) return dueDateDiff;
-    return new Date(right.billingDate).getTime() - new Date(left.billingDate).getTime();
-  });
-
-const activeLeaseOf = (room: Room) => room.leases?.find((lease) => lease.status === "ACTIVE");
 const leaseMonthlyIncome = (lease: Lease) => {
   const rent = monthlyAmount(lease.rentAmount, lease.cycle);
   const fees = (lease.fees ?? []).reduce((sum, fee) => sum + monthlyAmount(fee.amount, lease.cycle), 0);
@@ -87,6 +67,17 @@ export default function Index() {
   const occupiedCount = rooms.filter((room) => room.status === "OCCUPIED").length;
   const vacantCount = rooms.filter((room) => room.status === "VACANT").length;
   const occupancyRate = rooms.length ? Math.round((occupiedCount / rooms.length) * 100) : 0;
+  const vacantLayoutStats = useMemo(() => {
+    const layoutCounts = rooms
+      .filter((room) => room.status === "VACANT")
+      .reduce<Record<string, number>>((counts, room) => {
+        const layout = room.layout.trim() || "未配置";
+        counts[layout] = (counts[layout] ?? 0) + 1;
+        return counts;
+      }, {});
+
+    return Object.entries(layoutCounts).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+  }, [rooms]);
   const monthlyIncome = activeLeases.reduce((sum, lease) => sum + leaseMonthlyIncome(lease), 0);
   const thisMonthExpense = apartments
     .flatMap((apartment) => apartment.expenses ?? [])
@@ -101,19 +92,6 @@ export default function Index() {
     .map((lease) => ({ lease, remainingDays: daysUntil(lease.endDate) }))
     .filter((item) => item.remainingDays >= 0 && item.remainingDays <= 30)
     .sort((left, right) => left.remainingDays - right.remainingDays);
-  const topApartments = apartments
-    .map((apartment) => {
-      const apartmentRooms = apartment.rooms ?? [];
-      const apartmentOccupied = apartmentRooms.filter((room) => room.status === "OCCUPIED").length;
-      const apartmentIncome = apartmentRooms.reduce((sum, room) => {
-        const lease = activeLeaseOf(room);
-        return lease ? sum + leaseMonthlyIncome(lease) : sum;
-      }, 0);
-      return { apartment, apartmentRooms, apartmentOccupied, apartmentIncome };
-    })
-    .sort((left, right) => right.apartmentIncome - left.apartmentIncome)
-    .slice(0, 3);
-
   const todos: TodoItem[] = [
     overdueBills.length
       ? {
@@ -185,55 +163,49 @@ export default function Index() {
         </View>
       </View>
 
-      <View className="stat-row">
-        <Card className="stat-card">
-          <Text className="stat-label">公寓</Text>
-          <Text className="stat-value">{apartments.length}</Text>
-        </Card>
-        <Card className="stat-card">
-          <Text className="stat-label">房间</Text>
-          <Text className="stat-value">{rooms.length}</Text>
-        </Card>
-        <Card className="stat-card">
-          <Text className="stat-label">出租率</Text>
-          <Text className="stat-value">{occupancyRate}%</Text>
-        </Card>
-      </View>
-
-      <Card title="常用操作" subtitle="快速进入高频功能">
-        <View className="quick-action-grid">
-          <View className="quick-action-card" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
-            <View className="quick-action-icon"><Icon name="payment" size="lg" /></View>
-            <Text className="quick-action-label">登记收款</Text>
+      <Card className="occupancy-summary">
+        <View className="occupancy-metrics">
+          <View className="occupancy-metric occupancy-metric--vacant">
+            <Text className="stat-label">空闲房间</Text>
+            <Text className="stat-value">{vacantCount}</Text>
           </View>
-          <View className="quick-action-card" onClick={() => Taro.switchTab({ url: '/pages/rooms/index' })}>
-            <View className="quick-action-icon"><Icon name="contract" size="lg" /></View>
-            <Text className="quick-action-label">签约入住</Text>
+          <View className="occupancy-divider" />
+          <View className="occupancy-metric">
+            <Text className="stat-label">已租房间</Text>
+            <Text className="stat-value">{occupiedCount}</Text>
           </View>
-          <View className="quick-action-card" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
-            <View className="quick-action-icon"><Icon name="meter" size="lg" /></View>
-            <Text className="quick-action-label">抄表录入</Text>
-          </View>
+        </View>
+        <View className="vacant-layouts">
+          <Text className="vacant-layouts-title">空闲户型</Text>
+          {vacantLayoutStats.length === 0 ? (
+            <Text className="vacant-layouts-empty">暂无空闲房间</Text>
+          ) : (
+            <View className="vacant-layout-chip-row">
+              {vacantLayoutStats.map(([layout, count]) => (
+                <View key={layout} className="vacant-layout-chip">
+                  <Text className="vacant-layout-name">{layout}</Text>
+                  <Text className="vacant-layout-count">{count} 间</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </Card>
 
-      <Card title="资产出租" subtitle={`${occupiedCount} 已租 · ${vacantCount} 空闲`}>
-        {topApartments.length === 0 ? (
-          <EmptyState icon="apartment" title="暂无公寓资产" subtitle="请先到公寓页添加" />
-        ) : null}
-        {topApartments.map(({ apartment, apartmentRooms, apartmentOccupied, apartmentIncome }) => (
-          <View key={apartment.id} className="home-apartment-row">
-            <View className="home-apartment-main">
-              <Text className="card-title">{apartment.name}</Text>
-              <Text className="text-muted">{apartment.location}</Text>
-            </View>
-            <View className="home-apartment-stat">
-              <Text className="card-stat">¥{compactMoney(apartmentIncome)}</Text>
-              <Text className="stat-label">{apartmentOccupied}/{apartmentRooms.length} 间</Text>
-            </View>
-          </View>
-        ))}
-      </Card>
+      <View className="quick-action-row">
+        <View className="quick-action-button" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
+          <View className="quick-action-icon"><Icon name="payment" size="md" /></View>
+          <Text className="quick-action-label">登记收款</Text>
+        </View>
+        <View className="quick-action-button" onClick={() => Taro.switchTab({ url: '/pages/rooms/index' })}>
+          <View className="quick-action-icon"><Icon name="contract" size="md" /></View>
+          <Text className="quick-action-label">签约入住</Text>
+        </View>
+        <View className="quick-action-button" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
+          <View className="quick-action-icon"><Icon name="meter" size="md" /></View>
+          <Text className="quick-action-label">抄表录入</Text>
+        </View>
+      </View>
 
       <Card title="待办事项" subtitle={`${todos.length} 项`}>
         {todos.length === 0 ? (

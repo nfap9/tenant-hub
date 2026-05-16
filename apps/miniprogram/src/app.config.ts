@@ -17,11 +17,36 @@ export default defineAppConfig({
     backgroundColor: '#ffffff',
     borderStyle: 'white',
     list: [
-      { pagePath: 'pages/index/index', text: '首页' },
-      { pagePath: 'pages/rooms/index', text: '房间' },
-      { pagePath: 'pages/bills/index', text: '账单' },
-      { pagePath: 'pages/apartments/index', text: '公寓' },
-      { pagePath: 'pages/settings/index', text: '更多' }
+      {
+        pagePath: 'pages/index/index',
+        text: '首页',
+        iconPath: 'assets/tabbar/home-normal.png',
+        selectedIconPath: 'assets/tabbar/home-selected.png'
+      },
+      {
+        pagePath: 'pages/rooms/index',
+        text: '房间',
+        iconPath: 'assets/tabbar/room-normal.png',
+        selectedIconPath: 'assets/tabbar/room-selected.png'
+      },
+      {
+        pagePath: 'pages/bills/index',
+        text: '账单',
+        iconPath: 'assets/tabbar/bill-normal.png',
+        selectedIconPath: 'assets/tabbar/bill-selected.png'
+      },
+      {
+        pagePath: 'pages/apartments/index',
+        text: '公寓',
+        iconPath: 'assets/tabbar/apartment-normal.png',
+        selectedIconPath: 'assets/tabbar/apartment-selected.png'
+      },
+      {
+        pagePath: 'pages/settings/index',
+        text: '更多',
+        iconPath: 'assets/tabbar/settings-normal.png',
+        selectedIconPath: 'assets/tabbar/settings-selected.png'
+      }
     ]
   },
   window: {

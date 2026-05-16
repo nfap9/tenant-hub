@@ -5,6 +5,7 @@ import { useAppSession, useHasPermission } from '../../context/AppSessionContext
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
+import { TaskSheet } from '../../components/TaskSheet';
 import { money, today, nextYear, numberValue } from '../../utils/format';
 import type { Room, RoomStatus, Lease, RentCycle, BillItemType, TerminationType } from '../../types/domain';
 import './index.scss';
@@ -375,7 +376,7 @@ export default function RoomsPage() {
                   }}>编辑房间</Button> : null}
                   {room.status === "VACANT" && canManageLease ? <Button size="small" onClick={() => { setSelectedId(room.id); setLeaseRoomId(room.id); setEditingRoomId(undefined); }}>签约入住</Button> : null}
                   {canManageRoom ? (
-                    <View onClick={(e) => { e.stopPropagation(); deleteRoom(); }}>
+                    <View onClick={(e) => { e.stopPropagation(); Taro.showModal({ title: "删除房间", content: "删除后房间资料不可恢复，请确认当前房间没有有效租约。", confirmText: "确认删除", confirmColor: "#c2413d" }).then((res) => { if (res.confirm) deleteRoom(); }); }}>
                       <Button variant="danger" size="small">删除房间</Button>
                     </View>
                   ) : null}
@@ -409,10 +410,17 @@ export default function RoomsPage() {
         );
       })}
 
-      {/* Edit Room Panel */}
-      {editingRoom && (
-        <View className="form-panel">
-          <Card title="编辑房间" subtitle={`${editingRoom.apartment?.name} · ${editingRoom.roomNo}`}>
+      <TaskSheet
+        visible={!!editingRoom}
+        title="编辑房间"
+        onClose={() => setEditingRoomId(undefined)}
+        footer={(
+          <>
+            <Button onClick={updateRoom}>保存房间信息</Button>
+            <Button variant="ghost" onClick={() => setEditingRoomId(undefined)}>取消</Button>
+          </>
+        )}
+      >
             <Input label="房间号" placeholder="例如 301" value={roomForm.roomNo} onChange={(value) => setRoomForm((old) => ({ ...old, roomNo: value }))} />
             <View className="form-grid">
               <Input label="户型" placeholder="例如 单间" value={roomForm.layout} onChange={(value) => setRoomForm((old) => ({ ...old, layout: value }))} />
@@ -426,18 +434,19 @@ export default function RoomsPage() {
                 </View>
               ))}
             </View>
-            <View className="action-row">
-              <Button onClick={updateRoom}>保存房间信息</Button>
-              <Button variant="ghost" onClick={() => setEditingRoomId(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Create Lease Panel */}
-      {leaseRoom && (
-        <View className="form-panel">
-          <Card title="签约入住" subtitle={`${leaseRoom.apartment?.name} · ${leaseRoom.roomNo}`}>
+      <TaskSheet
+        visible={!!leaseRoom}
+        title="签约入住"
+        onClose={() => { setLeaseRoomId(undefined); setPresetFees([]); setCustomFees([]); }}
+        footer={(
+          <>
+            <Button onClick={createLease}>确认签约</Button>
+            <Button variant="ghost" onClick={() => { setLeaseRoomId(undefined); setPresetFees([]); setCustomFees([]); }}>取消</Button>
+          </>
+        )}
+      >
             <Input label="租客姓名" placeholder="请输入姓名" value={leaseForm.tenantName} onChange={(value) => setLeaseForm((old) => ({ ...old, tenantName: value }))} />
             <Input label="租客电话" placeholder="请输入手机号" value={leaseForm.tenantPhone} onChange={(value) => setLeaseForm((old) => ({ ...old, tenantPhone: value }))} />
             <View className="form-grid">
@@ -505,18 +514,19 @@ export default function RoomsPage() {
               </View>
             ))}
             <Button variant="secondary" size="small" onClick={() => setCustomFees((old) => [...old, { id: `${Date.now()}-${old.length}`, name: "", amount: "" }])}>添加其他费用</Button>
-            <View className="action-row">
-              <Button onClick={createLease}>确认签约</Button>
-              <Button variant="ghost" onClick={() => { setLeaseRoomId(undefined); setPresetFees([]); setCustomFees([]); }}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Edit Lease Panel */}
-      {editingLease && (
-        <View className="form-panel">
-          <Card title="编辑租约" subtitle={`${editingLease.tenantName} · ${editingLease.room?.apartment?.name} · ${editingLease.room?.roomNo}`}>
+      <TaskSheet
+        visible={!!editingLease}
+        title="编辑租约"
+        onClose={() => { setEditingLease(undefined); setPresetFees([]); setCustomFees([]); }}
+        footer={(
+          <>
+            <Button onClick={updateLease}>保存修改</Button>
+            <Button variant="ghost" onClick={() => { setEditingLease(undefined); setPresetFees([]); setCustomFees([]); }}>取消</Button>
+          </>
+        )}
+      >
             <View className="form-grid">
               <Input label="租金" placeholder="每期金额" type="number" value={editLeaseForm.rentAmount} onChange={(value) => setEditLeaseForm((old) => ({ ...old, rentAmount: value }))} />
               <Input label="押金" placeholder="请输入押金" type="number" value={editLeaseForm.depositAmount} onChange={(value) => setEditLeaseForm((old) => ({ ...old, depositAmount: value }))} />
@@ -547,18 +557,21 @@ export default function RoomsPage() {
               </View>
             ))}
             <Button variant="secondary" size="small" onClick={() => setCustomFees((old) => [...old, { id: `${Date.now()}-${old.length}`, name: "", amount: "" }])}>添加其他费用</Button>
-            <View className="action-row">
-              <Button onClick={updateLease}>保存修改</Button>
-              <Button variant="ghost" onClick={() => { setEditingLease(undefined); setPresetFees([]); setCustomFees([]); }}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Termination Panel */}
-      {terminatingLease && (
-        <View className="form-panel">
-          <Card title="合约终止" subtitle={`${terminatingLease.tenantName} · ${terminatingLease.startDate.slice(0, 10)} 至 ${terminatingLease.endDate.slice(0, 10)}`}>
+      <TaskSheet
+        visible={!!terminatingLease}
+        title="合约终止"
+        onClose={() => setTerminatingLease(undefined)}
+        footer={(
+          <>
+            <Button variant="danger" onClick={terminateLease}>确认终止合约</Button>
+            <Button variant="ghost" onClick={() => setTerminatingLease(undefined)}>取消</Button>
+          </>
+        )}
+      >
+          {terminatingLease ? (
+          <>
             <View className="segment">
               {(["EXPIRED", "NEGOTIATED", "BREACH"] as TerminationType[]).map((item) => (
                 <View key={item} className={`segment-item ${terminationForm.type === item ? 'segment-item--active' : ''}`} onClick={() => setTerminationForm((old) => ({ ...old, type: item }))}>
@@ -605,13 +618,9 @@ export default function RoomsPage() {
             </View>
             <Input label="退租原因" placeholder="可选" value={terminationForm.reason} onChange={(value) => setTerminationForm((old) => ({ ...old, reason: value }))} />
             {terminatingLease?.isAutoRenewalPeriod ? <Text className="text-muted">当前租约已进入自动续约期，到期后退房不默认视为违约。</Text> : null}
-            <View className="action-row">
-              <Button variant="danger" onClick={terminateLease}>确认终止合约</Button>
-              <Button variant="ghost" onClick={() => setTerminatingLease(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+          </>
+          ) : null}
+      </TaskSheet>
     </View>
   );
 }

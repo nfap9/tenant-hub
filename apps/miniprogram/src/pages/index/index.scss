@@ -14,7 +14,7 @@
     linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
-  margin-bottom: var(--spacing-5);
+  margin-bottom: var(--layout-section-gap);
   color: white;
   box-shadow: 0 24rpx 52rpx rgba(20, 108, 92, 0.2);
 }
@@ -86,15 +86,29 @@
   font-weight: 600;
 }
 
-.stat-row {
-  display: flex;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-5);
+.occupancy-summary {
+  margin-bottom: var(--layout-section-gap);
 }
 
-.stat-card {
+.occupancy-metrics {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: var(--spacing-6);
+}
+
+.occupancy-metric {
   flex: 1;
   min-width: 0;
+}
+
+.occupancy-metric--vacant .stat-value {
+  color: var(--color-primary);
+}
+
+.occupancy-divider {
+  width: 1rpx;
+  margin: var(--spacing-1) var(--spacing-6);
+  background: var(--color-border-light);
 }
 
 .stat-label {
@@ -113,65 +127,100 @@
   color: var(--color-text);
 }
 
-.quick-action-grid {
-  display: flex;
-  gap: var(--spacing-3);
-  margin-top: var(--spacing-2);
+.vacant-layouts {
+  padding-top: var(--spacing-5);
+  border-top: 1rpx solid var(--color-border-light);
 }
 
-.quick-action-card {
-  flex: 1;
-  min-width: 0;
-  background: linear-gradient(180deg, var(--color-surface-tinted), var(--color-primary-lightest));
-  border: 1rpx solid var(--color-border-light);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-4) var(--spacing-2);
-  text-align: center;
+.vacant-layouts-title {
+  display: block;
+  margin-bottom: var(--spacing-3);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-muted);
 }
 
-.quick-action-icon {
-  width: 76rpx;
-  height: 76rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: var(--spacing-2);
-  border-radius: var(--radius-full);
-  background: #fff;
-  box-shadow: var(--shadow-subtle);
-}
-
-.quick-action-label {
+.vacant-layouts-empty {
   display: block;
   font-size: var(--font-size-body-small);
   line-height: var(--line-height-body-small);
   color: var(--color-text-secondary);
+}
+
+.vacant-layout-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
+
+.vacant-layout-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-height: 52rpx;
+  padding: 0 var(--spacing-3);
+  border: 1rpx solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-tinted);
+}
+
+.vacant-layout-name,
+.vacant-layout-count {
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+}
+
+.vacant-layout-name {
+  color: var(--color-text);
   font-weight: 700;
 }
 
-.home-apartment-row {
+.vacant-layout-count {
+  color: var(--color-text-muted);
+}
+
+.quick-action-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-4);
-  padding: var(--spacing-6) 0;
-  border-bottom: 1rpx solid var(--color-border-light);
+  gap: var(--layout-inline-gap);
+  margin-bottom: var(--layout-section-gap);
 }
 
-.home-apartment-row:last-child {
-  border-bottom: none;
-}
-
-.home-apartment-main {
+.quick-action-button {
   flex: 1;
   min-width: 0;
+  min-height: 76rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  background: var(--color-surface);
+  border: 1rpx solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 0 var(--spacing-3);
+  box-shadow: var(--shadow-subtle);
 }
 
-.home-apartment-stat {
-  text-align: right;
-  min-width: 150rpx;
+.quick-action-button:active {
+  opacity: 0.86;
+  transform: scale(0.98);
+}
+
+.quick-action-icon {
+  flex: 0 0 40rpx;
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
+.quick-action-label {
+  display: inline;
+  font-size: var(--font-size-body-small);
+  line-height: var(--line-height-body-small);
+  color: var(--color-text);
+  font-weight: 700;
 }
 
 .card-title {
@@ -180,14 +229,6 @@
   line-height: var(--line-height-body);
   font-weight: 600;
   color: var(--color-text);
-}
-
-.card-stat {
-  display: block;
-  font-size: var(--font-size-body);
-  line-height: var(--line-height-body);
-  font-weight: 600;
-  color: var(--color-primary);
 }
 
 .text-muted {

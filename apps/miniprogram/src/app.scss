@@ -19,14 +19,30 @@ textarea {
 
 .page-container {
   min-height: 100vh;
-  padding: var(--spacing-5);
+  padding: var(--layout-page-padding);
   padding-bottom: var(--layout-content-bottom-padding);
+}
+
+.sub-page-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.page-back-button {
+  flex: 0 0 auto;
+  min-height: 56rpx;
+  padding: 0 var(--spacing-3);
+  border: 1rpx solid var(--color-border);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow-subtle);
 }
 
 .form-panel .input-wrapper,
 .form-panel .date-field-wrapper,
 .form-panel .form-grid {
-  margin-bottom: var(--spacing-6);
+  margin-bottom: var(--layout-content-gap);
 }
 
 .form-panel .field-label {

@@ -2,7 +2,7 @@
   background-color: var(--color-surface);
   border: 1rpx solid rgba(220, 231, 226, 0.85);
   border-radius: var(--radius-lg);
-  margin-bottom: var(--spacing-8);
+  margin-bottom: var(--layout-section-gap);
   overflow: hidden;
 
   &--default {

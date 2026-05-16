@@ -5,6 +5,7 @@ import { useAppSession, useHasPermission } from '../../context/AppSessionContext
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
+import { TaskSheet } from '../../components/TaskSheet';
 import { money, optionalNumber, optionalText, toFacilityArray, facilitiesText } from '../../utils/format';
 import { buildBatchRoomNos, toggleBatchRoomSelection } from '../../utils/batchRooms';
 import type { Apartment, Room, RoomStatus } from '../../types/domain';
@@ -375,23 +376,24 @@ export default function ApartmentsPage() {
           })}
         </Card>
 
-        {/* Expense Layer */}
-        {layer === "expense" && (
-          <View className="form-panel">
-            <Card title="记录花费" subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : undefined}>
+        <TaskSheet
+          visible={layer === "expense"}
+          title="记录花费"
+          onClose={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}
+          footer={(
+            <>
+              <Button onClick={addExpense}>保存花费</Button>
+              <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
+            </>
+          )}
+        >
               <View className="form-grid">
                 <Input label="花费名称" placeholder="例如 维修材料" value={expense.name} onChange={(value) => setExpense((old) => ({ ...old, name: value }))} />
                 <Input label="金额" placeholder="请输入金额" type="number" value={expense.amount} onChange={(value) => setExpense((old) => ({ ...old, amount: value }))} />
                 <DateField label="日期" placeholder="选择日期" value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
               </View>
               <Input label="备注" placeholder="可选" value={expense.note} onChange={(value) => setExpense((old) => ({ ...old, note: value }))} />
-              <View className="action-row">
-                <Button onClick={addExpense}>保存花费</Button>
-                <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        </TaskSheet>
       </View>
     );
   }
@@ -401,8 +403,8 @@ export default function ApartmentsPage() {
     return (
       <View className="page-container">
         <View className="sub-page-header">
-          <Button variant="ghost" size="small" onClick={mode === "create" ? backToList : () => setMode("detail")}>
-            {mode === "create" ? "返回公寓列表" : "返回公寓详情"}
+          <Button className="page-back-button" variant="ghost" size="small" onClick={mode === "create" ? backToList : () => setMode("detail")}>
+            {mode === "create" ? "‹ 返回公寓列表" : "‹ 返回公寓详情"}
           </Button>
         </View>
         <Card title={mode === "create" ? "新建公寓" : "编辑公寓信息"}>
@@ -442,7 +444,7 @@ export default function ApartmentsPage() {
     return (
       <View className="page-container">
         <View className="sub-page-header">
-          <Button variant="ghost" size="small" onClick={backToList}>返回公寓列表</Button>
+          <Button className="page-back-button" variant="ghost" size="small" onClick={backToList}>‹ 返回公寓列表</Button>
         </View>
 
         <Card
@@ -550,28 +552,36 @@ export default function ApartmentsPage() {
           </Card>
         ) : null}
 
-        {/* Expense Layer */}
-        {layer === "expense" && (
-          <View className="form-panel">
-            <Card title="记录花费" subtitle={expenseApartment ? `${expenseApartment.name} · 经营支出` : undefined}>
+        <TaskSheet
+          visible={layer === "expense"}
+          title="记录花费"
+          onClose={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}
+          footer={(
+            <>
+              <Button onClick={addExpense}>保存花费</Button>
+              <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
+            </>
+          )}
+        >
               <View className="form-grid">
                 <Input label="花费名称" placeholder="例如 维修材料" value={expense.name} onChange={(value) => setExpense((old) => ({ ...old, name: value }))} />
                 <Input label="金额" placeholder="请输入金额" type="number" value={expense.amount} onChange={(value) => setExpense((old) => ({ ...old, amount: value }))} />
                 <DateField label="日期" placeholder="选择日期" value={expense.spentAt} onChange={(value) => setExpense((old) => ({ ...old, spentAt: value }))} />
               </View>
               <Input label="备注" placeholder="可选" value={expense.note} onChange={(value) => setExpense((old) => ({ ...old, note: value }))} />
-              <View className="action-row">
-                <Button onClick={addExpense}>保存花费</Button>
-                <Button variant="ghost" onClick={() => { setLayer(undefined); setExpenseApartmentId(undefined); }}>取消</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        </TaskSheet>
 
-        {/* Room Single Layer */}
-        {layer === "roomSingle" && (
-          <View className="form-panel">
-            <Card title="新增房间" subtitle={selectedApartment.name}>
+        <TaskSheet
+          visible={layer === "roomSingle"}
+          title="新增房间"
+          onClose={resetRoomWork}
+          footer={(
+            <>
+              <Button onClick={createRoom}>保存房间</Button>
+              <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
+            </>
+          )}
+        >
               <View className="form-grid">
                 <Input label="房间号" placeholder="例如 301" value={roomForm.roomNo} onChange={(value) => updateRoomForm("roomNo", value)} />
                 <Input label="面积" placeholder="平方米" type="number" value={roomForm.area} onChange={(value) => updateRoomForm("area", value)} />
@@ -583,18 +593,19 @@ export default function ApartmentsPage() {
                 ))}
               </View>
               <Input label="设施" placeholder="用逗号分隔" value={roomForm.facilities} onChange={(value) => updateRoomForm("facilities", value)} />
-              <View className="action-row">
-                <Button onClick={createRoom}>保存房间</Button>
-                <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        </TaskSheet>
 
-        {/* Room Batch Layer */}
-        {layer === "roomBatch" && (
-          <View className="form-panel">
-            <Card title="批量添加房间" subtitle={selectedApartment.name}>
+        <TaskSheet
+          visible={layer === "roomBatch"}
+          title="批量添加房间"
+          onClose={resetRoomWork}
+          footer={(
+            <>
+              <Button onClick={addBatchRooms}>确认添加房间</Button>
+              <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
+            </>
+          )}
+        >
               <View className="form-grid">
                 <Input label="开始楼层" placeholder="例如 2" type="number" value={batchStartFloor} onChange={setBatchStartFloor} />
                 <Input label="结束楼层" placeholder="例如 4" type="number" value={batchEndFloor} onChange={setBatchEndFloor} />
@@ -628,18 +639,19 @@ export default function ApartmentsPage() {
                 <Input label="面积" placeholder="平方米" type="number" value={batchArea} onChange={setBatchArea} />
               </View>
               <Input label="设施" placeholder="用逗号分隔" value={batchFacilities} onChange={setBatchFacilities} />
-              <View className="action-row">
-                <Button onClick={addBatchRooms}>确认添加房间</Button>
-                <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        </TaskSheet>
 
-        {/* Room Edit Layer */}
-        {layer === "roomEdit" && (
-          <View className="form-panel">
-            <Card title="编辑房间" subtitle={editingRoom ? `${editingRoom.roomNo} · ${editingRoom.layout}` : undefined}>
+        <TaskSheet
+          visible={layer === "roomEdit"}
+          title="编辑房间"
+          onClose={resetRoomWork}
+          footer={(
+            <>
+              <Button onClick={updateRoom}>保存修改</Button>
+              <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
+            </>
+          )}
+        >
               <View className="form-grid">
                 <Input label="房间号" placeholder="例如 301" value={roomForm.roomNo} onChange={(value) => updateRoomForm("roomNo", value)} />
                 <Input label="面积" placeholder="平方米" type="number" value={roomForm.area} onChange={(value) => updateRoomForm("area", value)} />
@@ -657,39 +669,37 @@ export default function ApartmentsPage() {
                   <Button key={status} variant={roomForm.status === status ? "primary" : "ghost"} size="small" onClick={() => updateRoomForm("status", status)}>{statusLabels[status]}</Button>
                 ))}
               </View>
-              <View className="action-row">
-                <Button onClick={updateRoom}>保存修改</Button>
-                <Button variant="ghost" onClick={resetRoomWork}>取消</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        </TaskSheet>
 
-        {/* Room Delete Layer */}
-        {layer === "roomDelete" && deletingRoom && (
-          <View className="form-panel">
-            <Card title="删除房间" subtitle={`${deletingRoom.roomNo} · ${deletingRoom.layout}`}>
-              <Text className="text-muted">删除后房间资料不可恢复，请确认当前房间没有有效租约。</Text>
-              <View className="action-row">
-                <Button variant="danger" size="small" onClick={() => deleteRoom(deletingRoom)}>确认删除</Button>
-                <Button variant="ghost" size="small" onClick={resetRoomWork}>取消</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        <TaskSheet
+          visible={layer === "roomDelete" && !!deletingRoom}
+          variant="dialog"
+          title="删除房间"
+          onClose={resetRoomWork}
+          footer={deletingRoom ? (
+            <>
+              <Button variant="danger" size="small" onClick={() => deleteRoom(deletingRoom)}>确认删除</Button>
+              <Button variant="ghost" size="small" onClick={resetRoomWork}>取消</Button>
+            </>
+          ) : undefined}
+        >
+          <Text className="text-muted">删除后房间资料不可恢复，请确认当前房间没有有效租约。</Text>
+        </TaskSheet>
 
-        {/* Apartment Delete Layer */}
-        {layer === "apartmentDelete" && (
-          <View className="form-panel">
-            <Card title="删除公寓" subtitle={`${selectedApartment.name} · ${selectedApartment.location}`}>
-              <Text className="text-muted">删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。</Text>
-              <View className="action-row">
-                <Button variant="danger" size="small" onClick={deleteApartment}>确认删除</Button>
-                <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        <TaskSheet
+          visible={layer === "apartmentDelete"}
+          variant="dialog"
+          title="删除公寓"
+          onClose={() => setLayer(undefined)}
+          footer={(
+            <>
+              <Button variant="danger" size="small" onClick={deleteApartment}>确认删除</Button>
+              <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
+            </>
+          )}
+        >
+          <Text className="text-muted">删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。</Text>
+        </TaskSheet>
       </View>
     );
   }

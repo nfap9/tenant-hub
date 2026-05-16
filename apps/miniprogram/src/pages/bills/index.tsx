@@ -6,6 +6,7 @@ import { apiClient } from '../../api/client';
 import { getApiBaseUrl } from '../../constants/config';
 import { Button, Card, EmptyState, Badge, Input, DateField } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
+import { TaskSheet } from '../../components/TaskSheet';
 import { money, day, today } from '../../utils/format';
 import type { Bill, BillStatus, MonthlyBill, MeterType, Room } from '../../types/domain';
 import './index.scss';
@@ -458,10 +459,17 @@ export default function BillsPage() {
         </>
       ) : null}
 
-      {/* Payment Layer */}
-      {layer === "payment" && (
-        <View className="form-panel">
-          <Card title="登记收款">
+      <TaskSheet
+        visible={layer === "payment"}
+        title="登记收款"
+        onClose={() => setLayer(undefined)}
+        footer={(
+          <>
+            <Button onClick={submitPayment}>确认收款</Button>
+            <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
+          </>
+        )}
+      >
             <Text className="field-label">选择房间</Text>
             <View className="segment">
               {rooms.map((room) => (
@@ -490,18 +498,19 @@ export default function BillsPage() {
               <Input label="收款方式" placeholder="例如 线下收款" value={paymentForm.method} onChange={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
             </View>
             <Input label="备注" placeholder="可选" value={paymentForm.note} onChange={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
-            <View className="action-row">
-              <Button onClick={submitPayment}>确认收款</Button>
-              <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Reading Layer */}
-      {layer === "reading" && (
-        <View className="form-panel">
-          <Card title="录入抄表">
+      <TaskSheet
+        visible={layer === "reading"}
+        title="录入抄表"
+        onClose={() => setLayer(undefined)}
+        footer={(
+          <>
+            <Button onClick={submitReading}>保存读数</Button>
+            <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
+          </>
+        )}
+      >
             <Text className="field-label">选择房间</Text>
             <View className="segment">
               {rooms.map((room) => (
@@ -523,18 +532,19 @@ export default function BillsPage() {
               <Input label="读数" placeholder="请输入读数" type="number" value={readingForm.value} onChange={(value) => setReadingForm((old) => ({ ...old, value }))} />
             </View>
             <Input label="备注" placeholder="可选" value={readingForm.note} onChange={(value) => setReadingForm((old) => ({ ...old, note: value }))} />
-            <View className="action-row">
-              <Button onClick={submitReading}>保存读数</Button>
-              <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Utility Layer */}
-      {layer === "utility" && (
-        <View className="form-panel">
-          <Card title="录入本期水电">
+      <TaskSheet
+        visible={layer === "utility"}
+        title="录入本期水电"
+        onClose={() => setLayer(undefined)}
+        footer={(
+          <>
+            <Button onClick={submitUtilityReading}>保存水电读数</Button>
+            <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
+          </>
+        )}
+      >
             <View className="form-grid">
               <View>
                 <Input label="上期水表" placeholder="请输入读数" type="number" value={utilityForm.previousWater} onChange={(value) => setUtilityForm((old) => ({ ...old, previousWater: value }))} />
@@ -551,44 +561,44 @@ export default function BillsPage() {
                 <Input label="本期电表" placeholder="请输入读数" type="number" value={utilityForm.currentPower} onChange={(value) => setUtilityForm((old) => ({ ...old, currentPower: value }))} />
               </View>
             </View>
-            <View className="action-row">
-              <Button onClick={submitUtilityReading}>保存水电读数</Button>
-              <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Utility Import Layer */}
-      {layer === "utilityImport" && (
-        <View className="form-panel">
-          <Card title="导入水电读数">
+      <TaskSheet
+        visible={layer === "utilityImport"}
+        title="导入水电读数"
+        onClose={() => setLayer(undefined)}
+        footer={(
+          <>
+            <Button onClick={importUtilityCsv}>确认导入</Button>
+            <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
+          </>
+        )}
+      >
             <Input label="CSV 内容" placeholder="粘贴 CSV 内容" value={utilityCsv} onChange={setUtilityCsv} />
-            <View className="action-row">
-              <Button onClick={importUtilityCsv}>确认导入</Button>
-              <Button variant="ghost" onClick={() => setLayer(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Utility Export Layer */}
-      {layer === "utilityExport" && (
-        <View className="form-panel">
-          <Card title="导出水电读数模板">
+      <TaskSheet
+        visible={layer === "utilityExport"}
+        title="导出水电读数模板"
+        onClose={() => setLayer(undefined)}
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => { Taro.setClipboardData({ data: utilityCsv }); }}>复制到剪贴板</Button>
+            <Button variant="ghost" onClick={() => setLayer(undefined)}>关闭</Button>
+          </>
+        )}
+      >
             <Text className="text-muted" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{utilityCsv}</Text>
-            <View className="action-row">
-              <Button variant="secondary" onClick={() => { Taro.setClipboardData({ data: utilityCsv }); }}>复制到剪贴板</Button>
-              <Button variant="ghost" onClick={() => setLayer(undefined)}>关闭</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      </TaskSheet>
 
-      {/* Monthly Detail Layer */}
-      {layer === "monthlyDetail" && selectedMonthlyBill && (
-        <View className="form-panel">
-          <Card title="账单详情" subtitle={`${selectedMonthlyBill.tenantName} · ${day(selectedMonthlyBill.billingDate)}`}>
+      <TaskSheet
+        visible={layer === "monthlyDetail" && !!selectedMonthlyBill}
+        title="账单详情"
+        onClose={() => setLayer(undefined)}
+        footer={<Button variant="ghost" onClick={() => setLayer(undefined)}>关闭</Button>}
+      >
+          {selectedMonthlyBill ? (
+          <>
             <View className="detail-panel">
               <View className="bill-card-header">
                 <View>
@@ -651,43 +661,52 @@ export default function BillsPage() {
                 ))}
               </View>
             ) : <Text className="text-muted">暂无收款记录</Text>}
-            <View className="action-row">
-              <Button variant="ghost" onClick={() => setLayer(undefined)}>关闭</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+          </>
+          ) : null}
+      </TaskSheet>
 
-      {/* Delete Confirm */}
-      {layer === "deleteConfirm" && (
-        <View className="form-panel">
-          <Card title="删除月度账单">
-            <Text className="text-muted">删除后不可恢复，是否确认？</Text>
-            <View className="action-row">
-              <Button variant="danger" size="small" onClick={() => deleteMonthlyBill(selectedMonthlyBillId)}>确认删除</Button>
-              <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      <TaskSheet
+        visible={layer === "deleteConfirm"}
+        variant="dialog"
+        title="删除月度账单"
+        onClose={() => setLayer(undefined)}
+        footer={(
+          <>
+            <Button variant="danger" size="small" onClick={() => deleteMonthlyBill(selectedMonthlyBillId)}>确认删除</Button>
+            <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
+          </>
+        )}
+      >
+        <Text className="text-muted">删除后不可恢复，是否确认？</Text>
+      </TaskSheet>
 
-      {/* Delete Child Confirm */}
-      {layer === "deleteChildConfirm" && (
-        <View className="form-panel">
-          <Card title="删除账单">
-            <Text className="text-muted">删除后不可恢复，是否确认？</Text>
-            <View className="action-row">
-              <Button variant="danger" size="small" onClick={() => deleteChildBill(selectedChildBillId)}>确认删除</Button>
-              <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+      <TaskSheet
+        visible={layer === "deleteChildConfirm"}
+        variant="dialog"
+        title="删除账单"
+        onClose={() => setLayer(undefined)}
+        footer={(
+          <>
+            <Button variant="danger" size="small" onClick={() => deleteChildBill(selectedChildBillId)}>确认删除</Button>
+            <Button variant="ghost" size="small" onClick={() => setLayer(undefined)}>取消</Button>
+          </>
+        )}
+      >
+        <Text className="text-muted">删除后不可恢复，是否确认？</Text>
+      </TaskSheet>
 
-      {/* Edit Bill Item */}
-      {layer === "editBillItem" && editingBillItem && (
-        <View className="form-panel">
-          <Card title={`修改 ${editingBillItem.name}`}>
+      <TaskSheet
+        visible={layer === "editBillItem" && !!editingBillItem}
+        title={editingBillItem ? `修改 ${editingBillItem.name}` : "修改账单项目"}
+        onClose={() => { setEditingBillItem(undefined); setLayer("monthlyDetail"); }}
+        footer={(
+          <>
+            <Button variant="secondary" size="small" onClick={() => { setEditingBillItem(undefined); setLayer("monthlyDetail"); }}>取消</Button>
+            <Button size="small" onClick={updateBillItem}>保存</Button>
+          </>
+        )}
+      >
+          {editingBillItem ? (
             <View style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
               <View>
                 <Input
@@ -707,13 +726,8 @@ export default function BillsPage() {
                 />
               </View>
             </View>
-            <View className="action-row">
-              <Button variant="secondary" size="small" onClick={() => { setEditingBillItem(undefined); setLayer("monthlyDetail"); }}>取消</Button>
-              <Button size="small" onClick={updateBillItem}>保存</Button>
-            </View>
-          </Card>
-        </View>
-      )}
+          ) : null}
+      </TaskSheet>
     </View>
   );
 }

@@ -4,6 +4,7 @@ import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession, useHasPermission } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge, Input } from '../../components/ui';
+import { TaskSheet } from '../../components/TaskSheet';
 import type { OrgMember, OrgRole } from '../../types/domain';
 import './index.scss';
 
@@ -153,47 +154,54 @@ export default function OrganizationPage() {
             {canManageMember && member.userId !== currentMembership?.organization.ownerId ? (
               <View className="action-row-inline">
                 <Button variant="secondary" size="small" onClick={() => { setEditingMemberId(member.id); setSelectedRoleId(member.roleId); }}>修改角色</Button>
-                <Button variant="danger" size="small" onClick={() => removeMember(member.id)}>移除</Button>
-              </View>
-            ) : null}
-            {editingMemberId === member.id ? (
-              <View className="form-panel">
-                <Text className="field-label">选择新角色</Text>
-                <View className="segment">
-                  {roles.map((role) => (
-                    <View key={role.id} className={`segment-item ${selectedRoleId === role.id ? 'segment-item--active' : ''}`} onClick={() => setSelectedRoleId(role.id)}>
-                      <Text className={`segment-text ${selectedRoleId === role.id ? 'segment-text--active' : ''}`}>{role.name}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View className="action-row-inline">
-                  <Button size="small" onClick={() => updateMemberRole(member.id)}>保存</Button>
-                  <Button variant="ghost" size="small" onClick={() => setEditingMemberId("")}>取消</Button>
-                </View>
+                <Button variant="danger" size="small" onClick={() => Taro.showModal({ title: "移除成员", content: `确认移除 ${member.user.username}？`, confirmText: "确认移除", confirmColor: "#c2413d" }).then((res) => { if (res.confirm) removeMember(member.id); })}>移除</Button>
               </View>
             ) : null}
           </View>
         ))}
       </Card>
 
+      <TaskSheet
+        visible={!!editingMemberId}
+        title="修改成员角色"
+        onClose={() => setEditingMemberId("")}
+        footer={(
+          <>
+            <Button size="small" onClick={() => updateMemberRole(editingMemberId)}>保存</Button>
+            <Button variant="ghost" size="small" onClick={() => setEditingMemberId("")}>取消</Button>
+          </>
+        )}
+      >
+        <Text className="field-label">选择新角色</Text>
+        <View className="segment">
+          {roles.map((role) => (
+            <View key={role.id} className={`segment-item ${selectedRoleId === role.id ? 'segment-item--active' : ''}`} onClick={() => setSelectedRoleId(role.id)}>
+              <Text className={`segment-text ${selectedRoleId === role.id ? 'segment-text--active' : ''}`}>{role.name}</Text>
+            </View>
+          ))}
+        </View>
+      </TaskSheet>
+
       {canManageOrg ? (
         <Card title="转移所有权">
-          {showTransferForm ? (
-            <>
-              <Text className="field-label">选择新所有者</Text>
-              {members.filter((m) => m.userId !== currentMembership?.organization.ownerId).map((m) => (
-                <View key={m.id} className="detail-row" onClick={() => transferOwnership(m.userId)}>
-                  <Text className="card-title">{m.user.username}</Text>
-                  <Text className="text-muted">{m.user.phone}</Text>
-                </View>
-              ))}
-              <Button variant="ghost" size="small" onClick={() => setShowTransferForm(false)}>取消</Button>
-            </>
-          ) : (
-            <Button variant="danger" size="small" onClick={() => setShowTransferForm(true)}>转移所有权</Button>
-          )}
+          <Button variant="danger" size="small" onClick={() => setShowTransferForm(true)}>转移所有权</Button>
         </Card>
       ) : null}
+
+      <TaskSheet
+        visible={showTransferForm}
+        variant="dialog"
+        title="转移所有权"
+        onClose={() => setShowTransferForm(false)}
+        footer={<Button variant="ghost" size="small" onClick={() => setShowTransferForm(false)}>取消</Button>}
+      >
+        {members.filter((m) => m.userId !== currentMembership?.organization.ownerId).map((m) => (
+          <View key={m.id} className="detail-row" onClick={() => transferOwnership(m.userId)}>
+            <Text className="card-title">{m.user.username}</Text>
+            <Text className="text-muted">{m.user.phone}</Text>
+          </View>
+        ))}
+      </TaskSheet>
     </View>
   );
 }
