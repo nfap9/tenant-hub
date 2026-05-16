@@ -198,7 +198,14 @@
   font-weight: 600;
 }
 
-.fee-card {
+.fee-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.fee-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -206,27 +213,25 @@
   padding: var(--spacing-4);
   border: 1rpx solid var(--color-border);
   border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-2);
   background: var(--color-surface-tinted);
 }
 
-.fee-card--active {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary);
+.fee-row__type {
+  flex: 0 0 160rpx;
+  min-width: 0;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
-.custom-fee-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--spacing-4);
-  row-gap: var(--spacing-6);
-  align-items: end;
-  margin-bottom: var(--spacing-6);
+.fee-row .input-wrapper {
+  flex: 1;
+  margin-bottom: 0;
 }
 
-.custom-fee-row .danger-text {
-  grid-column: 1 / -1;
-  justify-self: flex-end;
+.fee-row .danger-text {
+  flex: 0 0 auto;
 }
 
 .danger-text {

@@ -27,14 +27,17 @@ const toneForStatus: Record<RoomStatus, "success" | "neutral" | "warning" | "dan
 const filters: Array<RoomStatus | "ALL"> = ["ALL", "VACANT", "OCCUPIED", "RESERVED", "MAINTENANCE"];
 const roomStatuses: RoomStatus[] = ["VACANT", "RESERVED", "OCCUPIED", "MAINTENANCE"];
 const cycleLabels: Record<RentCycle, string> = { MONTHLY: "月付", QUARTERLY: "季付", YEARLY: "年付" };
-const presetFeeTypes: Array<{ type: BillItemType; label: string }> = [
+const selectableFeeTypes: Array<{ type: BillItemType; label: string }> = [
   { type: "MANAGEMENT", label: "管理费" },
   { type: "SANITATION", label: "卫生费" },
   { type: "ELEVATOR", label: "电梯费" },
   { type: "PROPERTY", label: "物业费" },
-  { type: "NETWORK", label: "网费" }
+  { type: "NETWORK", label: "网费" },
+  { type: "OTHER", label: "其他费用" }
 ];
+const feeTypeLabels = selectableFeeTypes.reduce((labels, item) => ({ ...labels, [item.type]: item.label }), {} as Partial<Record<BillItemType, string>>);
 const terminationLabels: Record<TerminationType, string> = { EXPIRED: "到期解约", NEGOTIATED: "协商解约", BREACH: "违约退租" };
+type LeaseFeeFormItem = { id: string; type: BillItemType; name: string; amount: string };
 
 export default function RoomsPage() {
   const { currentOrgId } = useAppSession();
@@ -61,8 +64,7 @@ export default function RoomsPage() {
     autoRenew: true,
     generateHistoricalBills: false
   });
-  const [presetFees, setPresetFees] = useState<Array<{ type: BillItemType; amount: string }>>([]);
-  const [customFees, setCustomFees] = useState<Array<{ id: string; name: string; amount: string }>>([]);
+  const [leaseFees, setLeaseFees] = useState<LeaseFeeFormItem[]>([]);
   const [editingLease, setEditingLease] = useState<Lease>();
   const [editLeaseForm, setEditLeaseForm] = useState({ rentAmount: "", depositAmount: "", waterUnitPrice: "0", powerUnitPrice: "0" });
   const [terminatingLease, setTerminatingLease] = useState<Lease>();
@@ -145,28 +147,24 @@ export default function RoomsPage() {
   };
 
   const createLease = async () => {
-    if (!currentOrgId || !selectedRoom) return;
+    if (!currentOrgId || !leaseRoom) return;
     if (!canManageLease) return Taro.showToast({ title: "当前角色没有管理租约权限", icon: "none" });
-    if (selectedRoom.status !== "VACANT") return Taro.showToast({ title: "仅空闲房间可以签约", icon: "none" });
+    if (leaseRoom.status !== "VACANT") return Taro.showToast({ title: "仅空闲房间可以签约", icon: "none" });
     if (!leaseForm.tenantName.trim() || !leaseForm.tenantPhone.trim() || !leaseForm.rentAmount.trim()) {
       return Taro.showToast({ title: "请填写租客、电话和租金", icon: "none" });
     }
-    const fees = [
-      ...presetFees.filter((item) => item.amount.trim()).map((item) => ({
+    const fees = leaseFees
+      .filter((item) => item.name.trim() && item.amount.trim())
+      .map((item) => ({
         type: item.type,
-        name: presetFeeTypes.find((p) => p.type === item.type)!.label,
-        amount: Number(item.amount)
-      })),
-      ...customFees.filter((item) => item.name.trim() && item.amount.trim()).map((item) => ({
         name: item.name.trim(),
         amount: Number(item.amount)
-      }))
-    ];
+      }));
     try {
       await apiClient("/leases", {
         method: "POST",
         body: {
-          roomId: selectedRoom.id,
+          roomId: leaseRoom.id,
           tenantName: leaseForm.tenantName.trim(),
           tenantPhone: leaseForm.tenantPhone.trim(),
           startDate: leaseForm.startDate,
@@ -185,8 +183,7 @@ export default function RoomsPage() {
       });
       Taro.showToast({ title: "签约完成", icon: "success" });
       setLeaseForm({ tenantName: "", tenantPhone: "", startDate: today(), endDate: nextYear(), graceDays: "0", cycle: "MONTHLY", rentAmount: "", depositAmount: "", waterUnitPrice: "0", powerUnitPrice: "0", autoRenew: true, generateHistoricalBills: false });
-      setPresetFees([]);
-      setCustomFees([]);
+      setLeaseFees([]);
       setLeaseRoomId(undefined);
       setSelectedId(undefined);
       await loadRooms();
@@ -198,17 +195,13 @@ export default function RoomsPage() {
   const updateLease = async () => {
     if (!currentOrgId || !editingLease) return;
     if (!canManageLease) return Taro.showToast({ title: "当前角色没有管理租约权限", icon: "none" });
-    const fees = [
-      ...presetFees.filter((item) => item.amount.trim()).map((item) => ({
+    const fees = leaseFees
+      .filter((item) => item.name.trim() && item.amount.trim())
+      .map((item) => ({
         type: item.type,
-        name: presetFeeTypes.find((p) => p.type === item.type)!.label,
-        amount: Number(item.amount)
-      })),
-      ...customFees.filter((item) => item.name.trim() && item.amount.trim()).map((item) => ({
         name: item.name.trim(),
         amount: Number(item.amount)
-      }))
-    ];
+      }));
     try {
       await apiClient(`/leases/${editingLease.id}`, {
         method: "PUT",
@@ -223,8 +216,7 @@ export default function RoomsPage() {
       });
       Taro.showToast({ title: "租约信息已更新", icon: "success" });
       setEditingLease(undefined);
-      setPresetFees([]);
-      setCustomFees([]);
+      setLeaseFees([]);
       await loadRooms();
     } catch (e) {
       Taro.showToast({ title: e instanceof Error ? e.message : "更新租约失败", icon: "none" });
@@ -299,15 +291,28 @@ export default function RoomsPage() {
     return { utility, depositRefund, receivable, refundable, net: receivable - refundable };
   }, [previousReadings, terminatingLease, terminationForm]);
 
-  const togglePresetFee = (type: BillItemType) => {
-    setPresetFees((old) => {
-      const exists = old.some((item) => item.type === type);
-      if (exists) return old.filter((item) => item.type !== type);
-      return [...old, { type, amount: "" }];
-    });
+  const addLeaseFee = async () => {
+    const availableTypes = selectableFeeTypes.filter((item) => !leaseFees.some((fee) => fee.type === item.type));
+    if (availableTypes.length === 0) {
+      Taro.showToast({ title: "费用项目已全部添加", icon: "none" });
+      return;
+    }
+    try {
+      const result = await Taro.showActionSheet({ itemList: availableTypes.map((item) => item.label) });
+      const selectedType = availableTypes[result.tapIndex];
+      if (!selectedType) return;
+      setLeaseFees((old) => [...old, { id: `${selectedType.type}-${Date.now()}`, type: selectedType.type, name: selectedType.label, amount: "" }]);
+    } catch {
+      // User cancelled the action sheet.
+    }
   };
-  const updatePresetFeeAmount = (type: BillItemType, amount: string) => {
-    setPresetFees((old) => old.map((item) => (item.type === type ? { ...item, amount } : item)));
+
+  const updateLeaseFeeAmount = (id: string, amount: string) => {
+    setLeaseFees((old) => old.map((item) => (item.id === id ? { ...item, amount } : item)));
+  };
+
+  const removeLeaseFee = (id: string) => {
+    setLeaseFees((old) => old.filter((item) => item.id !== id));
   };
 
   if (!currentOrgId) {
@@ -399,8 +404,12 @@ export default function RoomsPage() {
                             setEditingLease(roomActiveLease);
                             setEditLeaseForm({ rentAmount: String(roomActiveLease.rentAmount ?? ""), depositAmount: String(roomActiveLease.depositAmount ?? ""), waterUnitPrice: String(roomActiveLease.waterUnitPrice ?? 0), powerUnitPrice: String(roomActiveLease.powerUnitPrice ?? 0) });
                             const fees = roomActiveLease.fees ?? [];
-                            setPresetFees(fees.filter((fee) => presetFeeTypes.some((p) => p.type === fee.type)).map((fee) => ({ type: fee.type, amount: String(fee.amount) })));
-                            setCustomFees(fees.filter((fee) => !presetFeeTypes.some((p) => p.type === fee.type)).map((fee) => ({ id: `${Date.now()}-${Math.random()}`, name: fee.name, amount: String(fee.amount) })));
+                            setLeaseFees(fees.map((fee) => ({
+                              id: fee.id,
+                              type: fee.type,
+                              name: fee.name || feeTypeLabels[fee.type] || "其他费用",
+                              amount: String(fee.amount)
+                            })));
                           }}>编辑租约</Button>
                           <Button variant="danger" size="small" onClick={() => openTermination(roomActiveLease)}>退租</Button>
                         </View>
@@ -443,11 +452,11 @@ export default function RoomsPage() {
       <TaskSheet
         visible={!!leaseRoom}
         title="签约入住"
-        onClose={() => { setLeaseRoomId(undefined); setPresetFees([]); setCustomFees([]); }}
+        onClose={() => { setLeaseRoomId(undefined); setLeaseFees([]); }}
         footer={(
           <>
             <Button onClick={createLease}>确认签约</Button>
-            <Button variant="ghost" onClick={() => { setLeaseRoomId(undefined); setPresetFees([]); setCustomFees([]); }}>取消</Button>
+            <Button variant="ghost" onClick={() => { setLeaseRoomId(undefined); setLeaseFees([]); }}>取消</Button>
           </>
         )}
       >
@@ -497,37 +506,26 @@ export default function RoomsPage() {
               </>
             ) : null}
             <Text className="field-label">费用项目</Text>
-            {presetFeeTypes.map(({ type, label }) => {
-              const selected = presetFees.find((item) => item.type === type);
-              return (
-                <View key={type} style={{ marginBottom: 8 }}>
-                  <View className={`fee-card ${selected ? 'fee-card--active' : ''}`} onClick={() => togglePresetFee(type)}>
-                    <Text className={selected ? "card-title" : "text-muted"}>{label}</Text>
-                    <Text className={selected ? "card-stat" : "text-muted"}>{selected ? `¥${money(selected.amount)}` : "点击添加"}</Text>
-                  </View>
-                  {selected ? <Input label={`${label}金额`} placeholder="请输入金额" type="number" value={selected.amount} onChange={(value) => updatePresetFeeAmount(type, value)} /> : null}
+            <View className="fee-list">
+              {leaseFees.map((item) => (
+                <View key={item.id} className="fee-row">
+                  <Text className="fee-row__type">{item.name}</Text>
+                  <Input label="" placeholder="价格" type="number" value={item.amount} onChange={(value) => updateLeaseFeeAmount(item.id, value)} />
+                  <Text className="danger-text" onClick={() => removeLeaseFee(item.id)}>删除</Text>
                 </View>
-              );
-            })}
-            {customFees.length > 0 ? <Text className="field-label">其他费用</Text> : null}
-            {customFees.map((item, index) => (
-              <View key={item.id} className="custom-fee-row">
-                <Input label="费用名称" placeholder="例如 网费" value={item.name} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, name: value } : f)))} />
-                <Input label="费用金额" placeholder="请输入金额" type="number" value={item.amount} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, amount: value } : f)))} />
-                <Text className="danger-text" onClick={() => setCustomFees((old) => old.filter((_, i) => i !== index))}>删除</Text>
-              </View>
-            ))}
-            <Button variant="secondary" size="small" onClick={() => setCustomFees((old) => [...old, { id: `${Date.now()}-${old.length}`, name: "", amount: "" }])}>添加其他费用</Button>
+              ))}
+            </View>
+            <Button variant="secondary" size="small" onClick={addLeaseFee}>添加费用</Button>
       </TaskSheet>
 
       <TaskSheet
         visible={!!editingLease}
         title="编辑租约"
-        onClose={() => { setEditingLease(undefined); setPresetFees([]); setCustomFees([]); }}
+        onClose={() => { setEditingLease(undefined); setLeaseFees([]); }}
         footer={(
           <>
             <Button onClick={updateLease}>保存修改</Button>
-            <Button variant="ghost" onClick={() => { setEditingLease(undefined); setPresetFees([]); setCustomFees([]); }}>取消</Button>
+            <Button variant="ghost" onClick={() => { setEditingLease(undefined); setLeaseFees([]); }}>取消</Button>
           </>
         )}
       >
@@ -540,27 +538,16 @@ export default function RoomsPage() {
               <Input label="电费单价" placeholder="元/度" type="number" value={editLeaseForm.powerUnitPrice} onChange={(value) => setEditLeaseForm((old) => ({ ...old, powerUnitPrice: value }))} />
             </View>
             <Text className="field-label">费用项目</Text>
-            {presetFeeTypes.map(({ type, label }) => {
-              const selected = presetFees.find((item) => item.type === type);
-              return (
-                <View key={type} style={{ marginBottom: 8 }}>
-                  <View className={`fee-card ${selected ? 'fee-card--active' : ''}`} onClick={() => togglePresetFee(type)}>
-                    <Text className={selected ? "card-title" : "text-muted"}>{label}</Text>
-                    <Text className={selected ? "card-stat" : "text-muted"}>{selected ? `¥${money(selected.amount)}` : "点击添加"}</Text>
-                  </View>
-                  {selected ? <Input label={`${label}金额`} placeholder="请输入金额" type="number" value={selected.amount} onChange={(value) => updatePresetFeeAmount(type, value)} /> : null}
+            <View className="fee-list">
+              {leaseFees.map((item) => (
+                <View key={item.id} className="fee-row">
+                  <Text className="fee-row__type">{item.name}</Text>
+                  <Input label="" placeholder="价格" type="number" value={item.amount} onChange={(value) => updateLeaseFeeAmount(item.id, value)} />
+                  <Text className="danger-text" onClick={() => removeLeaseFee(item.id)}>删除</Text>
                 </View>
-              );
-            })}
-            {customFees.length > 0 ? <Text className="field-label">其他费用</Text> : null}
-            {customFees.map((item, index) => (
-              <View key={item.id} className="custom-fee-row">
-                <Input label="费用名称" placeholder="例如 网费" value={item.name} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, name: value } : f)))} />
-                <Input label="费用金额" placeholder="请输入金额" type="number" value={item.amount} onChange={(value) => setCustomFees((old) => old.map((f, i) => (i === index ? { ...f, amount: value } : f)))} />
-                <Text className="danger-text" onClick={() => setCustomFees((old) => old.filter((_, i) => i !== index))}>删除</Text>
-              </View>
-            ))}
-            <Button variant="secondary" size="small" onClick={() => setCustomFees((old) => [...old, { id: `${Date.now()}-${old.length}`, name: "", amount: "" }])}>添加其他费用</Button>
+              ))}
+            </View>
+            <Button variant="secondary" size="small" onClick={addLeaseFee}>添加费用</Button>
       </TaskSheet>
 
       <TaskSheet
