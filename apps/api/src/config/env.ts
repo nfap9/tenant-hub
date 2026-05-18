@@ -9,7 +9,7 @@ config({ path: resolve(__dirname, "../../../../.env") });
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
-  JWT_SECRET: z.string().min(12).default("tenant-hub-dev-secret"),
+  JWT_SECRET: z.string().min(32).default("tenant-hub-dev-secret"),
   JWT_EXPIRES_IN: z.string().default("7d"),
   CORS_ORIGINS: z.string().default("http://localhost:5173,http://localhost:8081,http://localhost:19006"),
   PORT: z.coerce.number().default(4000),
