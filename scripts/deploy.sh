@@ -194,10 +194,10 @@ if ! ufw status | grep -q "Status: active"; then
     exit 1
 fi
 
-for svc in ssh http https; do
-    if ! ufw status | grep -q "$svc"; then
-        err "ufw 未放行 $svc 端口"
-        err "请执行: sudo ufw allow $svc"
+for rule in "22/tcp" "80/tcp" "443/tcp"; do
+    if ! ufw status | grep -q "$rule"; then
+        err "ufw 未放行 $rule"
+        err "请执行: sudo ufw allow $rule"
         exit 1
     fi
 done
