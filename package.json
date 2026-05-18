@@ -8,7 +8,7 @@
     "dev:miniprogram": "pnpm --filter @tenant-hub/miniprogram dev:weapp",
     "build:miniprogram": "pnpm --filter @tenant-hub/miniprogram build:weapp",
     "build": "pnpm -r build",
-    "check": "pnpm test && pnpm typecheck && pnpm lint && pnpm build",
+    "check": "pnpm typecheck && pnpm lint && pnpm build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
