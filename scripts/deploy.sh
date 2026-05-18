@@ -174,6 +174,26 @@ if ! docker info &>/dev/null; then
     exit 1
 fi
 
+# Docker Compose 命令检测
+if docker compose version &>/dev/null; then
+    DOCKER_CMD="docker"
+    DOCKER_COMPOSE_CMD="docker compose"
+elif command -v docker-compose &>/dev/null; then
+    DOCKER_CMD="docker-compose"
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    err "未检测到可用的 Docker Compose 命令"
+    err "请安装 Docker Compose 插件或独立版本: https://docs.docker.com/compose/install/"
+    exit 1
+fi
+
+# curl（Ubuntu Server 最小安装可能未预装）
+if ! command -v curl &> /dev/null; then
+    err "curl 未安装"
+    err "请执行: sudo apt install -y curl"
+    exit 1
+fi
+
 # Certbot
 if ! command -v certbot &> /dev/null; then
     err "Certbot 未安装"
@@ -241,17 +261,21 @@ ok "ops-web 构建完成"
 # ============================================
 
 info "生成 nginx 配置文件..."
-cat > "$PROJECT_DIR/scripts/nginx-container.conf" << EOF
+
+cert_path="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+key_path="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+
+# 生成完整 HTTPS 配置（含 80 端口强制跳转）
+generate_full_nginx_conf() {
+    cat > "$PROJECT_DIR/scripts/nginx-container.conf" << EOF
 server {
     listen 80;
     server_name _;
 
-    # ACME 挑战（Let's Encrypt 证书申请）
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
 
-    # 其他请求强制 HTTPS
     location / {
         return 301 https://\$host\$request_uri;
     }
@@ -267,14 +291,12 @@ server {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
 
-    # 运营端静态文件（通过 volume 挂载）
     location / {
         root /usr/share/nginx/html;
         index index.html;
         try_files \$uri \$uri.html \$uri/ /index.html;
     }
 
-    # API 反向代理
     location /api/ {
         proxy_pass http://api:4000;
         proxy_http_version 1.1;
@@ -286,6 +308,47 @@ server {
     }
 }
 EOF
+}
+
+# 生成临时 HTTP 配置（首次部署无证书时使用）
+generate_http_nginx_conf() {
+    cat > "$PROJECT_DIR/scripts/nginx-container.conf" << EOF
+server {
+    listen 80;
+    server_name _;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files \$uri \$uri.html \$uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://api:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 60s;
+    }
+}
+EOF
+}
+
+if [[ -f "$cert_path" ]] && [[ -f "$key_path" ]]; then
+    generate_full_nginx_conf
+else
+    info "首次部署或证书缺失，先生成 HTTP 配置用于证书申请..."
+    generate_http_nginx_conf
+fi
 ok "nginx 配置已生成"
 
 # ============================================
@@ -294,7 +357,7 @@ ok "nginx 配置已生成"
 
 info "[4/5] 启动 Docker 服务..."
 
-$DOCKER_CMD compose -f docker-compose.prod.yml --env-file .env.production up -d --force-recreate
+$DOCKER_COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.production up -d --force-recreate
 
 ok "Docker 服务已启动"
 
@@ -309,7 +372,7 @@ while true; do
     fi
     if [[ "$WAITED" -ge "$MAX_WAIT" ]]; then
         err "API 服务在 ${MAX_WAIT} 秒内未就绪"
-        err "请查看日志: $DOCKER_CMD compose -f docker-compose.prod.yml logs api"
+        err "请查看日志: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs api"
         exit 1
     fi
     sleep 3
@@ -360,8 +423,9 @@ else
         # 使用 webroot 模式申请证书（nginx 运行在 Docker 容器中，无法使用 --nginx 插件）
         sudo certbot certonly --webroot -w /var/www/certbot -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL"
         ok "HTTPS 证书申请成功"
-        # 重载 nginx 使新证书生效
-        $DOCKER_CMD compose -f docker-compose.prod.yml exec nginx nginx -s reload || warn "nginx 重载失败，请手动检查"
+        # 重新生成完整 HTTPS 配置并重载 nginx
+        generate_full_nginx_conf
+        $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml exec nginx nginx -s reload || warn "nginx 重载失败，请手动检查"
     else
         warn "域名 DNS 未正确指向本机，跳过证书申请"
         echo ""
@@ -378,39 +442,41 @@ fi
 # ============================================
 
 info "配置数据库自动备份..."
-cat > "$PROJECT_DIR/scripts/backup-db.sh" << 'EOF'
+cat > "$PROJECT_DIR/scripts/backup-db.sh" << EOF
 #!/bin/bash
 set -euo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BACKUP_DIR="$PROJECT_DIR/backups"
+DOCKER_COMPOSE_CMD="$DOCKER_COMPOSE_CMD"
+
+PROJECT_DIR="\$(cd "\$(dirname "\$0")/.." && pwd)"
+BACKUP_DIR="\$PROJECT_DIR/backups"
 RETENTION_DAYS=30
 
 # 获取 postgres 容器 ID
-CONTAINER=$(docker compose -f "$PROJECT_DIR/docker-compose.prod.yml" ps -q postgres 2>/dev/null || true)
-if [[ -z "$CONTAINER" ]]; then
-    echo "[$(date)] ERROR: postgres container not found" >&2
+CONTAINER=\$("\$DOCKER_COMPOSE_CMD" -f "\$PROJECT_DIR/docker-compose.prod.yml" ps -q postgres 2>/dev/null || true)
+if [[ -z "\$CONTAINER" ]]; then
+    echo "[\$(date)] ERROR: postgres container not found" >&2
     exit 1
 fi
 
-DB_NAME=$(docker exec "$CONTAINER" printenv POSTGRES_DB 2>/dev/null || echo "tenant_hub")
-DB_USER=$(docker exec "$CONTAINER" printenv POSTGRES_USER 2>/dev/null || echo "postgres")
+DB_NAME=\$(docker exec "\$CONTAINER" printenv POSTGRES_DB 2>/dev/null || echo "tenant_hub")
+DB_USER=\$(docker exec "\$CONTAINER" printenv POSTGRES_USER 2>/dev/null || echo "postgres")
 
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/tenant_hub_$DATE.sql"
+DATE=\$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="\$BACKUP_DIR/tenant_hub_\$DATE.sql"
 
-mkdir -p "$BACKUP_DIR"
+mkdir -p "\$BACKUP_DIR"
 
-if ! docker exec "$CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" > "$BACKUP_FILE"; then
-    echo "[$(date)] ERROR: pg_dump failed" >&2
-    rm -f "$BACKUP_FILE"
+if ! docker exec "\$CONTAINER" pg_dump -U "\$DB_USER" -d "\$DB_NAME" > "\$BACKUP_FILE"; then
+    echo "[\$(date)] ERROR: pg_dump failed" >&2
+    rm -f "\$BACKUP_FILE"
     exit 1
 fi
 
-gzip "$BACKUP_FILE"
-find "$BACKUP_DIR" -name "tenant_hub_*.sql.gz" -mtime +$RETENTION_DAYS -delete
+gzip "\$BACKUP_FILE"
+find "\$BACKUP_DIR" -name "tenant_hub_*.sql.gz" -mtime +\$RETENTION_DAYS -delete
 
-echo "[$(date)] Backup completed: ${BACKUP_FILE}.gz"
+echo "[\$(date)] Backup completed: \${BACKUP_FILE}.gz"
 EOF
 chmod +x "$PROJECT_DIR/scripts/backup-db.sh"
 
@@ -463,9 +529,9 @@ echo "  运营端:   https://$DOMAIN"
 echo "  API:      https://$DOMAIN/api"
 echo ""
 echo "常用命令:"
-echo "  查看日志:    cd $PROJECT_DIR && docker compose -f docker-compose.prod.yml logs -f"
-echo "  查看状态:    cd $PROJECT_DIR && docker compose -f docker-compose.prod.yml ps"
-echo "  重启服务:    cd $PROJECT_DIR && docker compose -f docker-compose.prod.yml restart"
+echo "  查看日志:    cd $PROJECT_DIR && $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f"
+echo "  查看状态:    cd $PROJECT_DIR && $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml ps"
+echo "  重启服务:    cd $PROJECT_DIR && $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml restart"
 echo "  备份数据库:  $PROJECT_DIR/scripts/backup-db.sh"
 echo ""
 
@@ -475,11 +541,4 @@ if ! command -v fail2ban-server &> /dev/null; then
     warn "安装命令: sudo apt install -y fail2ban && sudo systemctl enable --now fail2ban"
 fi
 
-# 如果 Docker 组权限尚未生效，提示用户
-if ! docker info &>/dev/null 2>&1; then
-    if groups | grep -q '\bdocker\b'; then
-        warn "当前用户已加入 docker 组，但会话未加载权限"
-        warn "建议执行: newgrp docker"
-        warn "或退出 SSH 重新登录"
-    fi
-fi
+
