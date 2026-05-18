@@ -1,5 +1,7 @@
 import Taro from '@tarojs/taro';
 
+declare const API_BASE_URL: string;
+
 const normalizeLocalApiUrl = (url: string) => url.replace('http://localhost:', 'http://127.0.0.1:');
 
 /**
@@ -12,7 +14,7 @@ export function getApiBaseUrl(): string {
     // 正式版小程序返回生产域名
     const info = Taro.getAccountInfoSync?.();
     if (info?.miniProgram?.envVersion === 'release') {
-      return 'https://api.tenanthub.example.com/api'; // 部署前替换为真实域名
+      return API_BASE_URL;
     }
   } catch {
     // 非小程序环境（如 H5 预览）忽略

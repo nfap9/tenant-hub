@@ -12,7 +12,9 @@ const config = {
   sourceRoot: 'src',
   outputRoot: 'dist',
   plugins: [],
-  defineConstants: {},
+  defineConstants: {
+    API_BASE_URL: JSON.stringify(process.env.API_BASE_URL || 'http://127.0.0.1:4000/api')
+  },
   alias: {
     '@': path.resolve(__dirname, '..', 'src')
   },
