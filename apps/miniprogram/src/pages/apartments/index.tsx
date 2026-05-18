@@ -21,9 +21,7 @@ const emptyApartmentForm = {
   landlordPhone: "",
   contractStart: "",
   contractEnd: "",
-  rentAmount: "",
-  waterUnitPrice: "0",
-  powerUnitPrice: "0"
+  rentAmount: ""
 };
 
 const emptyRoomForm = {
@@ -191,9 +189,7 @@ export default function ApartmentsPage() {
         landlordPhone: optionalText(form.landlordPhone),
         contractStart: optionalText(form.contractStart),
         contractEnd: optionalText(form.contractEnd),
-        rentAmount: optionalNumber(form.rentAmount),
-        waterUnitPrice: Number(form.waterUnitPrice || 0),
-        powerUnitPrice: Number(form.powerUnitPrice || 0)
+        rentAmount: optionalNumber(form.rentAmount)
       };
       const path = selectedApartment ? `/apartments/${selectedApartment.id}` : "/apartments";
       const method = selectedApartment ? "PUT" : "POST";
@@ -363,7 +359,7 @@ export default function ApartmentsPage() {
                 </View>
                 <View className="detail-row">
                   <Text className="text-muted">{item.floors} 层 · 总面积 {item.totalArea ?? "未填"}㎡</Text>
-                  <Text className="text-muted">水 {money(item.waterUnitPrice)} / 电 {money(item.powerUnitPrice)}</Text>
+                  <Text className="text-muted">{rooms.length} 间房</Text>
                 </View>
                 <View className="detail-row">
                   <Text className="card-stat">本月收入 ¥{money(monthlyIncome)}</Text>
@@ -426,11 +422,6 @@ export default function ApartmentsPage() {
             <DateField label="合同结束日期" placeholder="选择日期" value={form.contractEnd} onChange={(value) => updateForm("contractEnd", value)} />
             <Input label="上游租金" placeholder="每期金额" type="number" value={form.rentAmount} onChange={(value) => updateForm("rentAmount", value)} />
           </View>
-          <Text className="section-label">水电单价</Text>
-          <View className="form-grid">
-            <Input label="水费单价" placeholder="元/吨" type="number" value={form.waterUnitPrice} onChange={(value) => updateForm("waterUnitPrice", value)} />
-            <Input label="电费单价" placeholder="元/度" type="number" value={form.powerUnitPrice} onChange={(value) => updateForm("powerUnitPrice", value)} />
-          </View>
           <Button loading={saving} disabled={saving} onClick={saveApartment}>
             {mode === "create" ? "创建公寓" : "保存公寓信息"}
           </Button>
@@ -492,10 +483,6 @@ export default function ApartmentsPage() {
                 <View className="detail-row">
                   <Text className="text-muted">上游租金</Text>
                   <Text className="card-stat">¥{money(selectedApartment.rentAmount)}</Text>
-                </View>
-                <View className="detail-row">
-                  <Text className="text-muted">水电单价</Text>
-                  <Text className="text-muted">水 ¥{money(selectedApartment.waterUnitPrice)} · 电 ¥{money(selectedApartment.powerUnitPrice)}</Text>
                 </View>
                 <View className="detail-row">
                   <Text className="text-muted">房间数量</Text>

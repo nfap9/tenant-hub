@@ -84,8 +84,6 @@ export type Apartment = {
   contractStart?: string;
   contractEnd?: string;
   rentAmount?: string | number;
-  waterUnitPrice: string | number;
-  powerUnitPrice: string | number;
   rooms?: Room[];
   expenses?: ApartmentExpense[];
 };

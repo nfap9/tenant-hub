@@ -371,12 +371,6 @@ export default function RoomsPage() {
 
               {expanded ? (
                 <>
-                  <View className="detail-panel">
-                    <View className="detail-row">
-                      <Text className="text-muted">水电单价</Text>
-                      <Text className="text-muted">水 ¥{money(room.apartment?.waterUnitPrice)} · 电 ¥{money(room.apartment?.powerUnitPrice)}</Text>
-                    </View>
-                  </View>
                   <View className="action-row-inline">
                     {canManageRoom ? <Button variant="secondary" size="small" onClick={() => {
                       setRoomForm({ roomNo: room.roomNo, layout: room.layout, area: room.area ? String(room.area) : "", facilities: room.facilities.join(","), status: room.status });

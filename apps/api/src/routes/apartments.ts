@@ -22,9 +22,7 @@ const apartmentInput = z.object({
   landlordPhone: z.string().optional(),
   contractStart: z.coerce.date().optional(),
   contractEnd: z.coerce.date().optional(),
-  rentAmount: z.coerce.number().optional(),
-  waterUnitPrice: z.coerce.number().default(0),
-  powerUnitPrice: z.coerce.number().default(0)
+  rentAmount: z.coerce.number().optional()
 });
 
 const ensureApartmentInOrg = async (apartmentId: string, organizationId: string) => {

@@ -230,8 +230,6 @@ model Apartment {
   contractStart  DateTime?
   contractEnd    DateTime?
   rentAmount     Decimal?     @db.Decimal(12, 2)
-  waterUnitPrice  Decimal      @default(0) @db.Decimal(10, 2)
-  powerUnitPrice  Decimal      @default(0) @db.Decimal(10, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
