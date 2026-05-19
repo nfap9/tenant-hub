@@ -2,12 +2,13 @@ import { describe, it, expect } from "vitest";
 import {
   calculateBillingPeriods,
   calculateUtilityAmount,
+  calculateUtilityLineAmounts,
   generateCurrentLeaseBills,
   getCurrentMonthBillWindow,
   getBillMonthLabel,
   getBillingDatesThrough,
   shouldGeneratePostpaidBill
-} from "./billing.js";
+} from "../../src/services/billing.js";
 
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
@@ -105,5 +106,19 @@ describe("billing", () => {
 
   it("should format bill month label correctly", () => {
     expect(getBillMonthLabel(date("2026-07-01"))).toBe("2026年7月");
+  });
+
+  it("should calculate utility line amounts separately", () => {
+    const result = calculateUtilityLineAmounts({
+      previousWater: 10,
+      currentWater: 18,
+      waterUnitPrice: 4,
+      previousPower: 100,
+      currentPower: 160,
+      powerUnitPrice: 0.8
+    });
+
+    expect(result.waterAmount.toString()).toBe("32");
+    expect(result.powerAmount.toString()).toBe("48");
   });
 });

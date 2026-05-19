@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ensurePlatformAdmin, ensureSystemSettings } from "./adminInit.js";
+import { ensurePlatformAdmin, ensureSystemSettings } from "../../src/services/adminInit.js";
 
 vi.mock("bcryptjs", () => ({
   default: {

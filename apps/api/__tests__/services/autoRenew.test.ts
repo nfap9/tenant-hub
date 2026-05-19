@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { processAutoRenewLeases } from "./autoRenew.js";
+import { processAutoRenewLeases } from "../../src/services/autoRenew.js";
 
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
-vi.mock("../config/prisma.js", () => ({
+vi.mock("../../src/config/prisma.js", () => ({
   prisma: {
     lease: {
       findMany: vi.fn(),
@@ -12,12 +12,12 @@ vi.mock("../config/prisma.js", () => ({
   }
 }));
 
-vi.mock("./billing.js", () => ({
+vi.mock("../../src/services/billing.js", () => ({
   generateLeaseBills: vi.fn()
 }));
 
-import { prisma } from "../config/prisma.js";
-import { generateLeaseBills } from "./billing.js";
+import { prisma } from "../../src/config/prisma.js";
+import { generateLeaseBills } from "../../src/services/billing.js";
 
 describe("autoRenew", () => {
   beforeEach(() => {

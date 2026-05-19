@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseUtilityImportRows } from "./utilityImport.js";
+import { parseUtilityImportRows } from "../../src/services/utilityImport.js";
 
 describe("utility import", () => {
   it("should parse basic CSV rows", () => {

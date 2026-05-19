@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assertInviteJoinable, buildInviteExpiry, normalizeInviteCode } from "./orgInvites.js";
+import { assertInviteJoinable, buildInviteExpiry, normalizeInviteCode } from "../../src/services/orgInvites.js";
 
 describe("org invites", () => {
   const now = new Date("2026-05-05T12:00:00.000Z");

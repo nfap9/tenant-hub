@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { PERMISSIONS, ensureSystemRoles } from "./roles.js";
+import { PERMISSIONS, ensureSystemRoles } from "../../src/services/roles.js";
 
 describe("roles", () => {
   it("should define all required permissions", () => {

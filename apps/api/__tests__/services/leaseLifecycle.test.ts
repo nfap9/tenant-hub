@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assertExpiredTerminationAllowed, getLeaseBillGenerationEnd, isAutoRenewalPeriod } from "./leaseLifecycle.js";
+import { assertExpiredTerminationAllowed, getLeaseBillGenerationEnd, isAutoRenewalPeriod } from "../../src/services/leaseLifecycle.js";
 
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 

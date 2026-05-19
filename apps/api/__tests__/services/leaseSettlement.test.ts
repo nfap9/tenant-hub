@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateSettlementAmounts, getSettlementDirection, validateMoveOutReadings } from "./leaseSettlement.js";
+import { calculateSettlementAmounts, getSettlementDirection, validateMoveOutReadings } from "../../src/services/leaseSettlement.js";
 
 describe("lease settlement", () => {
   const base = {

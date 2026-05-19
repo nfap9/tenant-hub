@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseEnv } from "./env.js";
+import { parseEnv } from "../../src/config/env.js";
 
 describe("env config", () => {
   it("should require an explicit JWT secret in production", () => {

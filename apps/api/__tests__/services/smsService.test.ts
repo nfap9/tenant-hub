@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { sendSms } from "./smsService.js";
+import { sendSms } from "../../src/services/smsService.js";
 
 describe("sms service", () => {
   const originalFetch = globalThis.fetch;

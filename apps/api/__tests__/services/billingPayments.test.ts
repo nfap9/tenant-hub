@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Prisma } from "@prisma/client";
-import { assertBillPaymentAllowed, assertMonthlyBillPaymentAllowed } from "./billing.js";
+import { assertBillPaymentAllowed, assertMonthlyBillPaymentAllowed } from "../../src/services/billing.js";
 
 describe("billing payments", () => {
   it("should allow paying the exact remaining amount", () => {

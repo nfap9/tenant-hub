@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toCsv } from "./csv.js";
+import { toCsv } from "../../src/services/csv.js";
 
 describe("csv", () => {
   it("should not quote plain CSV values", () => {
