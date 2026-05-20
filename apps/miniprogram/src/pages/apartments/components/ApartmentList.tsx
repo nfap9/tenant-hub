@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import { Button, Card, EmptyState } from '../../../components/ui';
 import { money } from '../../../utils/format';
 import { apartmentMonthlyIncome, apartmentMonthlyExpense } from '../utils';
@@ -7,19 +8,20 @@ import type { Apartment } from '../../../types/domain';
 interface ApartmentListProps {
   apartments: Apartment[];
   canManageApartment: boolean;
-  onOpenDetail: (id: string) => void;
-  onCreate: () => void;
-  onRecordExpense: (apartmentId: string) => void;
 }
 
-export function ApartmentList({ apartments, canManageApartment, onOpenDetail, onCreate, onRecordExpense }: ApartmentListProps) {
+export function ApartmentList({ apartments, canManageApartment }: ApartmentListProps) {
+  const handleCreate = () => {
+    Taro.navigateTo({ url: '/pages/apartments/form' });
+  };
+
   return (
     <Card
       title="公寓列表"
-      headerAction={canManageApartment ? <Button variant="secondary" size="small" onClick={onCreate}>新建</Button> : undefined}
+      headerAction={canManageApartment ? <Button variant="secondary" size="small" onClick={handleCreate}>新建</Button> : undefined}
     >
       {apartments.length === 0 ? (
-        <EmptyState icon="apartment" title="暂无公寓" subtitle="点击新建开始维护" action={<Button onClick={onCreate}>新建公寓</Button>} />
+        <EmptyState icon="apartment" title="暂无公寓" subtitle="点击新建开始维护" action={<Button onClick={handleCreate}>新建公寓</Button>} />
       ) : null}
       {apartments.map((item) => {
         const rooms = item.rooms ?? [];
@@ -27,7 +29,7 @@ export function ApartmentList({ apartments, canManageApartment, onOpenDetail, on
         const monthlyIncome = apartmentMonthlyIncome(item);
         const monthlyExpense = apartmentMonthlyExpense(item);
         return (
-          <View key={item.id} className="apartment-card" onClick={() => onOpenDetail(item.id)}>
+          <View key={item.id} className="apartment-card" onClick={() => Taro.navigateTo({ url: `/pages/apartments/detail?id=${item.id}` })}>
             <View className="apartment-card-header">
               <View>
                 <Text className="card-title">{item.name}</Text>
@@ -44,7 +46,7 @@ export function ApartmentList({ apartments, canManageApartment, onOpenDetail, on
               <Text className="text-muted">本月花费 ¥{money(monthlyExpense)}</Text>
             </View>
             {canManageApartment ? (
-              <View onClick={(e) => { e.stopPropagation(); onRecordExpense(item.id); }}>
+              <View onClick={(e) => { e.stopPropagation(); Taro.navigateTo({ url: `/pages/apartments/expense?apartmentId=${item.id}` }); }}>
                 <Button variant="ghost" size="small">记录花费</Button>
               </View>
             ) : null}
