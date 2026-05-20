@@ -1,4 +1,5 @@
 import { ScrollView, View, Text } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import { Button, Card, EmptyState, Badge } from '../../../components/ui';
 import { money } from '../../../utils/format';
 import { statusLabels, toneForStatus, filters, cycleLabels } from '../constants';
@@ -14,17 +15,13 @@ interface RoomListProps {
   canManageLease: boolean;
   onFilterChange: (filter: RoomStatus | "ALL") => void;
   onSelectRoom: (id: string) => void;
-  onEditRoom: (room: Room) => void;
   onDeleteRoom: (room: Room) => void;
-  onLeaseRoom: (roomId: string) => void;
-  onEditLease: (room: Room) => void;
-  onTerminateLease: (room: Room) => void;
 }
 
 export function RoomList({
   rooms, filter, vacantCount, occupiedCount, selectedId,
   canManageRoom, canManageLease,
-  onFilterChange, onSelectRoom, onEditRoom, onDeleteRoom, onLeaseRoom, onEditLease, onTerminateLease
+  onFilterChange, onSelectRoom, onDeleteRoom
 }: RoomListProps) {
   const visibleRooms = filter === "ALL" ? rooms : rooms.filter((item) => item.status === filter);
 
@@ -78,8 +75,8 @@ export function RoomList({
               {expanded ? (
                 <>
                   <View className="action-row-inline">
-                    {canManageRoom ? <View onClick={(e) => e.stopPropagation()}><Button variant="secondary" size="small" onClick={() => onEditRoom(room)}>编辑房间</Button></View> : null}
-                    {room.status === "VACANT" && canManageLease ? <View onClick={(e) => e.stopPropagation()}><Button size="small" onClick={() => onLeaseRoom(room.id)}>签约入住</Button></View> : null}
+                    {canManageRoom ? <View onClick={(e) => e.stopPropagation()}><Button variant="secondary" size="small" onClick={() => Taro.navigateTo({ url: `/pages/rooms/room-form?roomId=${room.id}` })}>编辑房间</Button></View> : null}
+                    {room.status === "VACANT" && canManageLease ? <View onClick={(e) => e.stopPropagation()}><Button size="small" onClick={() => Taro.navigateTo({ url: `/pages/rooms/lease-form?roomId=${room.id}` })}>签约入住</Button></View> : null}
                     {canManageRoom ? <View onClick={(e) => e.stopPropagation()}><Button variant="danger" size="small" onClick={() => onDeleteRoom(room)}>删除房间</Button></View> : null}
                   </View>
 
@@ -93,8 +90,8 @@ export function RoomList({
                       <View className="detail-row"><Text className="text-muted">自动续约</Text><Text className="text-muted">{roomActiveLease.autoRenew ? (roomActiveLease.isAutoRenewalPeriod ? "自动续约中" : "到期后自动续约") : "不自动续约"}</Text></View>
                       {canManageLease ? (
                         <View className="action-row-inline">
-                          <View onClick={(e) => e.stopPropagation()}><Button variant="secondary" size="small" onClick={() => onEditLease(room)}>编辑租约</Button></View>
-                          <View onClick={(e) => e.stopPropagation()}><Button variant="danger" size="small" onClick={() => onTerminateLease(room)}>退租</Button></View>
+                          <View onClick={(e) => e.stopPropagation()}><Button variant="secondary" size="small" onClick={() => Taro.navigateTo({ url: `/pages/rooms/lease-edit?roomId=${room.id}` })}>编辑租约</Button></View>
+                          <View onClick={(e) => e.stopPropagation()}><Button variant="danger" size="small" onClick={() => Taro.navigateTo({ url: `/pages/rooms/lease-terminate?roomId=${room.id}` })}>退租</Button></View>
                         </View>
                       ) : null}
                     </View>
