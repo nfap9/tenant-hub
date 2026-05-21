@@ -27,6 +27,9 @@ jobs:
           version: 10.33.0
           run_install: true
 
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
       - name: Lint (all)
         run: pnpm lint
 
@@ -34,29 +37,9 @@ jobs:
         run: pnpm typecheck
 
   api-checks:
-    name: API Lint & Typecheck & Test
+    name: API Lint & Typecheck & Build
     runs-on: ubuntu-latest
     needs: root-checks
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: tenant_hub
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d tenant_hub"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 20
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tenant_hub?schema=public
-      JWT_SECRET: ci-test-secret-do-not-use-in-production
-      JWT_EXPIRES_IN: 7d
-      PORT: 4000
-      NODE_ENV: test
 
     steps:
       - name: Checkout
@@ -77,18 +60,14 @@ jobs:
         working-directory: apps/api
         run: pnpm prisma generate
 
-      - name: Run Prisma Migrations
-        working-directory: apps/api
-        run: pnpm prisma migrate deploy
-
       - name: Typecheck
         run: pnpm --filter @tenant-hub/api typecheck
 
       - name: Lint
         run: pnpm --filter @tenant-hub/api lint
 
-      - name: Test
-        run: pnpm --filter @tenant-hub/api test
+      - name: Build
+        run: pnpm --filter @tenant-hub/api build
 
   ops-web-checks:
     name: Ops Web Lint & Typecheck & Build

@@ -1,5 +1,13 @@
 pipeline {
-    agent any
+    // ============================================================
+    // 节点配置说明
+    // ============================================================
+    // Jenkins 现有两个节点：master（控制器）、agent-2c（工作节点）
+    // 遵循 Jenkins 最佳实践：master 仅做调度，所有构建/测试/部署在 agent-2c 执行。
+    // 如需调整 Deploy 阶段的运行节点（例如目标服务器是 master），
+    // 请将下方 agent 改为 agent none，并在具体 stage 中通过 agent { label 'xxx' } 指定。
+    // ============================================================
+    agent { label 'agent-2c' }
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '20'))
@@ -18,7 +26,6 @@ pipeline {
         NODE_VERSION = '22'
         PNPM_VERSION = '10.33.0'
         PROJECT_DIR = "${WORKSPACE}"
-        // DEPLOY_DIR removed: single-server mode deploys directly from workspace
         // 构建阶段使用的测试环境变量（非敏感）
         TEST_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5433/tenant_hub_test?schema=public'
         TEST_JWT_SECRET = 'jenkins-test-secret-do-not-use-in-production'
