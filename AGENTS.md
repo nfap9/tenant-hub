@@ -47,6 +47,10 @@
 | 部署指南 | `docs/deployment-guide.md` |
 | Docker 生产编排 | `docker-compose.prod.yml` |
 | Docker 开发编排 | `docker-compose.dev.yml` |
-| CI 工作流 | `.github/workflows/api-ci.yml`, `.github/workflows/ops-web-ci.yml`, `.github/workflows/pr-check.yml` |
+| CI 工作流 (GitHub) | `.github/workflows/api-ci.yml`, `.github/workflows/ops-web-ci.yml`, `.github/workflows/pr-check.yml`, `.github/workflows/release.yml` |
+| CI/CD 流水线 (Jenkins) | `Jenkinsfile`, `docker-compose.infra.yml` |
+| Agent 环境初始化 | `scripts/jenkins-init-agent.sh` |
+| Jenkins 部署脚本 | `scripts/jenkins-deploy.sh` |
+| Nginx 反向代理 | `scripts/nginx-reverse-proxy.conf` |
 | 发布脚本 | `scripts/release.js` |
 | 提交校验 | `scripts/verify-commit.js` |
