@@ -40,18 +40,12 @@ pipeline {
                     node -v || { echo "Node.js not found"; exit 1; }
 
                     echo "=== pnpm Version ==="
-                    if ! command -v pnpm &> /dev/null || [ "$(pnpm -v | cut -d'.' -f1)" != "10" ]; then
-                        echo "Installing pnpm ${PNPM_VERSION}..."
-                        npm install -g pnpm@${PNPM_VERSION}
-                    fi
+                    pnpm -v || npm install -g pnpm@${PNPM_VERSION}
                     pnpm -v
 
                     echo "=== Docker Version ==="
                     docker -v || { echo "Docker not found"; exit 1; }
                     docker compose version || { echo "Docker Compose not found"; exit 1; }
-
-                    echo "=== PM2 Version ==="
-                    pm2 -v || { echo "PM2 not found"; exit 1; }
                 '''
             }
         }
@@ -214,6 +208,7 @@ pipeline {
                 // 清理工作区中可能残留的数据库容器
                 sh 'docker rm -f tenant-hub-postgres-test 2>/dev/null || true'
             }
+            cleanWs()
         }
         success {
             echo "✅ Pipeline completed successfully"
