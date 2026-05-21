@@ -1,5 +1,5 @@
 pipeline {
-    agent { label '4c8g' }
+    agent any
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '20'))
@@ -18,7 +18,7 @@ pipeline {
         NODE_VERSION = '22'
         PNPM_VERSION = '10.33.0'
         PROJECT_DIR = "${WORKSPACE}"
-        DEPLOY_DIR = "${HOME}/tenant-hub"
+        // DEPLOY_DIR removed: single-server mode deploys directly from workspace
         // 构建阶段使用的测试环境变量（非敏感）
         TEST_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5433/tenant_hub_test?schema=public'
         TEST_JWT_SECRET = 'jenkins-test-secret-do-not-use-in-production'
@@ -189,27 +189,19 @@ pipeline {
                 branch 'main'
             }
             steps {
-                // 从 Jenkins Credentials 中安全读取生产环境变量
+                // 从 Jenkins Credentials 读取生产环境变量文件
                 withCredentials([
-                    string(credentialsId: 'tenant-hub-database-url', variable: 'CRED_DATABASE_URL'),
-                    string(credentialsId: 'tenant-hub-jwt-secret', variable: 'CRED_JWT_SECRET'),
-                    string(credentialsId: 'tenant-hub-jwt-expires-in', variable: 'CRED_JWT_EXPIRES_IN'),
-                    string(credentialsId: 'tenant-hub-vite-api-url', variable: 'CRED_VITE_API_BASE_URL'),
-                    string(credentialsId: 'tenant-hub-api-base-url', variable: 'CRED_API_BASE_URL'),
-                    string(credentialsId: 'tenant-hub-cors-origins', variable: 'CRED_CORS_ORIGINS'),
-                    string(credentialsId: 'tenant-hub-platform-admin-phone', variable: 'CRED_PLATFORM_ADMIN_PHONE'),
-                    string(credentialsId: 'tenant-hub-platform-admin-password', variable: 'CRED_PLATFORM_ADMIN_PASSWORD'),
-                    string(credentialsId: 'tenant-hub-postgres-db', variable: 'CRED_POSTGRES_DB'),
-                    string(credentialsId: 'tenant-hub-postgres-user', variable: 'CRED_POSTGRES_USER'),
-                    string(credentialsId: 'tenant-hub-postgres-password', variable: 'CRED_POSTGRES_PASSWORD'),
+                    file(credentialsId: 'tenant-hub-env-file', variable: 'ENV_FILE'),
                 ]) {
                     sh '''#!/bin/bash
                         set -e
-                        echo "=== Starting Deployment ==="
-                        bash scripts/jenkins-deploy.sh \
-                            --project-dir "${DEPLOY_DIR}" \
-                            --build-number "${BUILD_NUMBER}" \
-                            --git-commit "${GIT_COMMIT}"
+                        echo "=== Preparing production env file ==="
+                        cp "$ENV_FILE" .env.production
+
+                        echo "=== Deploying on Local Server ==="
+                        docker compose -f docker-compose.prod.yml up -d --build
+                        echo "=== Deployment Complete ==="
+                        docker compose -f docker-compose.prod.yml ps
                     '''
                 }
             }
