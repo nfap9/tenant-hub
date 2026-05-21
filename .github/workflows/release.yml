@@ -1,4 +1,4 @@
-name: Release
+name: Release Check
 
 on:
   push:
@@ -8,117 +8,139 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository }}
-
 jobs:
-  build-and-push-api:
-    name: Build & Push API Image
+  root-checks:
+    name: Root Config Check
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: 22
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api
-          tags: |
-            type=sha,prefix=,suffix=,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
+          version: 10.33.0
+          run_install: true
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          target: production
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Lint (all)
+        run: pnpm lint
 
-  build-and-push-ops-web:
-    name: Build & Push Ops Web Image
+      - name: Typecheck (all)
+        run: pnpm typecheck
+
+  api-checks:
+    name: API Lint & Typecheck & Test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/ops-web
-          tags: |
-            type=sha,prefix=,suffix=,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/ops-web/Dockerfile
-          target: production
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'http://localhost:4000/api' }}
-
-  deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [build-and-push-api, build-and-push-ops-web]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Deploy to server via SSH
-        uses: appleboy/ssh-action@v1
+    needs: root-checks
+    services:
+      postgres:
+        image: postgres:16-alpine
         env:
-          GH_REPO: ${{ github.repository }}
+          POSTGRES_DB: tenant_hub
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tenant_hub"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tenant_hub?schema=public
+      JWT_SECRET: ci-test-secret-do-not-use-in-production
+      JWT_EXPIRES_IN: 7d
+      PORT: 4000
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          command_timeout: 300s
-          envs: GH_REPO
-          script: |
-            set -e
-            cd ~/tenant-hub
-            echo "[DEPLOY] Pulling latest code..."
-            git remote set-url origin git@github.com:${GH_REPO}.git 2>/dev/null || true
-            git pull origin main
-            echo "[DEPLOY] Running deploy script..."
-            bash scripts/deploy.sh --domain www.shen00.top --email admin@shen00.top
-            echo "[DEPLOY] Deployment completed successfully"
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: true
+
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: pnpm prisma generate
+
+      - name: Run Prisma Migrations
+        working-directory: apps/api
+        run: pnpm prisma migrate deploy
+
+      - name: Typecheck
+        run: pnpm --filter @tenant-hub/api typecheck
+
+      - name: Lint
+        run: pnpm --filter @tenant-hub/api lint
+
+      - name: Test
+        run: pnpm --filter @tenant-hub/api test
+
+  ops-web-checks:
+    name: Ops Web Lint & Typecheck & Build
+    runs-on: ubuntu-latest
+    needs: root-checks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: true
+
+      - name: Typecheck
+        run: pnpm --filter @tenant-hub/ops-web typecheck
+
+      - name: Lint
+        run: pnpm --filter @tenant-hub/ops-web lint
+
+      - name: Build
+        run: pnpm --filter @tenant-hub/ops-web build
+
+  miniprogram-checks:
+    name: Miniprogram Build
+    runs-on: ubuntu-latest
+    needs: root-checks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: true
+
+      - name: Build Weapp
+        run: pnpm --filter @tenant-hub/miniprogram build:weapp
+
+      - name: Build H5
+        env:
+          API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'http://localhost:4000/api' }}
+        run: pnpm --filter @tenant-hub/miniprogram build:h5
