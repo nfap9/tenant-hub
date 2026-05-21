@@ -58,6 +58,15 @@ ios/
 # Docker local data
 docker-data/
 
+# Environment-specific scripts and docs (keep local only)
+scripts/deploy.sh
+scripts/jenkins-deploy.sh
+scripts/jenkins-init-agent.sh
+scripts/nginx-container.conf
+scripts/nginx-reverse-proxy.conf
+scripts/nginx-site.conf
+docs/deployment-guide.md
+
 # OS and editor
 .DS_Store
 Thumbs.db
