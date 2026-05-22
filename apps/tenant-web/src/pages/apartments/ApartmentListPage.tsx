@@ -15,6 +15,7 @@ import { money, day } from '@/utils/format';
 import { apartmentMonthlyIncome, apartmentMonthlyExpense } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import './ApartmentListPage.scss';
 
 export default function ApartmentListPage() {
   const navigate = useNavigate();
@@ -86,13 +87,7 @@ export default function ApartmentListPage() {
             />
           </Card>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-              gap: 24,
-            }}
-          >
+          <div className="apartments-grid">
             {apartments.map((apt) => {
               const roomCount = apt.rooms?.length ?? 0;
               const occupiedCount =
@@ -105,22 +100,13 @@ export default function ApartmentListPage() {
                   key={apt.id}
                   hoverable
                   title={
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-                    >
-                      <HomeOutlined style={{ color: 'var(--th-primary)' }} />
-                      <span
-                        style={{
-                          fontFamily: 'var(--th-font-heading)',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {apt.name}
-                      </span>
+                    <div className="card-title">
+                      <HomeOutlined className="text-primary" />
+                      <span className="card-title-text">{apt.name}</span>
                     </div>
                   }
                   extra={
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    <div className="card-extra">
                       <Tooltip title="详情">
                         <Button
                           type="text"
@@ -163,121 +149,34 @@ export default function ApartmentListPage() {
                     </div>
                   }
                 >
-                  <div style={{ marginBottom: 16 }}>
+                  <div className="tag-row">
                     <Tag color="blue">{apt.location || '未填写地址'}</Tag>
-                    <Tag
-                      style={{
-                        color: 'var(--th-foreground-muted)',
-                        background: 'var(--th-surface-hover)',
-                        borderColor: 'var(--th-border)',
-                      }}
-                    >
-                      {apt.floors} 层
-                    </Tag>
+                    <Tag className="floors-tag">{apt.floors} 层</Tag>
                   </div>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: 16,
-                      padding: 'var(--th-space-4)',
-                      background: 'var(--th-bg)',
-                      borderRadius: 'var(--th-radius)',
-                    }}
-                  >
+                  <div className="stats-grid">
                     <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--th-foreground-muted)',
-                          marginBottom: 4,
-                        }}
-                      >
-                        房间数
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 18,
-                          fontWeight: 700,
-                          fontFamily: 'var(--th-font-heading)',
-                          color: 'var(--th-foreground)',
-                        }}
-                      >
-                        {roomCount} 间
-                      </div>
+                      <div className="stat-label">房间数</div>
+                      <div className="stat-value">{roomCount} 间</div>
                     </div>
                     <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--th-foreground-muted)',
-                          marginBottom: 4,
-                        }}
-                      >
-                        在租
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 18,
-                          fontWeight: 700,
-                          fontFamily: 'var(--th-font-heading)',
-                          color: 'var(--th-foreground)',
-                        }}
-                      >
-                        {occupiedCount} 间
-                      </div>
+                      <div className="stat-label">在租</div>
+                      <div className="stat-value">{occupiedCount} 间</div>
                     </div>
                     <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--th-foreground-muted)',
-                          marginBottom: 4,
-                        }}
-                      >
-                        本月收入
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 18,
-                          fontWeight: 700,
-                          fontFamily: 'var(--th-font-heading)',
-                          color: 'var(--th-success)',
-                        }}
-                      >
+                      <div className="stat-label">本月收入</div>
+                      <div className="stat-value stat-value--success">
                         ¥{money(income)}
                       </div>
                     </div>
                     <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--th-foreground-muted)',
-                          marginBottom: 4,
-                        }}
-                      >
-                        本月支出
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 18,
-                          fontWeight: 700,
-                          fontFamily: 'var(--th-font-heading)',
-                          color: 'var(--th-danger)',
-                        }}
-                      >
+                      <div className="stat-label">本月支出</div>
+                      <div className="stat-value stat-value--danger">
                         ¥{money(expense)}
                       </div>
                     </div>
                   </div>
                   {apt.contractStart && (
-                    <div
-                      style={{
-                        marginTop: 16,
-                        fontSize: 13,
-                        color: 'var(--th-foreground-muted)',
-                      }}
-                    >
+                    <div className="contract-period">
                       合同期：{day(apt.contractStart)} 至 {day(apt.contractEnd)}
                     </div>
                   )}

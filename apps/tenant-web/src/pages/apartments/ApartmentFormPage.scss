@@ -1,0 +1,18 @@
+.apartment-form-card {
+  max-width: 720px;
+
+  .ant-input-number,
+  .ant-picker {
+    width: 100%;
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.cancel-btn {
+  margin-left: 12px;
+}

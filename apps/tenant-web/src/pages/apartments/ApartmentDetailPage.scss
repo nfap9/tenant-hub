@@ -1,0 +1,95 @@
+.apartment-detail-page {
+  .action-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  .flex-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .info-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .info-label {
+    min-width: 70px;
+    color: var(--th-foreground-muted);
+  }
+
+  .info-value {
+    font-weight: 500;
+  }
+
+  .expense-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: var(--th-radius-sm);
+    background: var(--th-surface-hover);
+  }
+
+  .expense-amount {
+    font-weight: 600;
+    color: var(--th-danger);
+  }
+
+  .rooms-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .rooms-title-text {
+    font-family: var(--th-font-heading);
+    font-weight: 600;
+  }
+
+  .rooms-stats {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--th-foreground-muted);
+  }
+
+  .rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .room-card-title-text {
+    font-weight: 600;
+    font-family: var(--th-font-heading);
+  }
+
+  .room-layout {
+    margin-bottom: 8px;
+    color: var(--th-foreground-muted);
+  }
+
+  .room-facilities {
+    font-size: 12px;
+    margin-bottom: 12px;
+    color: var(--th-foreground-subtle);
+  }
+}

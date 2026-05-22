@@ -15,6 +15,7 @@ import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { createApartmentExpense } from '@/api/apartments';
 import { optionalText } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
+import './ApartmentExpensePage.scss';
 
 export default function ApartmentExpensePage() {
   const { id } = useParams<{ id: string }>();
@@ -63,7 +64,7 @@ export default function ApartmentExpensePage() {
         ]}
       />
 
-      <Card style={{ maxWidth: 600 }}>
+      <Card className="expense-form-card">
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             label="花费名称"
@@ -72,11 +73,7 @@ export default function ApartmentExpensePage() {
           >
             <Input
               size="large"
-              prefix={
-                <FormOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
+              prefix={<FormOutlined className="text-subtle" />}
               placeholder="例如 维修材料"
             />
           </Form.Item>
@@ -88,12 +85,8 @@ export default function ApartmentExpensePage() {
             <InputNumber
               min={0}
               size="large"
-              style={{ width: '100%' }}
-              prefix={
-                <DollarOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
+              className="w-full"
+              prefix={<DollarOutlined className="text-subtle" />}
               placeholder="请输入金额"
             />
           </Form.Item>
@@ -103,7 +96,7 @@ export default function ApartmentExpensePage() {
             rules={[{ required: true, message: '请选择日期' }]}
             initialValue={dayjs()}
           >
-            <DatePicker size="large" style={{ width: '100%' }} />
+            <DatePicker size="large" className="w-full" />
           </Form.Item>
           <Form.Item label="备注" name="note">
             <Input.TextArea rows={3} placeholder="可选" />
@@ -121,7 +114,7 @@ export default function ApartmentExpensePage() {
             </Button>
             <Button
               size="large"
-              style={{ marginLeft: 12 }}
+              className="cancel-btn"
               onClick={() => navigate(`/apartments/${id}`)}
             >
               取消

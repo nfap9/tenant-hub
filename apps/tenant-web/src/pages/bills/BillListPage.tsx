@@ -45,6 +45,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Bill, BillStatus, MonthlyBill } from '@/types/domain';
+import './BillListPage.scss';
 
 export default function BillListPage() {
   const { currentOrgId } = useAppSession();
@@ -149,80 +150,32 @@ export default function BillListPage() {
       <Card
         key={bill.id}
         size="small"
-        style={{ marginBottom: 12, cursor: 'pointer' }}
+        className="bill-card cursor-pointer"
         onClick={() => navigate(`/bills/monthly/${bill.id}`)}
         bodyStyle={{ padding: 'var(--th-space-5)' }}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-          }}
-        >
+        <div className="flex-start">
           <div>
-            <div
-              style={{
-                fontWeight: 600,
-                fontSize: 15,
-                fontFamily: 'var(--th-font-heading)',
-                color: 'var(--th-foreground)',
-              }}
-            >
-              {summary.title}
-            </div>
-            <div
-              style={{
-                color: 'var(--th-foreground-muted)',
-                fontSize: 13,
-                marginTop: 2,
-              }}
-            >
-              {summary.meta}
-            </div>
+            <div className="bill-card-title">{summary.title}</div>
+            <div className="bill-card-meta">{summary.meta}</div>
           </div>
           <Tag color={toneForBillStatus(bill.status)}>
             {statusLabels[bill.status]}
           </Tag>
         </div>
-        <div
-          style={{
-            marginTop: 12,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <div
-            style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: 'var(--th-primary)',
-              fontFamily: 'var(--th-font-heading)',
-            }}
-          >
-            ¥{money(summary.totalAmount)}
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ color: 'var(--th-foreground-muted)', fontSize: 13 }}>
+        <div className="bill-card-footer">
+          <div className="bill-card-amount">¥{money(summary.totalAmount)}</div>
+          <div className="text-right">
+            <div className="bill-card-muted">
               剩余 ¥{money(summary.remainingAmount)}
             </div>
-            <div style={{ color: 'var(--th-foreground-subtle)', fontSize: 13 }}>
+            <div className="bill-card-subtle">
               已收 ¥{money(summary.paidAmount)}
             </div>
           </div>
         </div>
-        <div
-          style={{
-            marginTop: 8,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span style={{ color: 'var(--th-foreground-subtle)', fontSize: 12 }}>
-            {summary.detailCountText}
-          </span>
+        <div className="bill-card-actions">
+          <span className="bill-card-count">{summary.detailCountText}</span>
           <Space>
             {showDelete && bill.status !== 'PAID' && (
               <Button
@@ -251,35 +204,16 @@ export default function BillListPage() {
     <Card
       key={bill.id}
       size="small"
-      style={{ marginBottom: 12 }}
+      className="bill-card"
       bodyStyle={{ padding: 'var(--th-space-5)' }}
     >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-        }}
-      >
+      <div className="flex-start">
         <div>
-          <div
-            style={{
-              fontWeight: 600,
-              fontSize: 15,
-              fontFamily: 'var(--th-font-heading)',
-              color: 'var(--th-foreground)',
-            }}
-          >
+          <div className="bill-card-title">
             {bill.lease?.tenantName ?? '租客'} ·{' '}
             {bill.lease?.room?.roomNo ?? '房间'}
           </div>
-          <div
-            style={{
-              color: 'var(--th-foreground-muted)',
-              fontSize: 13,
-              marginTop: 2,
-            }}
-          >
+          <div className="bill-card-meta">
             {bill.periodStart?.slice(0, 10)} 至 {bill.periodEnd?.slice(0, 10)}
           </div>
         </div>
@@ -287,11 +221,11 @@ export default function BillListPage() {
           {statusLabels[bill.status]}
         </Tag>
       </div>
-      <div style={{ marginTop: 8, color: 'var(--th-danger)', fontSize: 14 }}>
-        <ExclamationCircleOutlined style={{ marginRight: 6 }} />
+      <div className="bill-card-alert">
+        <ExclamationCircleOutlined className="bill-list-alert-icon" />
         {bill.failureReason ?? '需要补录或修正水电读数'}
       </div>
-      <div style={{ marginTop: 12 }}>
+      <div className="pending-actions">
         <Space>
           <Button size="small" onClick={() => handleRetry(bill)}>
             重新出账
@@ -328,7 +262,7 @@ export default function BillListPage() {
 
       <Spin spinning={loading}>
         {/* 统计 */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Row gutter={[16, 16]} className="stats-row">
           {tab === 'unpaid' && (
             <>
               <Col xs={24} sm={12}>
@@ -382,7 +316,7 @@ export default function BillListPage() {
         </Row>
 
         {/* 操作栏 */}
-        <div style={{ marginBottom: 16 }}>
+        <div className="mb-16">
           <Space>
             {tab === 'unpaid' && (
               <Button
@@ -470,11 +404,11 @@ export default function BillListPage() {
                     prefix={<SearchOutlined />}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ marginBottom: 16 }}
+                    className="mb-16"
                     allowClear
                     size="large"
                   />
-                  <Space wrap style={{ marginBottom: 16 }}>
+                  <Space wrap className="mb-16">
                     {(
                       [
                         '',

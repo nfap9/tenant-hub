@@ -1,0 +1,58 @@
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.filter-card {
+  margin-bottom: 16px;
+
+  .ant-card-body {
+    padding: var(--th-space-4) var(--th-space-6);
+  }
+}
+
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.room-title {
+  font-family: var(--th-font-heading);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.room-meta {
+  font-size: 12px;
+  color: var(--th-foreground-subtle);
+  margin-bottom: 12px;
+}
+
+.lease-info {
+  background: var(--th-success-bg);
+  padding: 12px;
+  border-radius: var(--th-radius-sm);
+  margin-bottom: 12px;
+  font-size: 13px;
+  border: 1px solid var(--th-border-light);
+}
+
+.lease-tenant {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--th-foreground);
+}
+
+.lease-rent {
+  margin-bottom: 2px;
+  color: var(--th-foreground-muted);
+}
+
+.room-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

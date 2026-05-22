@@ -32,6 +32,7 @@ import {
 } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import './LeaseTerminatePage.scss';
 
 export default function LeaseTerminatePage() {
   const { id } = useParams<{ id: string }>();
@@ -171,7 +172,7 @@ export default function LeaseTerminatePage() {
       />
 
       <Spin spinning={loading}>
-        <div style={{ maxWidth: 720 }}>
+        <div className="lease-terminate-container">
           <Card>
             {lease ? (
               <Form form={form} layout="vertical" onFinish={handleSubmit}>
@@ -197,69 +198,39 @@ export default function LeaseTerminatePage() {
                   rules={[{ required: true }]}
                 >
                   <DatePicker
-                    style={{ width: '100%' }}
+                    className="w-full"
                     size="large"
                     prefix={<CalendarOutlined />}
                   />
                 </Form.Item>
 
-                <Divider
-                  orientation="left"
-                  style={{
-                    color: 'var(--th-foreground-muted)',
-                    fontWeight: 600,
-                  }}
-                >
+                <Divider orientation="left" className="section-divider">
                   押金与房租
                 </Divider>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: 8,
-                    padding: '0 8px',
-                    color: 'var(--th-foreground-muted)',
-                  }}
-                >
+                <div className="summary-row flex-between mb-8 text-muted">
                   <span>原押金</span>
-                  <span
-                    style={{ fontWeight: 500, color: 'var(--th-foreground)' }}
-                  >
+                  <span className="summary-value">
                     ¥{money(lease.depositAmount)}
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: 16,
-                    padding: '0 8px',
-                    color: 'var(--th-foreground-muted)',
-                  }}
-                >
+                <div className="summary-row flex-between mb-16 text-muted">
                   <span>预计退押金</span>
-                  <span style={{ fontWeight: 500, color: 'var(--th-success)' }}>
+                  <span className="summary-value text-success">
                     ¥{money(preview.depositRefund)}
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 16,
-                  }}
-                >
+                <div className="form-grid-2">
                   <Form.Item label="押金扣款" name="depositDeductionAmount">
                     <InputNumber
                       min={0}
-                      style={{ width: '100%' }}
+                      className="w-full"
                       prefix="¥"
                       size="large"
                     />
                   </Form.Item>
                   <Form.Item label="房租退补" name="rentAdjustmentAmount">
                     <InputNumber
-                      style={{ width: '100%' }}
+                      className="w-full"
                       prefix="¥"
                       placeholder="正数补收，负数退款"
                       size="large"
@@ -274,54 +245,26 @@ export default function LeaseTerminatePage() {
                   />
                 </Form.Item>
 
-                <Divider
-                  orientation="left"
-                  style={{
-                    color: 'var(--th-foreground-muted)',
-                    fontWeight: 600,
-                  }}
-                >
+                <Divider orientation="left" className="section-divider">
                   水电读数
                 </Divider>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 16,
-                  }}
-                >
+                <div className="form-grid-2">
                   <Form.Item
                     label={`退租水表读数（上次 ${money(previousReadings.previousWater)}）`}
                     name="currentWater"
                   >
-                    <InputNumber
-                      min={0}
-                      style={{ width: '100%' }}
-                      size="large"
-                    />
+                    <InputNumber min={0} className="w-full" size="large" />
                   </Form.Item>
                   <Form.Item
                     label={`退租电表读数（上次 ${money(previousReadings.previousPower)}）`}
                     name="currentPower"
                   >
-                    <InputNumber
-                      min={0}
-                      style={{ width: '100%' }}
-                      size="large"
-                    />
+                    <InputNumber min={0} className="w-full" size="large" />
                   </Form.Item>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: 16,
-                    padding: '0 8px',
-                    color: 'var(--th-foreground-muted)',
-                  }}
-                >
+                <div className="summary-row flex-between mb-16 text-muted">
                   <span>预估水电费</span>
-                  <span style={{ fontWeight: 500, color: 'var(--th-warning)' }}>
+                  <span className="summary-value text-warning">
                     ¥{money(preview.utility)}
                   </span>
                 </div>
@@ -329,7 +272,7 @@ export default function LeaseTerminatePage() {
                 <Form.Item label="其他费用" name="otherFeeAmount">
                   <InputNumber
                     min={0}
-                    style={{ width: '100%' }}
+                    className="w-full"
                     prefix="¥"
                     size="large"
                   />
@@ -342,65 +285,25 @@ export default function LeaseTerminatePage() {
                   />
                 </Form.Item>
 
-                <Divider
-                  orientation="left"
-                  style={{
-                    color: 'var(--th-foreground-muted)',
-                    fontWeight: 600,
-                  }}
-                >
+                <Divider orientation="left" className="section-divider">
                   结算预览
                 </Divider>
-                <div
-                  style={{
-                    background: 'var(--th-surface-hover)',
-                    padding: 16,
-                    borderRadius: 'var(--th-radius-sm)',
-                    marginBottom: 16,
-                    border: '1px solid var(--th-border-light)',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      marginBottom: 8,
-                      color: 'var(--th-foreground-muted)',
-                    }}
-                  >
+                <div className="settlement-preview mb-16">
+                  <div className="flex-between mb-8 text-muted">
                     <span>应收</span>
-                    <span
-                      style={{ fontWeight: 500, color: 'var(--th-foreground)' }}
-                    >
+                    <span className="summary-value">
                       ¥{money(preview.receivable)}
                     </span>
                   </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      marginBottom: 8,
-                      color: 'var(--th-foreground-muted)',
-                    }}
-                  >
+                  <div className="flex-between mb-8 text-muted">
                     <span>应退</span>
-                    <span
-                      style={{ fontWeight: 500, color: 'var(--th-foreground)' }}
-                    >
+                    <span className="summary-value">
                       ¥{money(preview.refundable)}
                     </span>
                   </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      paddingTop: 8,
-                      borderTop: '1px solid var(--th-border)',
-                      color: 'var(--th-foreground-muted)',
-                    }}
-                  >
+                  <div className="summary-result flex-between text-muted">
                     <span>结算结果</span>
-                    <span style={{ fontWeight: 600, color: netColor }}>
+                    <span className="summary-net" style={{ color: netColor }}>
                       {preview.net > 0
                         ? `租客补交 ¥${money(preview.net)}`
                         : preview.net < 0
@@ -419,11 +322,11 @@ export default function LeaseTerminatePage() {
                     message="当前租约已进入自动续约期，到期后退房不默认视为违约。"
                     type="info"
                     showIcon
-                    style={{ marginBottom: 16 }}
+                    className="mb-16"
                   />
                 )}
 
-                <Form.Item style={{ marginTop: 24 }}>
+                <Form.Item className="form-actions">
                   <Button
                     type="primary"
                     danger
@@ -437,7 +340,7 @@ export default function LeaseTerminatePage() {
                   </Button>
                   <Button
                     size="large"
-                    style={{ marginLeft: 12 }}
+                    className="cancel-btn"
                     onClick={() => navigate('/rooms')}
                   >
                     取消

@@ -23,6 +23,7 @@ import { contractText } from './utils';
 import { statusLabels, toneForStatus } from './constants';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import './ApartmentDetailPage.scss';
 
 export default function ApartmentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -127,7 +128,7 @@ export default function ApartmentDetailPage() {
   };
 
   return (
-    <div className="page-content">
+    <div className="page-content apartment-detail-page">
       <PageHeader
         back="/apartments"
         breadcrumb={[
@@ -136,7 +137,7 @@ export default function ApartmentDetailPage() {
         ]}
         actions={
           canManageApartment && (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="action-group">
               <Button
                 icon={<EditOutlined />}
                 onClick={() => navigate(`/apartments/${id}/edit`)}
@@ -167,122 +168,43 @@ export default function ApartmentDetailPage() {
               key: 'detail',
               label: '公寓详情',
               children: (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fill, minmax(320px, 1fr))',
-                    gap: 24,
-                  }}
-                >
+                <div className="detail-grid">
                   <Card
                     title={
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <HomeOutlined style={{ color: 'var(--th-primary)' }} />
+                      <div className="flex-row">
+                        <HomeOutlined className="text-primary" />
                         基本信息
                       </div>
                     }
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 14,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <EnvironmentOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          地址
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                    <div className="info-card-body">
+                      <div className="flex-row">
+                        <EnvironmentOutlined className="text-subtle" />
+                        <span className="info-label">地址</span>
+                        <span className="info-value">
                           {apartment.location || '未填写'}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <BuildOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          楼层数
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                      <div className="flex-row">
+                        <BuildOutlined className="text-subtle" />
+                        <span className="info-label">楼层数</span>
+                        <span className="info-value">
                           {apartment.floors} 层
                         </span>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <AreaChartOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          占地面积
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                      <div className="flex-row">
+                        <AreaChartOutlined className="text-subtle" />
+                        <span className="info-label">占地面积</span>
+                        <span className="info-value">
                           {apartment.landArea
                             ? `${apartment.landArea} ㎡`
                             : '未填'}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <AreaChartOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          总面积
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                      <div className="flex-row">
+                        <AreaChartOutlined className="text-subtle" />
+                        <span className="info-label">总面积</span>
+                        <span className="info-value">
                           {apartment.totalArea
                             ? `${apartment.totalArea} ㎡`
                             : '未填'}
@@ -293,110 +215,38 @@ export default function ApartmentDetailPage() {
 
                   <Card
                     title={
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <UserOutlined style={{ color: 'var(--th-primary)' }} />
+                      <div className="flex-row">
+                        <UserOutlined className="text-primary" />
                         上游信息
                       </div>
                     }
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 14,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <UserOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          房东姓名
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                    <div className="info-card-body">
+                      <div className="flex-row">
+                        <UserOutlined className="text-subtle" />
+                        <span className="info-label">房东姓名</span>
+                        <span className="info-value">
                           {apartment.landlordName || '未维护'}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <PhoneOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          联系方式
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                      <div className="flex-row">
+                        <PhoneOutlined className="text-subtle" />
+                        <span className="info-label">联系方式</span>
+                        <span className="info-value">
                           {apartment.landlordPhone || '未维护'}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <CalendarOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          合同期
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                      <div className="flex-row">
+                        <CalendarOutlined className="text-subtle" />
+                        <span className="info-label">合同期</span>
+                        <span className="info-value">
                           {contractText(apartment)}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <DollarOutlined
-                          style={{ color: 'var(--th-foreground-subtle)' }}
-                        />
-                        <span
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            minWidth: 70,
-                          }}
-                        >
-                          上游租金
-                        </span>
-                        <span style={{ fontWeight: 500 }}>
+                      <div className="flex-row">
+                        <DollarOutlined className="text-subtle" />
+                        <span className="info-label">上游租金</span>
+                        <span className="info-value">
                           ¥{money(apartment.rentAmount)}
                         </span>
                       </div>
@@ -405,16 +255,8 @@ export default function ApartmentDetailPage() {
 
                   <Card
                     title={
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <DollarOutlined
-                          style={{ color: 'var(--th-primary)' }}
-                        />
+                      <div className="flex-row">
+                        <DollarOutlined className="text-primary" />
                         经营花费
                       </div>
                     }
@@ -446,34 +288,13 @@ export default function ApartmentDetailPage() {
                         }
                       />
                     ) : (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 8,
-                        }}
-                      >
+                      <div className="expense-list">
                         {(apartment.expenses ?? []).map((item) => (
-                          <div
-                            key={item.id}
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '12px 16px',
-                              borderRadius: 'var(--th-radius-sm)',
-                              background: 'var(--th-surface-hover)',
-                            }}
-                          >
-                            <span style={{ color: 'var(--th-foreground)' }}>
+                          <div key={item.id} className="expense-item">
+                            <span>
                               {item.name} · {item.spentAt.slice(0, 10)}
                             </span>
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                color: 'var(--th-danger)',
-                              }}
-                            >
+                            <span className="expense-amount">
                               ¥{money(item.amount)}
                             </span>
                           </div>
@@ -490,38 +311,16 @@ export default function ApartmentDetailPage() {
               children: (
                 <Card
                   title={
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: 'var(--th-font-heading)',
-                          fontWeight: 600,
-                        }}
-                      >
-                        房间概览
-                      </span>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 8,
-                          fontSize: 13,
-                          fontWeight: 500,
-                          color: 'var(--th-foreground-muted)',
-                        }}
-                      >
+                    <div className="rooms-title">
+                      <span className="rooms-title-text">房间概览</span>
+                      <div className="rooms-stats">
                         <span>共 {apartmentRooms.length} 间</span>
                         <span>·</span>
-                        <span style={{ color: 'var(--th-success)' }}>
+                        <span className="text-success">
                           空闲 {apartmentVacantRooms} 间
                         </span>
                         <span>·</span>
-                        <span style={{ color: 'var(--th-warning)' }}>
+                        <span className="text-warning">
                           已租 {apartmentOccupiedRooms} 间
                         </span>
                       </div>
@@ -529,7 +328,7 @@ export default function ApartmentDetailPage() {
                   }
                   extra={
                     canManageRoom && (
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div className="action-group">
                         <Button
                           icon={<PlusOutlined />}
                           onClick={() =>
@@ -565,33 +364,15 @@ export default function ApartmentDetailPage() {
                       }
                     />
                   ) : (
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns:
-                          'repeat(auto-fill, minmax(260px, 1fr))',
-                        gap: 20,
-                      }}
-                    >
+                    <div className="rooms-grid">
                       {apartmentRooms.map((room) => (
                         <Card
                           key={room.id}
                           size="small"
                           hoverable
                           title={
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  fontFamily: 'var(--th-font-heading)',
-                                }}
-                              >
+                            <div className="flex-between">
+                              <span className="room-card-title-text">
                                 {room.roomNo}
                               </span>
                               <Tag
@@ -604,26 +385,15 @@ export default function ApartmentDetailPage() {
                             </div>
                           }
                         >
-                          <div
-                            style={{
-                              marginBottom: 8,
-                              color: 'var(--th-foreground-muted)',
-                            }}
-                          >
+                          <div className="room-layout">
                             {room.layout} ·{' '}
                             {room.area ? `${room.area} ㎡` : '未填面积'}
                           </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: 'var(--th-foreground-subtle)',
-                              marginBottom: 12,
-                            }}
-                          >
+                          <div className="room-facilities">
                             {facilitiesText(room.facilities)}
                           </div>
                           {canManageRoom && (
-                            <div style={{ display: 'flex', gap: 8 }}>
+                            <div className="action-group">
                               <Button
                                 size="small"
                                 onClick={() =>

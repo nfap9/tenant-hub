@@ -1,0 +1,39 @@
+.lease-edit-container {
+  max-width: 720px;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.section-divider {
+  color: var(--th-foreground-muted);
+  font-weight: 600;
+}
+
+.fee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fee-label {
+  width: 90px;
+  display: inline-block;
+  font-weight: 500;
+  color: var(--th-foreground);
+}
+
+.form-actions {
+  margin-top: 24px;
+}
+
+.fee-item {
+  display: flex;
+}
+
+.cancel-btn {
+  margin-left: 12px;
+}

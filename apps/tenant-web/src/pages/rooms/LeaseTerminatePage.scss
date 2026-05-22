@@ -1,0 +1,56 @@
+.lease-terminate-container {
+  max-width: 720px;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.section-divider {
+  color: var(--th-foreground-muted);
+  font-weight: 600;
+}
+
+.summary-row {
+  padding: 0 8px;
+}
+
+.summary-result {
+  padding-top: 8px;
+  border-top: 1px solid var(--th-border);
+}
+
+.summary-value {
+  font-weight: 500;
+  color: var(--th-foreground);
+}
+
+.summary-value.text-success {
+  color: var(--th-success);
+}
+
+.summary-value.text-warning {
+  color: var(--th-warning);
+}
+
+.settlement-preview {
+  background: var(--th-surface-hover);
+  padding: 16px;
+  border-radius: var(--th-radius-sm);
+  margin-bottom: 16px;
+  border: 1px solid var(--th-border-light);
+}
+
+.summary-net {
+  font-weight: 600;
+}
+
+.form-actions {
+  margin-top: 24px;
+}
+
+.cancel-btn {
+  margin-left: 12px;
+}

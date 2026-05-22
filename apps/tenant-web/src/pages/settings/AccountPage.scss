@@ -1,0 +1,23 @@
+@import '@/styles/variables';
+@import '@/styles/mixins';
+
+.settings-card {
+  @include card-elevated;
+}
+
+.settings-card--spaced {
+  margin-bottom: 24px;
+}
+
+.settings-card-title {
+  font-weight: 600;
+  color: $th-foreground;
+
+  .anticon {
+    margin-right: 8px;
+  }
+}
+
+.settings-form {
+  max-width: 600px;
+}

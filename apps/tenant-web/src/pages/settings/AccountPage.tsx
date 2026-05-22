@@ -9,6 +9,7 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { updatePassword } from '@/api/auth';
 import PageHeader from '@/components/ui/PageHeader';
+import './AccountPage.scss';
 
 export default function AccountPage() {
   const { session } = useAppSession();
@@ -62,45 +63,31 @@ export default function AccountPage() {
       />
 
       <Card
+        className="settings-card settings-card--spaced"
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <UserOutlined style={{ marginRight: 8 }} />
+          <span className="settings-card-title">
+            <UserOutlined />
             基本信息
           </span>
         }
-        style={{
-          marginBottom: 24,
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
       >
         <Form
           form={form}
           layout="vertical"
           onFinish={handleUpdateProfile}
-          style={{ maxWidth: 600 }}
+          className="settings-form"
         >
           <Form.Item label="用户名" name="username">
             <Input
               size="large"
-              prefix={
-                <UserOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
-              style={{ borderRadius: 'var(--th-radius)' }}
+              prefix={<UserOutlined className="text-subtle" />}
             />
           </Form.Item>
           <Form.Item label="手机号" name="phone">
             <Input
               size="large"
-              prefix={
-                <MobileOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
+              prefix={<MobileOutlined className="text-subtle" />}
               disabled
-              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item>
@@ -117,22 +104,19 @@ export default function AccountPage() {
       </Card>
 
       <Card
+        className="settings-card"
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <LockOutlined style={{ marginRight: 8 }} />
+          <span className="settings-card-title">
+            <LockOutlined />
             修改密码
           </span>
         }
-        style={{
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
       >
         <Form
           form={passwordForm}
           layout="vertical"
           onFinish={handleUpdatePassword}
-          style={{ maxWidth: 600 }}
+          className="settings-form"
         >
           <Form.Item
             label="原密码"
@@ -141,13 +125,8 @@ export default function AccountPage() {
           >
             <Input.Password
               size="large"
-              prefix={
-                <LockOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
+              prefix={<LockOutlined className="text-subtle" />}
               placeholder="请输入原密码"
-              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item
@@ -160,13 +139,8 @@ export default function AccountPage() {
           >
             <Input.Password
               size="large"
-              prefix={
-                <LockOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
+              prefix={<LockOutlined className="text-subtle" />}
               placeholder="至少 8 位密码"
-              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item
@@ -186,13 +160,8 @@ export default function AccountPage() {
           >
             <Input.Password
               size="large"
-              prefix={
-                <LockOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
+              prefix={<LockOutlined className="text-subtle" />}
               placeholder="再次输入新密码"
-              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item>

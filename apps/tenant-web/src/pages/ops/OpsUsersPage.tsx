@@ -3,6 +3,7 @@ import { Card, Input, Select, Table, Tag, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { getAdminUsers, updateUserPlatformRole } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
+import './OpsUsersPage.scss';
 
 const platformRoleOptions = [
   { value: 'USER', label: '普通用户' },
@@ -50,7 +51,7 @@ export default function OpsUsersPage() {
             onChange={(e) => setKeyword(e.target.value)}
             onSearch={load}
             prefix={<SearchOutlined className="text-subtle" />}
-            style={{ width: 280 }}
+            className="search-input"
             size="large"
           />
         }
@@ -85,7 +86,7 @@ export default function OpsUsersPage() {
               render: (_: unknown, row: (typeof users)[0]) => (
                 <Select
                   value={row.platformRole}
-                  style={{ width: 150 }}
+                  className="role-select"
                   size="middle"
                   options={platformRoleOptions}
                   onChange={async (platformRole) => {

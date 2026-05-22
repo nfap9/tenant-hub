@@ -30,6 +30,7 @@ import { getPaymentAmountError } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import type { MonthlyBill } from '@/types/domain';
+import './MonthlyDetailPage.scss';
 
 export default function MonthlyDetailPage() {
   const { currentOrgId } = useAppSession();
@@ -149,43 +150,18 @@ export default function MonthlyDetailPage() {
 
       <Spin spinning={loading}>
         {/* 账单概览 */}
-        <Card style={{ marginBottom: 24 }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-            }}
-          >
+        <Card className="mdp-mb-24">
+          <div className="flex-start">
             <div>
-              <div
-                style={{
-                  fontWeight: 600,
-                  fontSize: 16,
-                  fontFamily: 'var(--th-font-heading)',
-                  color: 'var(--th-foreground)',
-                }}
-              >
-                <HomeOutlined
-                  style={{ marginRight: 6, color: 'var(--th-primary)' }}
-                />
+              <div className="mdp-title">
+                <HomeOutlined className="mdp-icon-primary" />
                 {bill.lease?.room?.roomNo ?? '房间'} · 到期 {day(bill.dueDate)}
               </div>
-              <div
-                style={{ color: 'var(--th-foreground-muted)', marginTop: 6 }}
-              >
+              <div className="mdp-meta">
                 应收 ¥{money(bill.totalAmount)} · 已收 ¥{money(bill.paidAmount)}
               </div>
-              <div
-                style={{
-                  color: 'var(--th-foreground-muted)',
-                  marginTop: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <PhoneOutlined style={{ fontSize: 12 }} />
+              <div className="mdp-phone-row">
+                <PhoneOutlined className="mdp-icon-small" />
                 租客 {bill.tenantName} · {bill.lease?.tenantPhone}
               </div>
             </div>
@@ -199,14 +175,14 @@ export default function MonthlyDetailPage() {
         {canPay && (
           <Card
             title={
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="mdp-card-title">
                 <WalletOutlined />
                 登记收款
               </span>
             }
-            style={{ marginBottom: 24 }}
+            className="mdp-mb-24"
           >
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <Space direction="vertical" className="w-full" size="middle">
               <Input
                 placeholder="收款金额"
                 prefix="¥"
@@ -223,7 +199,7 @@ export default function MonthlyDetailPage() {
                 onChange={(value) =>
                   setPaymentForm((old) => ({ ...old, method: value }))
                 }
-                style={{ width: '100%' }}
+                className="w-full"
                 options={[
                   { label: '线下收款', value: '线下收款' },
                   { label: '现金', value: '现金' },
@@ -256,12 +232,12 @@ export default function MonthlyDetailPage() {
         {/* 子账单明细 */}
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="mdp-card-title">
               <FileTextOutlined />
               账单明细
             </span>
           }
-          style={{ marginBottom: 24 }}
+          className="mdp-mb-24"
         >
           {(bill.bills ?? []).length === 0 ? (
             <EmptyState
@@ -269,36 +245,18 @@ export default function MonthlyDetailPage() {
               description="当前账单暂无明细记录"
             />
           ) : (
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space direction="vertical" className="w-full">
               {(bill.bills ?? []).map((child) => (
-                <div key={child.id} style={{ width: '100%' }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
+                <div key={child.id} className="w-full">
+                  <div className="flex-between">
                     <div>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--th-foreground)',
-                          fontFamily: 'var(--th-font-heading)',
-                        }}
-                      >
+                      <span className="mdp-child-title">
                         {billModeText(child.mode)} · {day(child.periodStart)} 至{' '}
                         {day(child.periodEnd)}
                       </span>
                     </div>
                     <Space>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--th-primary)',
-                          fontFamily: 'var(--th-font-heading)',
-                        }}
-                      >
+                      <span className="mdp-child-amount">
                         ¥{money(child.totalAmount)}
                       </span>
                       {child.status !== 'PAID' && (
@@ -314,26 +272,15 @@ export default function MonthlyDetailPage() {
                       )}
                     </Space>
                   </div>
-                  <div style={{ marginTop: 8, paddingLeft: 16 }}>
+                  <div className="mdp-items-wrap">
                     {(child.items ?? []).map((item) => (
-                      <div
-                        key={item.id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '6px 0',
-                          borderBottom: '1px solid var(--th-border-light)',
-                        }}
-                      >
-                        <span style={{ color: 'var(--th-foreground-muted)' }}>
+                      <div key={item.id} className="mdp-item-row">
+                        <span className="text-muted">
                           {item.name}
                           {item.note ? ` · ${item.note}` : ''}
                         </span>
                         <Space>
-                          <span
-                            style={{ color: 'var(--th-foreground-subtle)' }}
-                          >
+                          <span className="text-subtle">
                             ¥{money(item.amount)}
                           </span>
                           {child.status !== 'PAID' && (
@@ -365,12 +312,12 @@ export default function MonthlyDetailPage() {
                       onClick={() =>
                         navigate(`/bills/utility?billId=${child.id}`)
                       }
-                      style={{ marginTop: 8 }}
+                      className="mdp-btn-mt"
                     >
                       录入本期水电
                     </Button>
                   )}
-                  <Divider style={{ margin: '16px 0' }} />
+                  <Divider className="mdp-divider" />
                 </div>
               ))}
             </Space>
@@ -380,7 +327,7 @@ export default function MonthlyDetailPage() {
         {/* 收款记录 */}
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="mdp-card-title">
               <WalletOutlined />
               收款记录
             </span>
@@ -389,29 +336,14 @@ export default function MonthlyDetailPage() {
           {(bill.payments ?? []).length === 0 ? (
             <EmptyState title="暂无收款记录" description="当前暂无收款记录" />
           ) : (
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space direction="vertical" className="w-full">
               {(bill.payments ?? []).map((payment) => (
-                <div
-                  key={payment.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '10px 0',
-                    borderBottom: '1px solid var(--th-border-light)',
-                  }}
-                >
-                  <span style={{ color: 'var(--th-foreground-muted)' }}>
+                <div key={payment.id} className="mdp-payment-row">
+                  <span className="text-muted">
                     {day(payment.paidAt)} · {payment.method}
                     {payment.note ? ` · ${payment.note}` : ''}
                   </span>
-                  <span
-                    style={{
-                      fontWeight: 600,
-                      color: 'var(--th-primary)',
-                      fontFamily: 'var(--th-font-heading)',
-                    }}
-                  >
+                  <span className="mdp-payment-amount">
                     ¥{money(payment.amount)}
                   </span>
                 </div>

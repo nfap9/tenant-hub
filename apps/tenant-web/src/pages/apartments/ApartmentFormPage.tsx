@@ -30,6 +30,7 @@ import {
 import type { Apartment } from '@/types/domain';
 import { optionalNumber, optionalText } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
+import './ApartmentFormPage.scss';
 
 export default function ApartmentFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -141,7 +142,7 @@ export default function ApartmentFormPage() {
       />
 
       <Spin spinning={loading}>
-        <Card style={{ maxWidth: 720 }}>
+        <Card className="apartment-form-card">
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
             <Form.Item
               label="公寓名称"
@@ -150,11 +151,7 @@ export default function ApartmentFormPage() {
             >
               <Input
                 size="large"
-                prefix={
-                  <HomeOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                prefix={<HomeOutlined className="text-subtle" />}
                 placeholder="例如 阳光公寓"
               />
             </Form.Item>
@@ -165,11 +162,7 @@ export default function ApartmentFormPage() {
             >
               <Input
                 size="large"
-                prefix={
-                  <EnvironmentOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                prefix={<EnvironmentOutlined className="text-subtle" />}
                 placeholder="请输入地址或片区"
               />
             </Form.Item>
@@ -181,32 +174,18 @@ export default function ApartmentFormPage() {
               <InputNumber
                 min={1}
                 size="large"
-                style={{ width: '100%' }}
-                prefix={
-                  <BuildOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                className="w-full"
+                prefix={<BuildOutlined className="text-subtle" />}
                 placeholder="例如 6"
               />
             </Form.Item>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
+            <div className="form-row">
               <Form.Item label="占地面积（㎡）" name="landArea">
                 <InputNumber
                   min={0}
                   size="large"
-                  style={{ width: '100%' }}
-                  prefix={
-                    <AreaChartOutlined
-                      style={{ color: 'var(--th-foreground-subtle)' }}
-                    />
-                  }
+                  className="w-full"
+                  prefix={<AreaChartOutlined className="text-subtle" />}
                   placeholder="例如 500"
                 />
               </Form.Item>
@@ -214,12 +193,8 @@ export default function ApartmentFormPage() {
                 <InputNumber
                   min={0}
                   size="large"
-                  style={{ width: '100%' }}
-                  prefix={
-                    <AreaChartOutlined
-                      style={{ color: 'var(--th-foreground-subtle)' }}
-                    />
-                  }
+                  className="w-full"
+                  prefix={<AreaChartOutlined className="text-subtle" />}
                   placeholder="例如 3000"
                 />
               </Form.Item>
@@ -227,49 +202,31 @@ export default function ApartmentFormPage() {
             <Form.Item label="房东姓名" name="landlordName">
               <Input
                 size="large"
-                prefix={
-                  <UserOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                prefix={<UserOutlined className="text-subtle" />}
                 placeholder="请输入房东姓名"
               />
             </Form.Item>
             <Form.Item label="房东电话" name="landlordPhone">
               <Input
                 size="large"
-                prefix={
-                  <PhoneOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                prefix={<PhoneOutlined className="text-subtle" />}
                 placeholder="请输入手机号"
               />
             </Form.Item>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
+            <div className="form-row">
               <Form.Item label="合同开始日期" name="contractStart">
-                <DatePicker size="large" style={{ width: '100%' }} />
+                <DatePicker size="large" className="w-full" />
               </Form.Item>
               <Form.Item label="合同结束日期" name="contractEnd">
-                <DatePicker size="large" style={{ width: '100%' }} />
+                <DatePicker size="large" className="w-full" />
               </Form.Item>
             </div>
             <Form.Item label="上游租金" name="rentAmount">
               <InputNumber
                 min={0}
                 size="large"
-                style={{ width: '100%' }}
-                prefix={
-                  <DollarOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                className="w-full"
+                prefix={<DollarOutlined className="text-subtle" />}
                 placeholder="每期金额"
               />
             </Form.Item>
@@ -286,7 +243,7 @@ export default function ApartmentFormPage() {
               </Button>
               <Button
                 size="large"
-                style={{ marginLeft: 12 }}
+                className="cancel-btn"
                 onClick={() =>
                   navigate(isEdit ? `/apartments/${id}` : '/apartments')
                 }

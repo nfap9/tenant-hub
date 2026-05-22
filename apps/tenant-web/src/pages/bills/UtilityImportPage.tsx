@@ -9,6 +9,7 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { importUtilityCsv } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
+import './UtilityImportPage.scss';
 
 export default function UtilityImportPage() {
   const { currentOrgId } = useAppSession();
@@ -56,51 +57,23 @@ export default function UtilityImportPage() {
       <Card>
         <Upload.Dragger beforeUpload={handleUpload} maxCount={1} accept=".csv">
           <p className="ant-upload-drag-icon">
-            <UploadOutlined
-              style={{ fontSize: 48, color: 'var(--th-primary)' }}
-            />
+            <UploadOutlined className="import-upload-icon" />
           </p>
-          <p
-            className="ant-upload-text"
-            style={{ fontWeight: 600, color: 'var(--th-foreground)' }}
-          >
+          <p className="ant-upload-text import-upload-text">
             点击或拖拽 CSV 文件到此区域上传
           </p>
-          <p
-            className="ant-upload-hint"
-            style={{ color: 'var(--th-foreground-muted)' }}
-          >
+          <p className="ant-upload-hint text-muted">
             支持 CSV 格式批量导入水电读数
           </p>
         </Upload.Dragger>
 
         {fileContent && (
-          <div style={{ marginTop: 24 }}>
-            <div
-              style={{
-                color: 'var(--th-success)',
-                marginBottom: 12,
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
+          <div className="import-mt-24">
+            <div className="import-success">
               <CheckCircleOutlined />
               文件已读取
             </div>
-            <pre
-              style={{
-                background: 'var(--th-surface-hover)',
-                padding: 'var(--th-space-4)',
-                borderRadius: 'var(--th-radius)',
-                maxHeight: 200,
-                overflow: 'auto',
-                fontSize: 12,
-                border: '1px solid var(--th-border-light)',
-                color: 'var(--th-foreground-muted)',
-              }}
-            >
+            <pre className="import-pre">
               {fileContent.slice(0, 2000)}
               {fileContent.length > 2000 ? '...' : ''}
             </pre>
@@ -109,7 +82,7 @@ export default function UtilityImportPage() {
 
         <Button
           type="primary"
-          style={{ marginTop: 24 }}
+          className="import-mt-24"
           loading={submitting}
           onClick={handleSubmit}
           disabled={!fileContent}

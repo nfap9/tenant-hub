@@ -1,0 +1,48 @@
+@import '@/styles/variables';
+@import '@/styles/mixins';
+
+.settings-card {
+  @include card-elevated;
+}
+
+.settings-card--spaced {
+  margin-bottom: 24px;
+}
+
+.settings-card-title {
+  font-weight: 600;
+  color: $th-foreground;
+
+  .anticon {
+    margin-right: 8px;
+  }
+}
+
+.tab-label {
+  .anticon {
+    margin-right: 6px;
+  }
+}
+
+.settings-form {
+  max-width: 480px;
+}
+
+.invite-code {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: $th-foreground;
+}
+
+.invite-meta {
+  color: $th-foreground-muted;
+  font-size: 12px;
+}
+
+.input-radius-md {
+  &.ant-input,
+  &.ant-input-affix-wrapper {
+    border-radius: $th-radius !important;
+  }
+}

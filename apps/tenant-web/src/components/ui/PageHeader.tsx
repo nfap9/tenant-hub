@@ -28,15 +28,12 @@ export default function PageHeader({
                   {
                     title: (
                       <span
-                        style={{
-                          cursor: 'pointer',
-                          color: 'var(--th-primary)',
-                        }}
+                        className="breadcrumb-back"
                         onClick={() =>
                           navigate(typeof back === 'string' ? back : '..')
                         }
                       >
-                        <ArrowLeftOutlined style={{ marginRight: 4 }} />
+                        <ArrowLeftOutlined />
                         返回
                       </span>
                     ),

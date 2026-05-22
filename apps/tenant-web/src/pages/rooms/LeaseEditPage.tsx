@@ -19,6 +19,7 @@ import { selectableFeeTypes, type LeaseFeeFormItem } from './constants';
 import { buildLeaseFeesPayload } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import './LeaseEditPage.scss';
 
 export default function LeaseEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -146,21 +147,15 @@ export default function LeaseEditPage() {
       />
 
       <Spin spinning={loading}>
-        <div style={{ maxWidth: 720 }}>
+        <div className="lease-edit-container">
           <Card>
             {lease ? (
               <Form form={form} layout="vertical" onFinish={handleSubmit}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 16,
-                  }}
-                >
+                <div className="form-grid-2">
                   <Form.Item label="租金" name="rentAmount">
                     <InputNumber
                       min={0}
-                      style={{ width: '100%' }}
+                      className="w-full"
                       prefix="¥"
                       placeholder="每期金额"
                       size="large"
@@ -169,69 +164,29 @@ export default function LeaseEditPage() {
                   <Form.Item label="押金" name="depositAmount">
                     <InputNumber
                       min={0}
-                      style={{ width: '100%' }}
+                      className="w-full"
                       prefix="¥"
                       placeholder="请输入押金"
                       size="large"
                     />
                   </Form.Item>
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 16,
-                  }}
-                >
+                <div className="form-grid-2">
                   <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
-                    <InputNumber
-                      min={0}
-                      style={{ width: '100%' }}
-                      size="large"
-                    />
+                    <InputNumber min={0} className="w-full" size="large" />
                   </Form.Item>
                   <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
-                    <InputNumber
-                      min={0}
-                      style={{ width: '100%' }}
-                      size="large"
-                    />
+                    <InputNumber min={0} className="w-full" size="large" />
                   </Form.Item>
                 </div>
 
-                <Divider
-                  orientation="left"
-                  style={{
-                    color: 'var(--th-foreground-muted)',
-                    fontWeight: 600,
-                  }}
-                >
+                <Divider orientation="left" className="section-divider">
                   费用项目
                 </Divider>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 12,
-                    marginBottom: 16,
-                  }}
-                >
+                <div className="fee-list mb-16">
                   {fees.map((item) => (
-                    <Space
-                      key={item.id}
-                      style={{ display: 'flex' }}
-                      align="baseline"
-                    >
-                      <span
-                        style={{
-                          width: 90,
-                          display: 'inline-block',
-                          fontWeight: 500,
-                          color: 'var(--th-foreground)',
-                        }}
-                      >
-                        {item.name}
-                      </span>
+                    <Space key={item.id} className="fee-item" align="baseline">
+                      <span className="fee-label">{item.name}</span>
                       <InputNumber
                         min={0}
                         placeholder="价格"
@@ -253,19 +208,19 @@ export default function LeaseEditPage() {
                     </Space>
                   ))}
                 </div>
-                <div style={{ marginBottom: 16 }}>
+                <div className="mb-16">
                   <Button
                     type="dashed"
                     icon={<PlusOutlined />}
                     onClick={addFee}
                     size="large"
-                    style={{ width: '100%' }}
+                    className="w-full"
                   >
                     添加费用
                   </Button>
                 </div>
 
-                <Form.Item style={{ marginTop: 24 }}>
+                <Form.Item className="form-actions">
                   <Button
                     type="primary"
                     htmlType="submit"
@@ -278,7 +233,7 @@ export default function LeaseEditPage() {
                   </Button>
                   <Button
                     size="large"
-                    style={{ marginLeft: 12 }}
+                    className="cancel-btn"
                     onClick={() => navigate('/rooms')}
                   >
                     取消

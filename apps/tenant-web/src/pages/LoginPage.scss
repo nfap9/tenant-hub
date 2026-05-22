@@ -1,0 +1,139 @@
+@import '@/styles/variables';
+@import '@/styles/mixins';
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f0fdfa 0%, #e0f2fe 40%, #f0f9ff 100%);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg-shape {
+  position: absolute;
+  pointer-events: none;
+}
+
+.login-bg-shape--1 {
+  top: -10%;
+  left: -5%;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    rgba(15, 118, 110, 0.12) 0%,
+    rgba(20, 184, 166, 0.06) 100%
+  );
+  filter: blur(40px);
+}
+
+.login-bg-shape--2 {
+  bottom: -8%;
+  right: -5%;
+  width: 280px;
+  height: 280px;
+  border-radius: 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(14, 165, 233, 0.1) 0%,
+    rgba(15, 118, 110, 0.06) 100%
+  );
+  transform: rotate(15deg);
+  filter: blur(36px);
+}
+
+.login-bg-shape--3 {
+  top: 30%;
+  right: 10%;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.login-bg-shape--4 {
+  bottom: 25%;
+  left: 8%;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(14, 165, 233, 0.08);
+  transform: rotate(12deg);
+}
+
+.login-card {
+  width: 440px;
+  border-radius: 20px;
+  box-shadow:
+    0 20px 60px rgba(15, 118, 110, 0.12),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 1;
+
+  .ant-card-body {
+    padding: 40px 36px;
+  }
+}
+
+.login-logo-wrapper {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-logo-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.25);
+}
+
+.login-logo-icon {
+  font-size: 28px;
+  color: #fff;
+}
+
+.login-title {
+  color: $th-primary;
+  margin: 0;
+  font-family: $th-font-heading;
+}
+
+.login-subtitle {
+  font-size: 14px;
+}
+
+.login-segmented-wrapper {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.login-input-prefix {
+  color: $th-foreground-muted;
+  margin-right: 6px;
+}
+
+.login-form-item--submit {
+  margin-top: 8px;
+}
+
+.login-submit-btn {
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.25);
+}
+
+.login-auth-toggle {
+  text-align: center;
+  margin-top: 16px;
+}

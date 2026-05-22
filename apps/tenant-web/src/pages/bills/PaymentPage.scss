@@ -1,0 +1,41 @@
+@import '@/styles/variables';
+
+.payment-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-mb-24 {
+  margin-bottom: 24px;
+}
+
+.payment-bill-card {
+  cursor: pointer;
+  margin-bottom: 12px;
+
+  .ant-card-body {
+    padding: $th-space-4;
+  }
+
+  &--selected {
+    border-color: $th-primary;
+    background: rgba(15, 118, 110, 0.04);
+  }
+}
+
+.payment-bill-title {
+  font-weight: 600;
+  color: $th-foreground;
+  font-family: $th-font-heading;
+}
+
+.payment-bill-meta {
+  color: $th-foreground-muted;
+  font-size: 13px;
+}
+
+.payment-space-full,
+.payment-select-full {
+  width: 100%;
+}

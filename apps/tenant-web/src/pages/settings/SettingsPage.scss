@@ -1,0 +1,67 @@
+@import '@/styles/variables';
+@import '@/styles/mixins';
+
+.settings-card {
+  @include card-elevated;
+  margin-bottom: 16px;
+}
+
+.settings-menu-card {
+  .ant-card-body {
+    padding: 0;
+  }
+}
+
+.settings-action-card {
+  @include card-elevated;
+
+  .ant-card-body {
+    padding: $th-space-4;
+  }
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.avatar-primary {
+  background-color: $th-primary;
+  flex-shrink: 0;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: $th-font-heading;
+  color: $th-foreground;
+}
+
+.profile-phone {
+  color: $th-foreground-muted;
+  font-size: 14px;
+}
+
+.settings-menu-card .ant-list-item.settings-menu-item {
+  cursor: pointer;
+  padding: $th-space-4 $th-space-6;
+  transition: $th-transition;
+}
+
+.menu-avatar {
+  background-color: $th-primary;
+}
+
+.menu-title {
+  font-weight: 500;
+  color: $th-foreground;
+}
+
+.settings-footer {
+  text-align: center;
+  margin-top: 24px;
+  color: $th-foreground-subtle;
+  font-size: 12px;
+}

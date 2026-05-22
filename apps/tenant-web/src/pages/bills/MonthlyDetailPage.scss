@@ -1,0 +1,84 @@
+@import '@/styles/variables';
+@import '@/styles/mixins';
+
+.mdp-mb-24 {
+  margin-bottom: 24px;
+}
+
+.mdp-title {
+  font-weight: 600;
+  font-size: 16px;
+  font-family: $th-font-heading;
+  color: $th-foreground;
+}
+
+.mdp-icon-primary {
+  color: $th-primary;
+  margin-right: 6px;
+}
+
+.mdp-meta {
+  color: $th-foreground-muted;
+  margin-top: 6px;
+}
+
+.mdp-phone-row {
+  color: $th-foreground-muted;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mdp-icon-small {
+  font-size: 12px;
+}
+
+.mdp-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mdp-child-title {
+  font-weight: 600;
+  color: $th-foreground;
+  font-family: $th-font-heading;
+}
+
+.mdp-child-amount {
+  font-weight: 600;
+  color: $th-primary;
+  font-family: $th-font-heading;
+}
+
+.mdp-items-wrap {
+  margin-top: 8px;
+  padding-left: 16px;
+}
+
+.mdp-item-row {
+  @include flex-between;
+  padding: 6px 0;
+  border-bottom: 1px solid $th-border-light;
+}
+
+.mdp-btn-mt {
+  margin-top: 8px;
+}
+
+.mdp-divider {
+  margin: 16px 0;
+}
+
+.mdp-payment-row {
+  @include flex-between;
+  padding: 10px 0;
+  border-bottom: 1px solid $th-border-light;
+}
+
+.mdp-payment-amount {
+  font-weight: 600;
+  color: $th-primary;
+  font-family: $th-font-heading;
+}

@@ -11,6 +11,7 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { message } from 'antd';
 import PageHeader from '@/components/ui/PageHeader';
+import './SettingsPage.scss';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -64,41 +65,18 @@ export default function SettingsPage() {
     <div className="page-content">
       <PageHeader breadcrumb={[{ label: '设置' }]} />
 
-      <Card
-        style={{
-          marginBottom: 16,
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
-        bodyStyle={{ padding: 'var(--th-space-6)' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            marginBottom: 16,
-          }}
-        >
+      <Card className="settings-card">
+        <div className="profile-header">
           <Avatar
             size={64}
             icon={<UserOutlined />}
-            style={{ backgroundColor: 'var(--th-primary)', flexShrink: 0 }}
+            className="avatar-primary"
           />
           <div className="page-content">
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 600,
-                fontFamily: 'var(--th-font-heading)',
-                color: 'var(--th-foreground)',
-              }}
-            >
+            <div className="profile-name">
               {session?.user?.username || session?.user?.phone}
             </div>
-            <div style={{ color: 'var(--th-foreground-muted)', fontSize: 14 }}>
-              {session?.user?.phone}
-            </div>
+            <div className="profile-phone">{session?.user?.phone}</div>
           </div>
         </div>
         {currentMembership && (
@@ -113,59 +91,26 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card
-        style={{
-          marginBottom: 16,
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
-        bodyStyle={{ padding: 0 }}
-      >
+      <Card className="settings-card settings-menu-card">
         <List
           itemLayout="horizontal"
           dataSource={menuItems}
           renderItem={(item) => (
             <List.Item
-              style={{
-                cursor: 'pointer',
-                padding: 'var(--th-space-4) var(--th-space-6)',
-                transition: 'var(--th-transition)',
-              }}
+              className="settings-menu-item"
               onClick={() => navigate(item.path)}
-              actions={[
-                <RightOutlined
-                  key="arrow"
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />,
-              ]}
+              actions={[<RightOutlined key="arrow" className="text-subtle" />]}
             >
               <List.Item.Meta
-                avatar={
-                  <Avatar
-                    icon={item.icon}
-                    style={{ backgroundColor: 'var(--th-primary)' }}
-                  />
-                }
-                title={
-                  <span
-                    style={{ fontWeight: 500, color: 'var(--th-foreground)' }}
-                  >
-                    {item.title}
-                  </span>
-                }
+                avatar={<Avatar icon={item.icon} className="menu-avatar" />}
+                title={<span className="menu-title">{item.title}</span>}
               />
             </List.Item>
           )}
         />
       </Card>
 
-      <Card
-        style={{
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
-        bodyStyle={{ padding: 'var(--th-space-4)' }}
-      >
+      <Card className="settings-action-card">
         <Button
           type="primary"
           danger
@@ -178,14 +123,7 @@ export default function SettingsPage() {
         </Button>
       </Card>
 
-      <div
-        style={{
-          textAlign: 'center',
-          marginTop: 24,
-          color: 'var(--th-foreground-subtle)',
-          fontSize: 12,
-        }}
-      >
+      <div className="settings-footer">
         {platformInfo.name} © {new Date().getFullYear()}
       </div>
     </div>

@@ -21,6 +21,7 @@ import { statusLabels, toneForStatus, filters } from './constants';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
+import './RoomListPage.scss';
 
 export default function RoomListPage() {
   const navigate = useNavigate();
@@ -100,14 +101,7 @@ export default function RoomListPage() {
         }
       />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
+      <div className="stats-grid">
         <StatCard
           title="总房间"
           value={rooms.length}
@@ -134,10 +128,7 @@ export default function RoomListPage() {
         />
       </div>
 
-      <Card
-        style={{ marginBottom: 16 }}
-        bodyStyle={{ padding: 'var(--th-space-4) var(--th-space-6)' }}
-      >
+      <Card className="filter-card">
         <Radio.Group value={filter} onChange={(e) => setFilter(e.target.value)}>
           {filters.map((f) => (
             <Radio.Button key={f} value={f}>
@@ -163,13 +154,7 @@ export default function RoomListPage() {
             />
           </Card>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: 16,
-            }}
-          >
+          <div className="room-grid">
             {filteredRooms.map((room) => {
               const activeLease = room.leases?.find(
                 (l) => l.status === 'ACTIVE'
@@ -178,73 +163,28 @@ export default function RoomListPage() {
                 <Card
                   key={room.id}
                   title={
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: 'var(--th-font-heading)',
-                          fontWeight: 600,
-                          fontSize: 16,
-                        }}
-                      >
-                        {room.roomNo}
-                      </span>
+                    <div className="flex-between">
+                      <span className="room-title">{room.roomNo}</span>
                       <Tag color={statusColorMap[toneForStatus[room.status]]}>
                         {statusLabels[room.status]}
                       </Tag>
                     </div>
                   }
                 >
-                  <div
-                    style={{
-                      marginBottom: 4,
-                      color: 'var(--th-foreground-muted)',
-                    }}
-                  >
+                  <div className="mb-4 text-muted">
                     {room.apartment?.name} · {room.layout}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--th-foreground-subtle)',
-                      marginBottom: 12,
-                    }}
-                  >
+                  <div className="room-meta text-subtle">
                     {room.area ? `${room.area} ㎡ · ` : ''}
                     {room.facilities?.join('、') || '无设施'}
                   </div>
 
                   {activeLease && (
-                    <div
-                      style={{
-                        background: 'var(--th-success-bg)',
-                        padding: 12,
-                        borderRadius: 'var(--th-radius-sm)',
-                        marginBottom: 12,
-                        fontSize: 13,
-                        border: '1px solid var(--th-border-light)',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          marginBottom: 4,
-                          color: 'var(--th-foreground)',
-                        }}
-                      >
+                    <div className="lease-info">
+                      <div className="lease-tenant">
                         {activeLease.tenantName} · {activeLease.tenantPhone}
                       </div>
-                      <div
-                        style={{
-                          color: 'var(--th-foreground-muted)',
-                          marginBottom: 2,
-                        }}
-                      >
+                      <div className="text-muted lease-rent">
                         租金 ¥{money(activeLease.rentAmount)}/
                         {activeLease.cycle === 'MONTHLY'
                           ? '月'
@@ -252,14 +192,14 @@ export default function RoomListPage() {
                             ? '季'
                             : '年'}
                       </div>
-                      <div style={{ color: 'var(--th-foreground-subtle)' }}>
+                      <div className="text-subtle">
                         {day(activeLease.startDate)} 至{' '}
                         {day(activeLease.endDate)}
                       </div>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div className="room-actions">
                     {canManageRoom && (
                       <>
                         <Button

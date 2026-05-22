@@ -25,6 +25,7 @@ import { optionalNumber, toFacilityArray } from '@/utils/format';
 import { emptyRoomForm, roomStatuses, statusLabels } from './constants';
 import { roomLayoutOptions } from '@/pages/apartments/constants';
 import PageHeader from '@/components/ui/PageHeader';
+import './RoomFormPage.scss';
 
 export default function RoomFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -154,7 +155,7 @@ export default function RoomFormPage() {
       />
 
       <Spin spinning={loading}>
-        <div style={{ maxWidth: 640 }}>
+        <div className="room-form-container">
           <Card>
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
               <Form.Item
@@ -202,7 +203,7 @@ export default function RoomFormPage() {
               <Form.Item label="面积（㎡）" name="area">
                 <InputNumber
                   min={0}
-                  style={{ width: '100%' }}
+                  className="w-full"
                   size="large"
                   placeholder="请输入面积"
                 />
@@ -229,7 +230,7 @@ export default function RoomFormPage() {
                   />
                 </Form.Item>
               )}
-              <Form.Item style={{ marginTop: 24 }}>
+              <Form.Item className="form-actions">
                 <Button
                   type="primary"
                   htmlType="submit"
@@ -242,7 +243,7 @@ export default function RoomFormPage() {
                 </Button>
                 <Button
                   size="large"
-                  style={{ marginLeft: 12 }}
+                  className="cancel-btn"
                   onClick={() =>
                     navigate(
                       isEdit

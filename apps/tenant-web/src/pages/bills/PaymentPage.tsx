@@ -21,6 +21,7 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import type { MonthlyBill, Room } from '@/types/domain';
+import './PaymentPage.scss';
 
 export default function PaymentPage() {
   const { currentOrgId } = useAppSession();
@@ -162,12 +163,12 @@ export default function PaymentPage() {
       <Spin spinning={loading}>
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="payment-card-title">
               <HomeOutlined />
               选择房间
             </span>
           }
-          style={{ marginBottom: 24 }}
+          className="payment-mb-24"
         >
           {rooms.length === 0 ? (
             <EmptyState description="暂无房间" />
@@ -189,58 +190,34 @@ export default function PaymentPage() {
         {paymentRoomId && (
           <Card
             title={
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="payment-card-title">
                 <FileTextOutlined />
                 选择账单
               </span>
             }
-            style={{ marginBottom: 24 }}
+            className="payment-mb-24"
           >
             {roomBills.length === 0 ? (
               <EmptyState description="该房间暂无待收账单" />
             ) : (
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space direction="vertical" className="payment-space-full">
                 {roomBills.map((bill) => (
                   <Card
                     key={bill.id}
                     size="small"
-                    style={{
-                      cursor: 'pointer',
-                      borderColor:
-                        form.monthlyBillId === bill.id
-                          ? 'var(--th-primary)'
-                          : undefined,
-                      background:
-                        form.monthlyBillId === bill.id
-                          ? 'rgba(15, 118, 110, 0.04)'
-                          : undefined,
-                    }}
+                    className={
+                      form.monthlyBillId === bill.id
+                        ? 'payment-bill-card payment-bill-card--selected'
+                        : 'payment-bill-card'
+                    }
                     onClick={() => handleBillClick(bill)}
-                    bodyStyle={{ padding: 'var(--th-space-4)' }}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <div className="flex-between">
                       <div>
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--th-foreground)',
-                            fontFamily: 'var(--th-font-heading)',
-                          }}
-                        >
+                        <div className="payment-bill-title">
                           {bill.billingDate.slice(0, 10)}
                         </div>
-                        <div
-                          style={{
-                            color: 'var(--th-foreground-muted)',
-                            fontSize: 13,
-                          }}
-                        >
+                        <div className="payment-bill-meta">
                           剩余 ¥{money(remainingAmount(bill))}
                         </div>
                       </div>
@@ -257,13 +234,17 @@ export default function PaymentPage() {
 
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="payment-card-title">
               <WalletOutlined />
               收款信息
             </span>
           }
         >
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space
+            direction="vertical"
+            className="payment-space-full"
+            size="large"
+          >
             <Input
               placeholder="收款金额"
               prefix="¥"
@@ -280,7 +261,7 @@ export default function PaymentPage() {
               onChange={(value) =>
                 setForm((old) => ({ ...old, method: value }))
               }
-              style={{ width: '100%' }}
+              className="payment-select-full"
               options={[
                 { label: '线下收款', value: '线下收款' },
                 { label: '现金', value: '现金' },

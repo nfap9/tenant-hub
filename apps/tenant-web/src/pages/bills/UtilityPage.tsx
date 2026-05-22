@@ -9,6 +9,7 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { getBillDetail, recordUtilityReading } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
+import './UtilityPage.scss';
 
 export default function UtilityPage() {
   const { currentOrgId } = useAppSession();
@@ -79,14 +80,18 @@ export default function UtilityPage() {
       <Spin spinning={loading}>
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="utility-card-title">
               <DashboardOutlined />
               水表读数
             </span>
           }
-          style={{ marginBottom: 24 }}
+          className="utility-mb-24"
         >
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <Space
+            direction="vertical"
+            className="utility-space-full"
+            size="middle"
+          >
             <Input
               placeholder="上期水表读数"
               prefix={<ThunderboltOutlined />}
@@ -110,14 +115,18 @@ export default function UtilityPage() {
 
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="utility-card-title">
               <DashboardOutlined />
               电表读数
             </span>
           }
-          style={{ marginBottom: 24 }}
+          className="utility-mb-24"
         >
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <Space
+            direction="vertical"
+            className="utility-space-full"
+            size="middle"
+          >
             <Input
               placeholder="上期电表读数"
               prefix={<ThunderboltOutlined />}

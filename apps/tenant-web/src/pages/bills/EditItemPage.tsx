@@ -5,6 +5,7 @@ import { SaveOutlined, TagOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { updateBillItem } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
+import './EditItemPage.scss';
 
 export default function EditItemPage() {
   const { currentOrgId } = useAppSession();
@@ -59,7 +60,7 @@ export default function EditItemPage() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          style={{ maxWidth: 600 }}
+          className="edit-item-form"
         >
           <Form.Item label="名称" name="name">
             <Input disabled size="large" prefix={<TagOutlined />} />
@@ -69,12 +70,7 @@ export default function EditItemPage() {
             name="amount"
             rules={[{ required: true, message: '请输入金额' }]}
           >
-            <InputNumber
-              min={0}
-              style={{ width: '100%' }}
-              prefix="¥"
-              size="large"
-            />
+            <InputNumber min={0} className="w-full" prefix="¥" size="large" />
           </Form.Item>
           <Form.Item label="备注" name="note">
             <Input.TextArea rows={3} placeholder="请输入备注（可选）" />

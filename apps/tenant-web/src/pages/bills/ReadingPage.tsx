@@ -13,6 +13,7 @@ import { createMeterReading } from '@/api/bills';
 import { today } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import type { Room } from '@/types/domain';
+import './ReadingPage.scss';
 import dayjs from 'dayjs';
 
 export default function ReadingPage() {
@@ -80,12 +81,12 @@ export default function ReadingPage() {
       <Spin spinning={loading}>
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="reading-card-title">
               <HomeOutlined />
               选择房间
             </span>
           }
-          style={{ marginBottom: 24 }}
+          className="reading-mb-24"
         >
           <Space wrap>
             {rooms.map((room) => (
@@ -102,12 +103,12 @@ export default function ReadingPage() {
 
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="reading-card-title">
               <DashboardOutlined />
               表类型
             </span>
           }
-          style={{ marginBottom: 24 }}
+          className="reading-mb-24"
         >
           <Space>
             {(['WATER', 'POWER'] as const).map((type) => (
@@ -124,15 +125,19 @@ export default function ReadingPage() {
 
         <Card
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="reading-card-title">
               <ThunderboltOutlined />
               读数信息
             </span>
           }
         >
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space
+            direction="vertical"
+            className="reading-space-full"
+            size="large"
+          >
             <DatePicker
-              style={{ width: '100%' }}
+              className="w-full"
               size="large"
               value={form.readingDate ? dayjs(form.readingDate) : undefined}
               onChange={(date) =>

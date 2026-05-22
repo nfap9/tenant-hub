@@ -11,6 +11,7 @@ import {
 } from '@/utils/batchRooms';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import './RoomBatchPage.scss';
 
 export default function RoomBatchPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,25 +103,15 @@ export default function RoomBatchPage() {
         ]}
       />
 
-      <Card style={{ maxWidth: 720 }}>
+      <Card className="batch-form-card">
         <Form layout="vertical">
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 16,
-            }}
-          >
+          <div className="form-grid-3">
             <Form.Item label="开始楼层">
               <InputNumber
                 min={1}
                 size="large"
-                style={{ width: '100%' }}
-                prefix={
-                  <BuildOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                className="w-full"
+                prefix={<BuildOutlined className="text-subtle" />}
                 value={Number(batchStartFloor) || undefined}
                 onChange={(v) => setBatchStartFloor(String(v || 1))}
               />
@@ -129,12 +120,8 @@ export default function RoomBatchPage() {
               <InputNumber
                 min={1}
                 size="large"
-                style={{ width: '100%' }}
-                prefix={
-                  <BuildOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                className="w-full"
+                prefix={<BuildOutlined className="text-subtle" />}
                 value={Number(batchEndFloor) || undefined}
                 onChange={(v) => setBatchEndFloor(String(v || 1))}
               />
@@ -144,12 +131,8 @@ export default function RoomBatchPage() {
                 min={1}
                 max={200}
                 size="large"
-                style={{ width: '100%' }}
-                prefix={
-                  <HomeOutlined
-                    style={{ color: 'var(--th-foreground-subtle)' }}
-                  />
-                }
+                className="w-full"
+                prefix={<HomeOutlined className="text-subtle" />}
                 value={Number(batchRoomCount) || undefined}
                 onChange={(v) => setBatchRoomCount(String(v || 1))}
               />
@@ -157,30 +140,15 @@ export default function RoomBatchPage() {
           </div>
         </Form>
 
-        <div style={{ marginTop: 16 }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 12,
-            }}
-          >
-            <span
-              style={{
-                fontWeight: 600,
-                fontFamily: 'var(--th-font-heading)',
-                color: 'var(--th-foreground)',
-              }}
-            >
-              生成房间号
-            </span>
-            <span style={{ color: 'var(--th-foreground-muted)' }}>
+        <div className="mt-16">
+          <div className="preview-header">
+            <span className="preview-title">生成房间号</span>
+            <span className="text-muted">
               已选 {selectedGeneratedBatchRoomNos.length}/
               {generatedBatchRoomNos.length}
               {generatedBatchRoomNos.length > 0 && (
                 <Checkbox
-                  style={{ marginLeft: 12 }}
+                  className="checkbox-ml"
                   checked={allSelected}
                   onChange={(e) =>
                     setSelectedBatchRoomNos(
@@ -200,20 +168,11 @@ export default function RoomBatchPage() {
               description="输入有效的楼层范围和每层房间数后会自动生成房间号"
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="groups-container">
               {batchRoomGroups.map((group) => (
                 <div key={group.floor}>
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      marginBottom: 10,
-                      color: 'var(--th-foreground)',
-                      fontFamily: 'var(--th-font-heading)',
-                    }}
-                  >
-                    {group.floor}层
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div className="floor-label">{group.floor}层</div>
+                  <div className="room-buttons">
                     {group.roomNos.map((roomNo) => {
                       const selected = selectedBatchRoomNos.includes(roomNo);
                       return (
@@ -221,7 +180,7 @@ export default function RoomBatchPage() {
                           key={roomNo}
                           type={selected ? 'primary' : 'default'}
                           size="small"
-                          style={{ borderRadius: 'var(--th-radius-sm)' }}
+                          className="room-btn"
                           onClick={() =>
                             setSelectedBatchRoomNos((old) =>
                               toggleBatchRoomSelection(old, roomNo)
@@ -239,7 +198,7 @@ export default function RoomBatchPage() {
           )}
         </div>
 
-        <div style={{ marginTop: 24 }}>
+        <div className="actions-container">
           <Button
             type="primary"
             icon={<SaveOutlined />}
@@ -252,7 +211,7 @@ export default function RoomBatchPage() {
           </Button>
           <Button
             size="large"
-            style={{ marginLeft: 12 }}
+            className="cancel-btn"
             onClick={() => navigate(`/apartments/${id}`)}
           >
             取消

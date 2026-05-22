@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import { getSmsConfig, updateSmsConfig } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
+import './OpsSmsConfigPage.scss';
 
 const methodOptions = [
   { value: 'POST', label: 'POST' },
@@ -108,13 +109,9 @@ export default function OpsSmsConfigPage() {
   ) => (
     <Form.List name={name}>
       {(fields, { add, remove }) => (
-        <div className="page-content">
+        <div>
           {fields.map((field) => (
-            <Space
-              key={field.key}
-              align="baseline"
-              style={{ display: 'flex', marginBottom: 8 }}
-            >
+            <Space key={field.key} align="baseline" className="kv-space">
               <Form.Item
                 {...field}
                 name={[field.name, 'key']}
@@ -123,7 +120,7 @@ export default function OpsSmsConfigPage() {
               >
                 <Input
                   placeholder={keyPlaceholder}
-                  style={{ width: 160, borderRadius: 'var(--th-radius-sm)' }}
+                  className="kv-input--key"
                   size="large"
                 />
               </Form.Item>
@@ -135,7 +132,7 @@ export default function OpsSmsConfigPage() {
               >
                 <Input
                   placeholder={valuePlaceholder}
-                  style={{ width: 320, borderRadius: 'var(--th-radius-sm)' }}
+                  className="kv-input--value"
                   size="large"
                 />
               </Form.Item>
@@ -149,7 +146,7 @@ export default function OpsSmsConfigPage() {
             onClick={() => add()}
             block
             size="large"
-            style={{ borderRadius: 'var(--th-radius)' }}
+            className="btn-radius-md"
           >
             新增字段
           </Button>
@@ -165,17 +162,12 @@ export default function OpsSmsConfigPage() {
       <Card
         loading={loading}
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <LinkOutlined style={{ marginRight: 8 }} />
+          <span className="card-title">
+            <LinkOutlined className="title-icon" />
             通用短信服务配置
           </span>
         }
-        style={{
-          maxWidth: 720,
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-          marginBottom: 16,
-        }}
+        className="sms-config-card"
       >
         <Form form={form} layout="vertical" onFinish={handleSave}>
           <Form.Item
@@ -185,13 +177,8 @@ export default function OpsSmsConfigPage() {
           >
             <Input
               size="large"
-              prefix={
-                <LinkOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
+              prefix={<LinkOutlined className="text-subtle" />}
               placeholder="https://api.example.com/sms/send"
-              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item
@@ -231,28 +218,19 @@ export default function OpsSmsConfigPage() {
 
       <Card
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <InfoCircleOutlined style={{ marginRight: 8 }} />
+          <span className="card-title">
+            <InfoCircleOutlined className="title-icon" />
             变量说明
           </span>
         }
         size="small"
-        style={{
-          maxWidth: 720,
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-          background: 'var(--th-bg)',
-        }}
+        className="sms-config-card--bg"
       >
-        <Typography.Paragraph
-          style={{ marginBottom: 8, color: 'var(--th-foreground-muted)' }}
-        >
+        <Typography.Paragraph className="sms-config-text">
           在 URL、Headers、Params
           中均可使用以下变量，发送时会被自动替换为实际值：
         </Typography.Paragraph>
-        <ul
-          style={{ margin: 0, paddingLeft: 18, color: 'var(--th-foreground)' }}
-        >
+        <ul className="sms-config-list">
           <li>
             <Typography.Text code>{'{{code}}'}</Typography.Text> — 验证码（6
             位数字）
@@ -272,14 +250,7 @@ export default function OpsSmsConfigPage() {
             5）
           </li>
         </ul>
-        <Typography.Paragraph
-          type="secondary"
-          style={{
-            marginTop: 12,
-            marginBottom: 0,
-            color: 'var(--th-foreground-muted)',
-          }}
-        >
+        <Typography.Paragraph type="secondary" className="sms-config-hint">
           GET 请求：参数自动拼接到 URL Query String。
           <br />
           POST / PUT 请求：参数作为 JSON Body 发送。
