@@ -1,11 +1,11 @@
-name: Ops Web CI
+name: Tenant Web CI
 
 on:
   push:
     branches: [main]
     paths:
-      - 'apps/ops-web/**'
-      - '.github/workflows/ops-web-ci.yml'
+      - 'apps/tenant-web/**'
+      - '.github/workflows/tenant-web-ci.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -14,8 +14,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'apps/ops-web/**'
-      - '.github/workflows/ops-web-ci.yml'
+      - 'apps/tenant-web/**'
+      - '.github/workflows/tenant-web-ci.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -46,10 +46,10 @@ jobs:
           run_install: true
 
       - name: Typecheck
-        run: pnpm --filter @tenant-hub/ops-web typecheck
+        run: pnpm --filter @tenant-hub/tenant-web typecheck
 
       - name: Lint
-        run: pnpm --filter @tenant-hub/ops-web lint
+        run: pnpm --filter @tenant-hub/tenant-web lint
 
       - name: Build
-        run: pnpm --filter @tenant-hub/ops-web build
+        run: pnpm --filter @tenant-hub/tenant-web build

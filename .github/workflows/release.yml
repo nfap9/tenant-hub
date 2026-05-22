@@ -69,8 +69,8 @@ jobs:
       - name: Build
         run: pnpm --filter @tenant-hub/api build
 
-  ops-web-checks:
-    name: Ops Web Lint & Typecheck & Build
+  tenant-web-checks:
+    name: Tenant Web Lint & Typecheck & Build
     runs-on: ubuntu-latest
     needs: root-checks
     steps:
@@ -89,13 +89,13 @@ jobs:
           run_install: true
 
       - name: Typecheck
-        run: pnpm --filter @tenant-hub/ops-web typecheck
+        run: pnpm --filter @tenant-hub/tenant-web typecheck
 
       - name: Lint
-        run: pnpm --filter @tenant-hub/ops-web lint
+        run: pnpm --filter @tenant-hub/tenant-web lint
 
       - name: Build
-        run: pnpm --filter @tenant-hub/ops-web build
+        run: pnpm --filter @tenant-hub/tenant-web build
 
   miniprogram-checks:
     name: Miniprogram Build

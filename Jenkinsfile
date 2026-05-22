@@ -138,25 +138,25 @@ pipeline {
                     }
                 }
 
-                stage('Ops Web') {
+                stage('Tenant Web') {
                     stages {
-                        stage('Ops Web: Lint') {
+                        stage('Tenant Web: Lint') {
                             steps {
-                                sh 'pnpm --filter @tenant-hub/ops-web lint'
+                                sh 'pnpm --filter @tenant-hub/tenant-web lint'
                             }
                         }
-                        stage('Ops Web: Typecheck') {
+                        stage('Tenant Web: Typecheck') {
                             steps {
-                                sh 'pnpm --filter @tenant-hub/ops-web typecheck'
+                                sh 'pnpm --filter @tenant-hub/tenant-web typecheck'
                             }
                         }
-                        stage('Ops Web: Build') {
+                        stage('Tenant Web: Build') {
                             steps {
                                 sh '''#!/bin/bash
                                     set -e
                                     # 构建时注入 API 地址（从 Jenkins 环境变量或默认值）
                                     export VITE_API_BASE_URL="${VITE_API_BASE_URL:-http://localhost:4000/api}"
-                                    pnpm --filter @tenant-hub/ops-web build
+                                    pnpm --filter @tenant-hub/tenant-web build
                                 '''
                             }
                         }

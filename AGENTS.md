@@ -3,7 +3,7 @@
 - 本项目是 pnpm monorepo 项目
 - 包管理器：pnpm，Node >= 22
 - **`apps/api`** — 后端 API 服务（Node.js 22 + Express 4 + Prisma 5 + PostgreSQL 16）
-- **`apps/ops-web`** — 平台运营端 Web 前台（React 18 + Vite 6 + Ant Design 5），仅供系统配置、租户管理、套餐配置等运营操作
+- **`apps/tenant-web`** — Web 管理端（React 18 + Vite 6 + Ant Design 5），承载组织、公寓、房间、租约、账单、水电录入、收款等全部业务操作，同时包含平台运营配置（租户管理、套餐配置、系统配置等）
 - **`apps/miniprogram`** — 最终用户小程序端（Taro 4 + React 18），承载组织、公寓、房间、租约、账单、水电录入、收款等全部业务操作
 
 
@@ -16,7 +16,7 @@
 - 根 `tsconfig.base.json` 启用 `strict: true`、`esModuleInterop: true`、`skipLibCheck: true`、`forceConsistentCasingInFileNames: true`。
 - 各应用继承并扩展自己的 `tsconfig.json`。
 - API 使用 `module: NodeNext` / `moduleResolution: NodeNext`（ESM 原生运行）。
-- ops-web 使用 `allowImportingTsExtensions: true` + `noEmit: true`（Vite 负责编译）。
+- tenant-web 使用 `allowImportingTsExtensions: true` + `noEmit: true`（Vite 负责编译）。
 
 ### 命名与模块
 - API 路由按资源命名：`/api/auth`, `/api/organizations`, `/api/apartments`, `/api/leases`, `/api/bills`, `/api/admin`。
@@ -39,14 +39,21 @@
 | API 认证中间件 | `apps/api/src/middleware/auth.ts` |
 | 超级管理员初始化 | `apps/api/src/services/adminInit.ts` |
 | Prisma Schema | `apps/api/prisma/schema.prisma` |
-| 运营端入口 | `apps/ops-web/src/main.tsx`, `apps/ops-web/src/App.tsx` |
-| 运营端短信配置 | `apps/ops-web/src/pages/SmsConfigPage.tsx` |
+| Web 端入口 | `apps/tenant-web/src/main.tsx`, `apps/tenant-web/src/App.tsx` |
+| Web 端路由 | `apps/tenant-web/src/router/index.tsx` |
+| 运营端总览 | `apps/tenant-web/src/pages/ops/OpsDashboardPage.tsx` |
+| 运营端用户管理 | `apps/tenant-web/src/pages/ops/OpsUsersPage.tsx` |
+| 运营端套餐配置 | `apps/tenant-web/src/pages/ops/OpsPlansPage.tsx` |
+| 运营端组织管理 | `apps/tenant-web/src/pages/ops/OpsOrganizationsPage.tsx` |
+| 运营端角色权限 | `apps/tenant-web/src/pages/ops/OpsRolesPage.tsx` |
+| 运营端短信配置 | `apps/tenant-web/src/pages/ops/OpsSmsConfigPage.tsx` |
+| 运营端系统配置 | `apps/tenant-web/src/pages/ops/OpsSystemSettingsPage.tsx` |
 | 小程序入口 | `apps/miniprogram/src/app.tsx` |
 | 小程序路由配置 | `apps/miniprogram/src/app.config.ts` |
 | 小程序交互规范 | `docs/mobile-ui-guidelines.md` |
 | Docker 生产编排 | `docker-compose.prod.yml` |
 | Docker 开发编排 | `docker-compose.infra.yml` |
-| CI 工作流 (GitHub) | `.github/workflows/api-ci.yml`, `.github/workflows/ops-web-ci.yml`, `.github/workflows/pr-check.yml`, `.github/workflows/release.yml` |
+| CI 工作流 (GitHub) | `.github/workflows/api-ci.yml`, `.github/workflows/tenant-web-ci.yml`, `.github/workflows/pr-check.yml`, `.github/workflows/release.yml` |
 | CI/CD 流水线 (Jenkins) | `Jenkinsfile` |
 | 发布脚本 | `scripts/release.js` |
 | 提交校验 | `scripts/verify-commit.js` |
