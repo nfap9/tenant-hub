@@ -38,7 +38,7 @@ import {
   monthlyAmount,
 } from '@/utils/format';
 import type { Apartment, Room, Lease, MonthlyBill, Bill } from '@/types/domain';
-import Overview from './Overview';
+import Overview from './OverviewCard';
 
 const leaseMonthlyIncome = (lease: Lease) => {
   const rent = monthlyAmount(lease.rentAmount, lease.cycle);
