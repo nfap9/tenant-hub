@@ -9,11 +9,12 @@ import {
   message,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   SaveOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { updateBillItem } from "@/api/bills";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function EditItemPage() {
   const { currentOrgId } = useAppSession();
@@ -50,13 +51,14 @@ export default function EditItemPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>编辑账单项目</h2>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-          返回
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={true}
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "编辑账单项目" },
+        ]}
+      />
 
       <Card>
         <Form
@@ -66,20 +68,20 @@ export default function EditItemPage() {
           style={{ maxWidth: 600 }}
         >
           <Form.Item label="名称" name="name">
-            <Input disabled />
+            <Input disabled size="large" prefix={<TagOutlined />} />
           </Form.Item>
           <Form.Item
             label="金额"
             name="amount"
             rules={[{ required: true, message: "请输入金额" }]}
           >
-            <InputNumber min={0} style={{ width: "100%" }} prefix="¥" />
+            <InputNumber min={0} style={{ width: "100%" }} prefix="¥" size="large" />
           </Form.Item>
           <Form.Item label="备注" name="note">
-            <Input.TextArea rows={3} />
+            <Input.TextArea rows={3} placeholder="请输入备注（可选）" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={submitting}>
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={submitting} size="large">
               保存
             </Button>
           </Form.Item>

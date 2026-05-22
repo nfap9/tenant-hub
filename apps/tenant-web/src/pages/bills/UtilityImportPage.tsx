@@ -7,11 +7,13 @@ import {
   message,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   UploadOutlined,
+  ImportOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { importUtilityCsv } from "@/api/bills";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function UtilityImportPage() {
   const { currentOrgId } = useAppSession();
@@ -47,13 +49,14 @@ export default function UtilityImportPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>批量导入水电</h2>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-          返回
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={true}
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "批量导入水电" },
+        ]}
+      />
 
       <Card>
         <Upload.Dragger
@@ -62,23 +65,32 @@ export default function UtilityImportPage() {
           accept=".csv"
         >
           <p className="ant-upload-drag-icon">
-            <UploadOutlined />
+            <UploadOutlined style={{ fontSize: 48, color: "var(--th-primary)" }} />
           </p>
-          <p className="ant-upload-text">点击或拖拽 CSV 文件到此区域上传</p>
-          <p className="ant-upload-hint">支持 CSV 格式批量导入水电读数</p>
+          <p className="ant-upload-text" style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+            点击或拖拽 CSV 文件到此区域上传
+          </p>
+          <p className="ant-upload-hint" style={{ color: "var(--th-foreground-muted)" }}>
+            支持 CSV 格式批量导入水电读数
+          </p>
         </Upload.Dragger>
 
         {fileContent && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ color: "#52c41a", marginBottom: 8 }}>文件已读取</div>
+          <div style={{ marginTop: 24 }}>
+            <div style={{ color: "var(--th-success)", marginBottom: 12, fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+              <CheckCircleOutlined />
+              文件已读取
+            </div>
             <pre
               style={{
-                background: "#f5f5f5",
-                padding: 12,
-                borderRadius: 4,
+                background: "var(--th-surface-hover)",
+                padding: "var(--th-space-4)",
+                borderRadius: "var(--th-radius)",
                 maxHeight: 200,
                 overflow: "auto",
                 fontSize: 12,
+                border: "1px solid var(--th-border-light)",
+                color: "var(--th-foreground-muted)",
               }}
             >
               {fileContent.slice(0, 2000)}
@@ -89,10 +101,12 @@ export default function UtilityImportPage() {
 
         <Button
           type="primary"
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 24 }}
           loading={submitting}
           onClick={handleSubmit}
           disabled={!fileContent}
+          icon={<ImportOutlined />}
+          size="large"
         >
           确认导入
         </Button>

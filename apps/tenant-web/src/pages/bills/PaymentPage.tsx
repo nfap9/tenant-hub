@@ -6,15 +6,15 @@ import {
   Input,
   Select,
   Space,
-  Empty,
   Tag,
   Spin,
   message,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   SaveOutlined,
   WalletOutlined,
+  HomeOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { getMonthlyBills, createPayment } from "@/api/bills";
@@ -22,6 +22,8 @@ import { getRooms } from "@/api/rooms";
 import { money } from "@/utils/format";
 import { statusLabels, toneForBillStatus } from "./constants";
 import { remainingAmount, roomKeyForBill, sortMonthlyBillsForList, getPaymentAmountError } from "./utils";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
 import type { MonthlyBill, Room } from "@/types/domain";
 
 export default function PaymentPage() {
@@ -136,18 +138,22 @@ export default function PaymentPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>登记收款</h2>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-          返回
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={true}
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "登记收款" },
+        ]}
+      />
 
       <Spin spinning={loading}>
-        <Card title="选择房间" style={{ marginBottom: 16 }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><HomeOutlined />选择房间</span>}
+          style={{ marginBottom: 24 }}
+        >
           {rooms.length === 0 ? (
-            <Empty description="暂无房间" />
+            <EmptyState description="暂无房间" />
           ) : (
             <Space wrap>
               {rooms.map((room) => (
@@ -164,9 +170,12 @@ export default function PaymentPage() {
         </Card>
 
         {paymentRoomId && (
-          <Card title="选择账单" style={{ marginBottom: 16 }}>
+          <Card
+            title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><FileTextOutlined />选择账单</span>}
+            style={{ marginBottom: 24 }}
+          >
             {roomBills.length === 0 ? (
-              <Empty description="该房间暂无待收账单" />
+              <EmptyState description="该房间暂无待收账单" />
             ) : (
               <Space direction="vertical" style={{ width: "100%" }}>
                 {roomBills.map((bill) => (
@@ -175,16 +184,20 @@ export default function PaymentPage() {
                     size="small"
                     style={{
                       cursor: "pointer",
-                      borderColor: form.monthlyBillId === bill.id ? "#146c5c" : undefined,
-                      background: form.monthlyBillId === bill.id ? "#f6ffed" : undefined,
+                      borderColor: form.monthlyBillId === bill.id ? "var(--th-primary)" : undefined,
+                      background: form.monthlyBillId === bill.id ? "rgba(15, 118, 110, 0.04)" : undefined,
                     }}
                     onClick={() => handleBillClick(bill)}
-                    bodyStyle={{ padding: 12 }}
+                    bodyStyle={{ padding: "var(--th-space-4)" }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
-                        <div style={{ fontWeight: 600 }}>{bill.billingDate.slice(0, 10)}</div>
-                        <div style={{ color: "#888" }}>剩余 ¥{money(remainingAmount(bill))}</div>
+                        <div style={{ fontWeight: 600, color: "var(--th-foreground)", fontFamily: "var(--th-font-heading)" }}>
+                          {bill.billingDate.slice(0, 10)}
+                        </div>
+                        <div style={{ color: "var(--th-foreground-muted)", fontSize: 13 }}>
+                          剩余 ¥{money(remainingAmount(bill))}
+                        </div>
                       </div>
                       <Tag color={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Tag>
                     </div>
@@ -195,17 +208,21 @@ export default function PaymentPage() {
           </Card>
         )}
 
-        <Card title="收款信息">
-          <Space direction="vertical" style={{ width: "100%" }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><WalletOutlined />收款信息</span>}
+        >
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
             <Input
               placeholder="收款金额"
-              prefix={<WalletOutlined />}
+              prefix="¥"
+              size="large"
               value={form.amount}
               onChange={(e) => setForm((old) => ({ ...old, amount: e.target.value }))}
             />
             <Select
               placeholder="收款方式"
               value={form.method}
+              size="large"
               onChange={(value) => setForm((old) => ({ ...old, method: value }))}
               style={{ width: "100%" }}
               options={[
@@ -220,7 +237,7 @@ export default function PaymentPage() {
               placeholder="备注（可选）"
               value={form.note}
               onChange={(e) => setForm((old) => ({ ...old, note: e.target.value }))}
-              rows={2}
+              rows={3}
             />
             <Button
               type="primary"
@@ -228,6 +245,7 @@ export default function PaymentPage() {
               loading={submitting}
               onClick={handleSubmit}
               disabled={!form.monthlyBillId}
+              size="large"
             >
               确认收款
             </Button>

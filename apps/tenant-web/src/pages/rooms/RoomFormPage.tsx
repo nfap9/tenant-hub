@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, Form, Input, InputNumber, Select, Button, message, Spin } from "antd";
+import { SaveOutlined, HomeOutlined, BuildOutlined, NumberOutlined, AppstoreOutlined } from "@ant-design/icons";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { SaveOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
 import { getApartments } from "@/api/apartments";
 import { createRoom, updateRoom } from "@/api/rooms";
@@ -9,6 +9,7 @@ import type { Apartment, Room } from "@/types/domain";
 import { optionalNumber, toFacilityArray } from "@/utils/format";
 import { emptyRoomForm, roomStatuses, statusLabels } from "./constants";
 import { roomLayoutOptions } from "@/pages/apartments/constants";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function RoomFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -107,43 +108,72 @@ export default function RoomFormPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(isEdit ? "/rooms" : urlApartmentId ? `/apartments/${urlApartmentId}` : "/rooms")}>
-          返回
-        </Button>
-        <h2 style={{ margin: 0 }}>{isEdit ? "编辑房间" : "新增房间"}</h2>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={isEdit ? "/rooms" : urlApartmentId ? `/apartments/${urlApartmentId}` : "/rooms"}
+        breadcrumb={[
+          { label: "房间管理", path: "/rooms" },
+          { label: isEdit ? "编辑房间" : "新增房间" },
+        ]}
+      />
+
       <Spin spinning={loading}>
-        <Card style={{ maxWidth: 600 }}>
-          <Form form={form} layout="vertical" onFinish={handleSubmit}>
-            <Form.Item label="所属公寓" name="apartmentId" rules={[{ required: !isEdit, message: "请选择公寓" }]}>
-              <Select placeholder="请选择公寓" disabled={isEdit} options={apartments.map((a) => ({ label: a.name, value: a.id }))} />
-            </Form.Item>
-            <Form.Item label="房号" name="roomNo" rules={[{ required: true, message: "请输入房号" }]}>
-              <Input placeholder="例如 301" />
-            </Form.Item>
-            <Form.Item label="户型" name="layout" rules={[{ required: true, message: "请选择户型" }]}>
-              <Select placeholder="请选择户型" options={roomLayoutOptions.map((l) => ({ label: l, value: l }))} />
-            </Form.Item>
-            <Form.Item label="面积（㎡）" name="area">
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-            <Form.Item label="设施" name="facilities">
-              <Input placeholder="多个设施用逗号分隔，如：空调,热水器,洗衣机" />
-            </Form.Item>
-            {isEdit && (
-              <Form.Item label="状态" name="status" rules={[{ required: true }]}>
-                <Select options={roomStatuses.map((s) => ({ label: statusLabels[s], value: s }))} />
+        <div style={{ maxWidth: 640 }}>
+          <Card>
+            <Form form={form} layout="vertical" onFinish={handleSubmit}>
+              <Form.Item label="所属公寓" name="apartmentId" rules={[{ required: !isEdit, message: "请选择公寓" }]}>
+                <Select
+                  placeholder="请选择公寓"
+                  disabled={isEdit}
+                  options={apartments.map((a) => ({ label: a.name, value: a.id }))}
+                  size="large"
+                  prefix={<HomeOutlined />}
+                />
               </Form.Item>
-            )}
-            <Form.Item>
-              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving}>
-                {isEdit ? "保存修改" : "保存房间"}
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
+              <Form.Item label="房号" name="roomNo" rules={[{ required: true, message: "请输入房号" }]}>
+                <Input placeholder="例如 301" size="large" prefix={<NumberOutlined />} />
+              </Form.Item>
+              <Form.Item label="户型" name="layout" rules={[{ required: true, message: "请选择户型" }]}>
+                <Select
+                  placeholder="请选择户型"
+                  options={roomLayoutOptions.map((l) => ({ label: l, value: l }))}
+                  size="large"
+                  prefix={<BuildOutlined />}
+                />
+              </Form.Item>
+              <Form.Item label="面积（㎡）" name="area">
+                <InputNumber min={0} style={{ width: "100%" }} size="large" placeholder="请输入面积" />
+              </Form.Item>
+              <Form.Item label="设施" name="facilities">
+                <Input
+                  placeholder="多个设施用逗号分隔，如：空调,热水器,洗衣机"
+                  size="large"
+                  prefix={<AppstoreOutlined />}
+                />
+              </Form.Item>
+              {isEdit && (
+                <Form.Item label="状态" name="status" rules={[{ required: true }]}>
+                  <Select
+                    options={roomStatuses.map((s) => ({ label: statusLabels[s], value: s }))}
+                    size="large"
+                  />
+                </Form.Item>
+              )}
+              <Form.Item style={{ marginTop: 24 }}>
+                <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving} size="large">
+                  {isEdit ? "保存修改" : "保存房间"}
+                </Button>
+                <Button
+                  size="large"
+                  style={{ marginLeft: 12 }}
+                  onClick={() => navigate(isEdit ? "/rooms" : urlApartmentId ? `/apartments/${urlApartmentId}` : "/rooms")}
+                >
+                  取消
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+        </div>
       </Spin>
     </div>
   );

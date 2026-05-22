@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
-import { Card, Form, Input, Button, Empty, List, Tag, Tabs, message, Table } from "antd";
-import { PlusOutlined, CopyOutlined } from "@ant-design/icons";
+import { Card, Form, Input, Button, List, Tag, Tabs, message, Table } from "antd";
+import {
+  PlusOutlined,
+  CopyOutlined,
+  HomeOutlined,
+  UserAddOutlined,
+  TeamOutlined,
+  BuildOutlined,
+} from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import {
   createOrganization,
@@ -9,6 +16,8 @@ import {
   createOrganizationInvite,
 } from "@/api/organization";
 import type { OrgInvite, Membership } from "@/types/domain";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
 
 export default function OrganizationPage() {
   const { memberships, currentOrgId, reload } = useAppSession();
@@ -101,7 +110,7 @@ export default function OrganizationPage() {
       title: "角色",
       dataIndex: ["role", "name"],
       key: "role",
-      render: (text: string) => <Tag color="blue">{text}</Tag>,
+      render: (text: string) => <Tag color="accent">{text}</Tag>,
     },
     {
       title: "组织编码",
@@ -111,123 +120,217 @@ export default function OrganizationPage() {
   ];
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 24 }}>组织管理</h2>
+    <div className="page-content">
+      <PageHeader back="/settings" breadcrumb={[{ label: "设置", path: "/settings" }, { label: "组织管理" }]} />
 
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
-        {
-          key: "my-orgs",
-          label: "我的组织",
-          children: (
-            <div>
-              {memberships.length > 0 ? (
-                <Table
-                  dataSource={memberships}
-                  columns={orgColumns}
-                  rowKey={(record: Membership) => record.organization.id}
-                  pagination={false}
-                  style={{ marginBottom: 24 }}
-                />
-              ) : (
-                <Empty description="暂无组织，请先创建或加入组织" style={{ marginBottom: 24 }} />
-              )}
-
-              {isInOrg && (
-                <Card title="邀请码管理" style={{ marginBottom: 16 }}>
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleCreateInvite}
-                    loading={inviteLoading}
-                    style={{ marginBottom: 16 }}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: "my-orgs",
+            label: (
+              <span>
+                <TeamOutlined style={{ marginRight: 6 }} />
+                我的组织
+              </span>
+            ),
+            children: (
+              <div className="page-content">
+                {memberships.length > 0 ? (
+                  <Card
+                    style={{
+                      marginBottom: 24,
+                      borderRadius: "var(--th-radius-lg)",
+                      boxShadow: "var(--th-shadow)",
+                    }}
                   >
-                    创建邀请码
-                  </Button>
-                  {invites.length > 0 ? (
-                    <List
-                      size="small"
-                      dataSource={invites}
-                      renderItem={(invite) => (
-                        <List.Item
-                          actions={[
-                            <Button
-                              key="copy"
-                              type="link"
-                              icon={<CopyOutlined />}
-                              onClick={() => copyInviteCode(invite.code)}
-                            >
-                              复制
-                            </Button>,
-                          ]}
-                        >
-                          <div>
-                            <div style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 600 }}>
-                              {invite.code}
-                            </div>
-                            <div style={{ color: "#888", fontSize: 12 }}>
-                              有效期至 {invite.expiresAt.slice(0, 16).replace("T", " ")} · 已用{" "}
-                              {invite.usedCount}/{invite.maxUses}
-                            </div>
-                          </div>
-                        </List.Item>
-                      )}
+                    <Table
+                      dataSource={memberships}
+                      columns={orgColumns}
+                      rowKey={(record: Membership) => record.organization.id}
+                      pagination={false}
+                      scroll={{ x: "max-content" }}
                     />
-                  ) : (
-                    <Empty description="暂无邀请码" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  )}
-                </Card>
-              )}
-            </div>
-          ),
-        },
-        {
-          key: "create",
-          label: "创建组织",
-          children: (
-            <Card>
-              <Form form={createForm} layout="vertical" onFinish={handleCreate} style={{ maxWidth: 480 }}>
-                <Form.Item
-                  label="组织名称"
-                  name="name"
-                  rules={[{ required: true, message: "请输入组织名称" }]}
+                  </Card>
+                ) : (
+                  <Card
+                    style={{
+                      marginBottom: 24,
+                      borderRadius: "var(--th-radius-lg)",
+                      boxShadow: "var(--th-shadow)",
+                    }}
+                  >
+                    <EmptyState
+                      title="暂无组织"
+                      description="您还没有加入任何组织，请先创建或加入一个组织"
+                    />
+                  </Card>
+                )}
+
+                {isInOrg && (
+                  <Card
+                    title={
+                      <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+                        <UserAddOutlined style={{ marginRight: 8 }} />
+                        邀请码管理
+                      </span>
+                    }
+                    style={{
+                      borderRadius: "var(--th-radius-lg)",
+                      boxShadow: "var(--th-shadow)",
+                    }}
+                  >
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleCreateInvite}
+                      loading={inviteLoading}
+                      style={{ marginBottom: 16 }}
+                      size="large"
+                    >
+                      创建邀请码
+                    </Button>
+                    {invites.length > 0 ? (
+                      <List
+                        size="small"
+                        dataSource={invites}
+                        renderItem={(invite) => (
+                          <List.Item
+                            actions={[
+                              <Button
+                                key="copy"
+                                type="link"
+                                icon={<CopyOutlined />}
+                                onClick={() => copyInviteCode(invite.code)}
+                              >
+                                复制
+                              </Button>,
+                            ]}
+                          >
+                            <div className="page-content">
+                              <div
+                                style={{
+                                  fontFamily: "monospace",
+                                  fontSize: 16,
+                                  fontWeight: 600,
+                                  color: "var(--th-foreground)",
+                                }}
+                              >
+                                {invite.code}
+                              </div>
+                              <div style={{ color: "var(--th-foreground-muted)", fontSize: 12 }}>
+                                有效期至 {invite.expiresAt.slice(0, 16).replace("T", " ")} · 已用{" "}
+                                {invite.usedCount}/{invite.maxUses}
+                              </div>
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    ) : (
+                      <EmptyState
+                        title="暂无邀请码"
+                        description="点击上方按钮创建邀请码"
+                        action={{ label: "创建邀请码", onClick: handleCreateInvite }}
+                      />
+                    )}
+                  </Card>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "create",
+            label: (
+              <span>
+                <BuildOutlined style={{ marginRight: 6 }} />
+                创建组织
+              </span>
+            ),
+            children: (
+              <Card style={{ borderRadius: "var(--th-radius-lg)", boxShadow: "var(--th-shadow)" }}>
+                <Form
+                  form={createForm}
+                  layout="vertical"
+                  onFinish={handleCreate}
+                  style={{ maxWidth: 480 }}
                 >
-                  <Input placeholder="例如：阳光公寓" />
-                </Form.Item>
-                <Form.Item label="组织描述（可选）" name="description">
-                  <Input.TextArea placeholder="简要描述你的组织" rows={3} />
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={createLoading} icon={<PlusOutlined />}>
-                    创建组织
-                  </Button>
-                </Form.Item>
-              </Form>
-            </Card>
-          ),
-        },
-        {
-          key: "join",
-          label: "加入组织",
-          children: (
-            <Card>
-              <Form form={joinForm} layout="vertical" onFinish={handleJoin} style={{ maxWidth: 480 }}>
-                <Form.Item
-                  label="邀请码"
-                  name="inviteCode"
-                  rules={[{ required: true, message: "请输入邀请码" }]}
+                  <Form.Item
+                    label="组织名称"
+                    name="name"
+                    rules={[{ required: true, message: "请输入组织名称" }]}
+                  >
+                    <Input
+                      size="large"
+                      prefix={<HomeOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                      placeholder="例如：阳光公寓"
+                    />
+                  </Form.Item>
+                  <Form.Item label="组织描述（可选）" name="description">
+                    <Input.TextArea
+                      placeholder="简要描述你的组织"
+                      rows={3}
+                      style={{ borderRadius: "var(--th-radius)" }}
+                    />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={createLoading}
+                      icon={<PlusOutlined />}
+                      size="large"
+                    >
+                      创建组织
+                    </Button>
+                  </Form.Item>
+                </Form>
+              </Card>
+            ),
+          },
+          {
+            key: "join",
+            label: (
+              <span>
+                <UserAddOutlined style={{ marginRight: 6 }} />
+                加入组织
+              </span>
+            ),
+            children: (
+              <Card style={{ borderRadius: "var(--th-radius-lg)", boxShadow: "var(--th-shadow)" }}>
+                <Form
+                  form={joinForm}
+                  layout="vertical"
+                  onFinish={handleJoin}
+                  style={{ maxWidth: 480 }}
                 >
-                  <Input placeholder="请输入邀请码" />
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={joinLoading}>
-                    加入组织
-                  </Button>
-                </Form.Item>
-              </Form>
-            </Card>
-          ),
-        },
-      ]} />
+                  <Form.Item
+                    label="邀请码"
+                    name="inviteCode"
+                    rules={[{ required: true, message: "请输入邀请码" }]}
+                  >
+                    <Input
+                      size="large"
+                      placeholder="请输入邀请码"
+                      style={{ borderRadius: "var(--th-radius)" }}
+                    />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={joinLoading}
+                      size="large"
+                    >
+                      加入组织
+                    </Button>
+                  </Form.Item>
+                </Form>
+              </Card>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

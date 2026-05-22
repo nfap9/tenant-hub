@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { Card, Form, Input, Button, message } from "antd";
-import { SaveOutlined, LockOutlined } from "@ant-design/icons";
+import { SaveOutlined, LockOutlined, UserOutlined, MobileOutlined } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { updatePassword } from "@/api/auth";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function AccountPage() {
   const { session } = useAppSession();
@@ -46,26 +47,58 @@ export default function AccountPage() {
   };
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 24 }}>账号设置</h2>
+    <div className="page-content">
+      <PageHeader back="/settings" breadcrumb={[{ label: "设置", path: "/settings" }, { label: "账号设置" }]} />
 
-      <Card title="基本信息" style={{ marginBottom: 24 }}>
+      <Card
+        title={
+          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+            <UserOutlined style={{ marginRight: 8 }} />
+            基本信息
+          </span>
+        }
+        style={{
+          marginBottom: 24,
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+      >
         <Form form={form} layout="vertical" onFinish={handleUpdateProfile} style={{ maxWidth: 600 }}>
           <Form.Item label="用户名" name="username">
-            <Input />
+            <Input
+              size="large"
+              prefix={<UserOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              style={{ borderRadius: "var(--th-radius)" }}
+            />
           </Form.Item>
           <Form.Item label="手机号" name="phone">
-            <Input disabled />
+            <Input
+              size="large"
+              prefix={<MobileOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              disabled
+              style={{ borderRadius: "var(--th-radius)" }}
+            />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} size="large">
               保存
             </Button>
           </Form.Item>
         </Form>
       </Card>
 
-      <Card title="修改密码">
+      <Card
+        title={
+          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+            <LockOutlined style={{ marginRight: 8 }} />
+            修改密码
+          </span>
+        }
+        style={{
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+      >
         <Form
           form={passwordForm}
           layout="vertical"
@@ -77,7 +110,12 @@ export default function AccountPage() {
             name="currentPassword"
             rules={[{ required: true, message: "请输入原密码" }]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="请输入原密码" />
+            <Input.Password
+              size="large"
+              prefix={<LockOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              placeholder="请输入原密码"
+              style={{ borderRadius: "var(--th-radius)" }}
+            />
           </Form.Item>
           <Form.Item
             label="新密码"
@@ -87,7 +125,12 @@ export default function AccountPage() {
               { min: 8, message: "密码至少 8 位" },
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="至少 8 位密码" />
+            <Input.Password
+              size="large"
+              prefix={<LockOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              placeholder="至少 8 位密码"
+              style={{ borderRadius: "var(--th-radius)" }}
+            />
           </Form.Item>
           <Form.Item
             label="确认新密码"
@@ -104,10 +147,15 @@ export default function AccountPage() {
               }),
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="再次输入新密码" />
+            <Input.Password
+              size="large"
+              prefix={<LockOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              placeholder="再次输入新密码"
+              style={{ borderRadius: "var(--th-radius)" }}
+            />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} size="large">
               更新密码
             </Button>
           </Form.Item>

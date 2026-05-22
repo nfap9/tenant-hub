@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Card,
   Form,
@@ -9,18 +8,15 @@ import {
   Space,
   message,
 } from "antd";
-import {
-  ArrowLeftOutlined,
-  DownloadOutlined,
-} from "@ant-design/icons";
+import { DownloadOutlined } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { getApartments } from "@/api/apartments";
 import { exportUtilityPendingCsv } from "@/api/bills";
+import PageHeader from "@/components/ui/PageHeader";
 import type { Apartment } from "@/types/domain";
 
 export default function UtilityExportPage() {
   const { currentOrgId } = useAppSession();
-  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,13 +54,14 @@ export default function UtilityExportPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>导出水电数据</h2>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-          返回
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={true}
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "导出水电数据" },
+        ]}
+      />
 
       <Card>
         <Form form={form} layout="vertical" style={{ maxWidth: 600 }}>
@@ -73,11 +70,12 @@ export default function UtilityExportPage() {
               placeholder="全部公寓"
               loading={loading}
               allowClear
+              size="large"
               options={apartments.map((a) => ({ label: a.name, value: a.id }))}
             />
           </Form.Item>
           <Form.Item label="月份" name="month">
-            <DatePicker.MonthPicker style={{ width: "100%" }} />
+            <DatePicker.MonthPicker style={{ width: "100%" }} size="large" />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -86,6 +84,7 @@ export default function UtilityExportPage() {
                 icon={<DownloadOutlined />}
                 loading={exporting}
                 onClick={handleExport}
+                size="large"
               >
                 导出待录入模板
               </Button>

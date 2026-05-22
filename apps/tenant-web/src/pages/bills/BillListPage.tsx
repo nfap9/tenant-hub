@@ -6,12 +6,10 @@ import {
   Tabs,
   Input,
   Space,
-  Empty,
   Tag,
   Spin,
   message,
   Modal,
-  Statistic,
   Row,
   Col,
 } from "antd";
@@ -24,6 +22,9 @@ import {
   DownloadOutlined,
   UploadOutlined,
   ThunderboltOutlined,
+  WalletOutlined,
+  FileTextOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { getMonthlyBills, getBillsByStatus, deleteMonthlyBill, retryBillBilling } from "@/api/bills";
@@ -31,6 +32,9 @@ import { getRooms } from "@/api/rooms";
 import { money } from "@/utils/format";
 import { statusLabels, toneForBillStatus } from "./constants";
 import { remainingAmount, sortMonthlyBillsForList, getMonthlyBillCardSummary } from "./utils";
+import PageHeader from "@/components/ui/PageHeader";
+import StatCard from "@/components/ui/StatCard";
+import EmptyState from "@/components/ui/EmptyState";
 import type { Bill, BillStatus, MonthlyBill } from "@/types/domain";
 
 export default function BillListPage() {
@@ -133,26 +137,34 @@ export default function BillListPage() {
         size="small"
         style={{ marginBottom: 12, cursor: "pointer" }}
         onClick={() => navigate(`/bills/monthly/${bill.id}`)}
-        bodyStyle={{ padding: 16 }}
+        bodyStyle={{ padding: "var(--th-space-5)" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 15 }}>{summary.title}</div>
-            <div style={{ color: "#888", fontSize: 13 }}>{summary.meta}</div>
+            <div style={{ fontWeight: 600, fontSize: 15, fontFamily: "var(--th-font-heading)", color: "var(--th-foreground)" }}>
+              {summary.title}
+            </div>
+            <div style={{ color: "var(--th-foreground-muted)", fontSize: 13, marginTop: 2 }}>
+              {summary.meta}
+            </div>
           </div>
           <Tag color={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Tag>
         </div>
         <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#146c5c" }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--th-primary)", fontFamily: "var(--th-font-heading)" }}>
             ¥{money(summary.totalAmount)}
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ color: "#888", fontSize: 13 }}>剩余 ¥{money(summary.remainingAmount)}</div>
-            <div style={{ color: "#888", fontSize: 13 }}>已收 ¥{money(summary.paidAmount)}</div>
+            <div style={{ color: "var(--th-foreground-muted)", fontSize: 13 }}>
+              剩余 ¥{money(summary.remainingAmount)}
+            </div>
+            <div style={{ color: "var(--th-foreground-subtle)", fontSize: 13 }}>
+              已收 ¥{money(summary.paidAmount)}
+            </div>
           </div>
         </div>
         <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ color: "#888", fontSize: 12 }}>{summary.detailCountText}</span>
+          <span style={{ color: "var(--th-foreground-subtle)", fontSize: 12 }}>{summary.detailCountText}</span>
           <Space>
             {showDelete && bill.status !== "PAID" && (
               <Button
@@ -178,19 +190,25 @@ export default function BillListPage() {
   };
 
   const renderPendingCard = (bill: Bill) => (
-    <Card key={bill.id} size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: 16 }}>
+    <Card
+      key={bill.id}
+      size="small"
+      style={{ marginBottom: 12 }}
+      bodyStyle={{ padding: "var(--th-space-5)" }}
+    >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontWeight: 600, fontSize: 15 }}>
+          <div style={{ fontWeight: 600, fontSize: 15, fontFamily: "var(--th-font-heading)", color: "var(--th-foreground)" }}>
             {bill.lease?.tenantName ?? "租客"} · {bill.lease?.room?.roomNo ?? "房间"}
           </div>
-          <div style={{ color: "#888", fontSize: 13 }}>
+          <div style={{ color: "var(--th-foreground-muted)", fontSize: 13, marginTop: 2 }}>
             {bill.periodStart?.slice(0, 10)} 至 {bill.periodEnd?.slice(0, 10)}
           </div>
         </div>
         <Tag color={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Tag>
       </div>
-      <div style={{ marginTop: 8, color: "#ff4d4f" }}>
+      <div style={{ marginTop: 8, color: "var(--th-danger)", fontSize: 14 }}>
+        <ExclamationCircleOutlined style={{ marginRight: 6 }} />
         {bill.failureReason ?? "需要补录或修正水电读数"}
       </div>
       <div style={{ marginTop: 12 }}>
@@ -205,51 +223,69 @@ export default function BillListPage() {
   );
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>账单管理</h2>
-        <Space>
+    <div className="page-content">
+      <PageHeader
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "账单管理" },
+        ]}
+        actions={
           <Button icon={<ReloadOutlined />} loading={loading} onClick={loadData}>
             刷新
           </Button>
-        </Space>
-      </div>
+        }
+      />
 
       <Spin spinning={loading}>
         {/* 统计 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           {tab === "unpaid" && (
             <>
-              <Col span={12}>
-                <Card>
-                  <Statistic title="待支付账单" value={unpaidMonthlyBills.length} />
-                </Card>
+              <Col xs={24} sm={12}>
+                <StatCard
+                  title="待支付账单"
+                  value={unpaidMonthlyBills.length}
+                  icon={<FileTextOutlined />}
+                  color="warning"
+                />
               </Col>
-              <Col span={12}>
-                <Card>
-                  <Statistic title="待收金额" value={`¥${money(unpaidTotal)}`} />
-                </Card>
+              <Col xs={24} sm={12}>
+                <StatCard
+                  title="待收金额"
+                  value={`¥${money(unpaidTotal)}`}
+                  icon={<WalletOutlined />}
+                  color="danger"
+                />
               </Col>
             </>
           )}
           {tab === "pending" && (
             <Col span={24}>
-              <Card>
-                <Statistic title="待处理账单" value={reviewBills.length} />
-              </Card>
+              <StatCard
+                title="待处理账单"
+                value={reviewBills.length}
+                icon={<ExclamationCircleOutlined />}
+                color="warning"
+              />
             </Col>
           )}
           {tab === "all" && (
             <>
-              <Col span={12}>
-                <Card>
-                  <Statistic title="全部账单" value={monthlyBills.length} />
-                </Card>
+              <Col xs={24} sm={12}>
+                <StatCard
+                  title="全部账单"
+                  value={monthlyBills.length}
+                  icon={<FileTextOutlined />}
+                  color="primary"
+                />
               </Col>
-              <Col span={12}>
-                <Card>
-                  <Statistic title="待收金额" value={`¥${money(unpaidTotal)}`} />
-                </Card>
+              <Col xs={24} sm={12}>
+                <StatCard
+                  title="待收金额"
+                  value={`¥${money(unpaidTotal)}`}
+                  icon={<WalletOutlined />}
+                  color="danger"
+                />
               </Col>
             </>
           )}
@@ -293,7 +329,10 @@ export default function BillListPage() {
               children: (
                 <div>
                   {unpaidMonthlyBills.length === 0 ? (
-                    <Empty description="暂无待支付账单" />
+                    <EmptyState
+                      title="暂无待支付账单"
+                      description="当前没有待支付的账单记录"
+                    />
                   ) : (
                     sortMonthlyBillsForList(unpaidMonthlyBills).map((bill) => renderBillCard(bill))
                   )}
@@ -306,7 +345,10 @@ export default function BillListPage() {
               children: (
                 <div>
                   {reviewBills.length === 0 ? (
-                    <Empty description="暂无待处理账单" />
+                    <EmptyState
+                      title="暂无待处理账单"
+                      description="所有账单均已处理完毕"
+                    />
                   ) : (
                     reviewBills.map((bill) => renderPendingCard(bill))
                   )}
@@ -323,10 +365,11 @@ export default function BillListPage() {
                     prefix={<SearchOutlined />}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 16 }}
                     allowClear
+                    size="large"
                   />
-                  <Space wrap style={{ marginBottom: 12 }}>
+                  <Space wrap style={{ marginBottom: 16 }}>
                     {(["", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"] as const).map(
                       (status) => (
                         <Button
@@ -341,7 +384,10 @@ export default function BillListPage() {
                     )}
                   </Space>
                   {filteredAllBills.length === 0 ? (
-                    <Empty description="未找到账单" />
+                    <EmptyState
+                      title="未找到账单"
+                      description="请尝试调整搜索条件或筛选状态"
+                    />
                   ) : (
                     filteredAllBills.map((bill) => renderBillCard(bill, true))
                   )}

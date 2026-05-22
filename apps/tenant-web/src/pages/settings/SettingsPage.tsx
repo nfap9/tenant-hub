@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { message } from "antd";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -59,23 +60,43 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 24 }}>更多</h2>
+    <div className="page-content">
+      <PageHeader breadcrumb={[{ label: "设置" }]} />
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card
+        style={{
+          marginBottom: 16,
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+        bodyStyle={{ padding: "var(--th-space-6)" }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
-          <Avatar size={64} icon={<UserOutlined />} style={{ backgroundColor: "#146c5c" }} />
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>
+          <Avatar
+            size={64}
+            icon={<UserOutlined />}
+            style={{ backgroundColor: "var(--th-primary)", flexShrink: 0 }}
+          />
+          <div className="page-content">
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 600,
+                fontFamily: "var(--th-font-heading)",
+                color: "var(--th-foreground)",
+              }}
+            >
               {session?.user?.username || session?.user?.phone}
             </div>
-            <div style={{ color: "#71827b" }}>{session?.user?.phone}</div>
+            <div style={{ color: "var(--th-foreground-muted)", fontSize: 14 }}>
+              {session?.user?.phone}
+            </div>
           </div>
         </div>
         {currentMembership && (
           <Descriptions size="small" column={2}>
             <Descriptions.Item label="当前组织">
-              <Tag color="green">{currentMembership.organization.name}</Tag>
+              <Tag color="success">{currentMembership.organization.name}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="角色">
               <Tag>{currentMembership.role.name}</Tag>
@@ -84,32 +105,63 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card
+        style={{
+          marginBottom: 16,
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+        bodyStyle={{ padding: 0 }}
+      >
         <List
           itemLayout="horizontal"
           dataSource={menuItems}
           renderItem={(item) => (
             <List.Item
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", padding: "var(--th-space-4) var(--th-space-6)", transition: "var(--th-transition)" }}
               onClick={() => navigate(item.path)}
-              actions={[<RightOutlined key="arrow" style={{ color: "#bbb" }} />]}
+              actions={[
+                <RightOutlined key="arrow" style={{ color: "var(--th-foreground-subtle)" }} />,
+              ]}
             >
               <List.Item.Meta
-                avatar={<Avatar icon={item.icon} style={{ backgroundColor: "#146c5c" }} />}
-                title={item.title}
+                avatar={
+                  <Avatar
+                    icon={item.icon}
+                    style={{ backgroundColor: "var(--th-primary)" }}
+                  />
+                }
+                title={
+                  <span style={{ fontWeight: 500, color: "var(--th-foreground)" }}>
+                    {item.title}
+                  </span>
+                }
               />
             </List.Item>
           )}
         />
       </Card>
 
-      <Card>
-        <Button type="primary" danger block icon={<LogoutOutlined />} onClick={handleSignOut}>
+      <Card
+        style={{
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+        bodyStyle={{ padding: "var(--th-space-4)" }}
+      >
+        <Button type="primary" danger block icon={<LogoutOutlined />} onClick={handleSignOut} size="large">
           退出登录
         </Button>
       </Card>
 
-      <div style={{ textAlign: "center", marginTop: 24, color: "#bbb", fontSize: 12 }}>
+      <div
+        style={{
+          textAlign: "center",
+          marginTop: 24,
+          color: "var(--th-foreground-subtle)",
+          fontSize: 12,
+        }}
+      >
         {platformInfo.name} © {new Date().getFullYear()}
       </div>
     </div>

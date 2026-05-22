@@ -2,13 +2,23 @@ import { useEffect, useState } from "react";
 import { Card, Select, Table, Tag, message } from "antd";
 import { getAdminOrganizations } from "@/api/admin";
 import { apiClient } from "@/api/client";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function OpsOrganizationsPage() {
-  const [orgs, setOrgs] = useState<Array<{
-    id: string; name: string; code: string; status: string;
-    _count?: { apartments: number; members: number };
-    subscriptions?: Array<{ active: boolean; endsAt?: string; plan?: { name: string } }>;
-  }>>([]);
+  const [orgs, setOrgs] = useState<
+    Array<{
+      id: string;
+      name: string;
+      code: string;
+      status: string;
+      _count?: { apartments: number; members: number };
+      subscriptions?: Array<{
+        active: boolean;
+        endsAt?: string;
+        plan?: { name: string };
+      }>;
+    }>
+  >([]);
   const [loading, setLoading] = useState(false);
 
   const load = () => {
@@ -25,7 +35,10 @@ export default function OpsOrganizationsPage() {
 
   const handleStatusChange = async (orgId: string, status: string) => {
     try {
-      await apiClient(`/admin/organizations/${orgId}/status`, { method: "PUT", body: { status } });
+      await apiClient(`/admin/organizations/${orgId}/status`, {
+        method: "PUT",
+        body: { status },
+      });
       load();
     } catch (e) {
       message.error(e instanceof Error ? e.message : "更新失败");
@@ -33,41 +46,70 @@ export default function OpsOrganizationsPage() {
   };
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 24 }}>组织管理</h2>
-      <Card>
+    <div className="page-content">
+      <PageHeader breadcrumb={[{ label: "运营端" }, { label: "组织管理" }]} />
+
+      <Card
+        style={{
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+      >
         <Table
           rowKey="id"
           loading={loading}
           dataSource={orgs}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: "max-content" }}
           columns={[
-            { title: "组织", dataIndex: "name" },
+            { title: "组织", dataIndex: "name", ellipsis: true },
             { title: "编码", dataIndex: "code" },
             {
               title: "当前套餐",
-              render: (_: unknown, row: typeof orgs[0]) => {
+              render: (_: unknown, row: (typeof orgs)[0]) => {
                 const subscription = row.subscriptions?.find((item) => item.active);
-                return subscription ? <Tag color="green">{subscription.plan?.name}</Tag> : <Tag>未购买</Tag>;
+                return subscription ? (
+                  <Tag color="success">{subscription.plan?.name}</Tag>
+                ) : (
+                  <Tag>未购买</Tag>
+                );
               },
             },
             {
               title: "有效期",
-              render: (_: unknown, row: typeof orgs[0]) => {
+              render: (_: unknown, row: (typeof orgs)[0]) => {
                 const subscription = row.subscriptions?.find((item) => item.active);
-                return subscription?.endsAt ? new Date(subscription.endsAt).toLocaleDateString() : "-";
+                return subscription?.endsAt
+                  ? new Date(subscription.endsAt).toLocaleDateString()
+                  : "-";
               },
             },
-            { title: "公寓", render: (_: unknown, row: typeof orgs[0]) => row._count?.apartments },
-            { title: "成员", render: (_: unknown, row: typeof orgs[0]) => row._count?.members },
-            { title: "状态", dataIndex: "status" },
+            {
+              title: "公寓",
+              render: (_: unknown, row: (typeof orgs)[0]) => row._count?.apartments,
+            },
+            {
+              title: "成员",
+              render: (_: unknown, row: (typeof orgs)[0]) => row._count?.members,
+            },
+            {
+              title: "状态",
+              dataIndex: "status",
+              render: (value: string) => (
+                <Tag color={value === "ACTIVE" ? "success" : "warning"}>{value}</Tag>
+              ),
+            },
             {
               title: "操作",
-              render: (_: unknown, row: typeof orgs[0]) => (
+              render: (_: unknown, row: (typeof orgs)[0]) => (
                 <Select
                   value={row.status}
                   style={{ width: 116 }}
-                  options={["ACTIVE", "SUSPENDED", "DELETED"].map((value) => ({ value, label: value }))}
+                  size="middle"
+                  options={["ACTIVE", "SUSPENDED", "DELETED"].map((value) => ({
+                    value,
+                    label: value,
+                  }))}
                   onChange={(status) => handleStatusChange(row.id, status)}
                 />
               ),

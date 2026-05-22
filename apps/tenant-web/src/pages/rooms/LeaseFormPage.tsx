@@ -1,13 +1,21 @@
 import { useState } from "react";
 import { Card, Form, Input, InputNumber, DatePicker, Select, Switch, Button, message, Space, Divider } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { SaveOutlined, ArrowLeftOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  SaveOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  CalendarOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
 import { createLease } from "@/api/leases";
 import { today, nextYear } from "@/utils/format";
 import { cycleLabels, selectableFeeTypes, type LeaseFeeFormItem, type RentCycle } from "./constants";
 import { buildLeaseFeesPayload } from "./utils";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function LeaseFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -76,98 +84,128 @@ export default function LeaseFormPage() {
   const showHistoricalBills = startDate && dayjs(startDate).isBefore(dayjs(), "day");
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/rooms")}>返回</Button>
-        <h2 style={{ margin: 0 }}>签约入住</h2>
-      </div>
-      <Card style={{ maxWidth: 720 }}>
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          initialValues={{
-            startDate: dayjs(today()),
-            endDate: dayjs(nextYear()),
-            cycle: "MONTHLY",
-            graceDays: 0,
-            autoRenew: true,
-            generateHistoricalBills: false,
-            waterUnitPrice: 0,
-            powerUnitPrice: 0,
-          }}
-        >
-          <Form.Item label="租客姓名" name="tenantName" rules={[{ required: true, message: "请输入租客姓名" }]}>
-            <Input placeholder="请输入姓名" />
-          </Form.Item>
-          <Form.Item label="租客电话" name="tenantPhone" rules={[{ required: true, message: "请输入租客电话" }]}>
-            <Input placeholder="请输入手机号" />
-          </Form.Item>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <Form.Item label="开始日期" name="startDate" rules={[{ required: true, message: "请选择开始日期" }]}>
-              <DatePicker style={{ width: "100%" }} />
-            </Form.Item>
-            <Form.Item label="结束日期" name="endDate" rules={[{ required: true, message: "请选择结束日期" }]}>
-              <DatePicker style={{ width: "100%" }} />
-            </Form.Item>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <Form.Item label="租金" name="rentAmount" rules={[{ required: true, message: "请输入租金" }]}>
-              <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="每期金额" />
-            </Form.Item>
-            <Form.Item label="押金" name="depositAmount">
-              <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="请输入押金" />
-            </Form.Item>
-          </div>
-          <Form.Item label="宽限天数" name="graceDays">
-            <InputNumber min={0} style={{ width: "100%" }} placeholder="交租日后几日内" />
-          </Form.Item>
-          <Form.Item label="交租周期" name="cycle" rules={[{ required: true }]}>
-            <Select options={(["MONTHLY", "QUARTERLY", "YEARLY"] as RentCycle[]).map((c) => ({ label: cycleLabels[c], value: c }))} />
-          </Form.Item>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-            <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-          </div>
-          <Form.Item label="自动续约" name="autoRenew" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+    <div className="page-content">
+      <PageHeader
+        back="/rooms"
+        breadcrumb={[
+          { label: "房间管理", path: "/rooms" },
+          { label: "签约入住" },
+        ]}
+      />
 
-          {showHistoricalBills && (
-            <Form.Item label="历史账单" name="generateHistoricalBills" valuePropName="checked">
-              <Switch checkedChildren="生成全部" unCheckedChildren="仅当前期" />
+      <div style={{ maxWidth: 720 }}>
+        <Card>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+            initialValues={{
+              startDate: dayjs(today()),
+              endDate: dayjs(nextYear()),
+              cycle: "MONTHLY",
+              graceDays: 0,
+              autoRenew: true,
+              generateHistoricalBills: false,
+              waterUnitPrice: 0,
+              powerUnitPrice: 0,
+            }}
+          >
+            <Form.Item label="租客姓名" name="tenantName" rules={[{ required: true, message: "请输入租客姓名" }]}>
+              <Input placeholder="请输入姓名" size="large" prefix={<UserOutlined />} />
             </Form.Item>
-          )}
-
-          <Divider orientation="left">费用项目</Divider>
-          {fees.map((item) => (
-            <Space key={item.id} style={{ display: "flex", marginBottom: 8 }} align="baseline">
-              <span style={{ width: 80, display: "inline-block" }}>{item.name}</span>
-              <InputNumber
-                min={0}
-                placeholder="价格"
-                value={item.amount ? Number(item.amount) : undefined}
-                onChange={(v) => updateFeeAmount(item.id, String(v || 0))}
+            <Form.Item label="租客电话" name="tenantPhone" rules={[{ required: true, message: "请输入租客电话" }]}>
+              <Input placeholder="请输入手机号" size="large" prefix={<PhoneOutlined />} />
+            </Form.Item>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <Form.Item label="开始日期" name="startDate" rules={[{ required: true, message: "请选择开始日期" }]}>
+                <DatePicker style={{ width: "100%" }} size="large" prefix={<CalendarOutlined />} />
+              </Form.Item>
+              <Form.Item label="结束日期" name="endDate" rules={[{ required: true, message: "请选择结束日期" }]}>
+                <DatePicker style={{ width: "100%" }} size="large" prefix={<CalendarOutlined />} />
+              </Form.Item>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <Form.Item label="租金" name="rentAmount" rules={[{ required: true, message: "请输入租金" }]}>
+                <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="每期金额" size="large" />
+              </Form.Item>
+              <Form.Item label="押金" name="depositAmount">
+                <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="请输入押金" size="large" />
+              </Form.Item>
+            </div>
+            <Form.Item label="宽限天数" name="graceDays">
+              <InputNumber min={0} style={{ width: "100%" }} placeholder="交租日后几日内" size="large" />
+            </Form.Item>
+            <Form.Item label="交租周期" name="cycle" rules={[{ required: true }]}>
+              <Select
+                options={(["MONTHLY", "QUARTERLY", "YEARLY"] as RentCycle[]).map((c) => ({ label: cycleLabels[c], value: c }))}
+                size="large"
               />
-              <Button type="link" danger icon={<DeleteOutlined />} onClick={() => removeFee(item.id)} />
-            </Space>
-          ))}
-          <div style={{ marginBottom: 16 }}>
-            <Button type="dashed" icon={<PlusOutlined />} onClick={addFee}>添加费用</Button>
-          </div>
+            </Form.Item>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
+                <InputNumber min={0} style={{ width: "100%" }} size="large" />
+              </Form.Item>
+              <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
+                <InputNumber min={0} style={{ width: "100%" }} size="large" />
+              </Form.Item>
+            </div>
+            <Form.Item label="自动续约" name="autoRenew" valuePropName="checked">
+              <Switch />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving}>
-              确认签约
-            </Button>
-            <Button style={{ marginLeft: 8 }} onClick={() => navigate("/rooms")}>取消</Button>
-          </Form.Item>
-        </Form>
-      </Card>
+            {showHistoricalBills && (
+              <Form.Item label="历史账单" name="generateHistoricalBills" valuePropName="checked">
+                <Switch checkedChildren="生成全部" unCheckedChildren="仅当前期" />
+              </Form.Item>
+            )}
+
+            <Divider orientation="left" style={{ color: "var(--th-foreground-muted)", fontWeight: 600 }}>
+              费用项目
+            </Divider>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+              {fees.map((item) => (
+                <Space key={item.id} style={{ display: "flex" }} align="baseline">
+                  <span
+                    style={{
+                      width: 90,
+                      display: "inline-block",
+                      fontWeight: 500,
+                      color: "var(--th-foreground)",
+                    }}
+                  >
+                    {item.name}
+                  </span>
+                  <InputNumber
+                    min={0}
+                    placeholder="价格"
+                    value={item.amount ? Number(item.amount) : undefined}
+                    onChange={(v) => updateFeeAmount(item.id, String(v || 0))}
+                    size="large"
+                    prefix="¥"
+                  />
+                  <Button type="link" danger icon={<DeleteOutlined />} onClick={() => removeFee(item.id)}>
+                    删除
+                  </Button>
+                </Space>
+              ))}
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <Button type="dashed" icon={<PlusOutlined />} onClick={addFee} size="large" style={{ width: "100%" }}>
+                添加费用
+              </Button>
+            </div>
+
+            <Form.Item style={{ marginTop: 24 }}>
+              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving} size="large">
+                确认签约
+              </Button>
+              <Button size="large" style={{ marginLeft: 12 }} onClick={() => navigate("/rooms")}>
+                取消
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </div>
     </div>
   );
 }

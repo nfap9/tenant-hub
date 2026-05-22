@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Checkbox, Form, Input, Modal, Popconfirm, Space, Table, Tag, message } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Card,
+  Checkbox,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Table,
+  Tag,
+  message,
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from "@ant-design/icons";
 import { getAdminRoles, createAdminRole, updateAdminRole, deleteAdminRole } from "@/api/admin";
+import PageHeader from "@/components/ui/PageHeader";
 
 const permissionOptions = [
   { code: "*", name: "全部权限" },
@@ -100,27 +113,42 @@ export default function OpsRolesPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>角色权限</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增角色</Button>
-      </div>
-      <Card>
+    <div className="page-content">
+      <PageHeader
+        breadcrumb={[{ label: "运营端" }, { label: "角色权限" }]}
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} size="large">
+            新增角色
+          </Button>
+        }
+      />
+
+      <Card
+        style={{
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+      >
         <Table
           rowKey="id"
           loading={loading}
           dataSource={roles}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: "max-content" }}
           columns={[
-            { title: "名称", dataIndex: "name" },
+            { title: "名称", dataIndex: "name", ellipsis: true },
             { title: "编码", dataIndex: "code" },
-            { title: "系统预置", dataIndex: "system", render: (v: boolean) => (v ? "是" : "否") },
+            {
+              title: "系统预置",
+              dataIndex: "system",
+              render: (v: boolean) => (v ? <Tag color="warning">是</Tag> : <Tag>否</Tag>),
+            },
             {
               title: "权限",
               dataIndex: "permissions",
               render: (items: string[]) =>
                 items?.map((item) => (
-                  <Tag key={item} color={item === "*" ? "gold" : "default"}>
+                  <Tag key={item} color={item === "*" ? "warning" : "default"}>
                     {permissionNameMap.get(item) ?? item}
                   </Tag>
                 )),
@@ -129,7 +157,13 @@ export default function OpsRolesPage() {
               title: "操作",
               render: (_: unknown, row: RoleItem) => (
                 <Space>
-                  <Button type="link" onClick={() => openEdit(row)}>编辑</Button>
+                  <Button
+                    type="link"
+                    icon={<EditOutlined />}
+                    onClick={() => openEdit(row)}
+                  >
+                    编辑
+                  </Button>
                   <Popconfirm
                     title="确认删除角色？"
                     description={row.system ? "系统预置角色不可删除" : "删除后不可恢复"}
@@ -138,7 +172,9 @@ export default function OpsRolesPage() {
                     disabled={row.system}
                     onConfirm={() => handleDelete(row)}
                   >
-                    <Button type="link" danger disabled={row.system}>删除</Button>
+                    <Button type="link" danger disabled={row.system} icon={<DeleteOutlined />}>
+                      删除
+                    </Button>
                   </Popconfirm>
                 </Space>
               ),
@@ -146,11 +182,21 @@ export default function OpsRolesPage() {
           ]}
         />
       </Card>
+
       <Modal
         open={modalOpen}
-        title={editingRole ? "编辑角色" : "新增角色"}
+        title={
+          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+            <SafetyOutlined style={{ marginRight: 8 }} />
+            {editingRole ? "编辑角色" : "新增角色"}
+          </span>
+        }
         footer={null}
-        onCancel={() => { setModalOpen(false); setEditingRole(undefined); form.resetFields(); }}
+        onCancel={() => {
+          setModalOpen(false);
+          setEditingRole(undefined);
+          form.resetFields();
+        }}
       >
         <Form
           key={editingRole?.id ?? "new-role"}
@@ -159,25 +205,52 @@ export default function OpsRolesPage() {
           onFinish={handleSubmit}
         >
           <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
-            <Input />
+            <Input size="large" placeholder="请输入角色名称" style={{ borderRadius: "var(--th-radius)" }} />
           </Form.Item>
-          <Form.Item name="code" label="角色编码" rules={[{ required: true }]} extra="使用小写字母、数字、下划线或中划线">
-            <Input disabled={editingRole?.system} />
+          <Form.Item
+            name="code"
+            label="角色编码"
+            rules={[{ required: true }]}
+            extra="使用小写字母、数字、下划线或中划线"
+          >
+            <Input
+              size="large"
+              disabled={editingRole?.system}
+              placeholder="例如：manager"
+              style={{ borderRadius: "var(--th-radius)" }}
+            />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={2} />
+            <Input.TextArea rows={2} placeholder="角色描述（可选）" style={{ borderRadius: "var(--th-radius)" }} />
           </Form.Item>
-          <Form.Item name="permissions" label="权限码" rules={[{ required: true, message: "请选择权限码" }]}>
-            <Checkbox.Group style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <Form.Item
+            name="permissions"
+            label="权限码"
+            rules={[{ required: true, message: "请选择权限码" }]}
+          >
+            <Checkbox.Group
+              style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+            >
               {permissionOptions.map((item) => (
-                <Checkbox key={item.code} value={item.code} style={{ padding: 8, border: "1px solid #e3dece", borderRadius: 6, background: "#fffaf0" }}>
-                  <div>{item.name}</div>
-                  <div style={{ fontSize: 12, color: "#68736f" }}>{item.code}</div>
+                <Checkbox
+                  key={item.code}
+                  value={item.code}
+                  style={{
+                    padding: 8,
+                    border: "1px solid var(--th-border-light)",
+                    borderRadius: "var(--th-radius-sm)",
+                    background: "var(--th-bg)",
+                  }}
+                >
+                  <div style={{ color: "var(--th-foreground)", fontWeight: 500 }}>{item.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--th-foreground-muted)" }}>{item.code}</div>
                 </Checkbox>
               ))}
             </Checkbox.Group>
           </Form.Item>
-          <Button type="primary" htmlType="submit">保存</Button>
+          <Button type="primary" htmlType="submit" size="large">
+            保存
+          </Button>
         </Form>
       </Modal>
     </div>

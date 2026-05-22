@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Card, Input, Select, Table, Tag, message } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import { getAdminUsers, updateUserPlatformRole } from "@/api/admin";
+import PageHeader from "@/components/ui/PageHeader";
 
 const platformRoleOptions = [
   { value: "USER", label: "普通用户" },
@@ -10,10 +12,15 @@ const platformRoleOptions = [
 const platformRoleMap = new Map(platformRoleOptions.map((item) => [item.value, item.label]));
 
 export default function OpsUsersPage() {
-  const [users, setUsers] = useState<Array<{
-    id: string; username: string; phone: string; platformRole: string;
-    _count?: { memberships: number };
-  }>>([]);
+  const [users, setUsers] = useState<
+    Array<{
+      id: string;
+      username: string;
+      phone: string;
+      platformRole: string;
+      _count?: { memberships: number };
+    }>
+  >([]);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -30,43 +37,58 @@ export default function OpsUsersPage() {
   }, []);
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>用户管理</h2>
-      </div>
-      <Card>
-        <div style={{ marginBottom: 12 }}>
+    <div className="page-content">
+      <PageHeader
+        breadcrumb={[{ label: "运营端" }, { label: "用户管理" }]}
+        actions={
           <Input.Search
             allowClear
             placeholder="搜索手机号或用户名"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onSearch={load}
+            prefix={<SearchOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
             style={{ width: 280 }}
+            size="large"
           />
-        </div>
+        }
+      />
+
+      <Card
+        style={{
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+      >
         <Table
           rowKey="id"
           loading={loading}
           dataSource={users}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: "max-content" }}
           columns={[
-            { title: "用户名", dataIndex: "username" },
+            { title: "用户名", dataIndex: "username", ellipsis: true },
             { title: "手机号", dataIndex: "phone" },
-            { title: "组织数", render: (_: unknown, row: typeof users[0]) => row._count?.memberships ?? 0 },
+            {
+              title: "组织数",
+              render: (_: unknown, row: (typeof users)[0]) => row._count?.memberships ?? 0,
+            },
             {
               title: "运营权限",
               dataIndex: "platformRole",
               render: (value: string) => (
-                <Tag color={value === "USER" ? "default" : "green"}>{platformRoleMap.get(value) ?? value}</Tag>
+                <Tag color={value === "USER" ? "default" : "success"}>
+                  {platformRoleMap.get(value) ?? value}
+                </Tag>
               ),
             },
             {
               title: "操作",
-              render: (_: unknown, row: typeof users[0]) => (
+              render: (_: unknown, row: (typeof users)[0]) => (
                 <Select
                   value={row.platformRole}
                   style={{ width: 150 }}
+                  size="middle"
                   options={platformRoleOptions}
                   onChange={async (platformRole) => {
                     try {

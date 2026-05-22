@@ -4,10 +4,9 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
+  Progress,
   Button,
   Tag,
-  Empty,
   Space,
   Spin,
   message,
@@ -21,7 +20,13 @@ import {
   RightOutlined,
   ThunderboltOutlined,
   CheckCircleOutlined,
+  TeamOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
+import PageHeader from "@/components/ui/PageHeader";
+import StatCard from "@/components/ui/StatCard";
 import { useAppSession } from "@/context/AppSessionContext";
 import { getApartments } from "@/api/apartments";
 import { getRooms } from "@/api/rooms";
@@ -41,6 +46,24 @@ const leaseMonthlyIncome = (lease: Lease) => {
 const isUnpaid = (bill: MonthlyBill) => bill.status !== "PAID" && bill.status !== "VOID";
 const isOverdue = (bill: MonthlyBill) =>
   isUnpaid(bill) && bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
+
+const todoToneMap: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
+  red: {
+    color: "var(--th-danger)",
+    bg: "rgba(220, 38, 38, 0.08)",
+    icon: <ExclamationCircleOutlined />,
+  },
+  orange: {
+    color: "#EA580C",
+    bg: "rgba(234, 88, 12, 0.08)",
+    icon: <EditOutlined />,
+  },
+  green: {
+    color: "var(--th-success)",
+    bg: "rgba(34, 197, 94, 0.08)",
+    icon: <PlusOutlined />,
+  },
+};
 
 export default function DashboardPage() {
   const { currentOrgId } = useAppSession();
@@ -177,39 +200,50 @@ export default function DashboardPage() {
   }[];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>首页</h2>
-        <Button icon={<ReloadOutlined />} loading={loading} onClick={loadData}>
-          刷新
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        breadcrumb={[{ label: "首页" }]}
+        actions={
+          <Button icon={<ReloadOutlined />} loading={loading} onClick={loadData}>
+            刷新
+          </Button>
+        }
+      />
 
       <Spin spinning={loading}>
         {/* 经营概览 */}
-        <Card style={{ marginBottom: 16, background: "#146c5c", color: "#fff" }}>
-          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 14, marginBottom: 4 }}>
+        <Card
+          style={{
+            marginBottom: 16,
+            background: "linear-gradient(135deg, #0F766E 0%, #14B8A6 60%, #5EEAD4 100%)",
+            color: "#fff",
+            borderRadius: "var(--th-radius-lg)",
+            border: "none",
+          }}
+          bodyStyle={{ padding: "var(--th-space-6)" }}
+        >
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, marginBottom: 4, fontWeight: 500 }}>
             本月经营概览
           </div>
-          <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, color: "#fff" }}>
+          <div style={{ fontSize: 40, fontWeight: 700, marginBottom: 20, color: "#fff", fontFamily: "var(--th-font-heading)" }}>
             ¥{compactMoney(monthlyIncome)}
           </div>
           <Row gutter={16}>
             <Col span={8}>
-              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>已收</div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: "#fff" }}>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, marginBottom: 4 }}>已收</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: "#fff" }}>
                 ¥{compactMoney(paidThisMonth)}
               </div>
             </Col>
             <Col span={8}>
-              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>待收</div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: "#fff" }}>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, marginBottom: 4 }}>待收</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: "#fff" }}>
                 ¥{compactMoney(unpaidTotal)}
               </div>
             </Col>
             <Col span={8}>
-              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>支出</div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: "#fff" }}>
+              <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, marginBottom: 4 }}>支出</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: "#fff" }}>
                 ¥{compactMoney(thisMonthExpense)}
               </div>
             </Col>
@@ -219,71 +253,79 @@ export default function DashboardPage() {
         {/* 统计卡片 */}
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="公寓总数"
-                value={apartments.length}
-                prefix={<ApartmentOutlined />}
-              />
-            </Card>
+            <StatCard
+              title="公寓总数"
+              value={apartments.length}
+              icon={<ApartmentOutlined />}
+              color="primary"
+            />
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="房间总数"
-                value={rooms.length}
-                prefix={<HomeOutlined />}
-              />
-            </Card>
+            <StatCard
+              title="房间总数"
+              value={rooms.length}
+              icon={<HomeOutlined />}
+              color="accent"
+            />
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="待收账单"
-                value={monthlyBills.filter(isUnpaid).length}
-                prefix={<FileTextOutlined />}
-              />
-            </Card>
+            <StatCard
+              title="在租租约"
+              value={activeLeases.length}
+              icon={<TeamOutlined />}
+              color="success"
+            />
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="本月收入"
-                value={compactMoney(paidThisMonth)}
-                prefix={<WalletOutlined />}
-                suffix="元"
-              />
-            </Card>
+            <StatCard
+              title="待收账单"
+              value={monthlyBills.filter(isUnpaid).length}
+              icon={<FileTextOutlined />}
+              color="warning"
+            />
           </Col>
         </Row>
 
         {/* 出租率 */}
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} lg={12}>
-            <Card title="出租情况">
+            <Card
+              title={<span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>出租情况</span>}
+              style={{ borderRadius: "var(--th-radius-lg)", boxShadow: "var(--th-shadow)" }}
+            >
               <Row gutter={16}>
                 <Col span={12} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 32, fontWeight: 700, color: "#52c41a" }}>
+                  <div style={{ fontSize: 32, fontWeight: 700, color: "var(--th-success)" }}>
                     {vacantCount}
                   </div>
-                  <div style={{ color: "#888" }}>空闲房间</div>
+                  <div style={{ color: "var(--th-foreground-muted)" }}>空闲房间</div>
                 </Col>
                 <Col span={12} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 32, fontWeight: 700, color: "#146c5c" }}>
+                  <div style={{ fontSize: 32, fontWeight: 700, color: "var(--th-primary)" }}>
                     {occupiedCount}
                   </div>
-                  <div style={{ color: "#888" }}>已租房间</div>
+                  <div style={{ color: "var(--th-foreground-muted)" }}>已租房间</div>
                 </Col>
               </Row>
-              <div style={{ marginTop: 16 }}>
-                <span style={{ color: "#888" }}>出租率 {occupancyRate}%</span>
+              <div style={{ marginTop: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ color: "var(--th-foreground-muted)", fontSize: 13 }}>出租率</span>
+                  <span style={{ color: "var(--th-primary)", fontWeight: 700, fontSize: 16 }}>{occupancyRate}%</span>
+                </div>
+                <Progress
+                  percent={occupancyRate}
+                  strokeColor="var(--th-primary)"
+                  trailColor="var(--th-border)"
+                  strokeWidth={12}
+                  showInfo={false}
+                />
               </div>
               {vacantLayoutStats.length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <div style={{ marginBottom: 8, color: "#666" }}>空闲户型</div>
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ marginBottom: 8, color: "var(--th-foreground-muted)", fontSize: 13, fontWeight: 500 }}>空闲户型</div>
                   <Space wrap>
                     {vacantLayoutStats.map(([layout, count]) => (
-                      <Tag key={layout} color="default">
+                      <Tag key={layout} color="default" style={{ borderRadius: 8 }}>
                         {layout} {count}间
                       </Tag>
                     ))}
@@ -295,39 +337,82 @@ export default function DashboardPage() {
 
           {/* 待办事项 */}
           <Col xs={24} lg={12}>
-            <Card title={`待办事项 ${todos.length > 0 ? `(${todos.length} 项)` : ""}`}>
+            <Card
+              title={
+                <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+                  待办事项 {todos.length > 0 ? `(${todos.length} 项)` : ""}
+                </span>
+              }
+              style={{ borderRadius: "var(--th-radius-lg)", boxShadow: "var(--th-shadow)" }}
+            >
               {todos.length === 0 ? (
-                <Empty
-                  image={<CheckCircleOutlined style={{ fontSize: 48, color: "#52c41a" }} />}
-                  description={
-                    <div>
-                      <div style={{ fontWeight: 600 }}>暂无紧急待办</div>
-                      <div style={{ color: "#888" }}>经营状态稳定</div>
-                    </div>
-                  }
-                />
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                  <CheckCircleOutlined style={{ fontSize: 48, color: "var(--th-success)", marginBottom: 16 }} />
+                  <div style={{ fontWeight: 600, color: "var(--th-foreground)", marginBottom: 4 }}>暂无紧急待办</div>
+                  <div style={{ color: "var(--th-foreground-muted)" }}>经营状态稳定</div>
+                </div>
               ) : (
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  {todos.map((todo) => (
-                    <Card
-                      key={todo.key}
-                      size="small"
-                      style={{ cursor: "pointer", width: "100%" }}
-                      onClick={todo.onClick}
-                      bodyStyle={{ padding: 12 }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{todo.title}</div>
-                          <div style={{ color: "#888", fontSize: 13 }}>{todo.detail}</div>
+                <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                  {todos.map((todo) => {
+                    const tone = todoToneMap[todo.tone] ?? todoToneMap.green;
+                    return (
+                      <Card
+                        key={todo.key}
+                        size="small"
+                        style={{
+                          cursor: "pointer",
+                          width: "100%",
+                          borderRadius: "var(--th-radius-lg)",
+                          borderLeft: `4px solid ${tone.color}`,
+                          transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                        }}
+                        bodyStyle={{ padding: 16 }}
+                        onClick={todo.onClick}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                          (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                          (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 10,
+                                background: tone.bg,
+                                color: tone.color,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 16,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {tone.icon}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, color: "var(--th-foreground)", marginBottom: 2 }}>{todo.title}</div>
+                              <div style={{ color: "var(--th-foreground-muted)", fontSize: 13 }}>{todo.detail}</div>
+                            </div>
+                          </div>
+                          <Space style={{ flexShrink: 0 }}>
+                            <Tag
+                              color={todo.tone}
+                              style={{ borderRadius: 8, fontWeight: 500 }}
+                            >
+                              {todo.badge}
+                            </Tag>
+                            <RightOutlined style={{ color: "var(--th-foreground-muted)" }} />
+                          </Space>
                         </div>
-                        <Space>
-                          <Tag color={todo.tone}>{todo.badge}</Tag>
-                          <RightOutlined style={{ color: "#bbb" }} />
-                        </Space>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </Space>
               )}
             </Card>
@@ -337,7 +422,10 @@ export default function DashboardPage() {
         {/* 快捷操作 */}
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24}>
-            <Card title="快捷操作">
+            <Card
+              title={<span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>快捷操作</span>}
+              style={{ borderRadius: "var(--th-radius-lg)", boxShadow: "var(--th-shadow)" }}
+            >
               <Space size="middle">
                 <Button
                   type="primary"

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Form, Input, Button, Typography, message, Segmented } from "antd";
+import { MobileOutlined, SafetyOutlined, UserOutlined, HomeOutlined } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { sendOtp as sendOtpRequest, loginWithPassword, loginWithOtp, register } from "@/api/auth";
 
@@ -117,16 +118,97 @@ export default function LoginPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(155deg, #146c5c 0%, #0f4f45 78%)",
+        background: "linear-gradient(160deg, #F0FDFA 0%, #E0F2FE 40%, #F0F9FF 100%)",
         padding: 24,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <Card style={{ width: 420, borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+      {/* 装饰性几何元素 */}
+      <div
+        style={{
+          position: "absolute",
+          top: "-10%",
+          left: "-5%",
+          width: 320,
+          height: 320,
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, rgba(15,118,110,0.12) 0%, rgba(20,184,166,0.06) 100%)",
+          filter: "blur(40px)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-8%",
+          right: "-5%",
+          width: 280,
+          height: 280,
+          borderRadius: 24,
+          background: "linear-gradient(135deg, rgba(14,165,233,0.1) 0%, rgba(15,118,110,0.06) 100%)",
+          transform: "rotate(15deg)",
+          filter: "blur(36px)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: "30%",
+          right: "10%",
+          width: 80,
+          height: 80,
+          borderRadius: "50%",
+          background: "rgba(15,118,110,0.06)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "25%",
+          left: "8%",
+          width: 48,
+          height: 48,
+          borderRadius: 12,
+          background: "rgba(14,165,233,0.08)",
+          transform: "rotate(12deg)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <Card
+        style={{
+          width: 440,
+          borderRadius: 20,
+          boxShadow: "0 20px 60px rgba(15,118,110,0.12), 0 8px 24px rgba(0,0,0,0.06)",
+          position: "relative",
+          zIndex: 1,
+        }}
+        bodyStyle={{ padding: "40px 36px" }}
+      >
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <Title level={3} style={{ color: "#146c5c", margin: 0 }}>
+          {/* Logo 区 */}
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              background: "linear-gradient(135deg, #0F766E 0%, #14B8A6 100%)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+              boxShadow: "0 8px 20px rgba(15,118,110,0.25)",
+            }}
+          >
+            <HomeOutlined style={{ fontSize: 28, color: "#fff" }} />
+          </div>
+          <Title level={3} style={{ color: "var(--th-primary)", margin: 0, fontFamily: "var(--th-font-heading)" }}>
             {platformInfo.name}
           </Title>
-          <Text type="secondary">
+          <Text type="secondary" style={{ fontSize: 14 }}>
             {isRegister ? "手机号验证后即可创建账号" : "使用手机号登录你的公寓经营工作台"}
           </Text>
         </div>
@@ -150,7 +232,12 @@ export default function LoginPage() {
             name="phone"
             rules={[{ required: true, message: "请输入手机号" }]}
           >
-            <Input size="large" placeholder="请输入手机号" maxLength={11} />
+            <Input
+              size="large"
+              placeholder="请输入手机号"
+              maxLength={11}
+              prefix={<MobileOutlined style={{ color: "var(--th-foreground-muted)", marginRight: 6 }} />}
+            />
           </Form.Item>
 
           {isRegister && (
@@ -159,7 +246,12 @@ export default function LoginPage() {
               name="username"
               rules={[{ required: true, message: "请输入用户名" }]}
             >
-              <Input size="large" placeholder="请输入用户名" maxLength={24} />
+              <Input
+                size="large"
+                placeholder="请输入用户名"
+                maxLength={24}
+                prefix={<UserOutlined style={{ color: "var(--th-foreground-muted)", marginRight: 6 }} />}
+              />
             </Form.Item>
           )}
 
@@ -175,6 +267,7 @@ export default function LoginPage() {
               <Input.Password
                 size="large"
                 placeholder={isRegister ? "至少 8 位密码" : "请输入密码"}
+                prefix={<SafetyOutlined style={{ color: "var(--th-foreground-muted)", marginRight: 6 }} />}
               />
             </Form.Item>
           )}
@@ -195,7 +288,11 @@ export default function LoginPage() {
                 }),
               ]}
             >
-              <Input.Password size="large" placeholder="再次输入密码" />
+              <Input.Password
+                size="large"
+                placeholder="再次输入密码"
+                prefix={<SafetyOutlined style={{ color: "var(--th-foreground-muted)", marginRight: 6 }} />}
+              />
             </Form.Item>
           )}
 
@@ -209,6 +306,7 @@ export default function LoginPage() {
                 size="large"
                 placeholder="6 位验证码"
                 maxLength={6}
+                prefix={<SafetyOutlined style={{ color: "var(--th-foreground-muted)", marginRight: 6 }} />}
                 suffix={
                   <Button
                     type="link"
@@ -232,6 +330,13 @@ export default function LoginPage() {
               size="large"
               block
               loading={busy}
+              style={{
+                height: 48,
+                fontSize: 16,
+                fontWeight: 600,
+                borderRadius: 12,
+                boxShadow: "0 8px 20px rgba(15,118,110,0.25)",
+              }}
             >
               {busy ? "处理中" : isRegister ? "注册并登录" : "登录"}
             </Button>

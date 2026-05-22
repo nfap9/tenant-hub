@@ -4,7 +4,6 @@ import {
   Card,
   Button,
   Tag,
-  Empty,
   Input,
   Select,
   Space,
@@ -14,17 +13,23 @@ import {
   Divider,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   DeleteOutlined,
   EditOutlined,
   SaveOutlined,
   ThunderboltOutlined,
+  WalletOutlined,
+  FileTextOutlined,
+
+  HomeOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { getMonthlyBills, createPayment, deleteBill } from "@/api/bills";
 import { money, day } from "@/utils/format";
 import { statusLabels, toneForBillStatus, billModeText } from "./constants";
 import { getPaymentAmountError } from "./utils";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
 import type { MonthlyBill } from "@/types/domain";
 
 export default function MonthlyDetailPage() {
@@ -113,34 +118,43 @@ export default function MonthlyDetailPage() {
 
   if (!bill) {
     return (
-      <div>
-        <h2 style={{ marginBottom: 24 }}>月账单详情</h2>
-        <Empty description="账单不存在或已删除" />
+      <div className="page-content">
+        <PageHeader
+          back={true}
+          breadcrumb={[
+            { label: "财务管理", path: "/bills" },
+            { label: "月账单详情" },
+          ]}
+        />
+        <EmptyState title="账单不存在或已删除" description="该账单可能已被删除或您没有访问权限" />
       </div>
     );
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>月账单详情</h2>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-          返回
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={true}
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "月账单详情" },
+        ]}
+      />
 
       <Spin spinning={loading}>
         {/* 账单概览 */}
-        <Card style={{ marginBottom: 16 }}>
+        <Card style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 16 }}>
+              <div style={{ fontWeight: 600, fontSize: 16, fontFamily: "var(--th-font-heading)", color: "var(--th-foreground)" }}>
+                <HomeOutlined style={{ marginRight: 6, color: "var(--th-primary)" }} />
                 {bill.lease?.room?.roomNo ?? "房间"} · 到期 {day(bill.dueDate)}
               </div>
-              <div style={{ color: "#888", marginTop: 4 }}>
+              <div style={{ color: "var(--th-foreground-muted)", marginTop: 6 }}>
                 应收 ¥{money(bill.totalAmount)} · 已收 ¥{money(bill.paidAmount)}
               </div>
-              <div style={{ color: "#888", marginTop: 4 }}>
+              <div style={{ color: "var(--th-foreground-muted)", marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                <PhoneOutlined style={{ fontSize: 12 }} />
                 租客 {bill.tenantName} · {bill.lease?.tenantPhone}
               </div>
             </div>
@@ -150,11 +164,15 @@ export default function MonthlyDetailPage() {
 
         {/* 收款登记 */}
         {canPay && (
-          <Card title="登记收款" style={{ marginBottom: 16 }}>
-            <Space direction="vertical" style={{ width: "100%" }}>
+          <Card
+            title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><WalletOutlined />登记收款</span>}
+            style={{ marginBottom: 24 }}
+          >
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
               <Input
                 placeholder="收款金额"
                 prefix="¥"
+                size="large"
                 value={paymentForm.amount}
                 onChange={(e) =>
                   setPaymentForm((old) => ({ ...old, amount: e.target.value }))
@@ -163,6 +181,7 @@ export default function MonthlyDetailPage() {
               <Select
                 placeholder="收款方式"
                 value={paymentForm.method}
+                size="large"
                 onChange={(value) =>
                   setPaymentForm((old) => ({ ...old, method: value }))
                 }
@@ -188,6 +207,7 @@ export default function MonthlyDetailPage() {
                 icon={<SaveOutlined />}
                 loading={paying}
                 onClick={handlePayment}
+                size="large"
               >
                 确认收款
               </Button>
@@ -196,9 +216,12 @@ export default function MonthlyDetailPage() {
         )}
 
         {/* 子账单明细 */}
-        <Card title="账单明细" style={{ marginBottom: 16 }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><FileTextOutlined />账单明细</span>}
+          style={{ marginBottom: 24 }}
+        >
           {(bill.bills ?? []).length === 0 ? (
-            <Empty description="暂无账单明细" />
+            <EmptyState title="暂无账单明细" description="当前账单暂无明细记录" />
           ) : (
             <Space direction="vertical" style={{ width: "100%" }}>
               {(bill.bills ?? []).map((child) => (
@@ -211,13 +234,13 @@ export default function MonthlyDetailPage() {
                     }}
                   >
                     <div>
-                      <span style={{ fontWeight: 600 }}>
+                      <span style={{ fontWeight: 600, color: "var(--th-foreground)", fontFamily: "var(--th-font-heading)" }}>
                         {billModeText(child.mode)} · {day(child.periodStart)} 至{" "}
                         {day(child.periodEnd)}
                       </span>
                     </div>
                     <Space>
-                      <span style={{ fontWeight: 600, color: "#146c5c" }}>
+                      <span style={{ fontWeight: 600, color: "var(--th-primary)", fontFamily: "var(--th-font-heading)" }}>
                         ¥{money(child.totalAmount)}
                       </span>
                       {child.status !== "PAID" && (
@@ -241,15 +264,16 @@ export default function MonthlyDetailPage() {
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          padding: "4px 0",
+                          padding: "6px 0",
+                          borderBottom: "1px solid var(--th-border-light)",
                         }}
                       >
-                        <span style={{ color: "#666" }}>
+                        <span style={{ color: "var(--th-foreground-muted)" }}>
                           {item.name}
                           {item.note ? ` · ${item.note}` : ""}
                         </span>
                         <Space>
-                          <span style={{ color: "#888" }}>¥{money(item.amount)}</span>
+                          <span style={{ color: "var(--th-foreground-subtle)" }}>¥{money(item.amount)}</span>
                           {child.status !== "PAID" && (
                             <Button
                               type="link"
@@ -282,7 +306,7 @@ export default function MonthlyDetailPage() {
                       录入本期水电
                     </Button>
                   )}
-                  <Divider style={{ margin: "12px 0" }} />
+                  <Divider style={{ margin: "16px 0" }} />
                 </div>
               ))}
             </Space>
@@ -290,9 +314,11 @@ export default function MonthlyDetailPage() {
         </Card>
 
         {/* 收款记录 */}
-        <Card title="收款记录">
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><WalletOutlined />收款记录</span>}
+        >
           {(bill.payments ?? []).length === 0 ? (
-            <Empty description="暂无收款记录" />
+            <EmptyState title="暂无收款记录" description="当前暂无收款记录" />
           ) : (
             <Space direction="vertical" style={{ width: "100%" }}>
               {(bill.payments ?? []).map((payment) => (
@@ -302,15 +328,15 @@ export default function MonthlyDetailPage() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    padding: "8px 0",
-                    borderBottom: "1px solid #f0f0f0",
+                    padding: "10px 0",
+                    borderBottom: "1px solid var(--th-border-light)",
                   }}
                 >
-                  <span style={{ color: "#666" }}>
+                  <span style={{ color: "var(--th-foreground-muted)" }}>
                     {day(payment.paidAt)} · {payment.method}
                     {payment.note ? ` · ${payment.note}` : ""}
                   </span>
-                  <span style={{ fontWeight: 600, color: "#146c5c" }}>
+                  <span style={{ fontWeight: 600, color: "var(--th-primary)", fontFamily: "var(--th-font-heading)" }}>
                     ¥{money(payment.amount)}
                   </span>
                 </div>

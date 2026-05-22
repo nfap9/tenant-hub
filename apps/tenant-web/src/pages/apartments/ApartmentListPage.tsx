@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Card, Empty, Tag, Spin, message, Popconfirm } from "antd";
+import { Button, Card, Tag, Spin, message, Popconfirm, Tooltip } from "antd";
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, HomeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
@@ -7,6 +7,8 @@ import { getApartments, deleteApartment } from "@/api/apartments";
 import type { Apartment } from "@/types/domain";
 import { money, day } from "@/utils/format";
 import { apartmentMonthlyIncome, apartmentMonthlyExpense } from "./utils";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
 
 export default function ApartmentListPage() {
   const navigate = useNavigate();
@@ -45,23 +47,33 @@ export default function ApartmentListPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>公寓管理</h2>
-        {canManageApartment && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/apartments/new")}>
-            新增公寓
-          </Button>
-        )}
-      </div>
+    <div className="page-content">
+      <PageHeader
+        breadcrumb={[{ label: "公寓管理" }]}
+        actions={
+          canManageApartment && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/apartments/new")}>
+              新增公寓
+            </Button>
+          )
+        }
+      />
 
       <Spin spinning={loading}>
         {apartments.length === 0 ? (
           <Card>
-            <Empty description="暂无公寓数据" />
+            <EmptyState
+              title="暂无公寓数据"
+              description="当前组织下还没有创建任何公寓，点击右上角按钮创建第一个公寓"
+              action={
+                canManageApartment
+                  ? { label: "新增公寓", onClick: () => navigate("/apartments/new") }
+                  : undefined
+              }
+            />
           </Card>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
             {apartments.map((apt) => {
               const roomCount = apt.rooms?.length ?? 0;
               const occupiedCount = apt.rooms?.filter((r) => r.status === "OCCUPIED").length ?? 0;
@@ -71,22 +83,33 @@ export default function ApartmentListPage() {
               return (
                 <Card
                   key={apt.id}
+                  hoverable
                   title={
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <HomeOutlined />
-                      <span>{apt.name}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <HomeOutlined style={{ color: "var(--th-primary)" }} />
+                      <span style={{ fontFamily: "var(--th-font-heading)", fontWeight: 600 }}>{apt.name}</span>
                     </div>
                   }
                   extra={
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/apartments/${apt.id}`)}>
-                        详情
-                      </Button>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <Tooltip title="详情">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EyeOutlined />}
+                          onClick={() => navigate(`/apartments/${apt.id}`)}
+                        />
+                      </Tooltip>
                       {canManageApartment && (
                         <>
-                          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => navigate(`/apartments/${apt.id}/edit`)}>
-                            编辑
-                          </Button>
+                          <Tooltip title="编辑">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => navigate(`/apartments/${apt.id}/edit`)}
+                            />
+                          </Tooltip>
                           <Popconfirm
                             title="删除公寓"
                             description="删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。"
@@ -95,39 +118,92 @@ export default function ApartmentListPage() {
                             cancelText="取消"
                             okButtonProps={{ danger: true }}
                           >
-                            <Button type="link" danger size="small" icon={<DeleteOutlined />}>
-                              删除
-                            </Button>
+                            <Tooltip title="删除">
+                              <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                            </Tooltip>
                           </Popconfirm>
                         </>
                       )}
                     </div>
                   }
                 >
-                  <div style={{ marginBottom: 8 }}>
+                  <div style={{ marginBottom: 16 }}>
                     <Tag color="blue">{apt.location || "未填写地址"}</Tag>
-                    <Tag>{apt.floors} 层</Tag>
+                    <Tag
+                      style={{
+                        color: "var(--th-foreground-muted)",
+                        background: "var(--th-surface-hover)",
+                        borderColor: "var(--th-border)",
+                      }}
+                    >
+                      {apt.floors} 层
+                    </Tag>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 16,
+                      padding: "var(--th-space-4)",
+                      background: "var(--th-bg)",
+                      borderRadius: "var(--th-radius)",
+                    }}
+                  >
                     <div>
-                      <div style={{ fontSize: 12, color: "#888" }}>房间数</div>
-                      <div style={{ fontSize: 16, fontWeight: 500 }}>{roomCount} 间</div>
+                      <div style={{ fontSize: 12, color: "var(--th-foreground-muted)", marginBottom: 4 }}>房间数</div>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          fontFamily: "var(--th-font-heading)",
+                          color: "var(--th-foreground)",
+                        }}
+                      >
+                        {roomCount} 间
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: "#888" }}>在租</div>
-                      <div style={{ fontSize: 16, fontWeight: 500 }}>{occupiedCount} 间</div>
+                      <div style={{ fontSize: 12, color: "var(--th-foreground-muted)", marginBottom: 4 }}>在租</div>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          fontFamily: "var(--th-font-heading)",
+                          color: "var(--th-foreground)",
+                        }}
+                      >
+                        {occupiedCount} 间
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: "#888" }}>本月收入</div>
-                      <div style={{ fontSize: 16, fontWeight: 500, color: "#52c41a" }}>¥{money(income)}</div>
+                      <div style={{ fontSize: 12, color: "var(--th-foreground-muted)", marginBottom: 4 }}>本月收入</div>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          fontFamily: "var(--th-font-heading)",
+                          color: "var(--th-success)",
+                        }}
+                      >
+                        ¥{money(income)}
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: "#888" }}>本月支出</div>
-                      <div style={{ fontSize: 16, fontWeight: 500, color: "#ff4d4f" }}>¥{money(expense)}</div>
+                      <div style={{ fontSize: 12, color: "var(--th-foreground-muted)", marginBottom: 4 }}>本月支出</div>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          fontFamily: "var(--th-font-heading)",
+                          color: "var(--th-danger)",
+                        }}
+                      >
+                        ¥{money(expense)}
+                      </div>
                     </div>
                   </div>
                   {apt.contractStart && (
-                    <div style={{ marginTop: 12, fontSize: 12, color: "#888" }}>
+                    <div style={{ marginTop: 16, fontSize: 13, color: "var(--th-foreground-muted)" }}>
                       合同期：{day(apt.contractStart)} 至 {day(apt.contractEnd)}
                     </div>
                   )}

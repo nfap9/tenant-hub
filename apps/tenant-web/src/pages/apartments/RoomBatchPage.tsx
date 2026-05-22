@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, Form, InputNumber, Button, message, Checkbox } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { SaveOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { SaveOutlined, BuildOutlined, HomeOutlined } from "@ant-design/icons";
 import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
 import { createRoomsBatch } from "@/api/rooms";
 import { buildBatchRoomNos, groupBatchRoomNosByFloor, toggleBatchRoomSelection } from "@/utils/batchRooms";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
 
 export default function RoomBatchPage() {
   const { id } = useParams<{ id: string }>();
@@ -59,30 +61,59 @@ export default function RoomBatchPage() {
   const allSelected = selectedGeneratedBatchRoomNos.length === generatedBatchRoomNos.length && generatedBatchRoomNos.length > 0;
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/apartments/${id}`)}>返回</Button>
-        <h2 style={{ margin: 0 }}>批量添加房间</h2>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={`/apartments/${id}`}
+        breadcrumb={[
+          { label: "公寓管理", path: "/apartments" },
+          { label: "公寓详情", path: `/apartments/${id}` },
+          { label: "批量添加房间" },
+        ]}
+      />
+
       <Card style={{ maxWidth: 720 }}>
         <Form layout="vertical">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
             <Form.Item label="开始楼层">
-              <InputNumber min={1} style={{ width: "100%" }} value={Number(batchStartFloor) || undefined} onChange={(v) => setBatchStartFloor(String(v || 1))} />
+              <InputNumber
+                min={1}
+                size="large"
+                style={{ width: "100%" }}
+                prefix={<BuildOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                value={Number(batchStartFloor) || undefined}
+                onChange={(v) => setBatchStartFloor(String(v || 1))}
+              />
             </Form.Item>
             <Form.Item label="结束楼层">
-              <InputNumber min={1} style={{ width: "100%" }} value={Number(batchEndFloor) || undefined} onChange={(v) => setBatchEndFloor(String(v || 1))} />
+              <InputNumber
+                min={1}
+                size="large"
+                style={{ width: "100%" }}
+                prefix={<BuildOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                value={Number(batchEndFloor) || undefined}
+                onChange={(v) => setBatchEndFloor(String(v || 1))}
+              />
             </Form.Item>
             <Form.Item label="每层房间数">
-              <InputNumber min={1} max={200} style={{ width: "100%" }} value={Number(batchRoomCount) || undefined} onChange={(v) => setBatchRoomCount(String(v || 1))} />
+              <InputNumber
+                min={1}
+                max={200}
+                size="large"
+                style={{ width: "100%" }}
+                prefix={<HomeOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                value={Number(batchRoomCount) || undefined}
+                onChange={(v) => setBatchRoomCount(String(v || 1))}
+              />
             </Form.Item>
           </div>
         </Form>
 
         <div style={{ marginTop: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span style={{ fontWeight: 500 }}>生成房间号</span>
-            <span style={{ color: "#888" }}>
+            <span style={{ fontWeight: 600, fontFamily: "var(--th-font-heading)", color: "var(--th-foreground)" }}>
+              生成房间号
+            </span>
+            <span style={{ color: "var(--th-foreground-muted)" }}>
               已选 {selectedGeneratedBatchRoomNos.length}/{generatedBatchRoomNos.length}
               {generatedBatchRoomNos.length > 0 && (
                 <Checkbox style={{ marginLeft: 12 }} checked={allSelected} onChange={(e) => setSelectedBatchRoomNos(e.target.checked ? generatedBatchRoomNos : [])}>
@@ -93,14 +124,17 @@ export default function RoomBatchPage() {
           </div>
 
           {generatedBatchRoomNos.length === 0 ? (
-            <div style={{ color: "#888", padding: 24, textAlign: "center", background: "#f5f5f5", borderRadius: 8 }}>
-              输入有效的楼层范围和每层房间数后会自动生成房间号
-            </div>
+            <EmptyState
+              title="等待生成房间号"
+              description="输入有效的楼层范围和每层房间数后会自动生成房间号"
+            />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {batchRoomGroups.map((group) => (
                 <div key={group.floor}>
-                  <div style={{ fontWeight: 500, marginBottom: 8 }}>{group.floor}层</div>
+                  <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--th-foreground)", fontFamily: "var(--th-font-heading)" }}>
+                    {group.floor}层
+                  </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {group.roomNos.map((roomNo) => {
                       const selected = selectedBatchRoomNos.includes(roomNo);
@@ -109,6 +143,7 @@ export default function RoomBatchPage() {
                           key={roomNo}
                           type={selected ? "primary" : "default"}
                           size="small"
+                          style={{ borderRadius: "var(--th-radius-sm)" }}
                           onClick={() => setSelectedBatchRoomNos((old) => toggleBatchRoomSelection(old, roomNo))}
                         >
                           {roomNo}
@@ -123,10 +158,19 @@ export default function RoomBatchPage() {
         </div>
 
         <div style={{ marginTop: 24 }}>
-          <Button type="primary" icon={<SaveOutlined />} loading={saving} disabled={saving || selectedGeneratedBatchRoomNos.length === 0} onClick={handleSave}>
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={saving}
+            disabled={saving || selectedGeneratedBatchRoomNos.length === 0}
+            onClick={handleSave}
+            size="large"
+          >
             确认添加房间
           </Button>
-          <Button style={{ marginLeft: 8 }} onClick={() => navigate(`/apartments/${id}`)}>取消</Button>
+          <Button size="large" style={{ marginLeft: 12 }} onClick={() => navigate(`/apartments/${id}`)}>
+            取消
+          </Button>
         </div>
       </Card>
     </div>

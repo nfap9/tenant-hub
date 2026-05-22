@@ -10,14 +10,16 @@ import {
   message,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   SaveOutlined,
   ThunderboltOutlined,
+  HomeOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { getRooms } from "@/api/rooms";
 import { createMeterReading } from "@/api/bills";
 import { today } from "@/utils/format";
+import PageHeader from "@/components/ui/PageHeader";
 import type { Room } from "@/types/domain";
 import dayjs from "dayjs";
 
@@ -74,16 +76,20 @@ export default function ReadingPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>抄表录入</h2>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-          返回
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={true}
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "抄表录入" },
+        ]}
+      />
 
       <Spin spinning={loading}>
-        <Card title="选择房间" style={{ marginBottom: 16 }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><HomeOutlined />选择房间</span>}
+          style={{ marginBottom: 24 }}
+        >
           <Space wrap>
             {rooms.map((room) => (
               <Button
@@ -97,7 +103,10 @@ export default function ReadingPage() {
           </Space>
         </Card>
 
-        <Card title="表类型" style={{ marginBottom: 16 }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><DashboardOutlined />表类型</span>}
+          style={{ marginBottom: 24 }}
+        >
           <Space>
             {(["WATER", "POWER"] as const).map((type) => (
               <Button
@@ -111,10 +120,13 @@ export default function ReadingPage() {
           </Space>
         </Card>
 
-        <Card title="读数信息">
-          <Space direction="vertical" style={{ width: "100%" }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><ThunderboltOutlined />读数信息</span>}
+        >
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
             <DatePicker
               style={{ width: "100%" }}
+              size="large"
               value={form.readingDate ? dayjs(form.readingDate) : undefined}
               onChange={(date) =>
                 setForm((old) => ({
@@ -126,6 +138,7 @@ export default function ReadingPage() {
             <Input
               placeholder="读数"
               prefix={<ThunderboltOutlined />}
+              size="large"
               value={form.value}
               onChange={(e) => setForm((old) => ({ ...old, value: e.target.value }))}
             />
@@ -133,13 +146,14 @@ export default function ReadingPage() {
               placeholder="备注（可选）"
               value={form.note}
               onChange={(e) => setForm((old) => ({ ...old, note: e.target.value }))}
-              rows={2}
+              rows={3}
             />
             <Button
               type="primary"
               icon={<SaveOutlined />}
               loading={submitting}
               onClick={handleSubmit}
+              size="large"
             >
               保存读数
             </Button>

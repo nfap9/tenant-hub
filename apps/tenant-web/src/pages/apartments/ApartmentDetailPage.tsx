@@ -1,13 +1,28 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Card, Empty, Button, Tabs, Tag, message, Popconfirm, Spin } from "antd";
+import { Card, Button, Tabs, Tag, message, Popconfirm, Spin } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { EditOutlined, DeleteOutlined, PlusOutlined, ArrowLeftOutlined, AppstoreAddOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  AppstoreAddOutlined,
+  HomeOutlined,
+  EnvironmentOutlined,
+  BuildOutlined,
+  AreaChartOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+} from "@ant-design/icons";
 import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
 import { getApartments, deleteApartment } from "@/api/apartments";
 import type { Apartment, Room } from "@/types/domain";
 import { money, facilitiesText } from "@/utils/format";
 import { contractText } from "./utils";
 import { statusLabels, toneForStatus } from "./constants";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
 
 export default function ApartmentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -74,12 +89,14 @@ export default function ApartmentDetailPage() {
 
   if (!apartment) {
     return (
-      <div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/apartments")}>返回</Button>
-          <h2 style={{ margin: 0 }}>公寓详情</h2>
-        </div>
-        <Card><Empty description="公寓不存在或已删除" /></Card>
+      <div className="page-content">
+        <PageHeader
+          back="/apartments"
+          breadcrumb={[{ label: "公寓管理", path: "/apartments" }, { label: "公寓详情" }]}
+        />
+        <Card>
+          <EmptyState title="公寓不存在或已删除" description="该公寓可能已被删除或您没有访问权限" />
+        </Card>
       </div>
     );
   }
@@ -92,28 +109,35 @@ export default function ApartmentDetailPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/apartments")}>返回</Button>
-          <h2 style={{ margin: 0 }}>{apartment.name}</h2>
-        </div>
-        {canManageApartment && (
-          <div style={{ display: "flex", gap: 8 }}>
-            <Button icon={<EditOutlined />} onClick={() => navigate(`/apartments/${id}/edit`)}>编辑</Button>
-            <Popconfirm
-              title="删除公寓"
-              description="删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。"
-              onConfirm={handleDeleteApartment}
-              okText="确认删除"
-              cancelText="取消"
-              okButtonProps={{ danger: true }}
-            >
-              <Button danger icon={<DeleteOutlined />}>删除</Button>
-            </Popconfirm>
-          </div>
-        )}
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back="/apartments"
+        breadcrumb={[
+          { label: "公寓管理", path: "/apartments" },
+          { label: apartment.name },
+        ]}
+        actions={
+          canManageApartment && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button icon={<EditOutlined />} onClick={() => navigate(`/apartments/${id}/edit`)}>
+                编辑
+              </Button>
+              <Popconfirm
+                title="删除公寓"
+                description="删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。"
+                onConfirm={handleDeleteApartment}
+                okText="确认删除"
+                cancelText="取消"
+                okButtonProps={{ danger: true }}
+              >
+                <Button danger icon={<DeleteOutlined />}>
+                  删除
+                </Button>
+              </Popconfirm>
+            </div>
+          )
+        }
+      />
 
       <Spin spinning={loading}>
         <Tabs
@@ -122,39 +146,119 @@ export default function ApartmentDetailPage() {
               key: "detail",
               label: "公寓详情",
               children: (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-                  <Card title="基本信息">
-                    <div style={{ lineHeight: 2 }}>
-                      <div><strong>地址：</strong>{apartment.location}</div>
-                      <div><strong>楼层数：</strong>{apartment.floors} 层</div>
-                      <div><strong>占地面积：</strong>{apartment.landArea ? `${apartment.landArea} ㎡` : "未填"}</div>
-                      <div><strong>总面积：</strong>{apartment.totalArea ? `${apartment.totalArea} ㎡` : "未填"}</div>
-                    </div>
-                  </Card>
-                  <Card title="上游信息">
-                    <div style={{ lineHeight: 2 }}>
-                      <div><strong>房东姓名：</strong>{apartment.landlordName || "未维护"}</div>
-                      <div><strong>联系方式：</strong>{apartment.landlordPhone || "未维护"}</div>
-                      <div><strong>合同期：</strong>{contractText(apartment)}</div>
-                      <div><strong>上游租金：</strong>¥{money(apartment.rentAmount)}</div>
-                    </div>
-                  </Card>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
                   <Card
-                    title="经营花费"
-                    extra={canManageApartment && (
-                      <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => navigate(`/apartments/${id}/expenses`)}>
-                        记录花费
-                      </Button>
-                    )}
+                    title={
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <HomeOutlined style={{ color: "var(--th-primary)" }} />
+                        基本信息
+                      </div>
+                    }
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <EnvironmentOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>地址</span>
+                        <span style={{ fontWeight: 500 }}>{apartment.location || "未填写"}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <BuildOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>楼层数</span>
+                        <span style={{ fontWeight: 500 }}>{apartment.floors} 层</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <AreaChartOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>占地面积</span>
+                        <span style={{ fontWeight: 500 }}>{apartment.landArea ? `${apartment.landArea} ㎡` : "未填"}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <AreaChartOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>总面积</span>
+                        <span style={{ fontWeight: 500 }}>{apartment.totalArea ? `${apartment.totalArea} ㎡` : "未填"}</span>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card
+                    title={
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <UserOutlined style={{ color: "var(--th-primary)" }} />
+                        上游信息
+                      </div>
+                    }
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <UserOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>房东姓名</span>
+                        <span style={{ fontWeight: 500 }}>{apartment.landlordName || "未维护"}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <PhoneOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>联系方式</span>
+                        <span style={{ fontWeight: 500 }}>{apartment.landlordPhone || "未维护"}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <CalendarOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>合同期</span>
+                        <span style={{ fontWeight: 500 }}>{contractText(apartment)}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <DollarOutlined style={{ color: "var(--th-foreground-subtle)" }} />
+                        <span style={{ color: "var(--th-foreground-muted)", minWidth: 70 }}>上游租金</span>
+                        <span style={{ fontWeight: 500 }}>¥{money(apartment.rentAmount)}</span>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card
+                    title={
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <DollarOutlined style={{ color: "var(--th-primary)" }} />
+                        经营花费
+                      </div>
+                    }
+                    extra={
+                      canManageApartment && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<PlusOutlined />}
+                          onClick={() => navigate(`/apartments/${id}/expenses`)}
+                        >
+                          记录花费
+                        </Button>
+                      )
+                    }
                   >
                     {(apartment.expenses ?? []).length === 0 ? (
-                      <Empty description="暂无经营花费记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                      <EmptyState
+                        title="暂无经营花费记录"
+                        description="点击右上角按钮记录第一笔经营花费"
+                        action={
+                          canManageApartment
+                            ? { label: "记录花费", onClick: () => navigate(`/apartments/${id}/expenses`) }
+                            : undefined
+                        }
+                      />
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {(apartment.expenses ?? []).map((item) => (
-                          <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f0f0f0" }}>
-                            <span>{item.name} · {item.spentAt.slice(0, 10)}</span>
-                            <span style={{ fontWeight: 500, color: "#ff4d4f" }}>¥{money(item.amount)}</span>
+                          <div
+                            key={item.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "12px 16px",
+                              borderRadius: "var(--th-radius-sm)",
+                              background: "var(--th-surface-hover)",
+                            }}
+                          >
+                            <span style={{ color: "var(--th-foreground)" }}>
+                              {item.name} · {item.spentAt.slice(0, 10)}
+                            </span>
+                            <span style={{ fontWeight: 600, color: "var(--th-danger)" }}>¥{money(item.amount)}</span>
                           </div>
                         ))}
                       </div>
@@ -168,38 +272,77 @@ export default function ApartmentDetailPage() {
               label: `房间列表 (${apartmentRooms.length})`,
               children: (
                 <Card
-                  title={`共 ${apartmentRooms.length} 间 · 空闲 ${apartmentVacantRooms} 间 · 已租 ${apartmentOccupiedRooms} 间`}
-                  extra={canManageRoom && (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <Button icon={<PlusOutlined />} onClick={() => navigate(`/rooms/new?apartmentId=${id}`)}>新增房间</Button>
-                      <Button icon={<AppstoreAddOutlined />} onClick={() => navigate(`/apartments/${id}/rooms/batch`)}>批量添加</Button>
+                  title={
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: "var(--th-font-heading)", fontWeight: 600 }}>房间概览</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: "var(--th-foreground-muted)",
+                        }}
+                      >
+                        <span>共 {apartmentRooms.length} 间</span>
+                        <span>·</span>
+                        <span style={{ color: "var(--th-success)" }}>空闲 {apartmentVacantRooms} 间</span>
+                        <span>·</span>
+                        <span style={{ color: "var(--th-warning)" }}>已租 {apartmentOccupiedRooms} 间</span>
+                      </div>
                     </div>
-                  )}
+                  }
+                  extra={
+                    canManageRoom && (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <Button icon={<PlusOutlined />} onClick={() => navigate(`/rooms/new?apartmentId=${id}`)}>
+                          新增房间
+                        </Button>
+                        <Button icon={<AppstoreAddOutlined />} onClick={() => navigate(`/apartments/${id}/rooms/batch`)}>
+                          批量添加
+                        </Button>
+                      </div>
+                    )
+                  }
                 >
                   {apartmentRooms.length === 0 ? (
-                    <Empty description="暂无房间，可以新增单个房间或批量添加" />
+                    <EmptyState
+                      title="暂无房间"
+                      description="可以新增单个房间或批量添加"
+                      action={
+                        canManageRoom
+                          ? { label: "新增房间", onClick: () => navigate(`/rooms/new?apartmentId=${id}`) }
+                          : undefined
+                      }
+                    />
                   ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
                       {apartmentRooms.map((room) => (
                         <Card
                           key={room.id}
                           size="small"
+                          hoverable
                           title={
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span>{room.roomNo}</span>
+                              <span style={{ fontWeight: 600, fontFamily: "var(--th-font-heading)" }}>{room.roomNo}</span>
                               <Tag color={statusColorMap[toneForStatus[room.status]]}>{statusLabels[room.status]}</Tag>
                             </div>
                           }
                         >
-                          <div style={{ marginBottom: 8, color: "#666" }}>
+                          <div style={{ marginBottom: 8, color: "var(--th-foreground-muted)" }}>
                             {room.layout} · {room.area ? `${room.area} ㎡` : "未填面积"}
                           </div>
-                          <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>
+                          <div style={{ fontSize: 12, color: "var(--th-foreground-subtle)", marginBottom: 12 }}>
                             {facilitiesText(room.facilities)}
                           </div>
                           {canManageRoom && (
                             <div style={{ display: "flex", gap: 8 }}>
-                              <Button size="small" onClick={() => navigate(`/rooms/${room.id}/edit?apartmentId=${id}`)}>编辑</Button>
+                              <Button
+                                size="small"
+                                onClick={() => navigate(`/rooms/${room.id}/edit?apartmentId=${id}`)}
+                              >
+                                编辑
+                              </Button>
                               <Popconfirm
                                 title="删除房间"
                                 description="删除后房间资料不可恢复，请确认当前房间没有有效租约。"
@@ -208,7 +351,9 @@ export default function ApartmentDetailPage() {
                                 cancelText="取消"
                                 disabled={room.status === "OCCUPIED"}
                               >
-                                <Button size="small" danger disabled={room.status === "OCCUPIED"}>删除</Button>
+                                <Button size="small" danger disabled={room.status === "OCCUPIED"}>
+                                  删除
+                                </Button>
                               </Popconfirm>
                             </div>
                           )}

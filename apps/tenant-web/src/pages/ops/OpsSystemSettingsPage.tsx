@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Form, Input, Switch, message } from "antd";
-import { getQuotaLimitEnabled, updateQuotaLimitEnabled, getPlatformInfoSetting, updatePlatformInfoSetting } from "@/api/admin";
+import { SaveOutlined, SettingOutlined, BlockOutlined, GlobalOutlined, PhoneOutlined, LinkOutlined } from "@ant-design/icons";
+import {
+  getQuotaLimitEnabled,
+  updateQuotaLimitEnabled,
+  getPlatformInfoSetting,
+  updatePlatformInfoSetting,
+} from "@/api/admin";
+import PageHeader from "@/components/ui/PageHeader";
 
 interface PlatformInfoValue {
   name: string;
@@ -10,7 +17,11 @@ interface PlatformInfoValue {
 
 export default function OpsSystemSettingsPage() {
   const [quotaLimitEnabled, setQuotaLimitEnabled] = useState<boolean>(false);
-  const [platformInfo, setPlatformInfo] = useState<PlatformInfoValue>({ name: "", logoUrl: "", contactPhone: "" });
+  const [platformInfo, setPlatformInfo] = useState<PlatformInfoValue>({
+    name: "",
+    logoUrl: "",
+    contactPhone: "",
+  });
   const [loadingQuota, setLoadingQuota] = useState(false);
   const [loadingPlatform, setLoadingPlatform] = useState(false);
   const [savingQuota, setSavingQuota] = useState(false);
@@ -27,7 +38,9 @@ export default function OpsSystemSettingsPage() {
   useEffect(() => {
     setLoadingPlatform(true);
     getPlatformInfoSetting()
-      .then((data) => setPlatformInfo(data.value ?? { name: "", logoUrl: "", contactPhone: "" }))
+      .then((data) =>
+        setPlatformInfo(data.value ?? { name: "", logoUrl: "", contactPhone: "" })
+      )
       .catch(() => setPlatformInfo({ name: "", logoUrl: "", contactPhone: "" }))
       .finally(() => setLoadingPlatform(false));
   }, []);
@@ -37,7 +50,8 @@ export default function OpsSystemSettingsPage() {
     try {
       await updateQuotaLimitEnabled({
         value: { enabled: quotaLimitEnabled },
-        description: "是否开启用量限制：开启后用户需订阅套餐才能使用，关闭后所有用户不限量",
+        description:
+          "是否开启用量限制：开启后用户需订阅套餐才能使用，关闭后所有用户不限量",
       });
       message.success("用量限制配置已保存");
     } catch (e) {
@@ -67,37 +81,92 @@ export default function OpsSystemSettingsPage() {
   };
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 24 }}>系统配置</h2>
-      <Card loading={loadingPlatform} title="平台基础信息" style={{ maxWidth: 720 }}>
+    <div className="page-content">
+      <PageHeader breadcrumb={[{ label: "运营端" }, { label: "系统配置" }]} />
+
+      <Card
+        loading={loadingPlatform}
+        title={
+          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+            <GlobalOutlined style={{ marginRight: 8 }} />
+            平台基础信息
+          </span>
+        }
+        style={{
+          maxWidth: 720,
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+          marginBottom: 24,
+        }}
+      >
         <Form layout="vertical">
           <Form.Item label="平台名称" required>
             <Input
               placeholder="Tenant Hub"
               value={platformInfo.name}
-              onChange={(e) => setPlatformInfo((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) =>
+                setPlatformInfo((prev) => ({ ...prev, name: e.target.value }))
+              }
+              size="large"
+              prefix={<SettingOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              style={{ borderRadius: "var(--th-radius)" }}
             />
           </Form.Item>
           <Form.Item label="Logo URL" extra="填写图片地址，将在小程序端展示">
             <Input
               placeholder="https://example.com/logo.png"
               value={platformInfo.logoUrl}
-              onChange={(e) => setPlatformInfo((prev) => ({ ...prev, logoUrl: e.target.value }))}
+              onChange={(e) =>
+                setPlatformInfo((prev) => ({ ...prev, logoUrl: e.target.value }))
+              }
+              size="large"
+              prefix={<LinkOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              style={{ borderRadius: "var(--th-radius)" }}
             />
           </Form.Item>
           <Form.Item label="客服电话">
             <Input
               placeholder="400-xxx-xxxx"
               value={platformInfo.contactPhone}
-              onChange={(e) => setPlatformInfo((prev) => ({ ...prev, contactPhone: e.target.value }))}
+              onChange={(e) =>
+                setPlatformInfo((prev) => ({
+                  ...prev,
+                  contactPhone: e.target.value,
+                }))
+              }
+              size="large"
+              prefix={<PhoneOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+              style={{ borderRadius: "var(--th-radius)" }}
             />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={handleSavePlatform} loading={savingPlatform}>保存平台信息</Button>
+            <Button
+              type="primary"
+              onClick={handleSavePlatform}
+              loading={savingPlatform}
+              icon={<SaveOutlined />}
+              size="large"
+            >
+              保存平台信息
+            </Button>
           </Form.Item>
         </Form>
       </Card>
-      <Card loading={loadingQuota} title="用量限制" style={{ maxWidth: 720, marginTop: 24 }}>
+
+      <Card
+        loading={loadingQuota}
+        title={
+          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+            <BlockOutlined style={{ marginRight: 8 }} />
+            用量限制
+          </span>
+        }
+        style={{
+          maxWidth: 720,
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+      >
         <Form layout="vertical">
           <Form.Item
             label="开启用量限制"
@@ -111,7 +180,15 @@ export default function OpsSystemSettingsPage() {
             />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" onClick={handleSaveQuota} loading={savingQuota}>保存用量配置</Button>
+            <Button
+              type="primary"
+              onClick={handleSaveQuota}
+              loading={savingQuota}
+              icon={<SaveOutlined />}
+              size="large"
+            >
+              保存用量配置
+            </Button>
           </Form.Item>
         </Form>
       </Card>

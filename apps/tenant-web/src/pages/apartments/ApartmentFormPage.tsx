@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, Form, Input, InputNumber, Button, DatePicker, message, Spin } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { SaveOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import {
+  SaveOutlined,
+  HomeOutlined,
+  EnvironmentOutlined,
+  BuildOutlined,
+  AreaChartOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  DollarOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
 import { createApartment, updateApartment, getApartments } from "@/api/apartments";
 import type { Apartment } from "@/types/domain";
 import { optionalNumber, optionalText } from "@/utils/format";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function ApartmentFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -90,53 +100,102 @@ export default function ApartmentFormPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(isEdit ? `/apartments/${id}` : "/apartments")}>
-          返回
-        </Button>
-        <h2 style={{ margin: 0 }}>{isEdit ? "编辑公寓" : "新增公寓"}</h2>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={isEdit ? `/apartments/${id}` : "/apartments"}
+        breadcrumb={[
+          { label: "公寓管理", path: "/apartments" },
+          { label: isEdit ? "编辑公寓" : "新增公寓" },
+        ]}
+      />
+
       <Spin spinning={loading}>
         <Card style={{ maxWidth: 720 }}>
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
             <Form.Item label="公寓名称" name="name" rules={[{ required: true, message: "请输入公寓名称" }]}>
-              <Input placeholder="例如 阳光公寓" />
+              <Input
+                size="large"
+                prefix={<HomeOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                placeholder="例如 阳光公寓"
+              />
             </Form.Item>
             <Form.Item label="地址" name="location" rules={[{ required: true, message: "请输入地址" }]}>
-              <Input placeholder="请输入地址或片区" />
+              <Input
+                size="large"
+                prefix={<EnvironmentOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                placeholder="请输入地址或片区"
+              />
             </Form.Item>
             <Form.Item label="楼层数" name="floors" rules={[{ required: true, message: "请输入楼层数" }]}>
-              <InputNumber min={1} style={{ width: "100%" }} placeholder="例如 6" />
+              <InputNumber
+                min={1}
+                size="large"
+                style={{ width: "100%" }}
+                prefix={<BuildOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                placeholder="例如 6"
+              />
             </Form.Item>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <Form.Item label="占地面积（㎡）" name="landArea">
-                <InputNumber min={0} style={{ width: "100%" }} />
+                <InputNumber
+                  min={0}
+                  size="large"
+                  style={{ width: "100%" }}
+                  prefix={<AreaChartOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                  placeholder="例如 500"
+                />
               </Form.Item>
               <Form.Item label="总面积（㎡）" name="totalArea">
-                <InputNumber min={0} style={{ width: "100%" }} />
+                <InputNumber
+                  min={0}
+                  size="large"
+                  style={{ width: "100%" }}
+                  prefix={<AreaChartOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                  placeholder="例如 3000"
+                />
               </Form.Item>
             </div>
             <Form.Item label="房东姓名" name="landlordName">
-              <Input placeholder="请输入房东姓名" />
+              <Input
+                size="large"
+                prefix={<UserOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                placeholder="请输入房东姓名"
+              />
             </Form.Item>
             <Form.Item label="房东电话" name="landlordPhone">
-              <Input placeholder="请输入手机号" />
+              <Input
+                size="large"
+                prefix={<PhoneOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                placeholder="请输入手机号"
+              />
             </Form.Item>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <Form.Item label="合同开始日期" name="contractStart">
-                <DatePicker style={{ width: "100%" }} />
+                <DatePicker size="large" style={{ width: "100%" }} />
               </Form.Item>
               <Form.Item label="合同结束日期" name="contractEnd">
-                <DatePicker style={{ width: "100%" }} />
+                <DatePicker size="large" style={{ width: "100%" }} />
               </Form.Item>
             </div>
             <Form.Item label="上游租金" name="rentAmount">
-              <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="每期金额" />
+              <InputNumber
+                min={0}
+                size="large"
+                style={{ width: "100%" }}
+                prefix={<DollarOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                placeholder="每期金额"
+              />
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving}>
+              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving} size="large">
                 {isEdit ? "保存公寓信息" : "创建公寓"}
+              </Button>
+              <Button
+                size="large"
+                style={{ marginLeft: 12 }}
+                onClick={() => navigate(isEdit ? `/apartments/${id}` : "/apartments")}
+              >
+                取消
               </Button>
             </Form.Item>
           </Form>

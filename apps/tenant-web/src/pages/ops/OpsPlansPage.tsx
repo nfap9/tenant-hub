@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Form, Input, InputNumber, Modal, Space, Table, Tag, message } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, BuildOutlined } from "@ant-design/icons";
 import { getAdminPlans, createAdminPlan, updateAdminPlan } from "@/api/admin";
 import type { Plan } from "@/types/domain";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function OpsPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -51,28 +52,58 @@ export default function OpsPlansPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>套餐配置</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>新增套餐</Button>
-      </div>
-      <Card>
+    <div className="page-content">
+      <PageHeader
+        breadcrumb={[{ label: "运营端" }, { label: "套餐配置" }]}
+        actions={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setModalOpen(true)}
+            size="large"
+          >
+            新增套餐
+          </Button>
+        }
+      />
+
+      <Card
+        style={{
+          borderRadius: "var(--th-radius-lg)",
+          boxShadow: "var(--th-shadow)",
+        }}
+      >
         <Table
           rowKey="id"
           loading={loading}
           dataSource={plans}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: "max-content" }}
           columns={[
-            { title: "名称", dataIndex: "name" },
+            { title: "名称", dataIndex: "name", ellipsis: true },
             { title: "公寓数", dataIndex: "apartmentLimit" },
             { title: "房间数", dataIndex: "roomLimit" },
             { title: "成员数", dataIndex: "memberLimit" },
-            { title: "价格", dataIndex: "price", render: (v: string | number) => `${v}元/年` },
-            { title: "状态", dataIndex: "enabled", render: (v: boolean) => <Tag color={v ? "green" : "default"}>{v ? "启用" : "停用"}</Tag> },
+            {
+              title: "价格",
+              dataIndex: "price",
+              render: (v: string | number) => `${v}元/年`,
+            },
+            {
+              title: "状态",
+              dataIndex: "enabled",
+              render: (v: boolean) => (
+                <Tag color={v ? "success" : "default"}>{v ? "启用" : "停用"}</Tag>
+              ),
+            },
             {
               title: "操作",
               render: (_: unknown, row: Plan) => (
-                <Button type="link" danger={row.enabled} onClick={() => handleToggle(row)}>
+                <Button
+                  type="link"
+                  danger={row.enabled}
+                  onClick={() => handleToggle(row)}
+                >
                   {row.enabled ? "停用" : "启用"}
                 </Button>
               ),
@@ -80,27 +111,43 @@ export default function OpsPlansPage() {
           ]}
         />
       </Card>
-      <Modal open={modalOpen} title="新增套餐" footer={null} onCancel={() => { setModalOpen(false); form.resetFields(); }}>
+
+      <Modal
+        open={modalOpen}
+        title={
+          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+            <BuildOutlined style={{ marginRight: 8 }} />
+            新增套餐
+          </span>
+        }
+        footer={null}
+        onCancel={() => {
+          setModalOpen(false);
+          form.resetFields();
+        }}
+      >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="套餐名称" rules={[{ required: true }]}>
-            <Input />
+            <Input size="large" placeholder="请输入套餐名称" style={{ borderRadius: "var(--th-radius)" }} />
           </Form.Item>
           <Space wrap>
             <Form.Item name="apartmentLimit" label="公寓数" initialValue={1}>
-              <InputNumber min={0} />
+              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
             </Form.Item>
             <Form.Item name="roomLimit" label="房间数" initialValue={20}>
-              <InputNumber min={0} />
+              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
             </Form.Item>
             <Form.Item name="memberLimit" label="成员数" initialValue={3}>
-              <InputNumber min={0} />
+              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
             </Form.Item>
             <Form.Item name="price" label="年费价格" initialValue={0}>
-              <InputNumber min={0} />
+              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
             </Form.Item>
           </Space>
-          <Form.Item>
-            <Button type="primary" htmlType="submit">保存</Button>
+          <Form.Item style={{ marginTop: 16 }}>
+            <Button type="primary" htmlType="submit" size="large">
+              保存
+            </Button>
           </Form.Item>
         </Form>
       </Modal>

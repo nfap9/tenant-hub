@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, Form, InputNumber, Button, message, Spin, Space, Divider } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { SaveOutlined, ArrowLeftOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { SaveOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
 import { getRooms } from "@/api/rooms";
 import { updateLease } from "@/api/leases";
 import type { Room } from "@/types/domain";
 import { selectableFeeTypes, type LeaseFeeFormItem } from "./constants";
 import { buildLeaseFeesPayload } from "./utils";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
 
 export default function LeaseEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -94,60 +96,91 @@ export default function LeaseEditPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/rooms")}>返回</Button>
-        <h2 style={{ margin: 0 }}>编辑租约</h2>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back="/rooms"
+        breadcrumb={[
+          { label: "房间管理", path: "/rooms" },
+          { label: "编辑租约" },
+        ]}
+      />
+
       <Spin spinning={loading}>
-        <Card style={{ maxWidth: 720 }}>
-          {lease ? (
-            <Form form={form} layout="vertical" onFinish={handleSubmit}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <Form.Item label="租金" name="rentAmount">
-                  <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="每期金额" />
-                </Form.Item>
-                <Form.Item label="押金" name="depositAmount">
-                  <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="请输入押金" />
-                </Form.Item>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
-                  <InputNumber min={0} style={{ width: "100%" }} />
-                </Form.Item>
-                <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
-                  <InputNumber min={0} style={{ width: "100%" }} />
-                </Form.Item>
-              </div>
+        <div style={{ maxWidth: 720 }}>
+          <Card>
+            {lease ? (
+              <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <Form.Item label="租金" name="rentAmount">
+                    <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="每期金额" size="large" />
+                  </Form.Item>
+                  <Form.Item label="押金" name="depositAmount">
+                    <InputNumber min={0} style={{ width: "100%" }} prefix="¥" placeholder="请输入押金" size="large" />
+                  </Form.Item>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
+                    <InputNumber min={0} style={{ width: "100%" }} size="large" />
+                  </Form.Item>
+                  <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
+                    <InputNumber min={0} style={{ width: "100%" }} size="large" />
+                  </Form.Item>
+                </div>
 
-              <Divider orientation="left">费用项目</Divider>
-              {fees.map((item) => (
-                <Space key={item.id} style={{ display: "flex", marginBottom: 8 }} align="baseline">
-                  <span style={{ width: 80, display: "inline-block" }}>{item.name}</span>
-                  <InputNumber
-                    min={0}
-                    placeholder="价格"
-                    value={item.amount ? Number(item.amount) : undefined}
-                    onChange={(v) => updateFeeAmount(item.id, String(v || 0))}
-                  />
-                  <Button type="link" danger icon={<DeleteOutlined />} onClick={() => removeFee(item.id)} />
-                </Space>
-              ))}
-              <div style={{ marginBottom: 16 }}>
-                <Button type="dashed" icon={<PlusOutlined />} onClick={addFee}>添加费用</Button>
-              </div>
+                <Divider orientation="left" style={{ color: "var(--th-foreground-muted)", fontWeight: 600 }}>
+                  费用项目
+                </Divider>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+                  {fees.map((item) => (
+                    <Space key={item.id} style={{ display: "flex" }} align="baseline">
+                      <span
+                        style={{
+                          width: 90,
+                          display: "inline-block",
+                          fontWeight: 500,
+                          color: "var(--th-foreground)",
+                        }}
+                      >
+                        {item.name}
+                      </span>
+                      <InputNumber
+                        min={0}
+                        placeholder="价格"
+                        value={item.amount ? Number(item.amount) : undefined}
+                        onChange={(v) => updateFeeAmount(item.id, String(v || 0))}
+                        size="large"
+                        prefix="¥"
+                      />
+                      <Button type="link" danger icon={<DeleteOutlined />} onClick={() => removeFee(item.id)}>
+                        删除
+                      </Button>
+                    </Space>
+                  ))}
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <Button type="dashed" icon={<PlusOutlined />} onClick={addFee} size="large" style={{ width: "100%" }}>
+                    添加费用
+                  </Button>
+                </div>
 
-              <Form.Item>
-                <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving}>
-                  保存修改
-                </Button>
-                <Button style={{ marginLeft: 8 }} onClick={() => navigate("/rooms")}>取消</Button>
-              </Form.Item>
-            </Form>
-          ) : (
-            <div style={{ color: "#888", textAlign: "center", padding: 40 }}>租约不存在或已结束</div>
-          )}
-        </Card>
+                <Form.Item style={{ marginTop: 24 }}>
+                  <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving} size="large">
+                    保存修改
+                  </Button>
+                  <Button size="large" style={{ marginLeft: 12 }} onClick={() => navigate("/rooms")}>
+                    取消
+                  </Button>
+                </Form.Item>
+              </Form>
+            ) : (
+              <EmptyState
+                title="租约不存在或已结束"
+                description="当前房间没有有效的租约可供编辑"
+                action={{ label: "返回房间列表", onClick: () => navigate("/rooms") }}
+              />
+            )}
+          </Card>
+        </div>
       </Spin>
     </div>
   );

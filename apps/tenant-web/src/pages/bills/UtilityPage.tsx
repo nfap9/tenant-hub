@@ -9,12 +9,13 @@ import {
   message,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   SaveOutlined,
   ThunderboltOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { getBillDetail, recordUtilityReading } from "@/api/bills";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function UtilityPage() {
   const { currentOrgId } = useAppSession();
@@ -69,43 +70,54 @@ export default function UtilityPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0 }}>录入本期水电</h2>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-          返回
-        </Button>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        back={true}
+        breadcrumb={[
+          { label: "财务管理", path: "/bills" },
+          { label: "录入本期水电" },
+        ]}
+      />
 
       <Spin spinning={loading}>
-        <Card title="水表读数" style={{ marginBottom: 16 }}>
-          <Space direction="vertical" style={{ width: "100%" }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><DashboardOutlined />水表读数</span>}
+          style={{ marginBottom: 24 }}
+        >
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
             <Input
               placeholder="上期水表读数"
               prefix={<ThunderboltOutlined />}
+              size="large"
               value={form.previousWater}
               onChange={(e) => setForm((old) => ({ ...old, previousWater: e.target.value }))}
             />
             <Input
               placeholder="本期水表读数"
               prefix={<ThunderboltOutlined />}
+              size="large"
               value={form.currentWater}
               onChange={(e) => setForm((old) => ({ ...old, currentWater: e.target.value }))}
             />
           </Space>
         </Card>
 
-        <Card title="电表读数" style={{ marginBottom: 16 }}>
-          <Space direction="vertical" style={{ width: "100%" }}>
+        <Card
+          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><DashboardOutlined />电表读数</span>}
+          style={{ marginBottom: 24 }}
+        >
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
             <Input
               placeholder="上期电表读数"
               prefix={<ThunderboltOutlined />}
+              size="large"
               value={form.previousPower}
               onChange={(e) => setForm((old) => ({ ...old, previousPower: e.target.value }))}
             />
             <Input
               placeholder="本期电表读数"
               prefix={<ThunderboltOutlined />}
+              size="large"
               value={form.currentPower}
               onChange={(e) => setForm((old) => ({ ...old, currentPower: e.target.value }))}
             />
@@ -118,6 +130,7 @@ export default function UtilityPage() {
           loading={submitting}
           onClick={handleSubmit}
           block
+          size="large"
         >
           保存水电读数
         </Button>
