@@ -12,6 +12,11 @@ import {
   DownOutlined,
   DashboardOutlined,
   BellOutlined,
+  TeamOutlined,
+  AppstoreOutlined,
+  SafetyCertificateOutlined,
+  MailOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { useMemo } from "react";
@@ -24,8 +29,29 @@ function getMenuKeyFromPath(pathname: string): string {
   if (pathname.startsWith("/rooms")) return "rooms";
   if (pathname.startsWith("/bills")) return "bills";
   if (pathname.startsWith("/settings")) return "settings";
-  if (pathname.startsWith("/ops")) return "ops";
+  if (pathname === "/ops") return "ops-dashboard";
+  if (pathname.startsWith("/ops/users")) return "ops-users";
+  if (pathname.startsWith("/ops/plans")) return "ops-plans";
+  if (pathname.startsWith("/ops/organizations")) return "ops-organizations";
+  if (pathname.startsWith("/ops/roles")) return "ops-roles";
+  if (pathname.startsWith("/ops/sms")) return "ops-sms";
+  if (pathname.startsWith("/ops/settings")) return "ops-settings";
+  if (pathname.startsWith("/ops")) return "ops-dashboard";
   return "dashboard";
+}
+
+function getMenuLabel(
+  items: Array<{ key: string; label: string; children?: Array<{ key: string; label: string }> }>,
+  key: string
+): string {
+  for (const item of items) {
+    if (item.key === key) return item.label;
+    if (item.children) {
+      const child = item.children.find((c) => c.key === key);
+      if (child) return child.label;
+    }
+  }
+  return "";
 }
 
 export default function MainLayout() {
@@ -47,7 +73,24 @@ export default function MainLayout() {
           { key: "apartments", icon: <ApartmentOutlined />, label: "公寓" },
         ]),
     { key: "settings", icon: <SettingOutlined />, label: "更多" },
-    ...(platformRole === "SUPER_ADMIN" ? [{ key: "ops", icon: <DashboardOutlined />, label: "运营配置" }] : []),
+    ...(platformRole === "SUPER_ADMIN"
+      ? [
+          {
+            key: "ops",
+            icon: <DashboardOutlined />,
+            label: "运营配置",
+            children: [
+              { key: "ops-dashboard", icon: <DashboardOutlined />, label: "运营总览" },
+              { key: "ops-users", icon: <TeamOutlined />, label: "租户管理" },
+              { key: "ops-plans", icon: <AppstoreOutlined />, label: "套餐配置" },
+              { key: "ops-organizations", icon: <ApartmentOutlined />, label: "组织管理" },
+              { key: "ops-roles", icon: <SafetyCertificateOutlined />, label: "角色权限" },
+              { key: "ops-sms", icon: <MailOutlined />, label: "短信配置" },
+              { key: "ops-settings", icon: <ToolOutlined />, label: "系统配置" },
+            ],
+          },
+        ]
+      : []),
   ];
 
   const handleMenuClick = (key: string) => {
@@ -57,7 +100,13 @@ export default function MainLayout() {
       case "bills": navigate("/bills"); break;
       case "apartments": navigate("/apartments"); break;
       case "settings": navigate("/settings"); break;
-      case "ops": navigate("/ops"); break;
+      case "ops-dashboard": navigate("/ops"); break;
+      case "ops-users": navigate("/ops/users"); break;
+      case "ops-plans": navigate("/ops/plans"); break;
+      case "ops-organizations": navigate("/ops/organizations"); break;
+      case "ops-roles": navigate("/ops/roles"); break;
+      case "ops-sms": navigate("/ops/sms"); break;
+      case "ops-settings": navigate("/ops/settings"); break;
     }
   };
 
@@ -199,7 +248,7 @@ export default function MainLayout() {
         >
           {/* Breadcrumb placeholder / page title could go here */}
           <div style={{ fontFamily: "var(--th-font-heading)", fontWeight: 600, fontSize: 18, color: "var(--th-foreground)" }}>
-            {menuItems.find((m) => m.key === selectedKey)?.label || ""}
+            {getMenuLabel(menuItems, selectedKey)}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
