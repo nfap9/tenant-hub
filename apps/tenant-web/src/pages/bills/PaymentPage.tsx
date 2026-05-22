@@ -1,49 +1,239 @@
-import { Card, Form, Input, InputNumber, DatePicker, Select, Button, message } from "antd";
-import { SaveOutlined } from "@ant-design/icons";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  Space,
+  Empty,
+  Tag,
+  Spin,
+  message,
+} from "antd";
+import {
+  ArrowLeftOutlined,
+  SaveOutlined,
+  WalletOutlined,
+} from "@ant-design/icons";
+import { useAppSession } from "@/context/AppSessionContext";
+import { getMonthlyBills, createPayment } from "@/api/bills";
+import { getRooms } from "@/api/rooms";
+import { money } from "@/utils/format";
+import { statusLabels, toneForBillStatus } from "./constants";
+import { remainingAmount, roomKeyForBill, sortMonthlyBillsForList, getPaymentAmountError } from "./utils";
+import type { MonthlyBill, Room } from "@/types/domain";
 
 export default function PaymentPage() {
-  const [form] = Form.useForm();
+  const { currentOrgId } = useAppSession();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (values: unknown) => {
-    console.log(values);
-    message.success("收款录入成功");
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [bills, setBills] = useState<MonthlyBill[]>([]);
+  const [paymentRoomId, setPaymentRoomId] = useState("");
+  const [form, setForm] = useState({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const loadData = async () => {
+    if (!currentOrgId) return;
+    setLoading(true);
+    try {
+      const [nextRooms, nextBills] = await Promise.all([
+        getRooms(currentOrgId),
+        getMonthlyBills(currentOrgId),
+      ]);
+      setRooms(nextRooms);
+      setBills(nextBills);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : "加载失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [currentOrgId]);
+
+  const paymentBills = useMemo(
+    () => sortMonthlyBillsForList(bills.filter((b) => b.status === "UNPAID" || b.status === "PARTIAL_PAID")),
+    [bills]
+  );
+  const roomBills = useMemo(
+    () => paymentBills.filter((bill) => roomKeyForBill(bill) === paymentRoomId),
+    [paymentBills, paymentRoomId]
+  );
+
+  useEffect(() => {
+    if (paymentBills.length > 0 && !paymentRoomId) {
+      const first = paymentBills[0];
+      if (first) {
+        const key = roomKeyForBill(first);
+        setPaymentRoomId(key);
+        const isPayable = first.status !== "PAID" && first.status !== "VOID";
+        setForm({
+          monthlyBillId: isPayable ? first.id : "",
+          amount: isPayable ? String(remainingAmount(first)) : "",
+          method: "线下收款",
+          note: "",
+        });
+      }
+    }
+  }, [paymentBills, paymentRoomId]);
+
+  const handleRoomClick = (roomId: string) => {
+    setPaymentRoomId(roomId);
+    const firstBill = paymentBills.find((bill) => roomKeyForBill(bill) === roomId);
+    if (firstBill) {
+      const isPayable = firstBill.status !== "PAID" && firstBill.status !== "VOID";
+      setForm({
+        monthlyBillId: isPayable ? firstBill.id : "",
+        amount: isPayable ? String(remainingAmount(firstBill)) : "",
+        method: "线下收款",
+        note: "",
+      });
+    } else {
+      setForm({ monthlyBillId: "", amount: "", method: "线下收款", note: "" });
+    }
+  };
+
+  const handleBillClick = (bill: MonthlyBill) => {
+    const isPayable = bill.status !== "PAID" && bill.status !== "VOID";
+    setForm({
+      monthlyBillId: isPayable ? bill.id : "",
+      amount: isPayable ? String(remainingAmount(bill)) : "",
+      method: "线下收款",
+      note: "",
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!currentOrgId || !form.monthlyBillId || !form.amount.trim()) return;
+    const bill = bills.find((item) => item.id === form.monthlyBillId);
+    if (!bill || bill.status === "PAID" || bill.status === "VOID") return;
+    const amountError = getPaymentAmountError(form.amount, remainingAmount(bill));
+    if (amountError) {
+      message.error(amountError);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createPayment(currentOrgId, {
+        monthlyBillId: bill.id,
+        amount: Number(form.amount),
+        method: form.method.trim() || "线下收款",
+        note: form.note.trim() || undefined,
+        paidAt: new Date().toISOString(),
+      });
+      message.success("收款已登记");
+      navigate("/bills");
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : "收款失败");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div>
-      <h2 style={{ marginBottom: 24 }}>收款录入</h2>
-      <Card>
-        <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ maxWidth: 600 }}>
-          <Form.Item label="账单" name="billId" rules={[{ required: true }]}>
-            <Select placeholder="请选择账单" />
-          </Form.Item>
-          <Form.Item label="收款金额" name="amount" rules={[{ required: true }]}>
-            <InputNumber min={0} style={{ width: "100%" }} prefix="¥" />
-          </Form.Item>
-          <Form.Item label="收款日期" name="paidAt" rules={[{ required: true }]}>
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item label="收款方式" name="method" rules={[{ required: true }]}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h2 style={{ margin: 0 }}>登记收款</h2>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+          返回
+        </Button>
+      </div>
+
+      <Spin spinning={loading}>
+        <Card title="选择房间" style={{ marginBottom: 16 }}>
+          {rooms.length === 0 ? (
+            <Empty description="暂无房间" />
+          ) : (
+            <Space wrap>
+              {rooms.map((room) => (
+                <Button
+                  key={room.id}
+                  type={paymentRoomId === room.id ? "primary" : "default"}
+                  onClick={() => handleRoomClick(room.id)}
+                >
+                  {room.roomNo}
+                </Button>
+              ))}
+            </Space>
+          )}
+        </Card>
+
+        {paymentRoomId && (
+          <Card title="选择账单" style={{ marginBottom: 16 }}>
+            {roomBills.length === 0 ? (
+              <Empty description="该房间暂无待收账单" />
+            ) : (
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {roomBills.map((bill) => (
+                  <Card
+                    key={bill.id}
+                    size="small"
+                    style={{
+                      cursor: "pointer",
+                      borderColor: form.monthlyBillId === bill.id ? "#146c5c" : undefined,
+                      background: form.monthlyBillId === bill.id ? "#f6ffed" : undefined,
+                    }}
+                    onClick={() => handleBillClick(bill)}
+                    bodyStyle={{ padding: 12 }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{bill.billingDate.slice(0, 10)}</div>
+                        <div style={{ color: "#888" }}>剩余 ¥{money(remainingAmount(bill))}</div>
+                      </div>
+                      <Tag color={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Tag>
+                    </div>
+                  </Card>
+                ))}
+              </Space>
+            )}
+          </Card>
+        )}
+
+        <Card title="收款信息">
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Input
+              placeholder="收款金额"
+              prefix={<WalletOutlined />}
+              value={form.amount}
+              onChange={(e) => setForm((old) => ({ ...old, amount: e.target.value }))}
+            />
             <Select
-              placeholder="请选择收款方式"
+              placeholder="收款方式"
+              value={form.method}
+              onChange={(value) => setForm((old) => ({ ...old, method: value }))}
+              style={{ width: "100%" }}
               options={[
-                { label: "现金", value: "CASH" },
-                { label: "微信", value: "WECHAT" },
-                { label: "支付宝", value: "ALIPAY" },
-                { label: "银行转账", value: "BANK" },
+                { label: "线下收款", value: "线下收款" },
+                { label: "现金", value: "现金" },
+                { label: "微信", value: "微信" },
+                { label: "支付宝", value: "支付宝" },
+                { label: "银行转账", value: "银行转账" },
               ]}
             />
-          </Form.Item>
-          <Form.Item label="备注" name="note">
-            <Input.TextArea />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-              保存
+            <Input.TextArea
+              placeholder="备注（可选）"
+              value={form.note}
+              onChange={(e) => setForm((old) => ({ ...old, note: e.target.value }))}
+              rows={2}
+            />
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={submitting}
+              onClick={handleSubmit}
+              disabled={!form.monthlyBillId}
+            >
+              确认收款
             </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+          </Space>
+        </Card>
+      </Spin>
     </div>
   );
 }

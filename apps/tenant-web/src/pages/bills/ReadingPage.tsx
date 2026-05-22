@@ -1,46 +1,151 @@
-import { Card, Form, Select, DatePicker, InputNumber, Input, Button, message } from "antd";
-import { SaveOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Card,
+  Button,
+  Input,
+  DatePicker,
+  Space,
+  Spin,
+  message,
+} from "antd";
+import {
+  ArrowLeftOutlined,
+  SaveOutlined,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
+import { useAppSession } from "@/context/AppSessionContext";
+import { getRooms } from "@/api/rooms";
+import { createMeterReading } from "@/api/bills";
+import { today } from "@/utils/format";
+import type { Room } from "@/types/domain";
+import dayjs from "dayjs";
 
 export default function ReadingPage() {
-  const [form] = Form.useForm();
+  const { currentOrgId } = useAppSession();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (values: unknown) => {
-    console.log(values);
-    message.success("抄表录入成功");
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [form, setForm] = useState({
+    roomId: "",
+    meterType: "WATER" as "WATER" | "POWER",
+    readingDate: today(),
+    value: "",
+    note: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!currentOrgId) return;
+    setLoading(true);
+    getRooms(currentOrgId)
+      .then((data) => {
+        setRooms(data);
+        if (data.length > 0) {
+          setForm((old) => ({ ...old, roomId: data[0].id }));
+        }
+      })
+      .catch((e) => message.error(e instanceof Error ? e.message : "加载失败"))
+      .finally(() => setLoading(false));
+  }, [currentOrgId]);
+
+  const handleSubmit = async () => {
+    if (!currentOrgId || !form.roomId || !form.value.trim()) return;
+    const room = rooms.find((r) => r.id === form.roomId);
+    if (!room) return;
+    setSubmitting(true);
+    try {
+      await createMeterReading(currentOrgId, {
+        apartmentId: room.apartmentId,
+        roomId: form.roomId,
+        meterType: form.meterType,
+        readingDate: form.readingDate,
+        value: Number(form.value),
+        note: form.note.trim() || undefined,
+      });
+      message.success("抄表记录已保存");
+      navigate(-1);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : "保存失败");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div>
-      <h2 style={{ marginBottom: 24 }}>抄表录入</h2>
-      <Card>
-        <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ maxWidth: 600 }}>
-          <Form.Item label="房间" name="roomId" rules={[{ required: true }]}>
-            <Select placeholder="请选择房间" />
-          </Form.Item>
-          <Form.Item label="表类型" name="meterType" rules={[{ required: true }]}>
-            <Select
-              options={[
-                { label: "水表", value: "WATER" },
-                { label: "电表", value: "POWER" },
-              ]}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h2 style={{ margin: 0 }}>抄表录入</h2>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+          返回
+        </Button>
+      </div>
+
+      <Spin spinning={loading}>
+        <Card title="选择房间" style={{ marginBottom: 16 }}>
+          <Space wrap>
+            {rooms.map((room) => (
+              <Button
+                key={room.id}
+                type={form.roomId === room.id ? "primary" : "default"}
+                onClick={() => setForm((old) => ({ ...old, roomId: room.id }))}
+              >
+                {room.roomNo}
+              </Button>
+            ))}
+          </Space>
+        </Card>
+
+        <Card title="表类型" style={{ marginBottom: 16 }}>
+          <Space>
+            {(["WATER", "POWER"] as const).map((type) => (
+              <Button
+                key={type}
+                type={form.meterType === type ? "primary" : "default"}
+                onClick={() => setForm((old) => ({ ...old, meterType: type }))}
+              >
+                {type === "WATER" ? "水表" : "电表"}
+              </Button>
+            ))}
+          </Space>
+        </Card>
+
+        <Card title="读数信息">
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <DatePicker
+              style={{ width: "100%" }}
+              value={form.readingDate ? dayjs(form.readingDate) : undefined}
+              onChange={(date) =>
+                setForm((old) => ({
+                  ...old,
+                  readingDate: date ? date.format("YYYY-MM-DD") : today(),
+                }))
+              }
             />
-          </Form.Item>
-          <Form.Item label="抄表日期" name="readingDate" rules={[{ required: true }]}>
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item label="读数" name="value" rules={[{ required: true }]}>
-            <InputNumber style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item label="备注" name="note">
-            <Input.TextArea />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-              保存
+            <Input
+              placeholder="读数"
+              prefix={<ThunderboltOutlined />}
+              value={form.value}
+              onChange={(e) => setForm((old) => ({ ...old, value: e.target.value }))}
+            />
+            <Input.TextArea
+              placeholder="备注（可选）"
+              value={form.note}
+              onChange={(e) => setForm((old) => ({ ...old, note: e.target.value }))}
+              rows={2}
+            />
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={submitting}
+              onClick={handleSubmit}
+            >
+              保存读数
             </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+          </Space>
+        </Card>
+      </Spin>
     </div>
   );
 }
