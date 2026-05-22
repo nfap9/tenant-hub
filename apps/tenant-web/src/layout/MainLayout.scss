@@ -1,0 +1,191 @@
+@import '@/styles/variables';
+
+.main-layout {
+  min-height: 100vh;
+
+  .main-sider {
+    border-right: 1px solid $th-border;
+    background: $th-surface;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 20;
+    overflow: auto;
+
+    .sider-logo {
+      padding: 24px 20px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid $th-border-light;
+      margin-bottom: 8px;
+
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        .anticon {
+          color: #fff;
+          font-size: 18px;
+        }
+      }
+
+      .logo-text {
+        .logo-title {
+          font-family: $th-font-heading;
+          font-weight: 700;
+          font-size: 16px;
+          color: $th-foreground;
+          line-height: 1.2;
+        }
+
+        .logo-subtitle {
+          font-size: 11px;
+          color: $th-foreground-subtle;
+          margin-top: 2px;
+        }
+      }
+    }
+
+    .sider-menu-wrap {
+      padding: 0 8px;
+
+      .menu-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: $th-foreground-subtle;
+        padding: 12px 12px 8px;
+      }
+
+      .main-menu {
+        height: 100%;
+        border-right: 0;
+        background: transparent;
+      }
+    }
+
+    .sider-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 20px;
+      border-top: 1px solid $th-border-light;
+      background: $th-surface;
+
+      .user-phone {
+        font-size: 12px;
+        color: $th-foreground-subtle;
+      }
+    }
+  }
+
+  .main-content-layout {
+    margin-left: 240px;
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: $th-surface;
+      padding: 0 32px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      background-color: rgba(255, 255, 255, 0.92);
+
+      .header-page-title {
+        font-family: $th-font-heading;
+        font-weight: 600;
+        font-size: 18px;
+        color: $th-foreground;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+
+        .header-icon-btn {
+          font-size: 18px;
+          color: $th-foreground-muted;
+          cursor: pointer;
+        }
+
+        .org-switcher {
+          color: $th-foreground;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 500;
+          font-size: 14px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          border: 1px solid $th-border;
+          transition: all $th-transition;
+
+          .switcher-icon {
+            color: $th-primary;
+          }
+
+          .switcher-caret {
+            font-size: 10px;
+            color: $th-foreground-subtle;
+          }
+        }
+
+        .org-name-static {
+          color: $th-foreground-muted;
+          font-size: 14px;
+        }
+
+        .user-trigger {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+
+          .user-avatar {
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+            font-family: $th-font-heading;
+            font-weight: 600;
+          }
+
+          .user-name {
+            color: $th-foreground;
+            font-weight: 500;
+            font-size: 14px;
+          }
+
+          .user-caret {
+            font-size: 10px;
+            color: $th-foreground-subtle;
+          }
+        }
+      }
+    }
+
+    .main-content {
+      padding: 28px 32px;
+      background: $th-bg;
+      min-height: calc(100vh - 64px);
+
+      .content-loading {
+        display: flex;
+        justify-content: center;
+        padding: 64px;
+      }
+    }
+  }
+}

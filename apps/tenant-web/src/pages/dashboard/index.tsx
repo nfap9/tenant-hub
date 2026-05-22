@@ -39,6 +39,7 @@ import {
 } from '@/utils/format';
 import type { Apartment, Room, Lease, MonthlyBill, Bill } from '@/types/domain';
 import Overview from './OverviewCard';
+import './index.scss';
 
 const leaseMonthlyIncome = (lease: Lease) => {
   const rent = monthlyAmount(lease.rentAmount, lease.cycle);
@@ -229,7 +230,7 @@ export default function DashboardPage() {
   }[];
 
   return (
-    <div className="page-content">
+    <div className="page-content dashboard-page">
       <PageHeader
         breadcrumb={[{ label: '首页' }]}
         actions={
@@ -310,76 +311,25 @@ export default function DashboardPage() {
         </Row>
 
         {/* 出租率 */}
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Row gutter={[16, 16]} className="stat-grid">
           <Col xs={24} lg={12}>
             <Card
-              title={
-                <span
-                  style={{ fontWeight: 600, color: 'var(--th-foreground)' }}
-                >
-                  出租情况
-                </span>
-              }
-              style={{
-                borderRadius: 'var(--th-radius-lg)',
-                boxShadow: 'var(--th-shadow)',
-              }}
+              title={<span className="dashboard-card-title">出租情况</span>}
             >
               <Row gutter={16}>
-                <Col span={12} style={{ textAlign: 'center' }}>
-                  <div
-                    style={{
-                      fontSize: 32,
-                      fontWeight: 700,
-                      color: 'var(--th-success)',
-                    }}
-                  >
-                    {vacantCount}
-                  </div>
-                  <div style={{ color: 'var(--th-foreground-muted)' }}>
-                    空闲房间
-                  </div>
+                <Col span={12} className="text-center">
+                  <div className="stat-value-success">{vacantCount}</div>
+                  <div className="text-muted">空闲房间</div>
                 </Col>
-                <Col span={12} style={{ textAlign: 'center' }}>
-                  <div
-                    style={{
-                      fontSize: 32,
-                      fontWeight: 700,
-                      color: 'var(--th-primary)',
-                    }}
-                  >
-                    {occupiedCount}
-                  </div>
-                  <div style={{ color: 'var(--th-foreground-muted)' }}>
-                    已租房间
-                  </div>
+                <Col span={12} className="text-center">
+                  <div className="stat-value-primary">{occupiedCount}</div>
+                  <div className="text-muted">已租房间</div>
                 </Col>
               </Row>
-              <div style={{ marginTop: 20 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: 8,
-                  }}
-                >
-                  <span
-                    style={{
-                      color: 'var(--th-foreground-muted)',
-                      fontSize: 13,
-                    }}
-                  >
-                    出租率
-                  </span>
-                  <span
-                    style={{
-                      color: 'var(--th-primary)',
-                      fontWeight: 700,
-                      fontSize: 16,
-                    }}
-                  >
-                    {occupancyRate}%
-                  </span>
+              <div className="mt-20">
+                <div className="progress-header">
+                  <span className="progress-label">出租率</span>
+                  <span className="progress-value">{occupancyRate}%</span>
                 </div>
                 <Progress
                   percent={occupancyRate}
@@ -390,24 +340,11 @@ export default function DashboardPage() {
                 />
               </div>
               {vacantLayoutStats.length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <div
-                    style={{
-                      marginBottom: 8,
-                      color: 'var(--th-foreground-muted)',
-                      fontSize: 13,
-                      fontWeight: 500,
-                    }}
-                  >
-                    空闲户型
-                  </div>
+                <div className="vacant-layouts">
+                  <div className="vacant-layouts-label">空闲户型</div>
                   <Space wrap>
                     {vacantLayoutStats.map(([layout, count]) => (
-                      <Tag
-                        key={layout}
-                        color="default"
-                        style={{ borderRadius: 8 }}
-                      >
+                      <Tag key={layout} color="default">
                         {layout} {count}间
                       </Tag>
                     ))}
@@ -421,58 +358,28 @@ export default function DashboardPage() {
           <Col xs={24} lg={12}>
             <Card
               title={
-                <span
-                  style={{ fontWeight: 600, color: 'var(--th-foreground)' }}
-                >
+                <span className="dashboard-card-title">
                   待办事项 {todos.length > 0 ? `(${todos.length} 项)` : ''}
                 </span>
               }
-              style={{
-                borderRadius: 'var(--th-radius-lg)',
-                boxShadow: 'var(--th-shadow)',
-              }}
             >
               {todos.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                  <CheckCircleOutlined
-                    style={{
-                      fontSize: 48,
-                      color: 'var(--th-success)',
-                      marginBottom: 16,
-                    }}
-                  />
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      color: 'var(--th-foreground)',
-                      marginBottom: 4,
-                    }}
-                  >
-                    暂无紧急待办
-                  </div>
-                  <div style={{ color: 'var(--th-foreground-muted)' }}>
-                    经营状态稳定
-                  </div>
+                <div className="todo-empty">
+                  <CheckCircleOutlined className="todo-empty-icon" />
+                  <div className="todo-empty-title">暂无紧急待办</div>
+                  <div className="todo-empty-desc">经营状态稳定</div>
                 </div>
               ) : (
-                <Space
-                  direction="vertical"
-                  style={{ width: '100%' }}
-                  size="middle"
-                >
+                <Space direction="vertical" className="w-full" size="middle">
                   {todos.map((todo) => {
                     const tone = todoToneMap[todo.tone] ?? todoToneMap.green;
                     return (
                       <Card
                         key={todo.key}
                         size="small"
+                        className="todo-card"
                         style={{
-                          cursor: 'pointer',
-                          width: '100%',
-                          borderRadius: 'var(--th-radius-lg)',
                           borderLeft: `4px solid ${tone.color}`,
-                          transition:
-                            'transform 0.2s ease, box-shadow 0.2s ease',
                         }}
                         bodyStyle={{ padding: 16 }}
                         onClick={todo.onClick}
@@ -489,69 +396,25 @@ export default function DashboardPage() {
                             'none';
                         }}
                       >
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 12,
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 12,
-                              flex: 1,
-                              minWidth: 0,
-                            }}
-                          >
+                        <div className="todo-item">
+                          <div className="todo-main">
                             <div
+                              className="todo-icon"
                               style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 10,
                                 background: tone.bg,
                                 color: tone.color,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 16,
-                                flexShrink: 0,
                               }}
                             >
                               {tone.icon}
                             </div>
-                            <div style={{ minWidth: 0 }}>
-                              <div
-                                style={{
-                                  fontWeight: 600,
-                                  color: 'var(--th-foreground)',
-                                  marginBottom: 2,
-                                }}
-                              >
-                                {todo.title}
-                              </div>
-                              <div
-                                style={{
-                                  color: 'var(--th-foreground-muted)',
-                                  fontSize: 13,
-                                }}
-                              >
-                                {todo.detail}
-                              </div>
+                            <div className="todo-text">
+                              <div className="todo-title">{todo.title}</div>
+                              <div className="todo-detail">{todo.detail}</div>
                             </div>
                           </div>
-                          <Space style={{ flexShrink: 0 }}>
-                            <Tag
-                              color={todo.tone}
-                              style={{ borderRadius: 8, fontWeight: 500 }}
-                            >
-                              {todo.badge}
-                            </Tag>
-                            <RightOutlined
-                              style={{ color: 'var(--th-foreground-muted)' }}
-                            />
+                          <Space className="todo-meta">
+                            <Tag color={todo.tone}>{todo.badge}</Tag>
+                            <RightOutlined className="text-muted" />
                           </Space>
                         </div>
                       </Card>

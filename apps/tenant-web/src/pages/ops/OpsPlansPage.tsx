@@ -78,12 +78,7 @@ export default function OpsPlansPage() {
         }
       />
 
-      <Card
-        style={{
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
-      >
+      <Card>
         <Table
           rowKey="id"
           loading={loading}
@@ -128,8 +123,8 @@ export default function OpsPlansPage() {
       <Modal
         open={modalOpen}
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <BuildOutlined style={{ marginRight: 8 }} />
+          <span className="card-title">
+            <BuildOutlined className="title-icon" />
             新增套餐
           </span>
         }
@@ -141,43 +136,23 @@ export default function OpsPlansPage() {
       >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="套餐名称" rules={[{ required: true }]}>
-            <Input
-              size="large"
-              placeholder="请输入套餐名称"
-              style={{ borderRadius: 'var(--th-radius)' }}
-            />
+            <Input size="large" placeholder="请输入套餐名称" />
           </Form.Item>
           <Space wrap>
             <Form.Item name="apartmentLimit" label="公寓数" initialValue={1}>
-              <InputNumber
-                min={0}
-                size="large"
-                style={{ borderRadius: 'var(--th-radius)' }}
-              />
+              <InputNumber min={0} size="large" />
             </Form.Item>
             <Form.Item name="roomLimit" label="房间数" initialValue={20}>
-              <InputNumber
-                min={0}
-                size="large"
-                style={{ borderRadius: 'var(--th-radius)' }}
-              />
+              <InputNumber min={0} size="large" />
             </Form.Item>
             <Form.Item name="memberLimit" label="成员数" initialValue={3}>
-              <InputNumber
-                min={0}
-                size="large"
-                style={{ borderRadius: 'var(--th-radius)' }}
-              />
+              <InputNumber min={0} size="large" />
             </Form.Item>
             <Form.Item name="price" label="年费价格" initialValue={0}>
-              <InputNumber
-                min={0}
-                size="large"
-                style={{ borderRadius: 'var(--th-radius)' }}
-              />
+              <InputNumber min={0} size="large" />
             </Form.Item>
           </Space>
-          <Form.Item style={{ marginTop: 16 }}>
+          <Form.Item className="mt-16">
             <Button type="primary" htmlType="submit" size="large">
               保存
             </Button>

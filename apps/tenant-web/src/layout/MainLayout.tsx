@@ -29,6 +29,7 @@ import {
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo } from 'react';
+import './MainLayout.scss';
 
 const { Header, Sider, Content } = Layout;
 
@@ -201,152 +202,48 @@ export default function MainLayout() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        width={240}
-        theme="light"
-        style={{
-          borderRight: '1px solid var(--th-border)',
-          background: 'var(--th-surface)',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 20,
-          overflow: 'auto',
-        }}
-      >
+    <Layout className="main-layout">
+      <Sider width={240} theme="light" className="main-sider">
         {/* Logo */}
-        <div
-          style={{
-            padding: '24px 20px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            borderBottom: '1px solid var(--th-border-light)',
-            marginBottom: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #0F766E 0%, #14B8A6 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <HomeOutlined style={{ color: '#fff', fontSize: 18 }} />
+        <div className="sider-logo">
+          <div className="logo-icon">
+            <HomeOutlined />
           </div>
           <div>
-            <div
-              style={{
-                fontFamily: 'var(--th-font-heading)',
-                fontWeight: 700,
-                fontSize: 16,
-                color: 'var(--th-foreground)',
-                lineHeight: 1.2,
-              }}
-            >
-              {platformInfo.name}
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--th-foreground-subtle)',
-                marginTop: 2,
-              }}
-            >
-              公寓管理工作台
-            </div>
+            <div className="logo-title">{platformInfo.name}</div>
+            <div className="logo-subtitle">公寓管理工作台</div>
           </div>
         </div>
 
         {/* Navigation */}
-        <div style={{ padding: '0 8px' }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'var(--th-foreground-subtle)',
-              padding: '12px 12px 8px',
-            }}
-          >
-            主菜单
-          </div>
+        <div className="sider-menu-wrap">
+          <div className="menu-label">主菜单</div>
           <Menu
             mode="inline"
             selectedKeys={[selectedKey]}
-            style={{
-              height: '100%',
-              borderRight: 0,
-              background: 'transparent',
-            }}
+            className="main-menu"
             items={menuItems}
             onClick={({ key }) => handleMenuClick(key)}
           />
         </div>
 
         {/* Bottom section */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '16px 20px',
-            borderTop: '1px solid var(--th-border-light)',
-            background: 'var(--th-surface)',
-          }}
-        >
-          <div style={{ fontSize: 12, color: 'var(--th-foreground-subtle)' }}>
-            {session?.user?.phone}
-          </div>
+        <div className="sider-footer">
+          <div className="user-phone">{session?.user?.phone}</div>
         </div>
       </Sider>
 
-      <Layout style={{ marginLeft: 240 }}>
-        <Header
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'var(--th-surface)',
-            padding: '0 32px',
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
-            backdropFilter: 'blur(8px)',
-            backgroundColor: 'rgba(255, 255, 255, 0.92)',
-          }}
-        >
+      <Layout className="main-content-layout">
+        <Header className="main-header">
           {/* Breadcrumb placeholder / page title could go here */}
-          <div
-            style={{
-              fontFamily: 'var(--th-font-heading)',
-              fontWeight: 600,
-              fontSize: 18,
-              color: 'var(--th-foreground)',
-            }}
-          >
+          <div className="header-page-title">
             {getMenuLabel(menuItems, selectedKey)}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div className="header-right">
             {/* Notifications */}
             <Badge dot>
-              <BellOutlined
-                style={{
-                  fontSize: 18,
-                  color: 'var(--th-foreground-muted)',
-                  cursor: 'pointer',
-                }}
-              />
+              <BellOutlined className="header-icon-btn" />
             </Badge>
 
             {/* Org Switcher */}
@@ -359,36 +256,14 @@ export default function MainLayout() {
                   onClick: (e) => setCurrentOrgId(e.key),
                 }}
               >
-                <span
-                  style={{
-                    color: 'var(--th-foreground)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontWeight: 500,
-                    fontSize: 14,
-                    padding: '6px 12px',
-                    borderRadius: 8,
-                    border: '1px solid var(--th-border)',
-                    transition: 'all var(--th-transition)',
-                  }}
-                  className="org-switcher-hover"
-                >
-                  <SwapOutlined style={{ color: 'var(--th-primary)' }} />
+                <span className="org-switcher org-switcher-hover">
+                  <SwapOutlined className="switcher-icon" />
                   {currentMembership?.organization.name || '选择组织'}
-                  <DownOutlined
-                    style={{
-                      fontSize: 10,
-                      color: 'var(--th-foreground-subtle)',
-                    }}
-                  />
+                  <DownOutlined className="switcher-caret" />
                 </span>
               </Dropdown>
             ) : (
-              <span
-                style={{ color: 'var(--th-foreground-muted)', fontSize: 14 }}
-              >
+              <span className="org-name-static">
                 {currentMembership?.organization.name ||
                   (noOrg ? '未加入组织' : '')}
               </span>
@@ -413,57 +288,26 @@ export default function MainLayout() {
                 ],
               }}
             >
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  cursor: 'pointer',
-                }}
-              >
-                <Avatar
-                  size={34}
-                  style={{
-                    background:
-                      'linear-gradient(135deg, #0F766E 0%, #14B8A6 100%)',
-                    fontFamily: 'var(--th-font-heading)',
-                    fontWeight: 600,
-                  }}
-                >
+              <span className="user-trigger">
+                <Avatar size={34} className="user-avatar">
                   {(
                     session?.user?.username?.[0] ||
                     session?.user?.phone?.slice(-1) ||
                     '?'
                   ).toUpperCase()}
                 </Avatar>
-                <span
-                  style={{
-                    color: 'var(--th-foreground)',
-                    fontWeight: 500,
-                    fontSize: 14,
-                  }}
-                >
+                <span className="user-name">
                   {session?.user?.username || session?.user?.phone}
                 </span>
-                <DownOutlined
-                  style={{ fontSize: 10, color: 'var(--th-foreground-subtle)' }}
-                />
+                <DownOutlined className="user-caret" />
               </span>
             </Dropdown>
           </div>
         </Header>
 
-        <Content
-          style={{
-            padding: '28px 32px',
-            background: 'var(--th-bg)',
-            minHeight: 'calc(100vh - 64px)',
-          }}
-        >
+        <Content className="main-content">
           {loading ? (
-            <div
-              style={{ display: 'flex', justifyContent: 'center', padding: 64 }}
-            >
+            <div className="content-loading">
               <Spin size="large" />
             </div>
           ) : (

@@ -1,0 +1,75 @@
+// TenantHub SCSS Mixins
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-start {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+@mixin flex-col-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin text-muted {
+  color: var(--th-foreground-muted);
+}
+
+@mixin text-subtle {
+  color: var(--th-foreground-subtle);
+}
+
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin card-elevated {
+  border-radius: var(--th-radius-lg);
+  box-shadow: var(--th-shadow);
+}
+
+@mixin icon-box($size: 44px, $radius: 12px) {
+  width: $size;
+  height: $size;
+  border-radius: $radius;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@mixin stat-value($color: var(--th-foreground)) {
+  font-family: var(--th-font-heading);
+  font-weight: 700;
+  font-size: 32px;
+  color: $color;
+  line-height: 1.2;
+}
+
+@mixin trend-badge($color, $bg) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: $color;
+  background: $bg;
+  padding: 4px 10px;
+  border-radius: 20px;
+}

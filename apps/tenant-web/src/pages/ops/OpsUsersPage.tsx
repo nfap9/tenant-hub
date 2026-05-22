@@ -49,23 +49,14 @@ export default function OpsUsersPage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onSearch={load}
-            prefix={
-              <SearchOutlined
-                style={{ color: 'var(--th-foreground-subtle)' }}
-              />
-            }
+            prefix={<SearchOutlined className="text-subtle" />}
             style={{ width: 280 }}
             size="large"
           />
         }
       />
 
-      <Card
-        style={{
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
-      >
+      <Card>
         <Table
           rowKey="id"
           loading={loading}

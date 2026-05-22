@@ -1,5 +1,6 @@
 import { Card } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import './StatCard.scss';
 
 interface StatCardProps {
   title: string;
@@ -37,51 +38,26 @@ export default function StatCard({
 
   return (
     <Card
-      style={{
-        cursor: onClick ? 'pointer' : 'default',
-        borderRadius: 'var(--th-radius-lg)',
-      }}
+      className={`stat-card ${onClick ? 'clickable' : ''}`}
       bodyStyle={{ padding: 'var(--th-space-6)' }}
       onClick={onClick}
       hoverable={!!onClick}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          marginBottom: 12,
-        }}
-      >
+      <div className="stat-card-header">
         <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: c.bg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 20,
-            color: c.icon,
-          }}
+          className="stat-card-icon"
+          style={{ background: c.bg, color: c.icon }}
         >
           {icon}
         </div>
         {trend !== undefined && (
           <div
+            className="stat-card-trend"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 12,
-              fontWeight: 600,
               color: trendUp ? '#22C55E' : '#DC2626',
               background: trendUp
                 ? 'rgba(34, 197, 94, 0.08)'
                 : 'rgba(220, 38, 38, 0.08)',
-              padding: '4px 10px',
-              borderRadius: 20,
             }}
           >
             {trendUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
@@ -89,53 +65,15 @@ export default function StatCard({
           </div>
         )}
       </div>
-      <div
-        style={{
-          fontFamily: 'var(--th-font-heading)',
-          fontWeight: 700,
-          fontSize: 28,
-          color: 'var(--th-foreground)',
-          lineHeight: 1.2,
-          marginBottom: 4,
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 4,
-        }}
-      >
-        {prefix && (
-          <span style={{ fontSize: 18, color: 'var(--th-foreground-subtle)' }}>
-            {prefix}
-          </span>
-        )}
+      <div className="stat-card-value">
+        {prefix && <span className="prefix">{prefix}</span>}
         {value}
-        {suffix && (
-          <span
-            style={{
-              fontSize: 14,
-              color: 'var(--th-foreground-subtle)',
-              fontWeight: 400,
-            }}
-          >
-            {suffix}
-          </span>
-        )}
+        {suffix && <span className="suffix">{suffix}</span>}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            color: 'var(--th-foreground-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.02em',
-          }}
-        >
-          {title}
-        </span>
+      <div className="stat-card-title-row">
+        <span className="stat-card-title">{title}</span>
         {trendLabel && (
-          <span style={{ fontSize: 12, color: 'var(--th-foreground-subtle)' }}>
-            {trendLabel}
-          </span>
+          <span className="stat-card-trend-label">{trendLabel}</span>
         )}
       </div>
     </Card>

@@ -1,0 +1,57 @@
+// TenantHub SCSS Variables — mapped to CSS custom properties
+// Import this in component-level SCSS files when needed.
+
+$th-primary: var(--th-primary);
+$th-primary-light: var(--th-primary-light);
+$th-primary-dark: var(--th-primary-dark);
+$th-accent: var(--th-accent);
+$th-accent-light: var(--th-accent-light);
+
+$th-bg: var(--th-bg);
+$th-bg-elevated: var(--th-bg-elevated);
+$th-surface: var(--th-surface);
+$th-surface-hover: var(--th-surface-hover);
+
+$th-foreground: var(--th-foreground);
+$th-foreground-muted: var(--th-foreground-muted);
+$th-foreground-subtle: var(--th-foreground-subtle);
+
+$th-border: var(--th-border);
+$th-border-light: var(--th-border-light);
+
+$th-danger: var(--th-danger);
+$th-danger-bg: var(--th-danger-bg);
+$th-success: var(--th-success);
+$th-success-bg: var(--th-success-bg);
+$th-warning: var(--th-warning);
+$th-warning-bg: var(--th-warning-bg);
+
+$th-ring: var(--th-ring);
+
+$th-shadow-sm: var(--th-shadow-sm);
+$th-shadow: var(--th-shadow);
+$th-shadow-md: var(--th-shadow-md);
+$th-shadow-lg: var(--th-shadow-lg);
+$th-shadow-xl: var(--th-shadow-xl);
+
+$th-radius-sm: var(--th-radius-sm);
+$th-radius: var(--th-radius);
+$th-radius-lg: var(--th-radius-lg);
+$th-radius-xl: var(--th-radius-xl);
+
+$th-space-1: var(--th-space-1);
+$th-space-2: var(--th-space-2);
+$th-space-3: var(--th-space-3);
+$th-space-4: var(--th-space-4);
+$th-space-5: var(--th-space-5);
+$th-space-6: var(--th-space-6);
+$th-space-8: var(--th-space-8);
+$th-space-10: var(--th-space-10);
+$th-space-12: var(--th-space-12);
+
+$th-transition-fast: var(--th-transition-fast);
+$th-transition: var(--th-transition);
+$th-transition-slow: var(--th-transition-slow);
+
+$th-font-heading: var(--th-font-heading);
+$th-font-body: var(--th-font-body);

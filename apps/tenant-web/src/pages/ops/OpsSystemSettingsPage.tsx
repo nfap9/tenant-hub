@@ -15,6 +15,7 @@ import {
   updatePlatformInfoSetting,
 } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
+import './OpsSystemSettingsPage.scss';
 
 interface PlatformInfoValue {
   name: string;
@@ -96,17 +97,12 @@ export default function OpsSystemSettingsPage() {
       <Card
         loading={loadingPlatform}
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <GlobalOutlined style={{ marginRight: 8 }} />
+          <span className="card-title">
+            <GlobalOutlined className="title-icon" />
             平台基础信息
           </span>
         }
-        style={{
-          maxWidth: 720,
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-          marginBottom: 24,
-        }}
+        className="settings-card"
       >
         <Form layout="vertical">
           <Form.Item label="平台名称" required>
@@ -117,12 +113,7 @@ export default function OpsSystemSettingsPage() {
                 setPlatformInfo((prev) => ({ ...prev, name: e.target.value }))
               }
               size="large"
-              prefix={
-                <SettingOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
-              style={{ borderRadius: 'var(--th-radius)' }}
+              prefix={<SettingOutlined className="text-subtle" />}
             />
           </Form.Item>
           <Form.Item label="Logo URL" extra="填写图片地址，将在小程序端展示">
@@ -136,12 +127,7 @@ export default function OpsSystemSettingsPage() {
                 }))
               }
               size="large"
-              prefix={
-                <LinkOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
-              style={{ borderRadius: 'var(--th-radius)' }}
+              prefix={<LinkOutlined className="text-subtle" />}
             />
           </Form.Item>
           <Form.Item label="客服电话">
@@ -155,12 +141,7 @@ export default function OpsSystemSettingsPage() {
                 }))
               }
               size="large"
-              prefix={
-                <PhoneOutlined
-                  style={{ color: 'var(--th-foreground-subtle)' }}
-                />
-              }
-              style={{ borderRadius: 'var(--th-radius)' }}
+              prefix={<PhoneOutlined className="text-subtle" />}
             />
           </Form.Item>
           <Form.Item>
@@ -180,16 +161,12 @@ export default function OpsSystemSettingsPage() {
       <Card
         loading={loadingQuota}
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <BlockOutlined style={{ marginRight: 8 }} />
+          <span className="card-title">
+            <BlockOutlined className="title-icon" />
             用量限制
           </span>
         }
-        style={{
-          maxWidth: 720,
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
+        className="settings-card"
       >
         <Form layout="vertical">
           <Form.Item

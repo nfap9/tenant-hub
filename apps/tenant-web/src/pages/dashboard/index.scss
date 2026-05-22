@@ -1,0 +1,132 @@
+@import '@/styles/variables';
+@import '@/styles/mixins';
+
+.dashboard-page {
+  .stat-grid {
+    margin-top: 16px;
+  }
+
+  .dashboard-card-title {
+    font-weight: 600;
+    color: $th-foreground;
+  }
+
+  .stat-value-success {
+    font-family: $th-font-heading;
+    font-weight: 700;
+    font-size: 32px;
+    color: $th-success;
+    line-height: 1.2;
+  }
+
+  .stat-value-primary {
+    font-family: $th-font-heading;
+    font-weight: 700;
+    font-size: 32px;
+    color: $th-primary;
+    line-height: 1.2;
+  }
+
+  .progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .progress-label {
+    color: $th-foreground-muted;
+    font-size: 13px;
+  }
+
+  .progress-value {
+    color: $th-primary;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .vacant-layouts {
+    margin-top: 16px;
+
+    .vacant-layouts-label {
+      margin-bottom: 8px;
+      color: $th-foreground-muted;
+      font-size: 13px;
+      font-weight: 500;
+    }
+  }
+
+  .todo-card {
+    cursor: pointer;
+    width: 100%;
+    border-radius: $th-radius-lg;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  .todo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .todo-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .todo-icon {
+    @include icon-box(36px, 10px);
+    font-size: 16px;
+  }
+
+  .todo-text {
+    min-width: 0;
+  }
+
+  .todo-title {
+    font-weight: 600;
+    color: $th-foreground;
+    margin-bottom: 2px;
+  }
+
+  .todo-detail {
+    color: $th-foreground-muted;
+    font-size: 13px;
+  }
+
+  .todo-meta {
+    flex-shrink: 0;
+  }
+
+  .todo-empty {
+    text-align: center;
+    padding: 48px 0;
+
+    .todo-empty-icon {
+      font-size: 48px;
+      color: $th-success;
+      margin-bottom: 16px;
+    }
+
+    .todo-empty-title {
+      font-weight: 600;
+      color: $th-foreground;
+      margin-bottom: 4px;
+    }
+
+    .todo-empty-desc {
+      color: $th-foreground-muted;
+    }
+  }
+}

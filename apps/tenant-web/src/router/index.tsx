@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react';
 import { Spin, Empty } from 'antd';
 import MainLayout from '@/layout/MainLayout';
 import { useAppSession } from '@/context/AppSessionContext';
+import './router.scss';
 
 // 懒加载页面
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -66,14 +67,7 @@ const OpsSystemSettingsPage = lazy(
 
 function PageLoading() {
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-      }}
-    >
+    <div className="page-loading">
       <Spin size="large" />
     </div>
   );
@@ -102,14 +96,7 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
 
   if (platformRole !== 'SUPER_ADMIN') {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100%',
-        }}
-      >
+      <div className="center-empty">
         <Empty description="当前账号没有运营平台权限，请联系平台管理员开通" />
       </div>
     );
@@ -127,14 +114,7 @@ function RequireOrg({ children }: { children: React.ReactNode }) {
 
   if (memberships.length === 0) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100%',
-        }}
-      >
+      <div className="center-empty">
         <Empty description="请先创建或加入组织" />
       </div>
     );

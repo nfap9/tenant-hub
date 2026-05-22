@@ -11,6 +11,7 @@ import {
 import { getAdminSummary, getAdminOrganizations } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
+import './OpsDashboardPage.scss';
 
 export default function OpsDashboardPage() {
   const [summary, setSummary] = useState<{
@@ -87,14 +88,7 @@ export default function OpsDashboardPage() {
     <div className="page-content">
       <PageHeader breadcrumb={[{ label: '运营总览' }]} />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
+      <div className="ops-stats-grid">
         {stats.map((item) => (
           <StatCard
             key={item.title}
@@ -107,16 +101,8 @@ export default function OpsDashboardPage() {
       </div>
 
       <Card
-        title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            组织列表
-          </span>
-        }
+        title={<span className="card-title">组织列表</span>}
         loading={loading}
-        style={{
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
       >
         <Table
           rowKey="id"

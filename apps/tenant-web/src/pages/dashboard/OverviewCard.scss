@@ -1,0 +1,36 @@
+@import '@/styles/variables';
+
+.overview-card {
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 60%, #5eead4 100%);
+  color: #fff;
+  border-radius: $th-radius-lg;
+  border: none;
+
+  .overview-label {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .overview-total {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #fff;
+    font-family: $th-font-heading;
+  }
+
+  .overview-stat-label {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .overview-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+  }
+}

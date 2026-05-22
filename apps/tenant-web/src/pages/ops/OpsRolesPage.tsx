@@ -25,6 +25,7 @@ import {
   deleteAdminRole,
 } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
+import './OpsRolesPage.scss';
 
 const permissionOptions = [
   { code: '*', name: '全部权限' },
@@ -140,12 +141,7 @@ export default function OpsRolesPage() {
         }
       />
 
-      <Card
-        style={{
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
-      >
+      <Card>
         <Table
           rowKey="id"
           loading={loading}
@@ -211,8 +207,8 @@ export default function OpsRolesPage() {
       <Modal
         open={modalOpen}
         title={
-          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
-            <SafetyOutlined style={{ marginRight: 8 }} />
+          <span className="card-title">
+            <SafetyOutlined className="title-icon" />
             {editingRole ? '编辑角色' : '新增角色'}
           </span>
         }
@@ -230,11 +226,7 @@ export default function OpsRolesPage() {
           onFinish={handleSubmit}
         >
           <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
-            <Input
-              size="large"
-              placeholder="请输入角色名称"
-              style={{ borderRadius: 'var(--th-radius)' }}
-            />
+            <Input size="large" placeholder="请输入角色名称" />
           </Form.Item>
           <Form.Item
             name="code"
@@ -246,52 +238,25 @@ export default function OpsRolesPage() {
               size="large"
               disabled={editingRole?.system}
               placeholder="例如：manager"
-              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea
-              rows={2}
-              placeholder="角色描述（可选）"
-              style={{ borderRadius: 'var(--th-radius)' }}
-            />
+            <Input.TextArea rows={2} placeholder="角色描述（可选）" />
           </Form.Item>
           <Form.Item
             name="permissions"
             label="权限码"
             rules={[{ required: true, message: '请选择权限码' }]}
           >
-            <Checkbox.Group
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 8,
-              }}
-            >
+            <Checkbox.Group className="permission-grid">
               {permissionOptions.map((item) => (
                 <Checkbox
                   key={item.code}
                   value={item.code}
-                  style={{
-                    padding: 8,
-                    border: '1px solid var(--th-border-light)',
-                    borderRadius: 'var(--th-radius-sm)',
-                    background: 'var(--th-bg)',
-                  }}
+                  className="permission-checkbox"
                 >
-                  <div
-                    style={{ color: 'var(--th-foreground)', fontWeight: 500 }}
-                  >
-                    {item.name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--th-foreground-muted)',
-                    }}
-                  >
-                    {item.code}
-                  </div>
+                  <div className="permission-label">{item.name}</div>
+                  <div className="permission-code">{item.code}</div>
                 </Checkbox>
               ))}
             </Checkbox.Group>

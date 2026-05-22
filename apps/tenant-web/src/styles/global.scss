@@ -127,7 +127,7 @@ body {
 .ant-card {
   border-radius: var(--th-radius-lg);
   border: 1px solid var(--th-border-light);
-  box-shadow: var(--th-shadow-sm);
+  box-shadow: var(--th-shadow);
   transition:
     box-shadow var(--th-transition),
     transform var(--th-transition);
@@ -176,7 +176,8 @@ body {
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-select-selector,
-.ant-picker {
+.ant-picker,
+.ant-input-number {
   border-radius: var(--th-radius-sm) !important;
   transition: all var(--th-transition);
 }
@@ -185,7 +186,8 @@ body {
 .ant-input-affix-wrapper:focus,
 .ant-input-affix-wrapper-focused,
 .ant-select-focused .ant-select-selector,
-.ant-picker-focused {
+.ant-picker-focused,
+.ant-input-number-focused {
   border-color: var(--th-primary) !important;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12) !important;
 }
@@ -315,4 +317,115 @@ body {
 
 .page-content {
   animation: pageFadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-title {
+  font-weight: 600;
+  color: var(--th-foreground);
+}
+
+.title-icon {
+  margin-right: 8px;
+}
+
+/* ========================================================================
+   Utility Classes — for eliminating common inline styles
+   ======================================================================== */
+
+/* Flex utilities */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-start {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.flex-col-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Text utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--th-foreground-muted);
+}
+
+.text-subtle {
+  color: var(--th-foreground-subtle);
+}
+
+.text-primary {
+  color: var(--th-primary);
+}
+
+.text-success {
+  color: var(--th-success);
+}
+
+.text-warning {
+  color: var(--th-warning);
+}
+
+.text-danger {
+  color: var(--th-danger);
+}
+
+/* Cursor & interaction */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Sizing utilities */
+.w-full {
+  width: 100%;
+}
+
+.shrink-0 {
+  flex-shrink: 0;
+}
+
+/* Spacing utilities */
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.mb-4 {
+  margin-bottom: 4px;
+}
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mb-28 {
+  margin-bottom: 28px;
+}
+
+.p-64 {
+  padding: 64px;
 }

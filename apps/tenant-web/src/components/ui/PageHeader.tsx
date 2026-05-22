@@ -1,6 +1,7 @@
 import { Space, Breadcrumb } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import './PageHeader.scss';
 
 interface PageHeaderProps {
   back?: boolean | string;
@@ -18,10 +19,9 @@ export default function PageHeader({
   const navigate = useNavigate();
 
   return (
-    <div style={{ marginBottom: 28 }}>
+    <div className="page-header">
       {breadcrumb && breadcrumb.length > 0 && (
         <Breadcrumb
-          style={{ marginBottom: 16 }}
           items={[
             ...(back
               ? [
@@ -46,7 +46,7 @@ export default function PageHeader({
             ...breadcrumb.map((item, idx) => ({
               title: item.path ? (
                 <span
-                  style={{ cursor: 'pointer' }}
+                  className="breadcrumb-link"
                   onClick={() => navigate(item.path!)}
                 >
                   {item.label}
@@ -59,17 +59,10 @@ export default function PageHeader({
           ]}
         />
       )}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
+      <div className="page-header-content">
         <div>{children}</div>
         {actions && (
-          <Space size="middle" style={{ flexShrink: 0, marginTop: 4 }}>
+          <Space size="middle" className="page-header-actions">
             {actions}
           </Space>
         )}

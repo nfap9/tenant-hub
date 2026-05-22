@@ -49,12 +49,7 @@ export default function OpsOrganizationsPage() {
     <div className="page-content">
       <PageHeader breadcrumb={[{ label: '运营端' }, { label: '组织管理' }]} />
 
-      <Card
-        style={{
-          borderRadius: 'var(--th-radius-lg)',
-          boxShadow: 'var(--th-shadow)',
-        }}
-      >
+      <Card>
         <Table
           rowKey="id"
           loading={loading}
