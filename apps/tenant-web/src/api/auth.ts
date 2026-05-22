@@ -65,7 +65,7 @@ export async function register(input: RegisterInput) {
 }
 
 export async function getMe() {
-  return apiClient<{ user: AppSession["user"]; memberships: Membership[] }>("/auth/me");
+  return apiClient<{ user: AppSession["user"] & { platformRole?: string }; memberships: Membership[] }>("/auth/me");
 }
 
 export async function updatePassword(input: UpdatePasswordInput) {

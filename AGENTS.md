@@ -45,7 +45,7 @@
 | 小程序路由配置 | `apps/miniprogram/src/app.config.ts` |
 | 小程序交互规范 | `docs/mobile-ui-guidelines.md` |
 | Docker 生产编排 | `docker-compose.prod.yml` |
-| Docker 开发编排 | `docker-compose.dev.yml` |
+| Docker 开发编排 | `docker-compose.infra.yml` |
 | CI 工作流 (GitHub) | `.github/workflows/api-ci.yml`, `.github/workflows/ops-web-ci.yml`, `.github/workflows/pr-check.yml`, `.github/workflows/release.yml` |
 | CI/CD 流水线 (Jenkins) | `Jenkinsfile` |
 | 发布脚本 | `scripts/release.js` |

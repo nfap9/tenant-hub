@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Layout, Menu, Dropdown, Spin, message, Modal, Alert, Button } from "antd";
+import { Layout, Menu, Dropdown, Spin, message, Modal } from "antd";
 import {
   HomeOutlined,
   ApartmentOutlined,
@@ -10,6 +10,7 @@ import {
   LogoutOutlined,
   UserOutlined,
   DownOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
 import { useAppSession } from "@/context/AppSessionContext";
 import { useMemo } from "react";
@@ -22,23 +23,31 @@ function getMenuKeyFromPath(pathname: string): string {
   if (pathname.startsWith("/rooms")) return "rooms";
   if (pathname.startsWith("/bills")) return "bills";
   if (pathname.startsWith("/settings")) return "settings";
+  if (pathname.startsWith("/ops")) return "ops";
   return "dashboard";
 }
 
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, memberships, currentMembership, currentOrgId, setCurrentOrgId, signOut, platformInfo, loading } =
+  const { session, memberships, currentMembership, currentOrgId, setCurrentOrgId, signOut, platformInfo, loading, platformRole } =
     useAppSession();
 
   const selectedKey = useMemo(() => getMenuKeyFromPath(location.pathname), [location.pathname]);
 
+  const noOrg = memberships.length === 0;
+
   const menuItems = [
-    { key: "dashboard", icon: <HomeOutlined />, label: "首页" },
-    { key: "rooms", icon: <HomeFilled />, label: "房间" },
-    { key: "bills", icon: <FileTextOutlined />, label: "账单" },
-    { key: "apartments", icon: <ApartmentOutlined />, label: "公寓" },
+    ...(noOrg
+      ? []
+      : [
+          { key: "dashboard", icon: <HomeOutlined />, label: "首页" },
+          { key: "rooms", icon: <HomeFilled />, label: "房间" },
+          { key: "bills", icon: <FileTextOutlined />, label: "账单" },
+          { key: "apartments", icon: <ApartmentOutlined />, label: "公寓" },
+        ]),
     { key: "settings", icon: <SettingOutlined />, label: "更多" },
+    ...(platformRole === "SUPER_ADMIN" ? [{ key: "ops", icon: <DashboardOutlined />, label: "运营配置" }] : []),
   ];
 
   const handleMenuClick = (key: string) => {
@@ -57,6 +66,9 @@ export default function MainLayout() {
         break;
       case "settings":
         navigate("/settings");
+        break;
+      case "ops":
+        navigate("/ops");
         break;
     }
   };
@@ -81,8 +93,6 @@ export default function MainLayout() {
       },
     });
   };
-
-  const noOrg = memberships.length === 0;
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -164,20 +174,6 @@ export default function MainLayout() {
               </div>
             ) : (
               <>
-                {noOrg && location.pathname !== "/settings/organization" && (
-                  <Alert
-                    message="你还没有加入任何组织"
-                    description="请先创建或加入一个组织，才能开始使用系统功能。"
-                    type="warning"
-                    showIcon
-                    style={{ marginBottom: 24 }}
-                    action={
-                      <Button type="primary" onClick={() => navigate("/settings/organization")}>
-                        去创建/加入
-                      </Button>
-                    }
-                  />
-                )}
                 <Outlet />
               </>
             )}

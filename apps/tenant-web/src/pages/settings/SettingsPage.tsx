@@ -13,7 +13,7 @@ import { message } from "antd";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { session, currentMembership, signOut, platformInfo } = useAppSession();
+  const { session, memberships, currentMembership, signOut, platformInfo } = useAppSession();
 
   const handleSignOut = () => {
     Modal.confirm({
@@ -28,11 +28,15 @@ export default function SettingsPage() {
   };
 
   const menuItems = [
-    {
-      title: "我的租约",
-      icon: <FileTextOutlined />,
-      path: "/settings/leases",
-    },
+    ...(memberships.length === 0
+      ? []
+      : [
+          {
+            title: "我的租约",
+            icon: <FileTextOutlined />,
+            path: "/settings/leases",
+          },
+        ]),
     {
       title: "组织管理",
       icon: <TeamOutlined />,
@@ -43,11 +47,15 @@ export default function SettingsPage() {
       icon: <UserOutlined />,
       path: "/settings/account",
     },
-    {
-      title: "套餐订阅",
-      icon: <CrownOutlined />,
-      path: "/settings/plan",
-    },
+    ...(memberships.length === 0
+      ? []
+      : [
+          {
+            title: "套餐订阅",
+            icon: <CrownOutlined />,
+            path: "/settings/plan",
+          },
+        ]),
   ];
 
   return (

@@ -37,6 +37,7 @@ type AppSessionContextType = {
   loading: boolean;
   platformInfo: PlatformInfo;
   quotaLimitEnabled: boolean;
+  platformRole: string | undefined;
 };
 
 const AppSessionContext = createContext<AppSessionContextType | undefined>(undefined);
@@ -50,9 +51,10 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
   const [roles, setRoles] = useState<OrgRole[]>([]);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
+
   const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({ name: "Tenant Hub", logoUrl: "", contactPhone: "" });
   const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
+  const [platformRole, setPlatformRole] = useState<string | undefined>(undefined);
 
   const token = session?.token;
 
@@ -70,6 +72,7 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
       try {
         const me = await getMe();
         setMemberships(me.memberships);
+        setPlatformRole(me.user.platformRole);
         setCurrentOrgIdState((old) => {
           const validOld = old && me.memberships.some((item) => item.organization.id === old);
           const nextId = validOld ? old : me.memberships[0]?.organization.id;
@@ -133,6 +136,7 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
     setMembers([]);
     setRoles([]);
     setQuotaLimitEnabled(false);
+    setPlatformRole(undefined);
     navigate("/login", { replace: true });
   }, [navigate]);
 
@@ -167,14 +171,12 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
       const s = getSession();
       if (!s?.token) {
         setLoading(false);
-        setAuthChecked(true);
         return;
       }
       try {
         await loadMe(s.token);
       } finally {
         setLoading(false);
-        setAuthChecked(true);
       }
     };
     init();
@@ -184,13 +186,6 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     loadOrgData().catch((error) => setNotice(error.message));
   }, [loadOrgData]);
-
-  // 登录后如果没有组织，引导到组织管理页
-  useEffect(() => {
-    if (authChecked && session?.token && memberships.length === 0) {
-      navigate("/settings/organization", { replace: true });
-    }
-  }, [authChecked, session, memberships, navigate]);
 
   const value = useMemo(
     () => ({
@@ -209,8 +204,9 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
       loading,
       platformInfo,
       quotaLimitEnabled,
+      platformRole,
     }),
-    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, platformInfo, quotaLimitEnabled, setCurrentOrgId, signIn, signOut, reload]
+    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, platformInfo, quotaLimitEnabled, platformRole, setCurrentOrgId, signIn, signOut, reload]
   );
 
   return (

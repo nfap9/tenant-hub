@@ -11,7 +11,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().default("tenant-hub-dev-secret"),
   JWT_EXPIRES_IN: z.string().default("7d"),
-  CORS_ORIGINS: z.string().default("http://localhost:5173,http://localhost:8081,http://localhost:19006"),
+  CORS_ORIGINS: z.string().default("http://localhost:5174,http://localhost:8081,http://localhost:19006"),
   PORT: z.coerce.number().default(4000),
   OTP_EXPIRES_IN_MINUTES: z.coerce.number().default(5),
   BCRYPT_OTP_SALT_ROUNDS: z.coerce.number().default(10),

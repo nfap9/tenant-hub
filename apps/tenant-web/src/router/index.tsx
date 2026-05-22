@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Suspense, lazy } from "react";
-import { Spin } from "antd";
+import { Spin, Empty } from "antd";
 import MainLayout from "@/layout/MainLayout";
 import { useAppSession } from "@/context/AppSessionContext";
 
@@ -39,6 +39,15 @@ const OrganizationPage = lazy(() => import("@/pages/settings/OrganizationPage"))
 const AccountPage = lazy(() => import("@/pages/settings/AccountPage"));
 const PlanPage = lazy(() => import("@/pages/settings/PlanPage"));
 
+// 运营配置
+const OpsDashboardPage = lazy(() => import("@/pages/ops/OpsDashboardPage"));
+const OpsUsersPage = lazy(() => import("@/pages/ops/OpsUsersPage"));
+const OpsPlansPage = lazy(() => import("@/pages/ops/OpsPlansPage"));
+const OpsOrganizationsPage = lazy(() => import("@/pages/ops/OpsOrganizationsPage"));
+const OpsRolesPage = lazy(() => import("@/pages/ops/OpsRolesPage"));
+const OpsSmsConfigPage = lazy(() => import("@/pages/ops/OpsSmsConfigPage"));
+const OpsSystemSettingsPage = lazy(() => import("@/pages/ops/OpsSystemSettingsPage"));
+
 function PageLoading() {
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -61,6 +70,42 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
+  const { platformRole, loading } = useAppSession();
+
+  if (loading) {
+    return <PageLoading />;
+  }
+
+  if (platformRole !== "SUPER_ADMIN") {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+        <Empty description="当前账号没有运营平台权限，请联系平台管理员开通" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function RequireOrg({ children }: { children: React.ReactNode }) {
+  const { memberships, loading } = useAppSession();
+
+  if (loading) {
+    return <PageLoading />;
+  }
+
+  if (memberships.length === 0) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+        <Empty description="请先创建或加入组织" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function AppRouter() {
   return (
     <Suspense fallback={<PageLoading />}>
@@ -73,40 +118,49 @@ export default function AppRouter() {
             </RequireAuth>
           }
         >
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<RequireOrg><DashboardPage /></RequireOrg>} />
 
           {/* 公寓 */}
-          <Route path="/apartments" element={<ApartmentListPage />} />
-          <Route path="/apartments/:id" element={<ApartmentDetailPage />} />
-          <Route path="/apartments/new" element={<ApartmentFormPage />} />
-          <Route path="/apartments/:id/edit" element={<ApartmentFormPage />} />
-          <Route path="/apartments/:id/expenses" element={<ApartmentExpensePage />} />
-          <Route path="/apartments/:id/rooms/batch" element={<RoomBatchPage />} />
+          <Route path="/apartments" element={<RequireOrg><ApartmentListPage /></RequireOrg>} />
+          <Route path="/apartments/:id" element={<RequireOrg><ApartmentDetailPage /></RequireOrg>} />
+          <Route path="/apartments/new" element={<RequireOrg><ApartmentFormPage /></RequireOrg>} />
+          <Route path="/apartments/:id/edit" element={<RequireOrg><ApartmentFormPage /></RequireOrg>} />
+          <Route path="/apartments/:id/expenses" element={<RequireOrg><ApartmentExpensePage /></RequireOrg>} />
+          <Route path="/apartments/:id/rooms/batch" element={<RequireOrg><RoomBatchPage /></RequireOrg>} />
 
           {/* 房间 */}
-          <Route path="/rooms" element={<RoomListPage />} />
-          <Route path="/rooms/new" element={<RoomFormPage />} />
-          <Route path="/rooms/:id/edit" element={<RoomFormPage />} />
-          <Route path="/rooms/:id/lease/new" element={<LeaseFormPage />} />
-          <Route path="/rooms/:id/lease/edit" element={<LeaseEditPage />} />
-          <Route path="/rooms/:id/lease/terminate" element={<LeaseTerminatePage />} />
+          <Route path="/rooms" element={<RequireOrg><RoomListPage /></RequireOrg>} />
+          <Route path="/rooms/new" element={<RequireOrg><RoomFormPage /></RequireOrg>} />
+          <Route path="/rooms/:id/edit" element={<RequireOrg><RoomFormPage /></RequireOrg>} />
+          <Route path="/rooms/:id/lease/new" element={<RequireOrg><LeaseFormPage /></RequireOrg>} />
+          <Route path="/rooms/:id/lease/edit" element={<RequireOrg><LeaseEditPage /></RequireOrg>} />
+          <Route path="/rooms/:id/lease/terminate" element={<RequireOrg><LeaseTerminatePage /></RequireOrg>} />
 
           {/* 账单 */}
-          <Route path="/bills" element={<BillListPage />} />
-          <Route path="/bills/payment" element={<PaymentPage />} />
-          <Route path="/bills/reading" element={<ReadingPage />} />
-          <Route path="/bills/utility" element={<UtilityPage />} />
-          <Route path="/bills/utility-import" element={<UtilityImportPage />} />
-          <Route path="/bills/utility-export" element={<UtilityExportPage />} />
-          <Route path="/bills/monthly/:id" element={<MonthlyDetailPage />} />
-          <Route path="/bills/items/:id/edit" element={<EditItemPage />} />
+          <Route path="/bills" element={<RequireOrg><BillListPage /></RequireOrg>} />
+          <Route path="/bills/payment" element={<RequireOrg><PaymentPage /></RequireOrg>} />
+          <Route path="/bills/reading" element={<RequireOrg><ReadingPage /></RequireOrg>} />
+          <Route path="/bills/utility" element={<RequireOrg><UtilityPage /></RequireOrg>} />
+          <Route path="/bills/utility-import" element={<RequireOrg><UtilityImportPage /></RequireOrg>} />
+          <Route path="/bills/utility-export" element={<RequireOrg><UtilityExportPage /></RequireOrg>} />
+          <Route path="/bills/monthly/:id" element={<RequireOrg><MonthlyDetailPage /></RequireOrg>} />
+          <Route path="/bills/items/:id/edit" element={<RequireOrg><EditItemPage /></RequireOrg>} />
 
           {/* 设置 */}
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/leases" element={<MyLeasesPage />} />
+          <Route path="/settings/leases" element={<RequireOrg><MyLeasesPage /></RequireOrg>} />
           <Route path="/settings/organization" element={<OrganizationPage />} />
           <Route path="/settings/account" element={<AccountPage />} />
-          <Route path="/settings/plan" element={<PlanPage />} />
+          <Route path="/settings/plan" element={<RequireOrg><PlanPage /></RequireOrg>} />
+
+          {/* 运营配置 */}
+          <Route path="/ops" element={<RequireSuperAdmin><OpsDashboardPage /></RequireSuperAdmin>} />
+          <Route path="/ops/users" element={<RequireSuperAdmin><OpsUsersPage /></RequireSuperAdmin>} />
+          <Route path="/ops/plans" element={<RequireSuperAdmin><OpsPlansPage /></RequireSuperAdmin>} />
+          <Route path="/ops/organizations" element={<RequireSuperAdmin><OpsOrganizationsPage /></RequireSuperAdmin>} />
+          <Route path="/ops/roles" element={<RequireSuperAdmin><OpsRolesPage /></RequireSuperAdmin>} />
+          <Route path="/ops/sms" element={<RequireSuperAdmin><OpsSmsConfigPage /></RequireSuperAdmin>} />
+          <Route path="/ops/settings" element={<RequireSuperAdmin><OpsSystemSettingsPage /></RequireSuperAdmin>} />
         </Route>
       </Routes>
     </Suspense>
