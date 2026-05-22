@@ -6,7 +6,7 @@ import { useAppSession } from '@/context/AppSessionContext';
 
 // 懒加载页面
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
-const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const DashboardPage = lazy(() => import('@/pages/dashboard/index.tsx'));
 
 // 公寓
 const ApartmentListPage = lazy(
