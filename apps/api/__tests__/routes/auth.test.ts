@@ -9,12 +9,9 @@ vi.mock("../../src/config/env.js", () => ({
     BCRYPT_OTP_SALT_ROUNDS: 10,
     BCRYPT_PASSWORD_SALT_ROUNDS: 12,
     OTP_EXPIRES_IN_MINUTES: 5,
-    NODE_ENV: "test",
-    PLATFORM_ADMIN_PHONE: "",
-    PLATFORM_ADMIN_PASSWORD: ""
+    NODE_ENV: "test"
   },
-  corsOrigins: ["http://localhost:5173"],
-  platformAdminPhones: []
+  corsOrigins: ["http://localhost:5173"]
 }));
 
 vi.mock("../../src/services/smsService.js", () => ({
@@ -92,10 +89,12 @@ describe("auth routes", () => {
         usedAt: null
       });
       (prisma.otpCode.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      (prisma.user.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
       (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: "user-1",
         phone: "13800138000",
-        username: "测试用户"
+        username: "测试用户",
+        platformRole: "SUPER_ADMIN"
       });
 
       const res = await request(app)
@@ -109,7 +108,7 @@ describe("auth routes", () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.user).toMatchObject({ id: "user-1", phone: "13800138000" });
+      expect(res.body.data.user).toMatchObject({ id: "user-1", phone: "13800138000", platformRole: "SUPER_ADMIN" });
       expect(res.body.data.token).toBeDefined();
     });
 
@@ -239,10 +238,9 @@ describe("auth routes", () => {
         id: "user-1",
         phone: "13800138000",
         username: "测试用户",
-        platformRole: "NONE"
+        platformRole: "USER"
       });
       (prisma.orgMember.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (prisma.user.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
 
       const res = await request(app)
         .get("/api/auth/me")
@@ -250,6 +248,7 @@ describe("auth routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.user.id).toBe("user-1");
+      expect(res.body.data.user.platformRole).toBe("USER");
       expect(res.body.data.memberships).toEqual([]);
     });
   });

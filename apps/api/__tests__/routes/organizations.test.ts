@@ -10,8 +10,7 @@ vi.mock("../../src/config/env.js", () => ({
     INVITE_EXPIRES_IN_HOURS: 24,
     INVITE_EXPIRES_MAX_HOURS: 168
   },
-  corsOrigins: ["http://localhost:5173"],
-  platformAdminPhones: []
+  corsOrigins: ["http://localhost:5173"]
 }));
 
 vi.mock("../../src/config/prisma.js", () => ({

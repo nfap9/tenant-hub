@@ -1,7 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { platformAdminPhones } from "../config/env.js";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { sendSms, type SmsConfig } from "../services/smsService.js";
@@ -87,13 +86,15 @@ authRouter.post(
     if (existed) throw new HttpError(409, "手机号已注册");
     await verifyOtp(input.phone, input.code, "REGISTER");
 
+    const isFirstUser = (await prisma.user.count()) === 0;
     const user = await prisma.user.create({
       data: {
         phone: input.phone,
         username: input.username,
-        passwordHash: await bcrypt.hash(input.password, env.BCRYPT_PASSWORD_SALT_ROUNDS)
+        passwordHash: await bcrypt.hash(input.password, env.BCRYPT_PASSWORD_SALT_ROUNDS),
+        platformRole: isFirstUser ? "SUPER_ADMIN" : "USER"
       },
-      select: { id: true, phone: true, username: true }
+      select: { id: true, phone: true, username: true, platformRole: true }
     });
     ok(res, { user, token: signToken(user) });
   })
@@ -136,14 +137,7 @@ authRouter.get(
       where: { userId: req.user!.id, status: "ACTIVE" },
       include: { organization: true, role: true }
     });
-    const platformAdminCount = await prisma.user.count({ where: { platformRole: { not: "NONE" } } });
-    const effectivePlatformRole =
-      user.platformRole !== "NONE"
-        ? user.platformRole
-        : platformAdminPhones.includes(user.phone) || platformAdminCount === 0
-          ? "SUPER_ADMIN"
-          : "NONE";
-    ok(res, { user: { ...user, effectivePlatformRole }, memberships });
+    ok(res, { user, memberships });
   })
 );
 

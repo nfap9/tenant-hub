@@ -21,7 +21,7 @@ const menuItems = [
 
 export default function App() {
   const [session, setSession] = useState(readSession());
-  const [platformRole, setPlatformRole] = useState("NONE");
+  const [platformRole, setPlatformRole] = useState("USER");
   const [active, setActive] = useState("dashboard");
   const [loading, setLoading] = useState(false);
   const [platformName, setPlatformName] = useState("Tenant Hub");
@@ -31,8 +31,8 @@ export default function App() {
     if (!readSession().token) return;
     setLoading(true);
     try {
-      const me = await api<{ user: { id: string; phone: string; username: string; effectivePlatformRole: string } }>("/auth/me");
-      setPlatformRole(me.user.effectivePlatformRole);
+      const me = await api<{ user: { id: string; phone: string; username: string; platformRole: string } }>("/auth/me");
+      setPlatformRole(me.user.platformRole);
       setSession(writeSession({ user: me.user, organizationId: undefined }));
     } catch (error) {
       messageApi.error((error as Error).message);
@@ -112,7 +112,7 @@ export default function App() {
     )
   }[active];
 
-  if (platformRole === "NONE") {
+  if (platformRole !== "SUPER_ADMIN") {
     return (
       <div className="workspace">
         {contextHolder}

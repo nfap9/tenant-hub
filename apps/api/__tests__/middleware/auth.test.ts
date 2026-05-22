@@ -6,8 +6,7 @@ vi.mock("../../src/config/env.js", () => ({
     JWT_SECRET: "test-jwt-secret-123456789",
     JWT_EXPIRES_IN: "7d",
     NODE_ENV: "test"
-  },
-  platformAdminPhones: ["13800138000"]
+  }
 }));
 
 vi.mock("../../src/config/prisma.js", () => ({
@@ -223,24 +222,13 @@ describe("requirePermission", () => {
 });
 
 describe("requirePlatformAccess", () => {
-  it("should allow platform admin phone directly", async () => {
+  it("should allow SUPER_ADMIN", async () => {
     const req: any = { user: { id: "user-1", phone: "13800138000" } };
     const res: any = {};
     const next = vi.fn();
 
-    requirePlatformAccess(req, res, next);
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(next).toHaveBeenCalledWith();
-  });
-
-  it("should allow user with platform role", async () => {
-    const req: any = { user: { id: "user-1", phone: "13800138001" } };
-    const res: any = {};
-    const next = vi.fn();
-
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      platformRole: "ADMIN"
+      platformRole: "SUPER_ADMIN"
     });
 
     requirePlatformAccess(req, res, next);
@@ -249,15 +237,14 @@ describe("requirePlatformAccess", () => {
     expect(next).toHaveBeenCalledWith();
   });
 
-  it("should reject user without platform role", async () => {
+  it("should reject USER", async () => {
     const req: any = { user: { id: "user-1", phone: "13800138001" } };
     const res: any = {};
     const next = vi.fn();
 
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      platformRole: "NONE"
+      platformRole: "USER"
     });
-    (prisma.user.count as ReturnType<typeof vi.fn>).mockResolvedValue(1);
 
     requirePlatformAccess(req, res, next);
     await new Promise((r) => setTimeout(r, 0));

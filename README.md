@@ -83,7 +83,7 @@ docker compose restart api
 
 生产部署前请修改 `docker-compose.yml` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL` 和 `JWT_SECRET`。
 
-运营端账号与客户端账号使用同一套手机号登录，但权限隔离。普通用户默认没有运营平台权限；也可以通过环境变量 `PLATFORM_ADMIN_PHONE` + `PLATFORM_ADMIN_PASSWORD` 配置自动创建超级管理员账号。开发环境下，若系统没有任何运营管理员，首个已登录用户可临时进入运营端，在"用户管理"中给指定用户授予运营权限。
+运营端账号与客户端账号使用同一套手机号登录，但权限隔离。平台角色分为 `USER`（可访问客户端功能）和 `SUPER_ADMIN`（可访问运营端功能）。首个注册用户自动分配 `SUPER_ADMIN` 角色，后续注册用户默认为 `USER`，由超级管理员在运营端"用户管理"中授予其他用户 `SUPER_ADMIN` 角色。
 
 ## 已实现范围
 

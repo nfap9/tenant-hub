@@ -20,8 +20,6 @@ const envSchema = z.object({
   INVITE_EXPIRES_MAX_HOURS: z.coerce.number().default(168),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
-  PLATFORM_ADMIN_PHONE: z.string().default(""),
-  PLATFORM_ADMIN_PASSWORD: z.string().default(""),
   SCHEDULER_ENABLED: z.enum(["true", "false"]).default("true")
 }).superRefine((value, ctx) => {
   if (value.NODE_ENV !== "production") return;
@@ -42,4 +40,4 @@ export const corsOrigins = env.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-export const platformAdminPhones = env.PLATFORM_ADMIN_PHONE ? [env.PLATFORM_ADMIN_PHONE] : [];
+

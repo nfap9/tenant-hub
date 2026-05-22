@@ -8,8 +8,7 @@ vi.mock("../../src/config/env.js", () => ({
     JWT_EXPIRES_IN: "7d",
     NODE_ENV: "test"
   },
-  corsOrigins: ["http://localhost:5173"],
-  platformAdminPhones: ["13800138000"]
+  corsOrigins: ["http://localhost:5173"]
 }));
 
 vi.mock("../../src/config/prisma.js", () => ({
@@ -71,7 +70,6 @@ describe("admin routes", () => {
       username: "测试用户",
       platformRole: "SUPER_ADMIN"
     });
-    (prisma.user.count as ReturnType<typeof vi.fn>).mockResolvedValue(1);
   });
 
   describe("GET /api/admin/users", () => {
@@ -105,17 +103,16 @@ describe("admin routes", () => {
         id: "user-2",
         phone: "13800138001",
         username: "用户2",
-        platformRole: "ADMIN"
+        platformRole: "SUPER_ADMIN"
       });
-      (prisma.user.count as ReturnType<typeof vi.fn>).mockResolvedValueOnce(1).mockResolvedValueOnce(2);
 
       const res = await request(app)
         .put("/api/admin/users/user-2/platform-role")
         .set("Authorization", `Bearer ${authToken}`)
-        .send({ platformRole: "ADMIN" });
+        .send({ platformRole: "SUPER_ADMIN" });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.platformRole).toBe("ADMIN");
+      expect(res.body.data.platformRole).toBe("SUPER_ADMIN");
     });
 
     it("should reject non-super-admin", async () => {
@@ -123,18 +120,18 @@ describe("admin routes", () => {
         id: "user-1",
         phone: "13800138000",
         username: "测试用户",
-        platformRole: "OPERATOR"
+        platformRole: "USER"
       });
       (prisma.user.findUniqueOrThrow as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: "user-1",
         phone: "13800138000",
-        platformRole: "OPERATOR"
+        platformRole: "USER"
       });
 
       const res = await request(app)
         .put("/api/admin/users/user-2/platform-role")
         .set("Authorization", `Bearer ${authToken}`)
-        .send({ platformRole: "ADMIN" });
+        .send({ platformRole: "SUPER_ADMIN" });
 
       expect(res.status).toBe(403);
     });

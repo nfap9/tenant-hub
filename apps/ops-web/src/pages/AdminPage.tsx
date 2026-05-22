@@ -12,9 +12,7 @@ const titles: Record<AdminSection, string> = {
 };
 
 const platformRoleOptions = [
-  { value: "NONE", label: "无运营权限" },
-  { value: "OPERATOR", label: "运营人员" },
-  { value: "ADMIN", label: "管理员" },
+  { value: "USER", label: "普通用户" },
   { value: "SUPER_ADMIN", label: "超级管理员" }
 ];
 
@@ -98,12 +96,9 @@ export function AdminPage({ section }: { section: AdminSection }) {
               { title: "组织数", render: (_, row) => row._count?.memberships ?? 0 },
               {
                 title: "运营权限",
-                dataIndex: "effectivePlatformRole",
-                render: (value, row) => (
-                  <Space>
-                    <Tag color={value === "NONE" ? "default" : "green"}>{platformRoleMap.get(value) ?? value}</Tag>
-                    {row.bootstrapAdmin ? <Tag color="gold">初始化管理员</Tag> : null}
-                  </Space>
+                dataIndex: "platformRole",
+                render: (value) => (
+                  <Tag color={value === "USER" ? "default" : "green"}>{platformRoleMap.get(value) ?? value}</Tag>
                 )
               },
               {
@@ -113,7 +108,6 @@ export function AdminPage({ section }: { section: AdminSection }) {
                     value={row.platformRole}
                     style={{ width: 150 }}
                     options={platformRoleOptions}
-                    disabled={row.bootstrapAdmin}
                     onChange={async (platformRole) => {
                       try {
                         await api(`/admin/users/${row.id}/platform-role`, { method: "PUT", body: JSON.stringify({ platformRole }) });

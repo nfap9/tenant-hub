@@ -8,8 +8,7 @@ vi.mock("../../src/config/env.js", () => ({
     JWT_EXPIRES_IN: "7d",
     NODE_ENV: "test"
   },
-  corsOrigins: ["http://localhost:5173"],
-  platformAdminPhones: []
+  corsOrigins: ["http://localhost:5173"]
 }));
 
 vi.mock("../../src/services/billing.js", () => ({
