@@ -1,11 +1,19 @@
-@use "../../theme/tokens.scss";
+@use '../../theme/tokens.scss';
 
 .login-page {
   min-height: 100vh;
   padding: 48rpx;
   background:
-    radial-gradient(circle at 88% 10%, rgba(199, 125, 44, 0.28), transparent 240rpx),
-    linear-gradient(155deg, var(--color-primary) 0%, var(--color-primary-dark) 78%);
+    radial-gradient(
+      circle at 88% 10%,
+      rgba(199, 125, 44, 0.28),
+      transparent 240rpx
+    ),
+    linear-gradient(
+      155deg,
+      var(--color-primary) 0%,
+      var(--color-primary-dark) 78%
+    );
 }
 
 .login-hero {

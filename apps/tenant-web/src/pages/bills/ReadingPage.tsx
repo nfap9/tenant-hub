@@ -1,27 +1,19 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Card,
-  Button,
-  Input,
-  DatePicker,
-  Space,
-  Spin,
-  message,
-} from "antd";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Button, Input, DatePicker, Space, Spin, message } from 'antd';
 import {
   SaveOutlined,
   ThunderboltOutlined,
   HomeOutlined,
   DashboardOutlined,
-} from "@ant-design/icons";
-import { useAppSession } from "@/context/AppSessionContext";
-import { getRooms } from "@/api/rooms";
-import { createMeterReading } from "@/api/bills";
-import { today } from "@/utils/format";
-import PageHeader from "@/components/ui/PageHeader";
-import type { Room } from "@/types/domain";
-import dayjs from "dayjs";
+} from '@ant-design/icons';
+import { useAppSession } from '@/context/AppSessionContext';
+import { getRooms } from '@/api/rooms';
+import { createMeterReading } from '@/api/bills';
+import { today } from '@/utils/format';
+import PageHeader from '@/components/ui/PageHeader';
+import type { Room } from '@/types/domain';
+import dayjs from 'dayjs';
 
 export default function ReadingPage() {
   const { currentOrgId } = useAppSession();
@@ -29,11 +21,11 @@ export default function ReadingPage() {
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [form, setForm] = useState({
-    roomId: "",
-    meterType: "WATER" as "WATER" | "POWER",
+    roomId: '',
+    meterType: 'WATER' as 'WATER' | 'POWER',
     readingDate: today(),
-    value: "",
-    note: "",
+    value: '',
+    note: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,7 +40,7 @@ export default function ReadingPage() {
           setForm((old) => ({ ...old, roomId: data[0].id }));
         }
       })
-      .catch((e) => message.error(e instanceof Error ? e.message : "加载失败"))
+      .catch((e) => message.error(e instanceof Error ? e.message : '加载失败'))
       .finally(() => setLoading(false));
   }, [currentOrgId]);
 
@@ -66,10 +58,10 @@ export default function ReadingPage() {
         value: Number(form.value),
         note: form.note.trim() || undefined,
       });
-      message.success("抄表记录已保存");
+      message.success('抄表记录已保存');
       navigate(-1);
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "保存失败");
+      message.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setSubmitting(false);
     }
@@ -80,21 +72,26 @@ export default function ReadingPage() {
       <PageHeader
         back={true}
         breadcrumb={[
-          { label: "财务管理", path: "/bills" },
-          { label: "抄表录入" },
+          { label: '财务管理', path: '/bills' },
+          { label: '抄表录入' },
         ]}
       />
 
       <Spin spinning={loading}>
         <Card
-          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><HomeOutlined />选择房间</span>}
+          title={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <HomeOutlined />
+              选择房间
+            </span>
+          }
           style={{ marginBottom: 24 }}
         >
           <Space wrap>
             {rooms.map((room) => (
               <Button
                 key={room.id}
-                type={form.roomId === room.id ? "primary" : "default"}
+                type={form.roomId === room.id ? 'primary' : 'default'}
                 onClick={() => setForm((old) => ({ ...old, roomId: room.id }))}
               >
                 {room.roomNo}
@@ -104,34 +101,44 @@ export default function ReadingPage() {
         </Card>
 
         <Card
-          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><DashboardOutlined />表类型</span>}
+          title={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <DashboardOutlined />
+              表类型
+            </span>
+          }
           style={{ marginBottom: 24 }}
         >
           <Space>
-            {(["WATER", "POWER"] as const).map((type) => (
+            {(['WATER', 'POWER'] as const).map((type) => (
               <Button
                 key={type}
-                type={form.meterType === type ? "primary" : "default"}
+                type={form.meterType === type ? 'primary' : 'default'}
                 onClick={() => setForm((old) => ({ ...old, meterType: type }))}
               >
-                {type === "WATER" ? "水表" : "电表"}
+                {type === 'WATER' ? '水表' : '电表'}
               </Button>
             ))}
           </Space>
         </Card>
 
         <Card
-          title={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><ThunderboltOutlined />读数信息</span>}
+          title={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ThunderboltOutlined />
+              读数信息
+            </span>
+          }
         >
-          <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
             <DatePicker
-              style={{ width: "100%" }}
+              style={{ width: '100%' }}
               size="large"
               value={form.readingDate ? dayjs(form.readingDate) : undefined}
               onChange={(date) =>
                 setForm((old) => ({
                   ...old,
-                  readingDate: date ? date.format("YYYY-MM-DD") : today(),
+                  readingDate: date ? date.format('YYYY-MM-DD') : today(),
                 }))
               }
             />
@@ -140,12 +147,16 @@ export default function ReadingPage() {
               prefix={<ThunderboltOutlined />}
               size="large"
               value={form.value}
-              onChange={(e) => setForm((old) => ({ ...old, value: e.target.value }))}
+              onChange={(e) =>
+                setForm((old) => ({ ...old, value: e.target.value }))
+              }
             />
             <Input.TextArea
               placeholder="备注（可选）"
               value={form.note}
-              onChange={(e) => setForm((old) => ({ ...old, note: e.target.value }))}
+              onChange={(e) =>
+                setForm((old) => ({ ...old, note: e.target.value }))
+              }
               rows={3}
             />
             <Button

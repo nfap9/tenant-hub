@@ -9,7 +9,12 @@ export type DateFieldProps = {
   label?: string;
 };
 
-export function DateField({ value, onChange, placeholder = '选择日期', label }: DateFieldProps) {
+export function DateField({
+  value,
+  onChange,
+  placeholder = '选择日期',
+  label,
+}: DateFieldProps) {
   const [pickerValue, setPickerValue] = useState(value || '');
 
   useEffect(() => {
@@ -25,7 +30,12 @@ export function DateField({ value, onChange, placeholder = '选择日期', label
   return (
     <View className="date-field-wrapper">
       {label && <Text className="date-field__label">{label}</Text>}
-      <Picker className="date-field__picker" mode="date" value={pickerValue} onChange={handleChange}>
+      <Picker
+        className="date-field__picker"
+        mode="date"
+        value={pickerValue}
+        onChange={handleChange}
+      >
         <View className={`date-field ${value ? 'date-field--active' : ''}`}>
           <Text className="date-field__text">{value || placeholder}</Text>
         </View>

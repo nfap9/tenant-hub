@@ -1,7 +1,11 @@
-@use "../../theme/tokens.scss";
+@use '../../theme/tokens.scss';
 
 .page-container {
-  background: linear-gradient(180deg, rgba(20, 108, 92, 0.08), rgba(243, 247, 245, 0) 360rpx);
+  background: linear-gradient(
+    180deg,
+    rgba(20, 108, 92, 0.08),
+    rgba(243, 247, 245, 0) 360rpx
+  );
   height: 100vh;
   min-height: 0;
   display: flex;
@@ -70,7 +74,11 @@
 
 .room-card--active {
   border-color: var(--color-primary);
-  background: linear-gradient(180deg, var(--color-primary-lightest), var(--color-surface));
+  background: linear-gradient(
+    180deg,
+    var(--color-primary-lightest),
+    var(--color-surface)
+  );
 }
 
 .room-header {

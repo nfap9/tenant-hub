@@ -16,16 +16,25 @@ export default function MonthlyDetailPage() {
   const monthlyBillId = params.id;
 
   const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "线下收款", note: "" });
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    method: '线下收款',
+    note: '',
+  });
   const [paying, setPaying] = useState(false);
 
   const loadData = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<MonthlyBill[]>("/bills/monthly", { organizationId: currentOrgId });
+      const data = await apiClient<MonthlyBill[]>('/bills/monthly', {
+        organizationId: currentOrgId,
+      });
       setMonthlyBills(data);
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "加载失败", icon: "none" });
+      Taro.showToast({
+        title: e instanceof Error ? e.message : '加载失败',
+        icon: 'none',
+      });
     }
   };
 
@@ -33,9 +42,18 @@ export default function MonthlyDetailPage() {
     loadData();
   });
 
-  const bill = useMemo(() => monthlyBills.find((b) => b.id === monthlyBillId), [monthlyBills, monthlyBillId]);
-  const remaining = useMemo(() => bill ? Number(bill.totalAmount) - Number(bill.paidAmount) : 0, [bill]);
-  const canPay = useMemo(() => bill && bill.status !== "PAID" && bill.status !== "VOID", [bill]);
+  const bill = useMemo(
+    () => monthlyBills.find((b) => b.id === monthlyBillId),
+    [monthlyBills, monthlyBillId]
+  );
+  const remaining = useMemo(
+    () => (bill ? Number(bill.totalAmount) - Number(bill.paidAmount) : 0),
+    [bill]
+  );
+  const canPay = useMemo(
+    () => bill && bill.status !== 'PAID' && bill.status !== 'VOID',
+    [bill]
+  );
 
   const handleBack = () => {
     Taro.navigateBack();
@@ -45,21 +63,28 @@ export default function MonthlyDetailPage() {
     if (!currentOrgId || !bill) return;
     const error = getPaymentAmountError(paymentForm.amount, remaining);
     if (error) {
-      Taro.showToast({ title: error, icon: "none" });
+      Taro.showToast({ title: error, icon: 'none' });
       return;
     }
     setPaying(true);
     try {
       await apiClient(`/bills/monthly/${bill.id}/payments`, {
-        method: "POST",
-        body: { amount: Number(paymentForm.amount), method: paymentForm.method.trim() || "线下收款", note: paymentForm.note.trim() || undefined },
-        organizationId: currentOrgId
+        method: 'POST',
+        body: {
+          amount: Number(paymentForm.amount),
+          method: paymentForm.method.trim() || '线下收款',
+          note: paymentForm.note.trim() || undefined,
+        },
+        organizationId: currentOrgId,
       });
-      Taro.showToast({ title: "收款已登记", icon: "success" });
-      setPaymentForm({ amount: "", method: "线下收款", note: "" });
+      Taro.showToast({ title: '收款已登记', icon: 'success' });
+      setPaymentForm({ amount: '', method: '线下收款', note: '' });
       await loadData();
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "收款失败", icon: "none" });
+      Taro.showToast({
+        title: e instanceof Error ? e.message : '收款失败',
+        icon: 'none',
+      });
     } finally {
       setPaying(false);
     }
@@ -68,18 +93,24 @@ export default function MonthlyDetailPage() {
   const handleDeleteChild = async (childId: string) => {
     if (!currentOrgId) return;
     const res = await Taro.showModal({
-      title: "删除账单",
-      content: "删除后不可恢复，是否确认？",
-      confirmText: "确认删除",
-      confirmColor: "#ff4d4f"
+      title: '删除账单',
+      content: '删除后不可恢复，是否确认？',
+      confirmText: '确认删除',
+      confirmColor: '#ff4d4f',
     });
     if (!res.confirm) return;
     try {
-      await apiClient(`/bills/${childId}`, { method: "DELETE", organizationId: currentOrgId });
-      Taro.showToast({ title: "账单已删除", icon: "success" });
+      await apiClient(`/bills/${childId}`, {
+        method: 'DELETE',
+        organizationId: currentOrgId,
+      });
+      Taro.showToast({ title: '账单已删除', icon: 'success' });
       await loadData();
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "删除失败", icon: "none" });
+      Taro.showToast({
+        title: e instanceof Error ? e.message : '删除失败',
+        icon: 'none',
+      });
     }
   };
 
@@ -87,9 +118,15 @@ export default function MonthlyDetailPage() {
     Taro.navigateTo({ url: `/pages/bills/utility?billId=${childBillId}` });
   };
 
-  const handleEditItem = (item: { id: string; billId: string; name: string; amount: number; note: string }) => {
+  const handleEditItem = (item: {
+    id: string;
+    billId: string;
+    name: string;
+    amount: number;
+    note: string;
+  }) => {
     Taro.navigateTo({
-      url: `/pages/bills/edit-item?billId=${item.billId}&itemId=${item.id}&name=${encodeURIComponent(item.name)}&amount=${item.amount}&note=${encodeURIComponent(item.note)}`
+      url: `/pages/bills/edit-item?billId=${item.billId}&itemId=${item.id}&name=${encodeURIComponent(item.name)}&amount=${item.amount}&note=${encodeURIComponent(item.note)}`,
     });
   };
 
@@ -104,16 +141,29 @@ export default function MonthlyDetailPage() {
   return (
     <View className="page-container">
       <View className="sub-page-header">
-        <Button className="page-back-button" variant="ghost" size="small" onClick={handleBack}>‹ 返回</Button>
+        <Button
+          className="page-back-button"
+          variant="ghost"
+          size="small"
+          onClick={handleBack}
+        >
+          ‹ 返回
+        </Button>
       </View>
 
       <View className="detail-panel">
         <View className="bill-card-header">
           <View>
-            <Text className="card-title">{bill.lease?.room?.roomNo ?? "房间"} · 到期 {day(bill.dueDate)}</Text>
-            <Text className="text-muted">应收 ¥{money(bill.totalAmount)} · 已收 ¥{money(bill.paidAmount)}</Text>
+            <Text className="card-title">
+              {bill.lease?.room?.roomNo ?? '房间'} · 到期 {day(bill.dueDate)}
+            </Text>
+            <Text className="text-muted">
+              应收 ¥{money(bill.totalAmount)} · 已收 ¥{money(bill.paidAmount)}
+            </Text>
           </View>
-          <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
+          <Badge tone={toneForBillStatus(bill.status)}>
+            {statusLabels[bill.status]}
+          </Badge>
         </View>
       </View>
 
@@ -121,39 +171,93 @@ export default function MonthlyDetailPage() {
         <View className="detail-panel">
           <Text className="field-label">登记收款</Text>
           <View className="form-grid">
-            <Input label="收款金额" placeholder="请输入金额" type="number" value={paymentForm.amount} onChange={(value) => setPaymentForm((old) => ({ ...old, amount: value }))} />
-            <Input label="收款方式" placeholder="例如 线下收款" value={paymentForm.method} onChange={(value) => setPaymentForm((old) => ({ ...old, method: value }))} />
+            <Input
+              label="收款金额"
+              placeholder="请输入金额"
+              type="number"
+              value={paymentForm.amount}
+              onChange={(value) =>
+                setPaymentForm((old) => ({ ...old, amount: value }))
+              }
+            />
+            <Input
+              label="收款方式"
+              placeholder="例如 线下收款"
+              value={paymentForm.method}
+              onChange={(value) =>
+                setPaymentForm((old) => ({ ...old, method: value }))
+              }
+            />
           </View>
-          <Input label="备注" placeholder="可选" value={paymentForm.note} onChange={(value) => setPaymentForm((old) => ({ ...old, note: value }))} />
-          <Button loading={paying} disabled={paying} onClick={handlePayment}>确认收款</Button>
+          <Input
+            label="备注"
+            placeholder="可选"
+            value={paymentForm.note}
+            onChange={(value) =>
+              setPaymentForm((old) => ({ ...old, note: value }))
+            }
+          />
+          <Button loading={paying} disabled={paying} onClick={handlePayment}>
+            确认收款
+          </Button>
         </View>
       ) : null}
 
       {(bill.bills ?? []).map((child) => (
         <View key={child.id} className="detail-panel">
           <View className="detail-row">
-            <Text className="text-muted">{billModeText(child.mode)} · {day(child.periodStart)} 至 {day(child.periodEnd)}</Text>
+            <Text className="text-muted">
+              {billModeText(child.mode)} · {day(child.periodStart)} 至{' '}
+              {day(child.periodEnd)}
+            </Text>
             <View className="action-row-inline">
               <Text className="card-stat">¥{money(child.totalAmount)}</Text>
-              {child.status !== "PAID" ? (
-                <Text className="danger-text" onClick={() => handleDeleteChild(child.id)}>删除</Text>
+              {child.status !== 'PAID' ? (
+                <Text
+                  className="danger-text"
+                  onClick={() => handleDeleteChild(child.id)}
+                >
+                  删除
+                </Text>
               ) : null}
             </View>
           </View>
           {(child.items ?? []).map((item) => (
             <View key={item.id} className="detail-row">
-              <Text className="text-muted">{item.name}{item.note ? ` · ${item.note}` : ""}</Text>
+              <Text className="text-muted">
+                {item.name}
+                {item.note ? ` · ${item.note}` : ''}
+              </Text>
               <View className="action-row-inline">
                 <Text className="text-muted">¥{money(item.amount)}</Text>
-                {child.status !== "PAID" ? (
-                  <Text className="link-text" onClick={() => handleEditItem({ id: item.id, billId: child.id, name: item.name, amount: Number(item.amount), note: item.note ?? "" })}>
+                {child.status !== 'PAID' ? (
+                  <Text
+                    className="link-text"
+                    onClick={() =>
+                      handleEditItem({
+                        id: item.id,
+                        billId: child.id,
+                        name: item.name,
+                        amount: Number(item.amount),
+                        note: item.note ?? '',
+                      })
+                    }
+                  >
                     修改
                   </Text>
                 ) : null}
               </View>
             </View>
           ))}
-          {child.mode === "POSTPAID" ? <Button variant="secondary" size="small" onClick={() => handleUtilityReading(child.id)}>录入本期水电</Button> : null}
+          {child.mode === 'POSTPAID' ? (
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => handleUtilityReading(child.id)}
+            >
+              录入本期水电
+            </Button>
+          ) : null}
         </View>
       ))}
 
@@ -162,12 +266,16 @@ export default function MonthlyDetailPage() {
           <Text className="field-label">收款记录</Text>
           {(bill.payments ?? []).map((payment) => (
             <View key={payment.id} className="detail-row">
-              <Text className="text-muted">{day(payment.paidAt)} · {payment.method}</Text>
+              <Text className="text-muted">
+                {day(payment.paidAt)} · {payment.method}
+              </Text>
               <Text className="card-stat">¥{money(payment.amount)}</Text>
             </View>
           ))}
         </View>
-      ) : <Text className="text-muted">暂无收款记录</Text>}
+      ) : (
+        <Text className="text-muted">暂无收款记录</Text>
+      )}
     </View>
   );
 }

@@ -2,7 +2,8 @@ import Taro from '@tarojs/taro';
 
 declare const API_BASE_URL: string;
 
-const normalizeLocalApiUrl = (url: string) => url.replace('http://localhost:', 'http://127.0.0.1:');
+const normalizeLocalApiUrl = (url: string) =>
+  url.replace('http://localhost:', 'http://127.0.0.1:');
 
 /**
  * 获取 API 基础 URL

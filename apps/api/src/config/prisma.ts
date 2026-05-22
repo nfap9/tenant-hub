@@ -1,23 +1,23 @@
-import { PrismaClient } from "@prisma/client";
-import { env } from "./env.js";
+import { PrismaClient } from '@prisma/client';
+import { env } from './env.js';
 
 export const prisma = new PrismaClient({
-  log: env.NODE_ENV === "production" ? ["error"] : ["warn", "error"]
+  log: env.NODE_ENV === 'production' ? ['error'] : ['warn', 'error'],
 });
 
 const SOFT_DELETE_MODELS = [
-  "Apartment",
-  "Room",
-  "Lease",
-  "Bill",
-  "BillItem",
-  "MonthlyBill",
-  "Payment",
-  "MeterReading",
-  "ApartmentExpense",
-  "LeaseFee",
-  "LeaseSettlement",
-  "SettlementPayment"
+  'Apartment',
+  'Room',
+  'Lease',
+  'Bill',
+  'BillItem',
+  'MonthlyBill',
+  'Payment',
+  'MeterReading',
+  'ApartmentExpense',
+  'LeaseFee',
+  'LeaseSettlement',
+  'SettlementPayment',
 ];
 
 prisma.$use(async (params, next) => {
@@ -26,22 +26,26 @@ prisma.$use(async (params, next) => {
   }
 
   // Delete operations → soft delete by setting deletedAt
-  if (params.action === "delete") {
-    params.action = "update";
+  if (params.action === 'delete') {
+    params.action = 'update';
     params.args.data = { ...params.args.data, deletedAt: new Date() };
   }
-  if (params.action === "deleteMany") {
-    params.action = "updateMany";
+  if (params.action === 'deleteMany') {
+    params.action = 'updateMany';
     params.args.data = { ...params.args.data, deletedAt: new Date() };
   }
 
   // Query operations → auto-filter out soft-deleted records
   // unless the caller explicitly specifies a deletedAt condition
-  if (["findMany", "findFirst", "findFirstOrThrow", "count"].includes(params.action)) {
+  if (
+    ['findMany', 'findFirst', 'findFirstOrThrow', 'count'].includes(
+      params.action
+    )
+  ) {
     if (params.args?.where?.deletedAt === undefined) {
       params.args = {
         ...params.args,
-        where: { ...params.args?.where, deletedAt: null }
+        where: { ...params.args?.where, deletedAt: null },
       };
     }
   }

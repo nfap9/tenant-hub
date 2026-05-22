@@ -22,7 +22,7 @@ export function Card({
   subtitle,
   headerAction,
   onClick,
-  className = ''
+  className = '',
 }: CardProps) {
   const base = `card card--${variant} card--padding-${padding}`;
   return (

@@ -21,7 +21,7 @@ export function TaskSheet({
   subtitle,
   onClose,
   children,
-  footer
+  footer,
 }: TaskSheetProps) {
   const [show, setShow] = useState(false);
   const [animated, setAnimated] = useState(false);
@@ -46,7 +46,9 @@ export function TaskSheet({
         <View className="task-sheet__header">
           <View className="task-sheet__title-block">
             <Text className="task-sheet__title">{title}</Text>
-            {subtitle && <Text className="task-sheet__subtitle">{subtitle}</Text>}
+            {subtitle && (
+              <Text className="task-sheet__subtitle">{subtitle}</Text>
+            )}
           </View>
           <View className="task-sheet__close" onClick={onClose}>
             <Text>关闭</Text>

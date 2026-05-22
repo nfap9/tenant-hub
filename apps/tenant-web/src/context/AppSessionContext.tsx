@@ -1,14 +1,27 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { getSession, setSession, clearSession, getOrgId, setOrgId } from "@/utils/storage";
-import { getMe } from "@/api/auth";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  getSession,
+  setSession,
+  clearSession,
+  getOrgId,
+  setOrgId,
+} from '@/utils/storage';
+import { getMe } from '@/api/auth';
 import {
   getOrganizationMembers,
   getOrganizationRoles,
   getOrganizationSubscription,
-} from "@/api/organization";
-import { getPlatformInfo } from "@/api/platform";
-import type { Membership, OrgMember, OrgRole } from "@/types/domain";
+} from '@/api/organization';
+import { getPlatformInfo } from '@/api/platform';
+import type { Membership, OrgMember, OrgRole } from '@/types/domain';
 
 export type PlatformInfo = {
   name: string;
@@ -40,21 +53,37 @@ type AppSessionContextType = {
   platformRole: string | undefined;
 };
 
-const AppSessionContext = createContext<AppSessionContextType | undefined>(undefined);
+const AppSessionContext = createContext<AppSessionContextType | undefined>(
+  undefined
+);
 
-export function AppSessionProvider({ children }: { children: React.ReactNode }) {
+export function AppSessionProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const navigate = useNavigate();
-  const [session, setSessionState] = useState<AppSession | undefined>(() => getSession());
+  const [session, setSessionState] = useState<AppSession | undefined>(() =>
+    getSession()
+  );
   const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [currentOrgId, setCurrentOrgIdState] = useState<string | undefined>(() => getOrgId());
+  const [currentOrgId, setCurrentOrgIdState] = useState<string | undefined>(
+    () => getOrgId()
+  );
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [roles, setRoles] = useState<OrgRole[]>([]);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({ name: "Tenant Hub", logoUrl: "", contactPhone: "" });
+  const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({
+    name: 'Tenant Hub',
+    logoUrl: '',
+    contactPhone: '',
+  });
   const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
-  const [platformRole, setPlatformRole] = useState<string | undefined>(undefined);
+  const [platformRole, setPlatformRole] = useState<string | undefined>(
+    undefined
+  );
 
   const token = session?.token;
 
@@ -74,14 +103,15 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
         setMemberships(me.memberships);
         setPlatformRole(me.user.platformRole);
         setCurrentOrgIdState((old) => {
-          const validOld = old && me.memberships.some((item) => item.organization.id === old);
+          const validOld =
+            old && me.memberships.some((item) => item.organization.id === old);
           const nextId = validOld ? old : me.memberships[0]?.organization.id;
           if (nextId) setOrgId(nextId);
           return nextId;
         });
       } catch (e) {
-        if (e instanceof Error && !e.message.includes("登录已过期")) {
-          setNotice(e.message || "加载用户信息失败");
+        if (e instanceof Error && !e.message.includes('登录已过期')) {
+          setNotice(e.message || '加载用户信息失败');
         }
       }
     },
@@ -106,8 +136,8 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
         setRoles(nextRoles);
         setQuotaLimitEnabled(quotaOverview.quotaLimitEnabled ?? false);
       } catch (e) {
-        if (e instanceof Error && !e.message.includes("登录已过期")) {
-          setNotice(e.message || "加载组织数据失败");
+        if (e instanceof Error && !e.message.includes('登录已过期')) {
+          setNotice(e.message || '加载组织数据失败');
         }
       }
     },
@@ -137,7 +167,7 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
     setRoles([]);
     setQuotaLimitEnabled(false);
     setPlatformRole(undefined);
-    navigate("/login", { replace: true });
+    navigate('/login', { replace: true });
   }, [navigate]);
 
   const reload = useCallback(async () => {
@@ -206,7 +236,23 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
       quotaLimitEnabled,
       platformRole,
     }),
-    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, platformInfo, quotaLimitEnabled, platformRole, setCurrentOrgId, signIn, signOut, reload]
+    [
+      session,
+      memberships,
+      currentMembership,
+      currentOrgId,
+      members,
+      roles,
+      notice,
+      loading,
+      platformInfo,
+      quotaLimitEnabled,
+      platformRole,
+      setCurrentOrgId,
+      signIn,
+      signOut,
+      reload,
+    ]
   );
 
   return (
@@ -218,14 +264,15 @@ export function AppSessionProvider({ children }: { children: React.ReactNode }) 
 
 export function useAppSession() {
   const ctx = useContext(AppSessionContext);
-  if (!ctx) throw new Error("useAppSession must be used within AppSessionProvider");
+  if (!ctx)
+    throw new Error('useAppSession must be used within AppSessionProvider');
   return ctx;
 }
 
 export function useHasPermission(permission: string): boolean {
   const { currentMembership } = useAppSession();
   return Boolean(
-    currentMembership?.role.permissions.includes("*") ||
-      currentMembership?.role.permissions.includes(permission)
+    currentMembership?.role.permissions.includes('*') ||
+    currentMembership?.role.permissions.includes(permission)
   );
 }

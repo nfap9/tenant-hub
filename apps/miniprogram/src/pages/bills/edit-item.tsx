@@ -12,8 +12,8 @@ export default function EditItemPage() {
   const billId = params.billId;
   const itemId = params.itemId;
 
-  const [amount, setAmount] = useState(params.amount ?? "");
-  const [note, setNote] = useState(params.note ?? "");
+  const [amount, setAmount] = useState(params.amount ?? '');
+  const [note, setNote] = useState(params.note ?? '');
   const [submitting, setSubmitting] = useState(false);
 
   const handleBack = () => {
@@ -25,14 +25,17 @@ export default function EditItemPage() {
     setSubmitting(true);
     try {
       await apiClient(`/bills/${billId}/items/${itemId}`, {
-        method: "PUT",
+        method: 'PUT',
         organizationId: currentOrgId,
-        body: { amount: Number(amount), note: note.trim() || undefined }
+        body: { amount: Number(amount), note: note.trim() || undefined },
       });
-      Taro.showToast({ title: "账单项目已更新", icon: "success" });
+      Taro.showToast({ title: '账单项目已更新', icon: 'success' });
       Taro.navigateBack();
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "更新失败", icon: "none" });
+      Taro.showToast({
+        title: e instanceof Error ? e.message : '更新失败',
+        icon: 'none',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -41,13 +44,45 @@ export default function EditItemPage() {
   return (
     <View className="page-container">
       <View className="sub-page-header">
-        <Button className="page-back-button" variant="ghost" size="small" onClick={handleBack}>‹ 返回</Button>
+        <Button
+          className="page-back-button"
+          variant="ghost"
+          size="small"
+          onClick={handleBack}
+        >
+          ‹ 返回
+        </Button>
       </View>
-      <Card title={params.name ? `修改 ${decodeURIComponent(params.name)}` : "修改账单项目"}>
-        <Input label="金额" value={amount} onChange={setAmount} type="digit" placeholder="输入金额" />
-        <Input label="备注" value={note} onChange={setNote} placeholder="备注（可选）" />
-        <Button loading={submitting} disabled={submitting} onClick={handleSubmit}>保存</Button>
-        <Button variant="ghost" size="small" onClick={handleBack}>取消</Button>
+      <Card
+        title={
+          params.name
+            ? `修改 ${decodeURIComponent(params.name)}`
+            : '修改账单项目'
+        }
+      >
+        <Input
+          label="金额"
+          value={amount}
+          onChange={setAmount}
+          type="digit"
+          placeholder="输入金额"
+        />
+        <Input
+          label="备注"
+          value={note}
+          onChange={setNote}
+          placeholder="备注（可选）"
+        />
+        <Button
+          loading={submitting}
+          disabled={submitting}
+          onClick={handleSubmit}
+        >
+          保存
+        </Button>
+        <Button variant="ghost" size="small" onClick={handleBack}>
+          取消
+        </Button>
       </Card>
     </View>
   );

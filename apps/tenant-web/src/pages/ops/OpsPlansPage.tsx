@@ -1,9 +1,20 @@
-import { useEffect, useState } from "react";
-import { Button, Card, Form, Input, InputNumber, Modal, Space, Table, Tag, message } from "antd";
-import { PlusOutlined, BuildOutlined } from "@ant-design/icons";
-import { getAdminPlans, createAdminPlan, updateAdminPlan } from "@/api/admin";
-import type { Plan } from "@/types/domain";
-import PageHeader from "@/components/ui/PageHeader";
+import { useEffect, useState } from 'react';
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Space,
+  Table,
+  Tag,
+  message,
+} from 'antd';
+import { PlusOutlined, BuildOutlined } from '@ant-design/icons';
+import { getAdminPlans, createAdminPlan, updateAdminPlan } from '@/api/admin';
+import type { Plan } from '@/types/domain';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function OpsPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -26,10 +37,10 @@ export default function OpsPlansPage() {
   const handleToggle = async (row: Plan) => {
     try {
       await updateAdminPlan(row.id, { enabled: !row.enabled });
-      message.success(row.enabled ? "套餐已停用" : "套餐已启用");
+      message.success(row.enabled ? '套餐已停用' : '套餐已启用');
       load();
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "操作失败");
+      message.error(e instanceof Error ? e.message : '操作失败');
     }
   };
 
@@ -42,19 +53,19 @@ export default function OpsPlansPage() {
         memberLimit: Number(values.memberLimit ?? 3),
         price: Number(values.price ?? 0),
       });
-      message.success("套餐已创建");
+      message.success('套餐已创建');
       setModalOpen(false);
       form.resetFields();
       load();
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "创建失败");
+      message.error(e instanceof Error ? e.message : '创建失败');
     }
   };
 
   return (
     <div className="page-content">
       <PageHeader
-        breadcrumb={[{ label: "运营端" }, { label: "套餐配置" }]}
+        breadcrumb={[{ label: '运营端' }, { label: '套餐配置' }]}
         actions={
           <Button
             type="primary"
@@ -69,8 +80,8 @@ export default function OpsPlansPage() {
 
       <Card
         style={{
-          borderRadius: "var(--th-radius-lg)",
-          boxShadow: "var(--th-shadow)",
+          borderRadius: 'var(--th-radius-lg)',
+          boxShadow: 'var(--th-shadow)',
         }}
       >
         <Table
@@ -78,33 +89,35 @@ export default function OpsPlansPage() {
           loading={loading}
           dataSource={plans}
           pagination={{ pageSize: 10 }}
-          scroll={{ x: "max-content" }}
+          scroll={{ x: 'max-content' }}
           columns={[
-            { title: "名称", dataIndex: "name", ellipsis: true },
-            { title: "公寓数", dataIndex: "apartmentLimit" },
-            { title: "房间数", dataIndex: "roomLimit" },
-            { title: "成员数", dataIndex: "memberLimit" },
+            { title: '名称', dataIndex: 'name', ellipsis: true },
+            { title: '公寓数', dataIndex: 'apartmentLimit' },
+            { title: '房间数', dataIndex: 'roomLimit' },
+            { title: '成员数', dataIndex: 'memberLimit' },
             {
-              title: "价格",
-              dataIndex: "price",
+              title: '价格',
+              dataIndex: 'price',
               render: (v: string | number) => `${v}元/年`,
             },
             {
-              title: "状态",
-              dataIndex: "enabled",
+              title: '状态',
+              dataIndex: 'enabled',
               render: (v: boolean) => (
-                <Tag color={v ? "success" : "default"}>{v ? "启用" : "停用"}</Tag>
+                <Tag color={v ? 'success' : 'default'}>
+                  {v ? '启用' : '停用'}
+                </Tag>
               ),
             },
             {
-              title: "操作",
+              title: '操作',
               render: (_: unknown, row: Plan) => (
                 <Button
                   type="link"
                   danger={row.enabled}
                   onClick={() => handleToggle(row)}
                 >
-                  {row.enabled ? "停用" : "启用"}
+                  {row.enabled ? '停用' : '启用'}
                 </Button>
               ),
             },
@@ -115,7 +128,7 @@ export default function OpsPlansPage() {
       <Modal
         open={modalOpen}
         title={
-          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
             <BuildOutlined style={{ marginRight: 8 }} />
             新增套餐
           </span>
@@ -128,20 +141,40 @@ export default function OpsPlansPage() {
       >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="套餐名称" rules={[{ required: true }]}>
-            <Input size="large" placeholder="请输入套餐名称" style={{ borderRadius: "var(--th-radius)" }} />
+            <Input
+              size="large"
+              placeholder="请输入套餐名称"
+              style={{ borderRadius: 'var(--th-radius)' }}
+            />
           </Form.Item>
           <Space wrap>
             <Form.Item name="apartmentLimit" label="公寓数" initialValue={1}>
-              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
+              <InputNumber
+                min={0}
+                size="large"
+                style={{ borderRadius: 'var(--th-radius)' }}
+              />
             </Form.Item>
             <Form.Item name="roomLimit" label="房间数" initialValue={20}>
-              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
+              <InputNumber
+                min={0}
+                size="large"
+                style={{ borderRadius: 'var(--th-radius)' }}
+              />
             </Form.Item>
             <Form.Item name="memberLimit" label="成员数" initialValue={3}>
-              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
+              <InputNumber
+                min={0}
+                size="large"
+                style={{ borderRadius: 'var(--th-radius)' }}
+              />
             </Form.Item>
             <Form.Item name="price" label="年费价格" initialValue={0}>
-              <InputNumber min={0} size="large" style={{ borderRadius: "var(--th-radius)" }} />
+              <InputNumber
+                min={0}
+                size="large"
+                style={{ borderRadius: 'var(--th-radius)' }}
+              />
             </Form.Item>
           </Space>
           <Form.Item style={{ marginTop: 16 }}>

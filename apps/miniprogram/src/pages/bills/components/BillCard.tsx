@@ -12,7 +12,12 @@ interface BillCardProps {
   onDelete?: () => void;
 }
 
-export function BillCard({ bill, onClick, showDelete, onDelete }: BillCardProps) {
+export function BillCard({
+  bill,
+  onClick,
+  showDelete,
+  onDelete,
+}: BillCardProps) {
   const summary = getMonthlyBillCardSummary(bill);
   return (
     <View key={bill.id} className="bill-card" onClick={onClick}>
@@ -21,19 +26,33 @@ export function BillCard({ bill, onClick, showDelete, onDelete }: BillCardProps)
           <Text className="card-title">{summary.title}</Text>
           <Text className="text-muted">{summary.meta}</Text>
         </View>
-        <Badge tone={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Badge>
+        <Badge tone={toneForBillStatus(bill.status)}>
+          {statusLabels[bill.status]}
+        </Badge>
       </View>
       <View className="bill-amount-row">
         <Text className="bill-amount">¥{money(summary.totalAmount)}</Text>
         <View className="bill-summary-aside">
-          <Text className="text-muted">剩余 ¥{money(summary.remainingAmount)}</Text>
+          <Text className="text-muted">
+            剩余 ¥{money(summary.remainingAmount)}
+          </Text>
           <Text className="text-muted">已收 ¥{money(summary.paidAmount)}</Text>
         </View>
       </View>
       <View className="bill-footer">
         <Text className="field-label">{summary.detailCountText}</Text>
         <View className="action-row-inline">
-          {showDelete ? <Text className="danger-text" onClick={(e) => { e.stopPropagation(); onDelete?.(); }}>删除</Text> : null}
+          {showDelete ? (
+            <Text
+              className="danger-text"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.();
+              }}
+            >
+              删除
+            </Text>
+          ) : null}
           <Text className="link-text">查看详情</Text>
         </View>
       </View>

@@ -37,11 +37,16 @@
 
   &__content {
     position: relative;
-    background:
-      linear-gradient(180deg, var(--color-surface), var(--color-surface-tinted));
+    background: linear-gradient(
+      180deg,
+      var(--color-surface),
+      var(--color-surface-tinted)
+    );
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s, opacity 0.3s;
+    transition:
+      transform 0.3s,
+      opacity 0.3s;
 
     &--drawer {
       margin-top: auto;

@@ -1,33 +1,36 @@
 :root {
   /* TenantHub Design Tokens */
-  --th-primary: #0F766E;
-  --th-primary-light: #14B8A6;
-  --th-primary-dark: #134E4A;
-  --th-accent: #0369A1;
-  --th-accent-light: #38BDF8;
-  --th-bg: #F0FDFA;
-  --th-bg-elevated: #FFFFFF;
-  --th-surface: #FFFFFF;
-  --th-surface-hover: #F8FAFC;
-  --th-foreground: #134E4A;
-  --th-foreground-muted: #64748B;
-  --th-foreground-subtle: #94A3B8;
-  --th-border: #E2E8F0;
-  --th-border-light: #F1F5F9;
-  --th-danger: #DC2626;
-  --th-danger-bg: #FEF2F2;
-  --th-success: #22C55E;
-  --th-success-bg: #F0FDF4;
-  --th-warning: #EA580C;
-  --th-warning-bg: #FFF7ED;
-  --th-ring: #0F766E;
+  --th-primary: #0f766e;
+  --th-primary-light: #14b8a6;
+  --th-primary-dark: #134e4a;
+  --th-accent: #0369a1;
+  --th-accent-light: #38bdf8;
+  --th-bg: #f0fdfa;
+  --th-bg-elevated: #ffffff;
+  --th-surface: #ffffff;
+  --th-surface-hover: #f8fafc;
+  --th-foreground: #134e4a;
+  --th-foreground-muted: #64748b;
+  --th-foreground-subtle: #94a3b8;
+  --th-border: #e2e8f0;
+  --th-border-light: #f1f5f9;
+  --th-danger: #dc2626;
+  --th-danger-bg: #fef2f2;
+  --th-success: #22c55e;
+  --th-success-bg: #f0fdf4;
+  --th-warning: #ea580c;
+  --th-warning-bg: #fff7ed;
+  --th-ring: #0f766e;
 
   /* Shadows */
   --th-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
   --th-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
-  --th-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
-  --th-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
-  --th-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+  --th-shadow-md:
+    0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+  --th-shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+  --th-shadow-xl:
+    0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
 
   /* Radius */
   --th-radius-sm: 8px;
@@ -125,7 +128,9 @@ body {
   border-radius: var(--th-radius-lg);
   border: 1px solid var(--th-border-light);
   box-shadow: var(--th-shadow-sm);
-  transition: box-shadow var(--th-transition), transform var(--th-transition);
+  transition:
+    box-shadow var(--th-transition),
+    transform var(--th-transition);
 }
 
 .ant-card:hover {
@@ -288,12 +293,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #94a3b8;
 }
 
 /* Page transition */

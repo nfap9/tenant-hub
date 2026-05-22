@@ -141,6 +141,9 @@ page {
   --layout-safe-area-bottom: env(safe-area-inset-bottom);
   --layout-tab-bar-height: 124rpx;
   --layout-header-height: 112rpx;
-  --layout-content-bottom-padding: calc(var(--layout-tab-bar-height) + var(--layout-safe-area-bottom) + var(--spacing-12));
+  --layout-content-bottom-padding: calc(
+    var(--layout-tab-bar-height) + var(--layout-safe-area-bottom) +
+      var(--spacing-12)
+  );
   --layout-max-modal-width: 640rpx;
 }

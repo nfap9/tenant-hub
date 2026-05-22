@@ -63,26 +63,26 @@ docker compose -f docker-compose.prod.yml up --build
 
 ## 各服务独立启动命令
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev:infra` | Docker 启动 PostgreSQL |
-| `pnpm dev` | 同时启动 API + tenant-web |
-| `pnpm dev:web` | 同 `pnpm dev` |
+| 命令                   | 说明                             |
+| ---------------------- | -------------------------------- |
+| `pnpm dev:infra`       | Docker 启动 PostgreSQL           |
+| `pnpm dev`             | 同时启动 API + tenant-web        |
+| `pnpm dev:web`         | 同 `pnpm dev`                    |
 | `pnpm dev:miniprogram` | 启动小程序微信开发者工具编译模式 |
-| `pnpm db:generate` | 生成 Prisma Client |
-| `pnpm db:migrate` | 执行数据库迁移（交互式） |
-| `pnpm check` | 全量类型检查 + Lint + 构建 |
+| `pnpm db:generate`     | 生成 Prisma Client               |
+| `pnpm db:migrate`      | 执行数据库迁移（交互式）         |
+| `pnpm check`           | 全量类型检查 + Lint + 构建       |
 
 ## 环境变量
 
 本地开发只需在**仓库根目录**创建 `.env`（复制 `.env.example`），API 会自动从根目录加载。关键变量：
 
-| 变量 | 说明 | 开发默认值 |
-|------|------|-----------|
-| `DATABASE_URL` | PostgreSQL 连接串 | `postgresql://postgres:postgres@localhost:5433/tenant_hub?schema=public` |
-| `JWT_SECRET` | Token 签名密钥 | `tenant-hub-dev-secret`（生产必须修改） |
-| `CORS_ORIGINS` | 允许跨域的前端地址 | `http://localhost:5174,http://localhost:8081,http://localhost:19006` |
-| `PORT` | API 端口 | `4000` |
+| 变量           | 说明               | 开发默认值                                                               |
+| -------------- | ------------------ | ------------------------------------------------------------------------ |
+| `DATABASE_URL` | PostgreSQL 连接串  | `postgresql://postgres:postgres@localhost:5433/tenant_hub?schema=public` |
+| `JWT_SECRET`   | Token 签名密钥     | `tenant-hub-dev-secret`（生产必须修改）                                  |
+| `CORS_ORIGINS` | 允许跨域的前端地址 | `http://localhost:5174,http://localhost:8081,http://localhost:19006`     |
+| `PORT`         | API 端口           | `4000`                                                                   |
 
 ## 数据库迁移
 

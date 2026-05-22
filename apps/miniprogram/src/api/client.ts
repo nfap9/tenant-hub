@@ -21,7 +21,10 @@ const isLoginPageActive = () => {
   }
 };
 
-export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
+export async function apiClient<T>(
+  path: string,
+  options: ApiOptions = {}
+): Promise<T> {
   const session = getSession();
   const token = session?.token;
   const url = `${getApiBaseUrl()}${path}`;
@@ -34,7 +37,9 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
     header: {
       'content-type': 'application/json',
       ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...(options.organizationId ? { 'x-organization-id': options.organizationId } : {}),
+      ...(options.organizationId
+        ? { 'x-organization-id': options.organizationId }
+        : {}),
       ...options.headers,
     },
   });
@@ -55,7 +60,10 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
   }
 
   if (!res.statusCode || res.statusCode >= 400) {
-    const errorData = typeof res.data === 'string' ? { error: res.data } : (res.data as { error?: string }) || {};
+    const errorData =
+      typeof res.data === 'string'
+        ? { error: res.data }
+        : (res.data as { error?: string }) || {};
     throw new Error(errorData.error || `请求失败 (${res.statusCode})`);
   }
 

@@ -6,54 +6,57 @@
 - **`apps/tenant-web`** — Web 管理端（React 18 + Vite 6 + Ant Design 5），承载组织、公寓、房间、租约、账单、水电录入、收款等全部业务操作，同时包含平台运营配置（租户管理、套餐配置、系统配置等）
 - **`apps/miniprogram`** — 最终用户小程序端（Taro 4 + React 18），承载组织、公寓、房间、租约、账单、水电录入、收款等全部业务操作
 
-
 ## 代码风格与规范
 
 ### ESLint（根目录 `eslint.config.mjs` 统一管控）
+
 - 使用 `typescript-eslint` 推荐配置。
 
 ### TypeScript
+
 - 根 `tsconfig.base.json` 启用 `strict: true`、`esModuleInterop: true`、`skipLibCheck: true`、`forceConsistentCasingInFileNames: true`。
 - 各应用继承并扩展自己的 `tsconfig.json`。
 - API 使用 `module: NodeNext` / `moduleResolution: NodeNext`（ESM 原生运行）。
 - tenant-web 使用 `allowImportingTsExtensions: true` + `noEmit: true`（Vite 负责编译）。
 
 ### 命名与模块
+
 - API 路由按资源命名：`/api/auth`, `/api/organizations`, `/api/apartments`, `/api/leases`, `/api/bills`, `/api/admin`。
 - 服务层文件按业务领域命名，测试文件与源码**同目录**、同名加 `.test.ts` 后缀。
 - 小程序源码统一放在 `src/` 下。
 
 ### 环境变量
+
 - API 使用 `src/config/env.ts` 通过 **Zod Schema** 在运行时强校验环境变量。
 - **生产安全规则**：`NODE_ENV === "production"` 时，若 `JWT_SECRET` 仍为默认的 `tenant-hub-dev-secret`，Zod 会抛校验错误阻止启动。
 - 各应用均使用 `.env` 文件（已 `.gitignore`），根目录提供 `.env.example` 作为模板。
 
 ## 关键文件速查
 
-| 目的 | 路径 |
-|------|------|
-| 根配置 & 脚本 | `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `eslint.config.mjs` |
-| 环境变量模板 | `.env.example`, `.env.production.example` |
-| API 入口 | `apps/api/src/server.ts`, `apps/api/src/app.ts` |
-| API 环境校验 | `apps/api/src/config/env.ts` |
-| API 认证中间件 | `apps/api/src/middleware/auth.ts` |
-| 超级管理员初始化 | `apps/api/src/services/adminInit.ts` |
-| Prisma Schema | `apps/api/prisma/schema.prisma` |
-| Web 端入口 | `apps/tenant-web/src/main.tsx`, `apps/tenant-web/src/App.tsx` |
-| Web 端路由 | `apps/tenant-web/src/router/index.tsx` |
-| 运营端总览 | `apps/tenant-web/src/pages/ops/OpsDashboardPage.tsx` |
-| 运营端用户管理 | `apps/tenant-web/src/pages/ops/OpsUsersPage.tsx` |
-| 运营端套餐配置 | `apps/tenant-web/src/pages/ops/OpsPlansPage.tsx` |
-| 运营端组织管理 | `apps/tenant-web/src/pages/ops/OpsOrganizationsPage.tsx` |
-| 运营端角色权限 | `apps/tenant-web/src/pages/ops/OpsRolesPage.tsx` |
-| 运营端短信配置 | `apps/tenant-web/src/pages/ops/OpsSmsConfigPage.tsx` |
-| 运营端系统配置 | `apps/tenant-web/src/pages/ops/OpsSystemSettingsPage.tsx` |
-| 小程序入口 | `apps/miniprogram/src/app.tsx` |
-| 小程序路由配置 | `apps/miniprogram/src/app.config.ts` |
-| 小程序交互规范 | `docs/mobile-ui-guidelines.md` |
-| Docker 生产编排 | `docker-compose.prod.yml` |
-| Docker 开发编排 | `docker-compose.infra.yml` |
-| CI 工作流 (GitHub) | `.github/workflows/api-ci.yml`, `.github/workflows/tenant-web-ci.yml`, `.github/workflows/pr-check.yml`, `.github/workflows/release.yml` |
-| CI/CD 流水线 (Jenkins) | `Jenkinsfile` |
-| 发布脚本 | `scripts/release.js` |
-| 提交校验 | `scripts/verify-commit.js` |
+| 目的                   | 路径                                                                                                                                     |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 根配置 & 脚本          | `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `eslint.config.mjs`                                                         |
+| 环境变量模板           | `.env.example`, `.env.production.example`                                                                                                |
+| API 入口               | `apps/api/src/server.ts`, `apps/api/src/app.ts`                                                                                          |
+| API 环境校验           | `apps/api/src/config/env.ts`                                                                                                             |
+| API 认证中间件         | `apps/api/src/middleware/auth.ts`                                                                                                        |
+| 超级管理员初始化       | `apps/api/src/services/adminInit.ts`                                                                                                     |
+| Prisma Schema          | `apps/api/prisma/schema.prisma`                                                                                                          |
+| Web 端入口             | `apps/tenant-web/src/main.tsx`, `apps/tenant-web/src/App.tsx`                                                                            |
+| Web 端路由             | `apps/tenant-web/src/router/index.tsx`                                                                                                   |
+| 运营端总览             | `apps/tenant-web/src/pages/ops/OpsDashboardPage.tsx`                                                                                     |
+| 运营端用户管理         | `apps/tenant-web/src/pages/ops/OpsUsersPage.tsx`                                                                                         |
+| 运营端套餐配置         | `apps/tenant-web/src/pages/ops/OpsPlansPage.tsx`                                                                                         |
+| 运营端组织管理         | `apps/tenant-web/src/pages/ops/OpsOrganizationsPage.tsx`                                                                                 |
+| 运营端角色权限         | `apps/tenant-web/src/pages/ops/OpsRolesPage.tsx`                                                                                         |
+| 运营端短信配置         | `apps/tenant-web/src/pages/ops/OpsSmsConfigPage.tsx`                                                                                     |
+| 运营端系统配置         | `apps/tenant-web/src/pages/ops/OpsSystemSettingsPage.tsx`                                                                                |
+| 小程序入口             | `apps/miniprogram/src/app.tsx`                                                                                                           |
+| 小程序路由配置         | `apps/miniprogram/src/app.config.ts`                                                                                                     |
+| 小程序交互规范         | `docs/mobile-ui-guidelines.md`                                                                                                           |
+| Docker 生产编排        | `docker-compose.prod.yml`                                                                                                                |
+| Docker 开发编排        | `docker-compose.infra.yml`                                                                                                               |
+| CI 工作流 (GitHub)     | `.github/workflows/api-ci.yml`, `.github/workflows/tenant-web-ci.yml`, `.github/workflows/pr-check.yml`, `.github/workflows/release.yml` |
+| CI/CD 流水线 (Jenkins) | `Jenkinsfile`                                                                                                                            |
+| 发布脚本               | `scripts/release.js`                                                                                                                     |
+| 提交校验               | `scripts/verify-commit.js`                                                                                                               |

@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Button,
@@ -12,7 +12,7 @@ import {
   Modal,
   Row,
   Col,
-} from "antd";
+} from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -25,28 +25,37 @@ import {
   WalletOutlined,
   FileTextOutlined,
   ExclamationCircleOutlined,
-} from "@ant-design/icons";
-import { useAppSession } from "@/context/AppSessionContext";
-import { getMonthlyBills, getBillsByStatus, deleteMonthlyBill, retryBillBilling } from "@/api/bills";
-import { getRooms } from "@/api/rooms";
-import { money } from "@/utils/format";
-import { statusLabels, toneForBillStatus } from "./constants";
-import { remainingAmount, sortMonthlyBillsForList, getMonthlyBillCardSummary } from "./utils";
-import PageHeader from "@/components/ui/PageHeader";
-import StatCard from "@/components/ui/StatCard";
-import EmptyState from "@/components/ui/EmptyState";
-import type { Bill, BillStatus, MonthlyBill } from "@/types/domain";
+} from '@ant-design/icons';
+import { useAppSession } from '@/context/AppSessionContext';
+import {
+  getMonthlyBills,
+  getBillsByStatus,
+  deleteMonthlyBill,
+  retryBillBilling,
+} from '@/api/bills';
+import { getRooms } from '@/api/rooms';
+import { money } from '@/utils/format';
+import { statusLabels, toneForBillStatus } from './constants';
+import {
+  remainingAmount,
+  sortMonthlyBillsForList,
+  getMonthlyBillCardSummary,
+} from './utils';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import EmptyState from '@/components/ui/EmptyState';
+import type { Bill, BillStatus, MonthlyBill } from '@/types/domain';
 
 export default function BillListPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"unpaid" | "pending" | "all">("unpaid");
+  const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
   const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
-  const [, setRooms] = useState<import("@/types/domain").Room[]>([]);
+  const [, setRooms] = useState<import('@/types/domain').Room[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BillStatus | "">("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<BillStatus | ''>('');
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
@@ -54,18 +63,18 @@ export default function BillListPage() {
     try {
       const nextMonthlyBills = await getMonthlyBills(currentOrgId);
       const [failedBills, billingBills, nextRooms] = await Promise.all([
-        getBillsByStatus(currentOrgId, "FAILED"),
-        getBillsByStatus(currentOrgId, "BILLING"),
+        getBillsByStatus(currentOrgId, 'FAILED'),
+        getBillsByStatus(currentOrgId, 'BILLING'),
         getRooms(currentOrgId),
       ]);
       const postpaidReviewBills = [...failedBills, ...billingBills].filter(
-        (bill) => bill.mode === "POSTPAID"
+        (bill) => bill.mode === 'POSTPAID'
       );
       setMonthlyBills(nextMonthlyBills);
       setReviewBills(postpaidReviewBills);
       setRooms(nextRooms);
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "账单加载失败");
+      message.error(e instanceof Error ? e.message : '账单加载失败');
     } finally {
       setLoading(false);
     }
@@ -76,11 +85,15 @@ export default function BillListPage() {
   }, [loadData]);
 
   const unpaidMonthlyBills = useMemo(
-    () => monthlyBills.filter((bill) => bill.status === "UNPAID" || bill.status === "PARTIAL_PAID"),
+    () =>
+      monthlyBills.filter(
+        (bill) => bill.status === 'UNPAID' || bill.status === 'PARTIAL_PAID'
+      ),
     [monthlyBills]
   );
   const unpaidTotal = useMemo(
-    () => unpaidMonthlyBills.reduce((sum, bill) => sum + remainingAmount(bill), 0),
+    () =>
+      unpaidMonthlyBills.reduce((sum, bill) => sum + remainingAmount(bill), 0),
     [unpaidMonthlyBills]
   );
 
@@ -95,24 +108,25 @@ export default function BillListPage() {
           bill.lease?.tenantPhone?.includes(q)
       );
     }
-    if (statusFilter) result = result.filter((bill) => bill.status === statusFilter);
+    if (statusFilter)
+      result = result.filter((bill) => bill.status === statusFilter);
     return sortMonthlyBillsForList(result);
   }, [monthlyBills, searchQuery, statusFilter]);
 
   const handleDelete = async (bill: MonthlyBill) => {
     if (!currentOrgId) return;
     Modal.confirm({
-      title: "删除月度账单",
-      content: "删除后不可恢复，是否确认？",
-      okText: "确认删除",
+      title: '删除月度账单',
+      content: '删除后不可恢复，是否确认？',
+      okText: '确认删除',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await deleteMonthlyBill(currentOrgId, bill.id);
-          message.success("月度账单已删除");
+          message.success('月度账单已删除');
           await loadData();
         } catch (e) {
-          message.error(e instanceof Error ? e.message : "删除失败");
+          message.error(e instanceof Error ? e.message : '删除失败');
         }
       },
     });
@@ -122,10 +136,10 @@ export default function BillListPage() {
     if (!currentOrgId) return;
     try {
       await retryBillBilling(currentOrgId, bill.id);
-      message.success("已重新尝试出账");
+      message.success('已重新尝试出账');
       await loadData();
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "重试失败");
+      message.error(e instanceof Error ? e.message : '重试失败');
     }
   };
 
@@ -135,38 +149,82 @@ export default function BillListPage() {
       <Card
         key={bill.id}
         size="small"
-        style={{ marginBottom: 12, cursor: "pointer" }}
+        style={{ marginBottom: 12, cursor: 'pointer' }}
         onClick={() => navigate(`/bills/monthly/${bill.id}`)}
-        bodyStyle={{ padding: "var(--th-space-5)" }}
+        bodyStyle={{ padding: 'var(--th-space-5)' }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+          }}
+        >
           <div>
-            <div style={{ fontWeight: 600, fontSize: 15, fontFamily: "var(--th-font-heading)", color: "var(--th-foreground)" }}>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 15,
+                fontFamily: 'var(--th-font-heading)',
+                color: 'var(--th-foreground)',
+              }}
+            >
               {summary.title}
             </div>
-            <div style={{ color: "var(--th-foreground-muted)", fontSize: 13, marginTop: 2 }}>
+            <div
+              style={{
+                color: 'var(--th-foreground-muted)',
+                fontSize: 13,
+                marginTop: 2,
+              }}
+            >
               {summary.meta}
             </div>
           </div>
-          <Tag color={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Tag>
+          <Tag color={toneForBillStatus(bill.status)}>
+            {statusLabels[bill.status]}
+          </Tag>
         </div>
-        <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--th-primary)", fontFamily: "var(--th-font-heading)" }}>
+        <div
+          style={{
+            marginTop: 12,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              color: 'var(--th-primary)',
+              fontFamily: 'var(--th-font-heading)',
+            }}
+          >
             ¥{money(summary.totalAmount)}
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: "var(--th-foreground-muted)", fontSize: 13 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ color: 'var(--th-foreground-muted)', fontSize: 13 }}>
               剩余 ¥{money(summary.remainingAmount)}
             </div>
-            <div style={{ color: "var(--th-foreground-subtle)", fontSize: 13 }}>
+            <div style={{ color: 'var(--th-foreground-subtle)', fontSize: 13 }}>
               已收 ¥{money(summary.paidAmount)}
             </div>
           </div>
         </div>
-        <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ color: "var(--th-foreground-subtle)", fontSize: 12 }}>{summary.detailCountText}</span>
+        <div
+          style={{
+            marginTop: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ color: 'var(--th-foreground-subtle)', fontSize: 12 }}>
+            {summary.detailCountText}
+          </span>
           <Space>
-            {showDelete && bill.status !== "PAID" && (
+            {showDelete && bill.status !== 'PAID' && (
               <Button
                 type="text"
                 danger
@@ -194,27 +252,55 @@ export default function BillListPage() {
       key={bill.id}
       size="small"
       style={{ marginBottom: 12 }}
-      bodyStyle={{ padding: "var(--th-space-5)" }}
+      bodyStyle={{ padding: 'var(--th-space-5)' }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+        }}
+      >
         <div>
-          <div style={{ fontWeight: 600, fontSize: 15, fontFamily: "var(--th-font-heading)", color: "var(--th-foreground)" }}>
-            {bill.lease?.tenantName ?? "租客"} · {bill.lease?.room?.roomNo ?? "房间"}
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: 15,
+              fontFamily: 'var(--th-font-heading)',
+              color: 'var(--th-foreground)',
+            }}
+          >
+            {bill.lease?.tenantName ?? '租客'} ·{' '}
+            {bill.lease?.room?.roomNo ?? '房间'}
           </div>
-          <div style={{ color: "var(--th-foreground-muted)", fontSize: 13, marginTop: 2 }}>
+          <div
+            style={{
+              color: 'var(--th-foreground-muted)',
+              fontSize: 13,
+              marginTop: 2,
+            }}
+          >
             {bill.periodStart?.slice(0, 10)} 至 {bill.periodEnd?.slice(0, 10)}
           </div>
         </div>
-        <Tag color={toneForBillStatus(bill.status)}>{statusLabels[bill.status]}</Tag>
+        <Tag color={toneForBillStatus(bill.status)}>
+          {statusLabels[bill.status]}
+        </Tag>
       </div>
-      <div style={{ marginTop: 8, color: "var(--th-danger)", fontSize: 14 }}>
+      <div style={{ marginTop: 8, color: 'var(--th-danger)', fontSize: 14 }}>
         <ExclamationCircleOutlined style={{ marginRight: 6 }} />
-        {bill.failureReason ?? "需要补录或修正水电读数"}
+        {bill.failureReason ?? '需要补录或修正水电读数'}
       </div>
       <div style={{ marginTop: 12 }}>
         <Space>
-          <Button size="small" onClick={() => handleRetry(bill)}>重新出账</Button>
-          <Button type="primary" size="small" onClick={() => navigate(`/bills/utility?billId=${bill.id}`)}>
+          <Button size="small" onClick={() => handleRetry(bill)}>
+            重新出账
+          </Button>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => navigate(`/bills/utility?billId=${bill.id}`)}
+          >
             录入本期水电
           </Button>
         </Space>
@@ -226,11 +312,15 @@ export default function BillListPage() {
     <div className="page-content">
       <PageHeader
         breadcrumb={[
-          { label: "财务管理", path: "/bills" },
-          { label: "账单管理" },
+          { label: '财务管理', path: '/bills' },
+          { label: '账单管理' },
         ]}
         actions={
-          <Button icon={<ReloadOutlined />} loading={loading} onClick={loadData}>
+          <Button
+            icon={<ReloadOutlined />}
+            loading={loading}
+            onClick={loadData}
+          >
             刷新
           </Button>
         }
@@ -239,7 +329,7 @@ export default function BillListPage() {
       <Spin spinning={loading}>
         {/* 统计 */}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          {tab === "unpaid" && (
+          {tab === 'unpaid' && (
             <>
               <Col xs={24} sm={12}>
                 <StatCard
@@ -259,7 +349,7 @@ export default function BillListPage() {
               </Col>
             </>
           )}
-          {tab === "pending" && (
+          {tab === 'pending' && (
             <Col span={24}>
               <StatCard
                 title="待处理账单"
@@ -269,7 +359,7 @@ export default function BillListPage() {
               />
             </Col>
           )}
-          {tab === "all" && (
+          {tab === 'all' && (
             <>
               <Col xs={24} sm={12}>
                 <StatCard
@@ -294,20 +384,33 @@ export default function BillListPage() {
         {/* 操作栏 */}
         <div style={{ marginBottom: 16 }}>
           <Space>
-            {tab === "unpaid" && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/bills/payment")}>
+            {tab === 'unpaid' && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => navigate('/bills/payment')}
+              >
                 登记收款
               </Button>
             )}
-            {tab === "pending" && (
+            {tab === 'pending' && (
               <>
-                <Button icon={<ThunderboltOutlined />} onClick={() => navigate("/bills/reading")}>
+                <Button
+                  icon={<ThunderboltOutlined />}
+                  onClick={() => navigate('/bills/reading')}
+                >
                   录入读数
                 </Button>
-                <Button icon={<DownloadOutlined />} onClick={() => navigate("/bills/utility-export")}>
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={() => navigate('/bills/utility-export')}
+                >
                   导出
                 </Button>
-                <Button icon={<UploadOutlined />} onClick={() => navigate("/bills/utility-import")}>
+                <Button
+                  icon={<UploadOutlined />}
+                  onClick={() => navigate('/bills/utility-import')}
+                >
                   导入
                 </Button>
               </>
@@ -318,13 +421,13 @@ export default function BillListPage() {
         <Tabs
           activeKey={tab}
           onChange={(key) => {
-            setTab(key as "unpaid" | "pending" | "all");
-            setSearchQuery("");
-            setStatusFilter("");
+            setTab(key as 'unpaid' | 'pending' | 'all');
+            setSearchQuery('');
+            setStatusFilter('');
           }}
           items={[
             {
-              key: "unpaid",
+              key: 'unpaid',
               label: `待支付 (${unpaidMonthlyBills.length})`,
               children: (
                 <div>
@@ -334,13 +437,15 @@ export default function BillListPage() {
                       description="当前没有待支付的账单记录"
                     />
                   ) : (
-                    sortMonthlyBillsForList(unpaidMonthlyBills).map((bill) => renderBillCard(bill))
+                    sortMonthlyBillsForList(unpaidMonthlyBills).map((bill) =>
+                      renderBillCard(bill)
+                    )
                   )}
                 </div>
               ),
             },
             {
-              key: "pending",
+              key: 'pending',
               label: `待处理 (${reviewBills.length})`,
               children: (
                 <div>
@@ -356,7 +461,7 @@ export default function BillListPage() {
               ),
             },
             {
-              key: "all",
+              key: 'all',
               label: `全部 (${monthlyBills.length})`,
               children: (
                 <div>
@@ -370,18 +475,25 @@ export default function BillListPage() {
                     size="large"
                   />
                   <Space wrap style={{ marginBottom: 16 }}>
-                    {(["", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"] as const).map(
-                      (status) => (
-                        <Button
-                          key={status || "all"}
-                          type={statusFilter === status ? "primary" : "default"}
-                          size="small"
-                          onClick={() => setStatusFilter(status)}
-                        >
-                          {status ? statusLabels[status] : "全部状态"}
-                        </Button>
-                      )
-                    )}
+                    {(
+                      [
+                        '',
+                        'UNPAID',
+                        'PARTIAL_PAID',
+                        'PAID',
+                        'FAILED',
+                        'VOID',
+                      ] as const
+                    ).map((status) => (
+                      <Button
+                        key={status || 'all'}
+                        type={statusFilter === status ? 'primary' : 'default'}
+                        size="small"
+                        onClick={() => setStatusFilter(status)}
+                      >
+                        {status ? statusLabels[status] : '全部状态'}
+                      </Button>
+                    ))}
                   </Space>
                   {filteredAllBills.length === 0 ? (
                     <EmptyState

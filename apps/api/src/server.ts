@@ -1,9 +1,9 @@
-import { env } from "./config/env.js";
-import { prisma } from "./config/prisma.js";
-import { app } from "./app.js";
-import { ensureSystemRoles } from "./services/roles.js";
-import { ensureSystemSettings } from "./services/adminInit.js";
-import { startScheduler } from "./services/scheduler.js";
+import { env } from './config/env.js';
+import { prisma } from './config/prisma.js';
+import { app } from './app.js';
+import { ensureSystemRoles } from './services/roles.js';
+import { ensureSystemSettings } from './services/adminInit.js';
+import { startScheduler } from './services/scheduler.js';
 
 await ensureSystemRoles();
 await ensureSystemSettings();
@@ -12,7 +12,7 @@ const server = app.listen(env.PORT, () => {
   console.info(`[TenantHub] API listening on http://localhost:${env.PORT}`);
 });
 
-if (env.SCHEDULER_ENABLED === "true") {
+if (env.SCHEDULER_ENABLED === 'true') {
   startScheduler();
 }
 
@@ -30,5 +30,5 @@ const shutdown = async () => {
   process.exit(0);
 };
 
-process.on("SIGINT", () => void shutdown());
-process.on("SIGTERM", () => void shutdown());
+process.on('SIGINT', () => void shutdown());
+process.on('SIGTERM', () => void shutdown());

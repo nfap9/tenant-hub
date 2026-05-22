@@ -1,7 +1,11 @@
-import { Router } from "express";
-import { z } from "zod";
-import { prisma } from "../config/prisma.js";
-import { requireAuth, requireOrg, requirePermission } from "../middleware/auth.js";
+import { Router } from 'express';
+import { z } from 'zod';
+import { prisma } from '../config/prisma.js';
+import {
+  requireAuth,
+  requireOrg,
+  requirePermission,
+} from '../middleware/auth.js';
 import {
   calculateUtilityLineAmounts,
   generateCurrentLeaseBills,
@@ -11,105 +15,175 @@ import {
   refreshBillTotals,
   refreshMonthlyBillTotals,
   retryPostpaidBillAndMonthlyBill,
-  tryCreateMonthlyBill
-} from "../services/billing.js";
-import { toCsv } from "../services/csv.js";
-import { PERMISSIONS } from "../services/roles.js";
-import { parseUtilityImportRows } from "../services/utilityImport.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { HttpError, ok } from "../utils/http.js";
+  tryCreateMonthlyBill,
+} from '../services/billing.js';
+import { toCsv } from '../services/csv.js';
+import { PERMISSIONS } from '../services/roles.js';
+import { parseUtilityImportRows } from '../services/utilityImport.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { HttpError, ok } from '../utils/http.js';
 
 export const billRouter = Router();
 billRouter.use(requireAuth, requireOrg);
 
 billRouter.get(
-  "/",
+  '/',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
-    const status = z.enum(["DRAFT", "BILLING", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"]).optional().parse(req.query.status);
+    const status = z
+      .enum([
+        'DRAFT',
+        'BILLING',
+        'UNPAID',
+        'PARTIAL_PAID',
+        'PAID',
+        'FAILED',
+        'VOID',
+      ])
+      .optional()
+      .parse(req.query.status);
     ok(
       res,
       await prisma.bill.findMany({
-        where: { organizationId: req.organizationId!, ...(status ? { status } : {}) },
-        include: { lease: { include: { room: true } }, items: true, payments: true },
-        orderBy: { dueDate: "asc" }
+        where: {
+          organizationId: req.organizationId!,
+          ...(status ? { status } : {}),
+        },
+        include: {
+          lease: { include: { room: true } },
+          items: true,
+          payments: true,
+        },
+        orderBy: { dueDate: 'asc' },
       })
     );
   })
 );
 
 billRouter.get(
-  "/monthly",
+  '/monthly',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
-    const status = z.enum(["DRAFT", "BILLING", "UNPAID", "PARTIAL_PAID", "PAID", "FAILED", "VOID"]).optional().parse(req.query.status);
+    const status = z
+      .enum([
+        'DRAFT',
+        'BILLING',
+        'UNPAID',
+        'PARTIAL_PAID',
+        'PAID',
+        'FAILED',
+        'VOID',
+      ])
+      .optional()
+      .parse(req.query.status);
     ok(
       res,
       await prisma.monthlyBill.findMany({
-        where: { organizationId: req.organizationId!, ...(status ? { status } : {}) },
-        include: { lease: { include: { room: true } }, bills: { include: { items: true } }, payments: true },
-        orderBy: { billingDate: "desc" }
+        where: {
+          organizationId: req.organizationId!,
+          ...(status ? { status } : {}),
+        },
+        include: {
+          lease: { include: { room: true } },
+          bills: { include: { items: true } },
+          payments: true,
+        },
+        orderBy: { billingDate: 'desc' },
       })
     );
   })
 );
 
 billRouter.post(
-  "/generate",
+  '/generate',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ leaseId: z.string().optional(), today: z.coerce.date().optional() }).parse(req.body);
+    const input = z
+      .object({
+        leaseId: z.string().optional(),
+        today: z.coerce.date().optional(),
+      })
+      .parse(req.body);
     if (!input.leaseId) {
-      ok(res, await generateCurrentLeaseBills(req.organizationId!, input.today ?? new Date()));
+      ok(
+        res,
+        await generateCurrentLeaseBills(
+          req.organizationId!,
+          input.today ?? new Date()
+        )
+      );
       return;
     }
-    const lease = await prisma.lease.findFirst({ where: { id: input.leaseId, organizationId: req.organizationId! }, select: { id: true } });
-    if (!lease) throw new HttpError(404, "租约不存在");
-    ok(res, { billIds: await generateLeaseBills(input.leaseId, input.today ?? new Date()) });
+    const lease = await prisma.lease.findFirst({
+      where: { id: input.leaseId, organizationId: req.organizationId! },
+      select: { id: true },
+    });
+    if (!lease) throw new HttpError(404, '租约不存在');
+    ok(res, {
+      billIds: await generateLeaseBills(
+        input.leaseId,
+        input.today ?? new Date()
+      ),
+    });
   })
 );
 
 billRouter.get(
-  "/meter-readings",
+  '/meter-readings',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
     const roomId = z.string().optional().parse(req.query.roomId);
     ok(
       res,
       await prisma.meterReading.findMany({
-        where: { organizationId: req.organizationId!, ...(roomId ? { roomId } : {}) },
-        include: { room: true, lease: true, createdBy: { select: { id: true, username: true, phone: true } } },
-        orderBy: { readingDate: "desc" }
+        where: {
+          organizationId: req.organizationId!,
+          ...(roomId ? { roomId } : {}),
+        },
+        include: {
+          room: true,
+          lease: true,
+          createdBy: { select: { id: true, username: true, phone: true } },
+        },
+        orderBy: { readingDate: 'desc' },
       })
     );
   })
 );
 
 billRouter.post(
-  "/meter-readings",
+  '/meter-readings',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
       .object({
         roomId: z.string(),
-        meterType: z.enum(["WATER", "POWER"]),
+        meterType: z.enum(['WATER', 'POWER']),
         readingDate: z.coerce.date(),
         value: z.coerce.number().nonnegative(),
-        source: z.enum(["MANUAL", "IMPORT"]).default("MANUAL"),
-        status: z.enum(["NORMAL", "SUSPECTED", "CONFIRMED", "VOID"]).default("NORMAL"),
-        note: z.string().optional()
+        source: z.enum(['MANUAL', 'IMPORT']).default('MANUAL'),
+        status: z
+          .enum(['NORMAL', 'SUSPECTED', 'CONFIRMED', 'VOID'])
+          .default('NORMAL'),
+        note: z.string().optional(),
       })
       .parse(req.body);
-    const room = await prisma.room.findFirst({ where: { id: input.roomId, apartment: { organizationId: req.organizationId! } }, include: { apartment: true } });
-    if (!room) throw new HttpError(404, "房间不存在");
+    const room = await prisma.room.findFirst({
+      where: {
+        id: input.roomId,
+        apartment: { organizationId: req.organizationId! },
+      },
+      include: { apartment: true },
+    });
+    if (!room) throw new HttpError(404, '房间不存在');
     const lease = await prisma.lease.findFirst({
       where: {
         roomId: room.id,
         organizationId: req.organizationId!,
         startDate: { lte: input.readingDate },
-        endDate: { gte: input.readingDate }
+        endDate: { gte: input.readingDate },
       },
-      orderBy: { startDate: "desc" }
+      orderBy: { startDate: 'desc' },
     });
 
     const reading = await prisma.meterReading.create({
@@ -124,21 +198,23 @@ billRouter.post(
         source: input.source,
         status: input.status,
         note: input.note,
-        createdById: req.user!.id
-      }
+        createdById: req.user!.id,
+      },
     });
 
     // 尝试自动完成该房间所有待出账的后付费账单
     const pendingBills = await prisma.bill.findMany({
       where: {
         lease: { roomId: room.id },
-        mode: "POSTPAID",
-        status: { in: ["BILLING", "FAILED"] }
+        mode: 'POSTPAID',
+        status: { in: ['BILLING', 'FAILED'] },
       },
-      select: { id: true }
+      select: { id: true },
     });
     await Promise.all(
-      pendingBills.map((b) => retryPostpaidBillAndMonthlyBill(b.id).catch(() => null))
+      pendingBills.map((b) =>
+        retryPostpaidBillAndMonthlyBill(b.id).catch(() => null)
+      )
     );
 
     ok(res, reading);
@@ -146,13 +222,28 @@ billRouter.post(
 );
 
 billRouter.post(
-  "/monthly/:id/payments",
+  '/monthly/:id/payments',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ amount: z.coerce.number().positive(), method: z.string().min(1), note: z.string().optional() }).parse(req.body);
-    const monthlyBill = await prisma.monthlyBill.findFirst({ where: { id: req.params.id, organizationId: req.organizationId! } });
-    if (!monthlyBill) throw new HttpError(404, "月度账单不存在");
-    ok(res, await recordMonthlyBillPayment({ monthlyBillId: monthlyBill.id, userId: req.user!.id, ...input }));
+    const input = z
+      .object({
+        amount: z.coerce.number().positive(),
+        method: z.string().min(1),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
+    const monthlyBill = await prisma.monthlyBill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!monthlyBill) throw new HttpError(404, '月度账单不存在');
+    ok(
+      res,
+      await recordMonthlyBillPayment({
+        monthlyBillId: monthlyBill.id,
+        userId: req.user!.id,
+        ...input,
+      })
+    );
   })
 );
 
@@ -163,7 +254,7 @@ const applyUtilityReadingToBill = async ({
   previousWater,
   currentWater,
   previousPower,
-  currentPower
+  currentPower,
 }: {
   billId: string;
   organizationId: string;
@@ -175,16 +266,19 @@ const applyUtilityReadingToBill = async ({
 }) => {
   const bill = await prisma.bill.findFirst({
     where: { id: billId, organizationId },
-    include: { lease: { include: { room: true } }, items: true }
+    include: { lease: { include: { room: true } }, items: true },
   });
-  if (!bill) throw new HttpError(404, "账单不存在");
-  if (bill.mode !== "POSTPAID") throw new HttpError(400, "仅后付费水电账单可以录入读数");
+  if (!bill) throw new HttpError(404, '账单不存在');
+  if (bill.mode !== 'POSTPAID')
+    throw new HttpError(400, '仅后付费水电账单可以录入读数');
 
-  const waterItem = bill.items.find((item) => item.type === "WATER");
-  const powerItem = bill.items.find((item) => item.type === "POWER");
-  if (!waterItem || !powerItem) throw new HttpError(400, "账单缺少水电项目");
-  if (currentWater < previousWater) throw new HttpError(400, "水表本期读数不能小于上期读数");
-  if (currentPower < previousPower) throw new HttpError(400, "电表本期读数不能小于上期读数");
+  const waterItem = bill.items.find((item) => item.type === 'WATER');
+  const powerItem = bill.items.find((item) => item.type === 'POWER');
+  if (!waterItem || !powerItem) throw new HttpError(400, '账单缺少水电项目');
+  if (currentWater < previousWater)
+    throw new HttpError(400, '水表本期读数不能小于上期读数');
+  if (currentPower < previousPower)
+    throw new HttpError(400, '电表本期读数不能小于上期读数');
 
   const { waterAmount, powerAmount } = calculateUtilityLineAmounts({
     previousWater,
@@ -192,19 +286,32 @@ const applyUtilityReadingToBill = async ({
     waterUnitPrice: waterItem.waterUnitPrice ?? 0,
     previousPower,
     currentPower,
-    powerUnitPrice: powerItem.powerUnitPrice ?? 0
+    powerUnitPrice: powerItem.powerUnitPrice ?? 0,
   });
 
   await prisma.$transaction([
     prisma.billItem.update({
       where: { id: waterItem.id },
-      data: { previousWater, currentWater, amount: waterAmount, status: "UNPAID" }
+      data: {
+        previousWater,
+        currentWater,
+        amount: waterAmount,
+        status: 'UNPAID',
+      },
     }),
     prisma.billItem.update({
       where: { id: powerItem.id },
-      data: { previousPower, currentPower, amount: powerAmount, status: "UNPAID" }
+      data: {
+        previousPower,
+        currentPower,
+        amount: powerAmount,
+        status: 'UNPAID',
+      },
     }),
-    prisma.bill.update({ where: { id: bill.id }, data: { status: "UNPAID", failureReason: null } }),
+    prisma.bill.update({
+      where: { id: bill.id },
+      data: { status: 'UNPAID', failureReason: null },
+    }),
     prisma.meterReading.createMany({
       data: [
         {
@@ -212,59 +319,62 @@ const applyUtilityReadingToBill = async ({
           apartmentId: bill.lease.room.apartmentId,
           roomId: bill.lease.roomId,
           leaseId: bill.leaseId,
-          meterType: "WATER",
+          meterType: 'WATER',
           readingDate: bill.periodStart,
           value: previousWater,
-          source: "MANUAL",
-          status: "NORMAL",
-          createdById: userId
+          source: 'MANUAL',
+          status: 'NORMAL',
+          createdById: userId,
         },
         {
           organizationId: bill.organizationId,
           apartmentId: bill.lease.room.apartmentId,
           roomId: bill.lease.roomId,
           leaseId: bill.leaseId,
-          meterType: "WATER",
+          meterType: 'WATER',
           readingDate: bill.periodEnd,
           value: currentWater,
-          source: "MANUAL",
-          status: "NORMAL",
-          createdById: userId
+          source: 'MANUAL',
+          status: 'NORMAL',
+          createdById: userId,
         },
         {
           organizationId: bill.organizationId,
           apartmentId: bill.lease.room.apartmentId,
           roomId: bill.lease.roomId,
           leaseId: bill.leaseId,
-          meterType: "POWER",
+          meterType: 'POWER',
           readingDate: bill.periodStart,
           value: previousPower,
-          source: "MANUAL",
-          status: "NORMAL",
-          createdById: userId
+          source: 'MANUAL',
+          status: 'NORMAL',
+          createdById: userId,
         },
         {
           organizationId: bill.organizationId,
           apartmentId: bill.lease.room.apartmentId,
           roomId: bill.lease.roomId,
           leaseId: bill.leaseId,
-          meterType: "POWER",
+          meterType: 'POWER',
           readingDate: bill.periodEnd,
           value: currentPower,
-          source: "MANUAL",
-          status: "NORMAL",
-          createdById: userId
-        }
-      ]
-    })
+          source: 'MANUAL',
+          status: 'NORMAL',
+          createdById: userId,
+        },
+      ],
+    }),
   ]);
   await refreshBillTotals(bill.id);
   await tryCreateMonthlyBill(bill.leaseId, bill.billingDate);
-  return prisma.bill.findUnique({ where: { id: bill.id }, include: { items: true } });
+  return prisma.bill.findUnique({
+    where: { id: bill.id },
+    include: { items: true },
+  });
 };
 
 billRouter.post(
-  "/:id/utility-reading",
+  '/:id/utility-reading',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
@@ -272,26 +382,50 @@ billRouter.post(
         previousWater: z.coerce.number(),
         currentWater: z.coerce.number(),
         previousPower: z.coerce.number(),
-        currentPower: z.coerce.number()
+        currentPower: z.coerce.number(),
       })
       .parse(req.body);
-    ok(res, await applyUtilityReadingToBill({ billId: req.params.id, organizationId: req.organizationId!, userId: req.user!.id, ...input }));
+    ok(
+      res,
+      await applyUtilityReadingToBill({
+        billId: req.params.id,
+        organizationId: req.organizationId!,
+        userId: req.user!.id,
+        ...input,
+      })
+    );
   })
 );
 
 billRouter.get(
-  "/utility/pending-export",
+  '/utility/pending-export',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
     const bills = await prisma.bill.findMany({
-      where: { mode: "POSTPAID", status: { in: ["BILLING", "FAILED"] }, organizationId: req.organizationId! },
+      where: {
+        mode: 'POSTPAID',
+        status: { in: ['BILLING', 'FAILED'] },
+        organizationId: req.organizationId!,
+      },
       include: { lease: { include: { room: true } }, items: true },
-      orderBy: { billingDate: "asc" }
+      orderBy: { billingDate: 'asc' },
     });
-    res.setHeader("content-type", "text/csv; charset=utf-8");
+    res.setHeader('content-type', 'text/csv; charset=utf-8');
     res.send(
       toCsv([
-        ["billId", "房间号", "租客", "交租日", "水电周期开始", "水电周期结束", "上月水表", "本月水表", "上月电表", "本月电表", "失败原因"],
+        [
+          'billId',
+          '房间号',
+          '租客',
+          '交租日',
+          '水电周期开始',
+          '水电周期结束',
+          '上月水表',
+          '本月水表',
+          '上月电表',
+          '本月电表',
+          '失败原因',
+        ],
         ...bills.map((bill) => [
           bill.id,
           bill.lease.room.roomNo,
@@ -299,106 +433,155 @@ billRouter.get(
           bill.billingDate.toISOString(),
           bill.periodStart.toISOString(),
           bill.periodEnd.toISOString(),
-          "",
-          "",
-          "",
-          "",
-          bill.failureReason ?? ""
-        ])
+          '',
+          '',
+          '',
+          '',
+          bill.failureReason ?? '',
+        ]),
       ])
     );
   })
 );
 
 billRouter.post(
-  "/utility/import",
+  '/utility/import',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ csv: z.string().optional(), rows: z.array(z.object({
-      billId: z.string(),
-      previousWater: z.coerce.number(),
-      currentWater: z.coerce.number(),
-      previousPower: z.coerce.number(),
-      currentPower: z.coerce.number()
-    })).optional() }).parse(req.body);
-    const rows = input.csv ? parseUtilityImportRows(input.csv) : input.rows ?? [];
+    const input = z
+      .object({
+        csv: z.string().optional(),
+        rows: z
+          .array(
+            z.object({
+              billId: z.string(),
+              previousWater: z.coerce.number(),
+              currentWater: z.coerce.number(),
+              previousPower: z.coerce.number(),
+              currentPower: z.coerce.number(),
+            })
+          )
+          .optional(),
+      })
+      .parse(req.body);
+    const rows = input.csv
+      ? parseUtilityImportRows(input.csv)
+      : (input.rows ?? []);
     const results = [];
     for (const row of rows) {
-      results.push(await applyUtilityReadingToBill({ ...row, organizationId: req.organizationId!, userId: req.user!.id }));
+      results.push(
+        await applyUtilityReadingToBill({
+          ...row,
+          organizationId: req.organizationId!,
+          userId: req.user!.id,
+        })
+      );
     }
     ok(res, results);
   })
 );
 
 billRouter.post(
-  "/:id/retry-billing",
+  '/:id/retry-billing',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const bill = await prisma.bill.findFirst({ where: { id: req.params.id, organizationId: req.organizationId! } });
-    if (!bill) throw new HttpError(404, "账单不存在");
-    if (bill.mode !== "POSTPAID") throw new HttpError(400, "仅后付费账单需要重新出账");
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.mode !== 'POSTPAID')
+      throw new HttpError(400, '仅后付费账单需要重新出账');
     ok(res, await retryPostpaidBillAndMonthlyBill(bill.id));
   })
 );
 
 billRouter.post(
-  "/:id/payments",
+  '/:id/payments',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ amount: z.coerce.number().positive(), method: z.string().min(1), note: z.string().optional() }).parse(req.body);
-    ok(res, await recordBillPayment({ billId: req.params.id, organizationId: req.organizationId!, userId: req.user!.id, ...input }));
+    const input = z
+      .object({
+        amount: z.coerce.number().positive(),
+        method: z.string().min(1),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
+    ok(
+      res,
+      await recordBillPayment({
+        billId: req.params.id,
+        organizationId: req.organizationId!,
+        userId: req.user!.id,
+        ...input,
+      })
+    );
   })
 );
 
 billRouter.put(
-  "/:id/items/:itemId",
+  '/:id/items/:itemId',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ amount: z.coerce.number().nonnegative(), note: z.string().optional() }).parse(req.body);
+    const input = z
+      .object({
+        amount: z.coerce.number().nonnegative(),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
     const billItem = await prisma.billItem.findFirst({
-      where: { id: req.params.itemId, billId: req.params.id, bill: { organizationId: req.organizationId! } },
-      include: { bill: true }
+      where: {
+        id: req.params.itemId,
+        billId: req.params.id,
+        bill: { organizationId: req.organizationId! },
+      },
+      include: { bill: true },
     });
-    if (!billItem) throw new HttpError(404, "账单项目不存在");
-    if (billItem.bill.status === "PAID") throw new HttpError(400, "已结清账单不能修改");
+    if (!billItem) throw new HttpError(404, '账单项目不存在');
+    if (billItem.bill.status === 'PAID')
+      throw new HttpError(400, '已结清账单不能修改');
     await prisma.billItem.update({ where: { id: billItem.id }, data: input });
     await refreshBillTotals(billItem.billId);
     await prisma.auditLog.create({
       data: {
         organizationId: req.organizationId!,
-        tableName: "BillItem",
+        tableName: 'BillItem',
         recordId: billItem.id,
-        action: "UPDATE",
-        fieldName: "amount",
-        oldValue: JSON.stringify({ amount: billItem.amount.toString(), note: billItem.note }),
+        action: 'UPDATE',
+        fieldName: 'amount',
+        oldValue: JSON.stringify({
+          amount: billItem.amount.toString(),
+          note: billItem.note,
+        }),
         newValue: JSON.stringify(input),
         userId: req.user!.id,
-        ipAddress: req.ip ?? null
-      }
+        ipAddress: req.ip ?? null,
+      },
     });
     ok(res, { updated: true });
   })
 );
 
 billRouter.delete(
-  "/:id",
+  '/:id',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const bill = await prisma.bill.findFirst({
       where: { id: req.params.id, organizationId: req.organizationId! },
-      include: { items: true, payments: true }
+      include: { items: true, payments: true },
     });
-    if (!bill) throw new HttpError(404, "账单不存在");
-    if (bill.status === "PAID") throw new HttpError(400, "已结清账单不能删除");
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不能删除');
 
     const monthlyBillId = bill.monthlyBillId;
     await prisma.$transaction([
       prisma.payment.deleteMany({ where: { billId: bill.id } }),
-      prisma.bill.delete({ where: { id: bill.id } })
+      prisma.bill.delete({ where: { id: bill.id } }),
     ]);
 
     if (monthlyBillId) {
-      const remainingBills = await prisma.bill.count({ where: { monthlyBillId } });
+      const remainingBills = await prisma.bill.count({
+        where: { monthlyBillId },
+      });
       if (remainingBills === 0) {
         await prisma.payment.deleteMany({ where: { monthlyBillId } });
         await prisma.monthlyBill.delete({ where: { id: monthlyBillId } });
@@ -412,22 +595,23 @@ billRouter.delete(
 );
 
 billRouter.delete(
-  "/monthly/:id",
+  '/monthly/:id',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const monthlyBill = await prisma.monthlyBill.findFirst({
       where: { id: req.params.id, organizationId: req.organizationId! },
-      include: { bills: true, payments: true }
+      include: { bills: true, payments: true },
     });
-    if (!monthlyBill) throw new HttpError(404, "月度账单不存在");
-    if (monthlyBill.status === "PAID") throw new HttpError(400, "已结清月度账单不能删除");
+    if (!monthlyBill) throw new HttpError(404, '月度账单不存在');
+    if (monthlyBill.status === 'PAID')
+      throw new HttpError(400, '已结清月度账单不能删除');
 
     const billIds = monthlyBill.bills.map((b) => b.id);
     await prisma.$transaction([
       prisma.payment.deleteMany({ where: { billId: { in: billIds } } }),
       prisma.bill.deleteMany({ where: { id: { in: billIds } } }),
       prisma.payment.deleteMany({ where: { monthlyBillId: monthlyBill.id } }),
-      prisma.monthlyBill.delete({ where: { id: monthlyBill.id } })
+      prisma.monthlyBill.delete({ where: { id: monthlyBill.id } }),
     ]);
 
     ok(res, { deleted: true });

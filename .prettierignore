@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+.expo
+*.lock
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+.git
+playwright-report
+test-results

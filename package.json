@@ -10,8 +10,10 @@
     "dev:miniprogram": "pnpm --filter @tenant-hub/miniprogram dev:weapp",
     "build:miniprogram": "pnpm --filter @tenant-hub/miniprogram build:weapp",
     "build": "pnpm -r build",
-    "check": "pnpm typecheck && pnpm lint && pnpm build",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm build",
     "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma generate",
@@ -29,8 +31,10 @@
     "conventional-changelog-cli": "^4.0.0",
     "dotenv-cli": "^11.0.0",
     "enquirer": "^2.4.0",
+    "eslint-config-prettier": "^10.1.8",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
+    "prettier": "^3.8.3",
     "semver": "^7.6.0",
     "typescript-eslint": "^8.59.2"
   }

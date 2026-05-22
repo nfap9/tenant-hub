@@ -1,4 +1,4 @@
-import { calculateUtilityAmount } from "./billing.js";
+import { calculateUtilityAmount } from './billing.js';
 
 export type UtilityImportRow = {
   billId: string;
@@ -12,7 +12,7 @@ const normalizeHeader = (value: string) => value.trim();
 
 const parseCsvLine = (line: string) => {
   const cells: string[] = [];
-  let current = "";
+  let current = '';
   let quoted = false;
 
   for (let index = 0; index < line.length; index += 1) {
@@ -30,9 +30,9 @@ const parseCsvLine = (line: string) => {
       continue;
     }
 
-    if (char === "," && !quoted) {
+    if (char === ',' && !quoted) {
       cells.push(current);
-      current = "";
+      current = '';
       continue;
     }
 
@@ -54,27 +54,35 @@ export const parseUtilityImportRows = (csv: string): UtilityImportRow[] => {
   if (lines.length <= 1) return [];
   const headers = parseCsvLine(lines[0]).map(normalizeHeader);
   const indexOf = (name: string) => headers.indexOf(name);
-  const billIdIndex = indexOf("billId");
-  const previousWaterIndex = indexOf("上月水表");
-  const currentWaterIndex = indexOf("本月水表");
-  const previousPowerIndex = indexOf("上月电表");
-  const currentPowerIndex = indexOf("本月电表");
+  const billIdIndex = indexOf('billId');
+  const previousWaterIndex = indexOf('上月水表');
+  const currentWaterIndex = indexOf('本月水表');
+  const previousPowerIndex = indexOf('上月电表');
+  const currentPowerIndex = indexOf('本月电表');
 
-  if ([billIdIndex, previousWaterIndex, currentWaterIndex, previousPowerIndex, currentPowerIndex].some((index) => index < 0)) {
-    throw new Error("导入内容缺少必要列");
+  if (
+    [
+      billIdIndex,
+      previousWaterIndex,
+      currentWaterIndex,
+      previousPowerIndex,
+      currentPowerIndex,
+    ].some((index) => index < 0)
+  ) {
+    throw new Error('导入内容缺少必要列');
   }
 
   return lines.slice(1).map((line) => {
     const cells = parseCsvLine(line);
     const row = {
       billId: cells[billIdIndex]?.trim(),
-      previousWater: numeric(cells[previousWaterIndex] ?? "", "上月水表"),
-      currentWater: numeric(cells[currentWaterIndex] ?? "", "本月水表"),
-      previousPower: numeric(cells[previousPowerIndex] ?? "", "上月电表"),
-      currentPower: numeric(cells[currentPowerIndex] ?? "", "本月电表")
+      previousWater: numeric(cells[previousWaterIndex] ?? '', '上月水表'),
+      currentWater: numeric(cells[currentWaterIndex] ?? '', '本月水表'),
+      previousPower: numeric(cells[previousPowerIndex] ?? '', '上月电表'),
+      currentPower: numeric(cells[currentPowerIndex] ?? '', '本月电表'),
     };
     calculateUtilityAmount({ ...row, waterUnitPrice: 0, powerUnitPrice: 0 });
-    if (!row.billId) throw new Error("billId不能为空");
+    if (!row.billId) throw new Error('billId不能为空');
     return row;
   });
 };

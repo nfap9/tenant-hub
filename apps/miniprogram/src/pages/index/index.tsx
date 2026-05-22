@@ -5,24 +5,41 @@ import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
 import { Button, Card, EmptyState, Badge, Icon } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
-import { compactMoney, isThisMonth, daysUntil, monthlyAmount } from '../../utils/format';
-import type { Apartment, Room, Lease, MonthlyBill, Bill } from '../../types/domain';
+import {
+  compactMoney,
+  isThisMonth,
+  daysUntil,
+  monthlyAmount,
+} from '../../utils/format';
+import type {
+  Apartment,
+  Room,
+  Lease,
+  MonthlyBill,
+  Bill,
+} from '../../types/domain';
 import './index.scss';
 
 const leaseMonthlyIncome = (lease: Lease) => {
   const rent = monthlyAmount(lease.rentAmount, lease.cycle);
-  const fees = (lease.fees ?? []).reduce((sum, fee) => sum + monthlyAmount(fee.amount, lease.cycle), 0);
+  const fees = (lease.fees ?? []).reduce(
+    (sum, fee) => sum + monthlyAmount(fee.amount, lease.cycle),
+    0
+  );
   return rent + fees;
 };
-const isUnpaid = (bill: MonthlyBill) => bill.status !== "PAID" && bill.status !== "VOID";
-const isOverdue = (bill: MonthlyBill) => isUnpaid(bill) && bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
+const isUnpaid = (bill: MonthlyBill) =>
+  bill.status !== 'PAID' && bill.status !== 'VOID';
+const isOverdue = (bill: MonthlyBill) =>
+  isUnpaid(bill) &&
+  bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
 
 type TodoItem = {
   key: string;
   title: string;
   detail: string;
   badge: string;
-  tone: "danger" | "warning" | "calm";
+  tone: 'danger' | 'warning' | 'calm';
 };
 
 export default function Index() {
@@ -37,19 +54,40 @@ export default function Index() {
     if (!currentOrgId || !session?.token) return;
     setLoading(true);
     try {
-      const [nextApartments, nextRooms, nextMonthlyBills, failedBills, billingBills] = await Promise.all([
-        apiClient<Apartment[]>("/apartments", { organizationId: currentOrgId }),
-        apiClient<Room[]>("/apartments/rooms", { organizationId: currentOrgId }),
-        apiClient<MonthlyBill[]>("/bills/monthly", { organizationId: currentOrgId }),
-        apiClient<Bill[]>("/bills?status=FAILED", { organizationId: currentOrgId }),
-        apiClient<Bill[]>("/bills?status=BILLING", { organizationId: currentOrgId })
+      const [
+        nextApartments,
+        nextRooms,
+        nextMonthlyBills,
+        failedBills,
+        billingBills,
+      ] = await Promise.all([
+        apiClient<Apartment[]>('/apartments', { organizationId: currentOrgId }),
+        apiClient<Room[]>('/apartments/rooms', {
+          organizationId: currentOrgId,
+        }),
+        apiClient<MonthlyBill[]>('/bills/monthly', {
+          organizationId: currentOrgId,
+        }),
+        apiClient<Bill[]>('/bills?status=FAILED', {
+          organizationId: currentOrgId,
+        }),
+        apiClient<Bill[]>('/bills?status=BILLING', {
+          organizationId: currentOrgId,
+        }),
       ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
       setMonthlyBills(nextMonthlyBills);
-      setReviewBills([...failedBills, ...billingBills].filter((bill) => bill.mode === "POSTPAID"));
+      setReviewBills(
+        [...failedBills, ...billingBills].filter(
+          (bill) => bill.mode === 'POSTPAID'
+        )
+      );
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "首页数据加载失败", icon: "none" });
+      Taro.showToast({
+        title: e instanceof Error ? e.message : '首页数据加载失败',
+        icon: 'none',
+      });
     } finally {
       setLoading(false);
     }
@@ -63,27 +101,47 @@ export default function Index() {
     loadData().finally(() => Taro.stopPullDownRefresh());
   });
 
-  const activeLeases = useMemo(() => rooms.flatMap((room) => room.leases ?? []).filter((lease) => lease.status === "ACTIVE"), [rooms]);
-  const occupiedCount = rooms.filter((room) => room.status === "OCCUPIED").length;
-  const vacantCount = rooms.filter((room) => room.status === "VACANT").length;
-  const occupancyRate = rooms.length ? Math.round((occupiedCount / rooms.length) * 100) : 0;
+  const activeLeases = useMemo(
+    () =>
+      rooms
+        .flatMap((room) => room.leases ?? [])
+        .filter((lease) => lease.status === 'ACTIVE'),
+    [rooms]
+  );
+  const occupiedCount = rooms.filter(
+    (room) => room.status === 'OCCUPIED'
+  ).length;
+  const vacantCount = rooms.filter((room) => room.status === 'VACANT').length;
+  const occupancyRate = rooms.length
+    ? Math.round((occupiedCount / rooms.length) * 100)
+    : 0;
   const vacantLayoutStats = useMemo(() => {
     const layoutCounts = rooms
-      .filter((room) => room.status === "VACANT")
+      .filter((room) => room.status === 'VACANT')
       .reduce<Record<string, number>>((counts, room) => {
-        const layout = room.layout.trim() || "未配置";
+        const layout = room.layout.trim() || '未配置';
         counts[layout] = (counts[layout] ?? 0) + 1;
         return counts;
       }, {});
 
-    return Object.entries(layoutCounts).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+    return Object.entries(layoutCounts).sort(
+      (left, right) => right[1] - left[1] || left[0].localeCompare(right[0])
+    );
   }, [rooms]);
-  const monthlyIncome = activeLeases.reduce((sum, lease) => sum + leaseMonthlyIncome(lease), 0);
+  const monthlyIncome = activeLeases.reduce(
+    (sum, lease) => sum + leaseMonthlyIncome(lease),
+    0
+  );
   const thisMonthExpense = apartments
     .flatMap((apartment) => apartment.expenses ?? [])
     .filter((expense) => isThisMonth(expense.spentAt))
     .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
-  const unpaidTotal = monthlyBills.filter(isUnpaid).reduce((sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount), 0);
+  const unpaidTotal = monthlyBills
+    .filter(isUnpaid)
+    .reduce(
+      (sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount),
+      0
+    );
   const paidThisMonth = monthlyBills
     .filter((bill) => isThisMonth(bill.billingDate))
     .reduce((sum, bill) => sum + Number(bill.paidAmount ?? 0), 0);
@@ -95,40 +153,40 @@ export default function Index() {
   const todos: TodoItem[] = [
     overdueBills.length
       ? {
-          key: "overdue",
-          title: "逾期账单",
+          key: 'overdue',
+          title: '逾期账单',
           detail: `${overdueBills.length} 张账单已过应收日，剩余待收 ¥${compactMoney(overdueBills.reduce((sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount), 0))}`,
-          badge: "收款",
-          tone: "danger"
+          badge: '收款',
+          tone: 'danger',
         }
       : undefined,
     reviewBills.length
       ? {
-          key: "review",
-          title: "后付费出账处理",
+          key: 'review',
+          title: '后付费出账处理',
           detail: `${reviewBills.length} 张水电账单需要补读数或重新出账`,
-          badge: "出账",
-          tone: "warning"
+          badge: '出账',
+          tone: 'warning',
         }
       : undefined,
     expiringLeases.length
       ? {
-          key: "lease",
-          title: "租约即将到期",
+          key: 'lease',
+          title: '租约即将到期',
           detail: `${expiringLeases[0].lease.tenantName} ${expiringLeases[0].remainingDays} 天后到期，共 ${expiringLeases.length} 份需跟进`,
-          badge: "续租",
-          tone: "warning"
+          badge: '续租',
+          tone: 'warning',
         }
       : undefined,
     vacantCount
       ? {
-          key: "vacant",
-          title: "空房可出租",
+          key: 'vacant',
+          title: '空房可出租',
           detail: `${vacantCount} 间空房可继续签约，当前出租率 ${occupancyRate}%`,
-          badge: "招租",
-          tone: "calm"
+          badge: '招租',
+          tone: 'calm',
         }
-      : undefined
+      : undefined,
   ].filter(Boolean) as TodoItem[];
 
   if (!currentOrgId) {
@@ -141,24 +199,38 @@ export default function Index() {
         <View className="home-hero-header">
           <View>
             <Text className="home-eyebrow">本月经营概览</Text>
-            <Text className="home-hero-value">¥{compactMoney(monthlyIncome)}</Text>
+            <Text className="home-hero-value">
+              ¥{compactMoney(monthlyIncome)}
+            </Text>
           </View>
-          <Button variant="secondary" size="small" loading={loading} disabled={loading} onClick={loadData}>
-            {loading ? "刷新中" : "刷新"}
+          <Button
+            variant="secondary"
+            size="small"
+            loading={loading}
+            disabled={loading}
+            onClick={loadData}
+          >
+            {loading ? '刷新中' : '刷新'}
           </Button>
         </View>
         <View className="home-hero-grid">
           <View className="home-hero-cell">
             <Text className="home-hero-label">已收</Text>
-            <Text className="home-hero-metric">¥{compactMoney(paidThisMonth)}</Text>
+            <Text className="home-hero-metric">
+              ¥{compactMoney(paidThisMonth)}
+            </Text>
           </View>
           <View className="home-hero-cell">
             <Text className="home-hero-label">待收</Text>
-            <Text className="home-hero-metric">¥{compactMoney(unpaidTotal)}</Text>
+            <Text className="home-hero-metric">
+              ¥{compactMoney(unpaidTotal)}
+            </Text>
           </View>
           <View className="home-hero-cell">
             <Text className="home-hero-label">支出</Text>
-            <Text className="home-hero-metric">¥{compactMoney(thisMonthExpense)}</Text>
+            <Text className="home-hero-metric">
+              ¥{compactMoney(thisMonthExpense)}
+            </Text>
           </View>
         </View>
       </View>
@@ -193,23 +265,42 @@ export default function Index() {
       </Card>
 
       <View className="quick-action-row">
-        <View className="quick-action-button" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
-          <View className="quick-action-icon"><Icon name="payment" size="md" /></View>
+        <View
+          className="quick-action-button"
+          onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}
+        >
+          <View className="quick-action-icon">
+            <Icon name="payment" size="md" />
+          </View>
           <Text className="quick-action-label">登记收款</Text>
         </View>
-        <View className="quick-action-button" onClick={() => Taro.switchTab({ url: '/pages/rooms/index' })}>
-          <View className="quick-action-icon"><Icon name="contract" size="md" /></View>
+        <View
+          className="quick-action-button"
+          onClick={() => Taro.switchTab({ url: '/pages/rooms/index' })}
+        >
+          <View className="quick-action-icon">
+            <Icon name="contract" size="md" />
+          </View>
           <Text className="quick-action-label">签约入住</Text>
         </View>
-        <View className="quick-action-button" onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}>
-          <View className="quick-action-icon"><Icon name="meter" size="md" /></View>
+        <View
+          className="quick-action-button"
+          onClick={() => Taro.switchTab({ url: '/pages/bills/index' })}
+        >
+          <View className="quick-action-icon">
+            <Icon name="meter" size="md" />
+          </View>
           <Text className="quick-action-label">抄表录入</Text>
         </View>
       </View>
 
       <Card title="待办事项" subtitle={`${todos.length} 项`}>
         {todos.length === 0 ? (
-          <EmptyState icon="check" title="暂无紧急待办" subtitle="经营状态稳定" />
+          <EmptyState
+            icon="check"
+            title="暂无紧急待办"
+            subtitle="经营状态稳定"
+          />
         ) : null}
         {todos.map((todo) => (
           <View key={todo.key} className="todo-item">
@@ -217,7 +308,17 @@ export default function Index() {
               <Text className="card-title">{todo.title}</Text>
               <Text className="text-muted">{todo.detail}</Text>
             </View>
-            <Badge tone={todo.tone === "danger" ? "danger" : todo.tone === "warning" ? "warning" : "primary"}>{todo.badge}</Badge>
+            <Badge
+              tone={
+                todo.tone === 'danger'
+                  ? 'danger'
+                  : todo.tone === 'warning'
+                    ? 'warning'
+                    : 'primary'
+              }
+            >
+              {todo.badge}
+            </Badge>
           </View>
         ))}
       </Card>

@@ -7,46 +7,48 @@ const config = {
   deviceRatio: {
     640: 2.34 / 2,
     750: 1,
-    828: 1.81 / 2
+    828: 1.81 / 2,
   },
   sourceRoot: 'src',
   outputRoot: 'dist',
   plugins: [],
   defineConstants: {
-    API_BASE_URL: JSON.stringify(process.env.API_BASE_URL || 'http://127.0.0.1:4000/api')
+    API_BASE_URL: JSON.stringify(
+      process.env.API_BASE_URL || 'http://127.0.0.1:4000/api'
+    ),
   },
   alias: {
-    '@': path.resolve(__dirname, '..', 'src')
+    '@': path.resolve(__dirname, '..', 'src'),
   },
   copy: {
     patterns: [],
-    options: {}
+    options: {},
   },
   framework: 'react',
   compiler: 'webpack5',
   cache: {
-    enable: false
+    enable: false,
   },
   mini: {
     postcss: {
       pxtransform: {
         enable: true,
-        config: {}
+        config: {},
       },
       url: {
         enable: true,
         config: {
-          limit: 1024
-        }
+          limit: 1024,
+        },
       },
       cssModules: {
         enable: false,
         config: {
           namingPattern: 'module',
-          generateScopedName: '[name]__[local]___[hash:base64:5]'
-        }
-      }
-    }
+          generateScopedName: '[name]__[local]___[hash:base64:5]',
+        },
+      },
+    },
   },
   h5: {
     publicPath: '/',
@@ -55,17 +57,17 @@ const config = {
     postcss: {
       autoprefixer: {
         enable: true,
-        config: {}
+        config: {},
       },
       cssModules: {
         enable: false,
         config: {
           namingPattern: 'module',
-          generateScopedName: '[name]__[local]___[hash:base64:5]'
-        }
-      }
-    }
-  }
+          generateScopedName: '[name]__[local]___[hash:base64:5]',
+        },
+      },
+    },
+  },
 };
 
 module.exports = function (merge) {

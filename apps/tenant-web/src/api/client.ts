@@ -1,7 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
 export type ApiOptions = {
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: Record<string, unknown>;
   headers?: Record<string, string>;
   organizationId?: string;
@@ -12,12 +13,12 @@ export type Session = {
   user?: { id: string; phone: string; username: string };
 };
 
-const SESSION_KEY = "tenantHubSession";
-const ORG_KEY = "tenantHubCurrentOrgId";
+const SESSION_KEY = 'tenantHubSession';
+const ORG_KEY = 'tenantHubCurrentOrgId';
 
 export function readSession(): Session {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY) || "{}") as Session;
+    return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}') as Session;
   } catch {
     return {};
   }
@@ -43,17 +44,20 @@ export function writeOrgId(id: string) {
 
 let isRedirecting = false;
 
-export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
+export async function apiClient<T>(
+  path: string,
+  options: ApiOptions = {}
+): Promise<T> {
   const session = readSession();
   const token = session.token;
   const orgId = options.organizationId ?? readOrgId();
 
   const response = await fetch(`${API_BASE}${path}`, {
-    method: options.method || "GET",
+    method: options.method || 'GET',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...(orgId ? { "x-organization-id": orgId } : {}),
+      ...(orgId ? { 'x-organization-id': orgId } : {}),
       ...options.headers,
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -68,10 +72,10 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
       isRedirecting = true;
       setTimeout(() => {
         isRedirecting = false;
-        window.location.href = "/login";
+        window.location.href = '/login';
       }, 100);
     }
-    throw new Error("登录已过期，请重新登录");
+    throw new Error('登录已过期，请重新登录');
   }
 
   if (!response.ok) {

@@ -1,9 +1,20 @@
 export type Membership = {
-  organization: { id: string; name: string; code: string; description?: string; ownerId: string };
+  organization: {
+    id: string;
+    name: string;
+    code: string;
+    description?: string;
+    ownerId: string;
+  };
   role: { id: string; code: string; name: string; permissions: string[] };
 };
 
-export type OrgRole = { id: string; code: string; name: string; permissions: string[] };
+export type OrgRole = {
+  id: string;
+  code: string;
+  name: string;
+  permissions: string[];
+};
 
 export type OrgMember = {
   id: string;
@@ -49,18 +60,40 @@ export type Subscription = {
 export type SubscriptionOverview = {
   subscription?: Subscription;
   usage: { apartments: number; members: number };
-  extraQuota: { apartmentQuota: number; roomQuota: number; memberQuota: number };
+  extraQuota: {
+    apartmentQuota: number;
+    roomQuota: number;
+    memberQuota: number;
+  };
 };
 
-export type RoomStatus = "VACANT" | "RESERVED" | "OCCUPIED" | "MAINTENANCE";
-export type RentCycle = "MONTHLY" | "QUARTERLY" | "YEARLY";
-export type LeaseStatus = "ACTIVE" | "TERMINATED" | "EXPIRED";
-export type TerminationType = "EXPIRED" | "NEGOTIATED" | "BREACH";
-export type BillStatus = "DRAFT" | "BILLING" | "UNPAID" | "PARTIAL_PAID" | "PAID" | "FAILED" | "VOID";
-export type BillMode = "PREPAID" | "POSTPAID";
-export type BillItemType = "RENT" | "UTILITY" | "WATER" | "POWER" | "DEPOSIT" | "MANAGEMENT" | "SANITATION" | "ELEVATOR" | "PROPERTY" | "NETWORK" | "OTHER";
-export type MeterType = "WATER" | "POWER";
-export type MeterReadingStatus = "NORMAL" | "SUSPECTED" | "CONFIRMED" | "VOID";
+export type RoomStatus = 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
+export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type LeaseStatus = 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
+export type TerminationType = 'EXPIRED' | 'NEGOTIATED' | 'BREACH';
+export type BillStatus =
+  | 'DRAFT'
+  | 'BILLING'
+  | 'UNPAID'
+  | 'PARTIAL_PAID'
+  | 'PAID'
+  | 'FAILED'
+  | 'VOID';
+export type BillMode = 'PREPAID' | 'POSTPAID';
+export type BillItemType =
+  | 'RENT'
+  | 'UTILITY'
+  | 'WATER'
+  | 'POWER'
+  | 'DEPOSIT'
+  | 'MANAGEMENT'
+  | 'SANITATION'
+  | 'ELEVATOR'
+  | 'PROPERTY'
+  | 'NETWORK'
+  | 'OTHER';
+export type MeterType = 'WATER' | 'POWER';
+export type MeterReadingStatus = 'NORMAL' | 'SUSPECTED' | 'CONFIRMED' | 'VOID';
 
 export type ApartmentExpense = {
   id: string;
@@ -180,8 +213,8 @@ export type Payment = {
   user?: { id: string; username: string; phone: string };
 };
 
-export type SettlementStatus = "PENDING" | "SETTLED";
-export type SettlementPaymentDirection = "RECEIVE" | "REFUND";
+export type SettlementStatus = 'PENDING' | 'SETTLED';
+export type SettlementPaymentDirection = 'RECEIVE' | 'REFUND';
 
 export type LeaseSettlement = {
   id: string;

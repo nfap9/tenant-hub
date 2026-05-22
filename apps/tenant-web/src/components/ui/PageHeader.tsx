@@ -1,6 +1,6 @@
-import { Space, Breadcrumb } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { Space, Breadcrumb } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 interface PageHeaderProps {
   back?: boolean | string;
@@ -9,7 +9,12 @@ interface PageHeaderProps {
   children?: React.ReactNode;
 }
 
-export default function PageHeader({ back, breadcrumb, actions, children }: PageHeaderProps) {
+export default function PageHeader({
+  back,
+  breadcrumb,
+  actions,
+  children,
+}: PageHeaderProps) {
   const navigate = useNavigate();
 
   return (
@@ -23,8 +28,13 @@ export default function PageHeader({ back, breadcrumb, actions, children }: Page
                   {
                     title: (
                       <span
-                        style={{ cursor: "pointer", color: "var(--th-primary)" }}
-                        onClick={() => navigate(typeof back === "string" ? back : "..")}
+                        style={{
+                          cursor: 'pointer',
+                          color: 'var(--th-primary)',
+                        }}
+                        onClick={() =>
+                          navigate(typeof back === 'string' ? back : '..')
+                        }
                       >
                         <ArrowLeftOutlined style={{ marginRight: 4 }} />
                         返回
@@ -35,7 +45,10 @@ export default function PageHeader({ back, breadcrumb, actions, children }: Page
               : []),
             ...breadcrumb.map((item, idx) => ({
               title: item.path ? (
-                <span style={{ cursor: "pointer" }} onClick={() => navigate(item.path!)}>
+                <span
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(item.path!)}
+                >
                   {item.label}
                 </span>
               ) : (
@@ -46,7 +59,14 @@ export default function PageHeader({ back, breadcrumb, actions, children }: Page
           ]}
         />
       )}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}
+      >
         <div>{children}</div>
         {actions && (
           <Space size="middle" style={{ flexShrink: 0, marginTop: 4 }}>

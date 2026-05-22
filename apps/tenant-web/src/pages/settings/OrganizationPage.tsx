@@ -1,5 +1,15 @@
-import { useState, useEffect } from "react";
-import { Card, Form, Input, Button, List, Tag, Tabs, message, Table } from "antd";
+import { useState, useEffect } from 'react';
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  List,
+  Tag,
+  Tabs,
+  message,
+  Table,
+} from 'antd';
 import {
   PlusOutlined,
   CopyOutlined,
@@ -7,17 +17,17 @@ import {
   UserAddOutlined,
   TeamOutlined,
   BuildOutlined,
-} from "@ant-design/icons";
-import { useAppSession } from "@/context/AppSessionContext";
+} from '@ant-design/icons';
+import { useAppSession } from '@/context/AppSessionContext';
 import {
   createOrganization,
   joinOrganization,
   getOrganizationInvites,
   createOrganizationInvite,
-} from "@/api/organization";
-import type { OrgInvite, Membership } from "@/types/domain";
-import PageHeader from "@/components/ui/PageHeader";
-import EmptyState from "@/components/ui/EmptyState";
+} from '@/api/organization';
+import type { OrgInvite, Membership } from '@/types/domain';
+import PageHeader from '@/components/ui/PageHeader';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function OrganizationPage() {
   const { memberships, currentOrgId, reload } = useAppSession();
@@ -27,7 +37,7 @@ export default function OrganizationPage() {
   const [joinLoading, setJoinLoading] = useState(false);
   const [invites, setInvites] = useState<OrgInvite[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("my-orgs");
+  const [activeTab, setActiveTab] = useState('my-orgs');
 
   const isInOrg = Boolean(currentOrgId);
 
@@ -47,19 +57,22 @@ export default function OrganizationPage() {
     }
   };
 
-  const handleCreate = async (values: { name: string; description?: string }) => {
+  const handleCreate = async (values: {
+    name: string;
+    description?: string;
+  }) => {
     setCreateLoading(true);
     try {
       await createOrganization({
         name: values.name.trim(),
         description: values.description?.trim(),
       });
-      message.success("组织创建成功");
+      message.success('组织创建成功');
       createForm.resetFields();
       await reload();
-      setActiveTab("my-orgs");
+      setActiveTab('my-orgs');
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "创建失败");
+      message.error(e instanceof Error ? e.message : '创建失败');
     } finally {
       setCreateLoading(false);
     }
@@ -69,12 +82,12 @@ export default function OrganizationPage() {
     setJoinLoading(true);
     try {
       await joinOrganization({ inviteCode: values.inviteCode.trim() });
-      message.success("加入组织成功");
+      message.success('加入组织成功');
       joinForm.resetFields();
       await reload();
-      setActiveTab("my-orgs");
+      setActiveTab('my-orgs');
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "加入失败");
+      message.error(e instanceof Error ? e.message : '加入失败');
     } finally {
       setJoinLoading(false);
     }
@@ -85,10 +98,10 @@ export default function OrganizationPage() {
     setInviteLoading(true);
     try {
       await createOrganizationInvite(currentOrgId);
-      message.success("邀请码已创建");
+      message.success('邀请码已创建');
       await loadInvites();
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "创建邀请码失败");
+      message.error(e instanceof Error ? e.message : '创建邀请码失败');
     } finally {
       setInviteLoading(false);
     }
@@ -96,39 +109,45 @@ export default function OrganizationPage() {
 
   const copyInviteCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
-      message.success("邀请码已复制");
+      message.success('邀请码已复制');
     });
   };
 
   const orgColumns = [
     {
-      title: "组织名称",
-      dataIndex: ["organization", "name"],
-      key: "name",
+      title: '组织名称',
+      dataIndex: ['organization', 'name'],
+      key: 'name',
     },
     {
-      title: "角色",
-      dataIndex: ["role", "name"],
-      key: "role",
+      title: '角色',
+      dataIndex: ['role', 'name'],
+      key: 'role',
       render: (text: string) => <Tag color="accent">{text}</Tag>,
     },
     {
-      title: "组织编码",
-      dataIndex: ["organization", "code"],
-      key: "code",
+      title: '组织编码',
+      dataIndex: ['organization', 'code'],
+      key: 'code',
     },
   ];
 
   return (
     <div className="page-content">
-      <PageHeader back="/settings" breadcrumb={[{ label: "设置", path: "/settings" }, { label: "组织管理" }]} />
+      <PageHeader
+        back="/settings"
+        breadcrumb={[
+          { label: '设置', path: '/settings' },
+          { label: '组织管理' },
+        ]}
+      />
 
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
         items={[
           {
-            key: "my-orgs",
+            key: 'my-orgs',
             label: (
               <span>
                 <TeamOutlined style={{ marginRight: 6 }} />
@@ -141,8 +160,8 @@ export default function OrganizationPage() {
                   <Card
                     style={{
                       marginBottom: 24,
-                      borderRadius: "var(--th-radius-lg)",
-                      boxShadow: "var(--th-shadow)",
+                      borderRadius: 'var(--th-radius-lg)',
+                      boxShadow: 'var(--th-shadow)',
                     }}
                   >
                     <Table
@@ -150,15 +169,15 @@ export default function OrganizationPage() {
                       columns={orgColumns}
                       rowKey={(record: Membership) => record.organization.id}
                       pagination={false}
-                      scroll={{ x: "max-content" }}
+                      scroll={{ x: 'max-content' }}
                     />
                   </Card>
                 ) : (
                   <Card
                     style={{
                       marginBottom: 24,
-                      borderRadius: "var(--th-radius-lg)",
-                      boxShadow: "var(--th-shadow)",
+                      borderRadius: 'var(--th-radius-lg)',
+                      boxShadow: 'var(--th-shadow)',
                     }}
                   >
                     <EmptyState
@@ -171,14 +190,19 @@ export default function OrganizationPage() {
                 {isInOrg && (
                   <Card
                     title={
-                      <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          color: 'var(--th-foreground)',
+                        }}
+                      >
                         <UserAddOutlined style={{ marginRight: 8 }} />
                         邀请码管理
                       </span>
                     }
                     style={{
-                      borderRadius: "var(--th-radius-lg)",
-                      boxShadow: "var(--th-shadow)",
+                      borderRadius: 'var(--th-radius-lg)',
+                      boxShadow: 'var(--th-shadow)',
                     }}
                   >
                     <Button
@@ -211,17 +235,25 @@ export default function OrganizationPage() {
                             <div className="page-content">
                               <div
                                 style={{
-                                  fontFamily: "monospace",
+                                  fontFamily: 'monospace',
                                   fontSize: 16,
                                   fontWeight: 600,
-                                  color: "var(--th-foreground)",
+                                  color: 'var(--th-foreground)',
                                 }}
                               >
                                 {invite.code}
                               </div>
-                              <div style={{ color: "var(--th-foreground-muted)", fontSize: 12 }}>
-                                有效期至 {invite.expiresAt.slice(0, 16).replace("T", " ")} · 已用{" "}
-                                {invite.usedCount}/{invite.maxUses}
+                              <div
+                                style={{
+                                  color: 'var(--th-foreground-muted)',
+                                  fontSize: 12,
+                                }}
+                              >
+                                有效期至{' '}
+                                {invite.expiresAt
+                                  .slice(0, 16)
+                                  .replace('T', ' ')}{' '}
+                                · 已用 {invite.usedCount}/{invite.maxUses}
                               </div>
                             </div>
                           </List.Item>
@@ -231,7 +263,10 @@ export default function OrganizationPage() {
                       <EmptyState
                         title="暂无邀请码"
                         description="点击上方按钮创建邀请码"
-                        action={{ label: "创建邀请码", onClick: handleCreateInvite }}
+                        action={{
+                          label: '创建邀请码',
+                          onClick: handleCreateInvite,
+                        }}
                       />
                     )}
                   </Card>
@@ -240,7 +275,7 @@ export default function OrganizationPage() {
             ),
           },
           {
-            key: "create",
+            key: 'create',
             label: (
               <span>
                 <BuildOutlined style={{ marginRight: 6 }} />
@@ -248,7 +283,12 @@ export default function OrganizationPage() {
               </span>
             ),
             children: (
-              <Card style={{ borderRadius: "var(--th-radius-lg)", boxShadow: "var(--th-shadow)" }}>
+              <Card
+                style={{
+                  borderRadius: 'var(--th-radius-lg)',
+                  boxShadow: 'var(--th-shadow)',
+                }}
+              >
                 <Form
                   form={createForm}
                   layout="vertical"
@@ -258,11 +298,15 @@ export default function OrganizationPage() {
                   <Form.Item
                     label="组织名称"
                     name="name"
-                    rules={[{ required: true, message: "请输入组织名称" }]}
+                    rules={[{ required: true, message: '请输入组织名称' }]}
                   >
                     <Input
                       size="large"
-                      prefix={<HomeOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
+                      prefix={
+                        <HomeOutlined
+                          style={{ color: 'var(--th-foreground-subtle)' }}
+                        />
+                      }
                       placeholder="例如：阳光公寓"
                     />
                   </Form.Item>
@@ -270,7 +314,7 @@ export default function OrganizationPage() {
                     <Input.TextArea
                       placeholder="简要描述你的组织"
                       rows={3}
-                      style={{ borderRadius: "var(--th-radius)" }}
+                      style={{ borderRadius: 'var(--th-radius)' }}
                     />
                   </Form.Item>
                   <Form.Item>
@@ -289,7 +333,7 @@ export default function OrganizationPage() {
             ),
           },
           {
-            key: "join",
+            key: 'join',
             label: (
               <span>
                 <UserAddOutlined style={{ marginRight: 6 }} />
@@ -297,7 +341,12 @@ export default function OrganizationPage() {
               </span>
             ),
             children: (
-              <Card style={{ borderRadius: "var(--th-radius-lg)", boxShadow: "var(--th-shadow)" }}>
+              <Card
+                style={{
+                  borderRadius: 'var(--th-radius-lg)',
+                  boxShadow: 'var(--th-shadow)',
+                }}
+              >
                 <Form
                   form={joinForm}
                   layout="vertical"
@@ -307,12 +356,12 @@ export default function OrganizationPage() {
                   <Form.Item
                     label="邀请码"
                     name="inviteCode"
-                    rules={[{ required: true, message: "请输入邀请码" }]}
+                    rules={[{ required: true, message: '请输入邀请码' }]}
                   >
                     <Input
                       size="large"
                       placeholder="请输入邀请码"
-                      style={{ borderRadius: "var(--th-radius)" }}
+                      style={{ borderRadius: 'var(--th-radius)' }}
                     />
                   </Form.Item>
                   <Form.Item>

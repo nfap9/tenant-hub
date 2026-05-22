@@ -26,10 +26,15 @@ const iconCodepoints: Record<IconName, number> = {
   contract: 0xf105,
   check: 0xf106,
   bill: 0xf107,
-  apartment: 0xf108
+  apartment: 0xf108,
 };
 
-export function Icon({ name, size = 'md', tone = 'primary', className = '' }: IconProps) {
+export function Icon({
+  name,
+  size = 'md',
+  tone = 'primary',
+  className = '',
+}: IconProps) {
   return (
     <Text className={`icon icon--${size} icon--${tone} ${className}`}>
       {String.fromCharCode(iconCodepoints[name])}

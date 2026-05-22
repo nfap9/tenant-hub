@@ -1,5 +1,12 @@
 // @ts-nocheck
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
 import Taro from '@tarojs/taro';
 import { apiClient } from '../api/client';
 import { getSession, setSession, clearSession } from '../utils/storage';
@@ -34,7 +41,9 @@ type AppSessionContextType = {
   quotaLimitEnabled: boolean;
 };
 
-const AppSessionContext = createContext<AppSessionContextType | undefined>(undefined);
+const AppSessionContext = createContext<AppSessionContextType | undefined>(
+  undefined
+);
 
 const isLoginPageActive = () => {
   try {
@@ -47,15 +56,21 @@ const isLoginPageActive = () => {
 };
 
 export function AppSessionProvider({ children }) {
-  const [session, setSessionState] = useState<MobileSession | undefined>(() => getSession());
+  const [session, setSessionState] = useState<MobileSession | undefined>(() =>
+    getSession()
+  );
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [currentOrgId, setCurrentOrgIdState] = useState<string | undefined>();
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [roles, setRoles] = useState<OrgRole[]>([]);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
-  const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({ name: 'Tenant Hub', logoUrl: '', contactPhone: '' });
+  const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({
+    name: 'Tenant Hub',
+    logoUrl: '',
+    contactPhone: '',
+  });
   const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
 
   const token = session?.token;
@@ -71,7 +86,10 @@ export function AppSessionProvider({ children }) {
         return;
       }
       try {
-        const me = await apiClient<{ user: MobileSession["user"]; memberships: Membership[] }>("/auth/me");
+        const me = await apiClient<{
+          user: MobileSession['user'];
+          memberships: Membership[];
+        }>('/auth/me');
         setMemberships(me.memberships);
         setCurrentOrgIdState((old) =>
           old && me.memberships.some((item) => item.organization.id === old)
@@ -81,7 +99,7 @@ export function AppSessionProvider({ children }) {
       } catch (e) {
         // 401 已在 apiClient 中处理（跳转登录页），其他错误显示提示
         if (e instanceof Error && !e.message.includes('登录已过期')) {
-          setNotice(e.message || "加载用户信息失败");
+          setNotice(e.message || '加载用户信息失败');
         }
       }
     },
@@ -98,16 +116,23 @@ export function AppSessionProvider({ children }) {
       }
       try {
         const [nextMembers, nextRoles, quotaOverview] = await Promise.all([
-          apiClient<OrgMember[]>(`/organizations/${organizationId}/members`, { organizationId }),
-          apiClient<OrgRole[]>(`/organizations/${organizationId}/roles`, { organizationId }),
-          apiClient<{ quotaLimitEnabled?: boolean }>(`/organizations/${organizationId}/subscription`, { organizationId }),
+          apiClient<OrgMember[]>(`/organizations/${organizationId}/members`, {
+            organizationId,
+          }),
+          apiClient<OrgRole[]>(`/organizations/${organizationId}/roles`, {
+            organizationId,
+          }),
+          apiClient<{ quotaLimitEnabled?: boolean }>(
+            `/organizations/${organizationId}/subscription`,
+            { organizationId }
+          ),
         ]);
         setMembers(nextMembers);
         setRoles(nextRoles);
         setQuotaLimitEnabled(quotaOverview.quotaLimitEnabled ?? false);
       } catch (e) {
         if (e instanceof Error && !e.message.includes('登录已过期')) {
-          setNotice(e.message || "加载组织数据失败");
+          setNotice(e.message || '加载组织数据失败');
         }
       }
     },
@@ -160,7 +185,7 @@ export function AppSessionProvider({ children }) {
 
   // 启动时：加载平台信息（无需登录）
   useEffect(() => {
-    apiClient<PlatformInfo>("/platform/info")
+    apiClient<PlatformInfo>('/platform/info')
       .then((info) => {
         if (info.name) {
           setPlatformInfo(info);
@@ -215,7 +240,22 @@ export function AppSessionProvider({ children }) {
       platformInfo,
       quotaLimitEnabled,
     }),
-    [session, memberships, currentMembership, currentOrgId, members, roles, notice, loading, platformInfo, quotaLimitEnabled, setCurrentOrgId, signIn, signOut, reload]
+    [
+      session,
+      memberships,
+      currentMembership,
+      currentOrgId,
+      members,
+      roles,
+      notice,
+      loading,
+      platformInfo,
+      quotaLimitEnabled,
+      setCurrentOrgId,
+      signIn,
+      signOut,
+      reload,
+    ]
   );
 
   return (
@@ -227,14 +267,15 @@ export function AppSessionProvider({ children }) {
 
 export function useAppSession() {
   const ctx = useContext(AppSessionContext);
-  if (!ctx) throw new Error("useAppSession must be used within AppSessionProvider");
+  if (!ctx)
+    throw new Error('useAppSession must be used within AppSessionProvider');
   return ctx;
 }
 
 export function useHasPermission(permission: string) {
   const { currentMembership } = useAppSession();
   return Boolean(
-    currentMembership?.role.permissions.includes("*") ||
+    currentMembership?.role.permissions.includes('*') ||
     currentMembership?.role.permissions.includes(permission)
   );
 }

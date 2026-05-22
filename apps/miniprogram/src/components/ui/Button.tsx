@@ -21,7 +21,7 @@ export function Button({
   disabled,
   loading,
   onClick,
-  className = ''
+  className = '',
 }: ButtonProps) {
   const baseClass = `btn btn--${variant} btn--${size}`;
   const stateClass = `${disabled ? ' btn--disabled' : ''}${loading ? ' btn--loading' : ''}`;

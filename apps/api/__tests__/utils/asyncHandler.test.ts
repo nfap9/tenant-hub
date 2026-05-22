@@ -1,9 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
-import { asyncHandler } from "../../src/utils/asyncHandler.js";
+import { describe, it, expect, vi } from 'vitest';
+import { asyncHandler } from '../../src/utils/asyncHandler.js';
 
-describe("asyncHandler", () => {
-  it("should pass resolved value and not call next on success", async () => {
-    const fn = vi.fn(async (_req, _res, _next) => "ok");
+describe('asyncHandler', () => {
+  it('should pass resolved value and not call next on success', async () => {
+    const fn = vi.fn(async (_req, _res, _next) => 'ok');
     const wrapped = asyncHandler(fn);
     const req = {} as any;
     const res = {} as any;
@@ -16,8 +16,8 @@ describe("asyncHandler", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("should call next with error when promise rejects", async () => {
-    const error = new Error("fail");
+  it('should call next with error when promise rejects', async () => {
+    const error = new Error('fail');
     const fn = vi.fn(async () => {
       throw error;
     });

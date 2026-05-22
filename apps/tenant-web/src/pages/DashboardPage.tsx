@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Row,
@@ -10,7 +10,7 @@ import {
   Space,
   Spin,
   message,
-} from "antd";
+} from 'antd';
 import {
   ApartmentOutlined,
   HomeOutlined,
@@ -24,32 +24,32 @@ import {
   EditOutlined,
   PlusOutlined,
   ExclamationCircleOutlined,
-} from "@ant-design/icons";
-import PageHeader from "@/components/ui/PageHeader";
-import StatCard from "@/components/ui/StatCard";
-import { useAppSession } from "@/context/AppSessionContext";
-import { getApartments } from "@/api/apartments";
-import { getRooms } from "@/api/rooms";
-import { getMonthlyBills, getBillsByStatus } from "@/api/bills";
+} from '@ant-design/icons';
+import PageHeader from '@/components/ui/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import { useAppSession } from '@/context/AppSessionContext';
+import { getApartments } from '@/api/apartments';
+import { getRooms } from '@/api/rooms';
+import { getMonthlyBills, getBillsByStatus } from '@/api/bills';
 import {
   compactMoney,
   isThisMonth,
   daysUntil,
   monthlyAmount,
-} from "@/utils/format";
-import type { Apartment, Room, Lease, MonthlyBill, Bill } from "@/types/domain";
+} from '@/utils/format';
+import type { Apartment, Room, Lease, MonthlyBill, Bill } from '@/types/domain';
 
 const leaseMonthlyIncome = (lease: Lease) => {
   const rent = monthlyAmount(lease.rentAmount, lease.cycle);
   const fees = (lease.fees ?? []).reduce(
     (sum, fee) => sum + monthlyAmount(fee.amount, lease.cycle),
-    0,
+    0
   );
   return rent + fees;
 };
 
 const isUnpaid = (bill: MonthlyBill) =>
-  bill.status !== "PAID" && bill.status !== "VOID";
+  bill.status !== 'PAID' && bill.status !== 'VOID';
 const isOverdue = (bill: MonthlyBill) =>
   isUnpaid(bill) &&
   bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
@@ -59,18 +59,18 @@ const todoToneMap: Record<
   { color: string; bg: string; icon: React.ReactNode }
 > = {
   red: {
-    color: "var(--th-danger)",
-    bg: "rgba(220, 38, 38, 0.08)",
+    color: 'var(--th-danger)',
+    bg: 'rgba(220, 38, 38, 0.08)',
     icon: <ExclamationCircleOutlined />,
   },
   orange: {
-    color: "#EA580C",
-    bg: "rgba(234, 88, 12, 0.08)",
+    color: '#EA580C',
+    bg: 'rgba(234, 88, 12, 0.08)',
     icon: <EditOutlined />,
   },
   green: {
-    color: "var(--th-success)",
-    bg: "rgba(34, 197, 94, 0.08)",
+    color: 'var(--th-success)',
+    bg: 'rgba(34, 197, 94, 0.08)',
     icon: <PlusOutlined />,
   },
 };
@@ -98,19 +98,19 @@ export default function DashboardPage() {
         getApartments(currentOrgId),
         getRooms(currentOrgId),
         getMonthlyBills(currentOrgId),
-        getBillsByStatus(currentOrgId, "FAILED"),
-        getBillsByStatus(currentOrgId, "BILLING"),
+        getBillsByStatus(currentOrgId, 'FAILED'),
+        getBillsByStatus(currentOrgId, 'BILLING'),
       ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
       setMonthlyBills(nextMonthlyBills);
       setReviewBills(
         [...failedBills, ...billingBills].filter(
-          (bill) => bill.mode === "POSTPAID",
-        ),
+          (bill) => bill.mode === 'POSTPAID'
+        )
       );
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "首页数据加载失败");
+      message.error(e instanceof Error ? e.message : '首页数据加载失败');
     } finally {
       setLoading(false);
     }
@@ -124,33 +124,33 @@ export default function DashboardPage() {
     () =>
       rooms
         .flatMap((room) => room.leases ?? [])
-        .filter((lease) => lease.status === "ACTIVE"),
-    [rooms],
+        .filter((lease) => lease.status === 'ACTIVE'),
+    [rooms]
   );
   const occupiedCount = rooms.filter(
-    (room) => room.status === "OCCUPIED",
+    (room) => room.status === 'OCCUPIED'
   ).length;
-  const vacantCount = rooms.filter((room) => room.status === "VACANT").length;
+  const vacantCount = rooms.filter((room) => room.status === 'VACANT').length;
   const occupancyRate = rooms.length
     ? Math.round((occupiedCount / rooms.length) * 100)
     : 0;
 
   const vacantLayoutStats = useMemo(() => {
     const layoutCounts = rooms
-      .filter((room) => room.status === "VACANT")
+      .filter((room) => room.status === 'VACANT')
       .reduce<Record<string, number>>((counts, room) => {
-        const layout = room.layout.trim() || "未配置";
+        const layout = room.layout.trim() || '未配置';
         counts[layout] = (counts[layout] ?? 0) + 1;
         return counts;
       }, {});
     return Object.entries(layoutCounts).sort(
-      (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+      (left, right) => right[1] - left[1] || left[0].localeCompare(right[0])
     );
   }, [rooms]);
 
   const monthlyIncome = activeLeases.reduce(
     (sum, lease) => sum + leaseMonthlyIncome(lease),
-    0,
+    0
   );
   const thisMonthExpense = apartments
     .flatMap((apartment) => apartment.expenses ?? [])
@@ -160,7 +160,7 @@ export default function DashboardPage() {
     .filter(isUnpaid)
     .reduce(
       (sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount),
-      0,
+      0
     );
   const paidThisMonth = monthlyBills
     .filter((bill) => isThisMonth(bill.billingDate))
@@ -174,48 +174,48 @@ export default function DashboardPage() {
   const todos = [
     overdueBills.length
       ? {
-          key: "overdue",
-          title: "逾期账单",
+          key: 'overdue',
+          title: '逾期账单',
           detail: `${overdueBills.length} 张账单已过应收日，剩余待收 ¥${compactMoney(
             overdueBills.reduce(
               (sum, bill) =>
                 sum + Number(bill.totalAmount) - Number(bill.paidAmount),
-              0,
-            ),
+              0
+            )
           )}`,
-          badge: "收款",
-          tone: "red" as const,
-          onClick: () => navigate("/bills"),
+          badge: '收款',
+          tone: 'red' as const,
+          onClick: () => navigate('/bills'),
         }
       : undefined,
     reviewBills.length
       ? {
-          key: "review",
-          title: "后付费出账处理",
+          key: 'review',
+          title: '后付费出账处理',
           detail: `${reviewBills.length} 张水电账单需要补读数或重新出账`,
-          badge: "出账",
-          tone: "orange" as const,
-          onClick: () => navigate("/bills"),
+          badge: '出账',
+          tone: 'orange' as const,
+          onClick: () => navigate('/bills'),
         }
       : undefined,
     expiringLeases.length
       ? {
-          key: "lease",
-          title: "租约即将到期",
+          key: 'lease',
+          title: '租约即将到期',
           detail: `${expiringLeases[0].lease.tenantName} ${expiringLeases[0].remainingDays} 天后到期，共 ${expiringLeases.length} 份需跟进`,
-          badge: "续租",
-          tone: "orange" as const,
-          onClick: () => navigate("/settings/leases"),
+          badge: '续租',
+          tone: 'orange' as const,
+          onClick: () => navigate('/settings/leases'),
         }
       : undefined,
     vacantCount
       ? {
-          key: "vacant",
-          title: "空房可出租",
+          key: 'vacant',
+          title: '空房可出租',
           detail: `${vacantCount} 间空房可继续签约，当前出租率 ${occupancyRate}%`,
-          badge: "招租",
-          tone: "green" as const,
-          onClick: () => navigate("/rooms"),
+          badge: '招租',
+          tone: 'green' as const,
+          onClick: () => navigate('/rooms'),
         }
       : undefined,
   ].filter(Boolean) as {
@@ -230,7 +230,7 @@ export default function DashboardPage() {
   return (
     <div className="page-content">
       <PageHeader
-        breadcrumb={[{ label: "首页" }]}
+        breadcrumb={[{ label: '首页' }]}
         actions={
           <>
             <Button
@@ -243,19 +243,19 @@ export default function DashboardPage() {
             <Button
               type="primary"
               icon={<WalletOutlined />}
-              onClick={() => navigate("/bills/payment")}
+              onClick={() => navigate('/bills/payment')}
             >
               登记收款
             </Button>
             <Button
               icon={<FileTextOutlined />}
-              onClick={() => navigate("/rooms")}
+              onClick={() => navigate('/rooms')}
             >
               签约入住
             </Button>
             <Button
               icon={<ThunderboltOutlined />}
-              onClick={() => navigate("/bills/reading")}
+              onClick={() => navigate('/bills/reading')}
             >
               抄表录入
             </Button>
@@ -269,16 +269,16 @@ export default function DashboardPage() {
           style={{
             marginBottom: 16,
             background:
-              "linear-gradient(135deg, #0F766E 0%, #14B8A6 60%, #5EEAD4 100%)",
-            color: "#fff",
-            borderRadius: "var(--th-radius-lg)",
-            border: "none",
+              'linear-gradient(135deg, #0F766E 0%, #14B8A6 60%, #5EEAD4 100%)',
+            color: '#fff',
+            borderRadius: 'var(--th-radius-lg)',
+            border: 'none',
           }}
-          bodyStyle={{ padding: "var(--th-space-6)" }}
+          bodyStyle={{ padding: 'var(--th-space-6)' }}
         >
           <div
             style={{
-              color: "rgba(255,255,255,0.85)",
+              color: 'rgba(255,255,255,0.85)',
               fontSize: 14,
               marginBottom: 4,
               fontWeight: 500,
@@ -291,8 +291,8 @@ export default function DashboardPage() {
               fontSize: 40,
               fontWeight: 700,
               marginBottom: 20,
-              color: "#fff",
-              fontFamily: "var(--th-font-heading)",
+              color: '#fff',
+              fontFamily: 'var(--th-font-heading)',
             }}
           >
             ¥{compactMoney(monthlyIncome)}
@@ -301,42 +301,42 @@ export default function DashboardPage() {
             <Col span={8}>
               <div
                 style={{
-                  color: "rgba(255,255,255,0.75)",
+                  color: 'rgba(255,255,255,0.75)',
                   fontSize: 12,
                   marginBottom: 4,
                 }}
               >
                 已收
               </div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: "#fff" }}>
+              <div style={{ fontSize: 20, fontWeight: 600, color: '#fff' }}>
                 ¥{compactMoney(paidThisMonth)}
               </div>
             </Col>
             <Col span={8}>
               <div
                 style={{
-                  color: "rgba(255,255,255,0.75)",
+                  color: 'rgba(255,255,255,0.75)',
                   fontSize: 12,
                   marginBottom: 4,
                 }}
               >
                 待收
               </div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: "#fff" }}>
+              <div style={{ fontSize: 20, fontWeight: 600, color: '#fff' }}>
                 ¥{compactMoney(unpaidTotal)}
               </div>
             </Col>
             <Col span={8}>
               <div
                 style={{
-                  color: "rgba(255,255,255,0.75)",
+                  color: 'rgba(255,255,255,0.75)',
                   fontSize: 12,
                   marginBottom: 4,
                 }}
               >
                 支出
               </div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: "#fff" }}>
+              <div style={{ fontSize: 20, fontWeight: 600, color: '#fff' }}>
                 ¥{compactMoney(thisMonthExpense)}
               </div>
             </Col>
@@ -385,42 +385,42 @@ export default function DashboardPage() {
             <Card
               title={
                 <span
-                  style={{ fontWeight: 600, color: "var(--th-foreground)" }}
+                  style={{ fontWeight: 600, color: 'var(--th-foreground)' }}
                 >
                   出租情况
                 </span>
               }
               style={{
-                borderRadius: "var(--th-radius-lg)",
-                boxShadow: "var(--th-shadow)",
+                borderRadius: 'var(--th-radius-lg)',
+                boxShadow: 'var(--th-shadow)',
               }}
             >
               <Row gutter={16}>
-                <Col span={12} style={{ textAlign: "center" }}>
+                <Col span={12} style={{ textAlign: 'center' }}>
                   <div
                     style={{
                       fontSize: 32,
                       fontWeight: 700,
-                      color: "var(--th-success)",
+                      color: 'var(--th-success)',
                     }}
                   >
                     {vacantCount}
                   </div>
-                  <div style={{ color: "var(--th-foreground-muted)" }}>
+                  <div style={{ color: 'var(--th-foreground-muted)' }}>
                     空闲房间
                   </div>
                 </Col>
-                <Col span={12} style={{ textAlign: "center" }}>
+                <Col span={12} style={{ textAlign: 'center' }}>
                   <div
                     style={{
                       fontSize: 32,
                       fontWeight: 700,
-                      color: "var(--th-primary)",
+                      color: 'var(--th-primary)',
                     }}
                   >
                     {occupiedCount}
                   </div>
-                  <div style={{ color: "var(--th-foreground-muted)" }}>
+                  <div style={{ color: 'var(--th-foreground-muted)' }}>
                     已租房间
                   </div>
                 </Col>
@@ -428,14 +428,14 @@ export default function DashboardPage() {
               <div style={{ marginTop: 20 }}>
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     marginBottom: 8,
                   }}
                 >
                   <span
                     style={{
-                      color: "var(--th-foreground-muted)",
+                      color: 'var(--th-foreground-muted)',
                       fontSize: 13,
                     }}
                   >
@@ -443,7 +443,7 @@ export default function DashboardPage() {
                   </span>
                   <span
                     style={{
-                      color: "var(--th-primary)",
+                      color: 'var(--th-primary)',
                       fontWeight: 700,
                       fontSize: 16,
                     }}
@@ -464,7 +464,7 @@ export default function DashboardPage() {
                   <div
                     style={{
                       marginBottom: 8,
-                      color: "var(--th-foreground-muted)",
+                      color: 'var(--th-foreground-muted)',
                       fontSize: 13,
                       fontWeight: 500,
                     }}
@@ -492,42 +492,42 @@ export default function DashboardPage() {
             <Card
               title={
                 <span
-                  style={{ fontWeight: 600, color: "var(--th-foreground)" }}
+                  style={{ fontWeight: 600, color: 'var(--th-foreground)' }}
                 >
-                  待办事项 {todos.length > 0 ? `(${todos.length} 项)` : ""}
+                  待办事项 {todos.length > 0 ? `(${todos.length} 项)` : ''}
                 </span>
               }
               style={{
-                borderRadius: "var(--th-radius-lg)",
-                boxShadow: "var(--th-shadow)",
+                borderRadius: 'var(--th-radius-lg)',
+                boxShadow: 'var(--th-shadow)',
               }}
             >
               {todos.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                <div style={{ textAlign: 'center', padding: '48px 0' }}>
                   <CheckCircleOutlined
                     style={{
                       fontSize: 48,
-                      color: "var(--th-success)",
+                      color: 'var(--th-success)',
                       marginBottom: 16,
                     }}
                   />
                   <div
                     style={{
                       fontWeight: 600,
-                      color: "var(--th-foreground)",
+                      color: 'var(--th-foreground)',
                       marginBottom: 4,
                     }}
                   >
                     暂无紧急待办
                   </div>
-                  <div style={{ color: "var(--th-foreground-muted)" }}>
+                  <div style={{ color: 'var(--th-foreground-muted)' }}>
                     经营状态稳定
                   </div>
                 </div>
               ) : (
                 <Space
                   direction="vertical"
-                  style={{ width: "100%" }}
+                  style={{ width: '100%' }}
                   size="middle"
                 >
                   {todos.map((todo) => {
@@ -537,40 +537,40 @@ export default function DashboardPage() {
                         key={todo.key}
                         size="small"
                         style={{
-                          cursor: "pointer",
-                          width: "100%",
-                          borderRadius: "var(--th-radius-lg)",
+                          cursor: 'pointer',
+                          width: '100%',
+                          borderRadius: 'var(--th-radius-lg)',
                           borderLeft: `4px solid ${tone.color}`,
                           transition:
-                            "transform 0.2s ease, box-shadow 0.2s ease",
+                            'transform 0.2s ease, box-shadow 0.2s ease',
                         }}
                         bodyStyle={{ padding: 16 }}
                         onClick={todo.onClick}
                         onMouseEnter={(e) => {
                           (e.currentTarget as HTMLElement).style.transform =
-                            "translateY(-2px)";
+                            'translateY(-2px)';
                           (e.currentTarget as HTMLElement).style.boxShadow =
-                            "0 4px 12px rgba(0,0,0,0.08)";
+                            '0 4px 12px rgba(0,0,0,0.08)';
                         }}
                         onMouseLeave={(e) => {
                           (e.currentTarget as HTMLElement).style.transform =
-                            "translateY(0)";
+                            'translateY(0)';
                           (e.currentTarget as HTMLElement).style.boxShadow =
-                            "none";
+                            'none';
                         }}
                       >
                         <div
                           style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
                             gap: 12,
                           }}
                         >
                           <div
                             style={{
-                              display: "flex",
-                              alignItems: "center",
+                              display: 'flex',
+                              alignItems: 'center',
                               gap: 12,
                               flex: 1,
                               minWidth: 0,
@@ -583,9 +583,9 @@ export default function DashboardPage() {
                                 borderRadius: 10,
                                 background: tone.bg,
                                 color: tone.color,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
                                 fontSize: 16,
                                 flexShrink: 0,
                               }}
@@ -596,7 +596,7 @@ export default function DashboardPage() {
                               <div
                                 style={{
                                   fontWeight: 600,
-                                  color: "var(--th-foreground)",
+                                  color: 'var(--th-foreground)',
                                   marginBottom: 2,
                                 }}
                               >
@@ -604,7 +604,7 @@ export default function DashboardPage() {
                               </div>
                               <div
                                 style={{
-                                  color: "var(--th-foreground-muted)",
+                                  color: 'var(--th-foreground-muted)',
                                   fontSize: 13,
                                 }}
                               >
@@ -620,7 +620,7 @@ export default function DashboardPage() {
                               {todo.badge}
                             </Tag>
                             <RightOutlined
-                              style={{ color: "var(--th-foreground-muted)" }}
+                              style={{ color: 'var(--th-foreground-muted)' }}
                             />
                           </Space>
                         </div>

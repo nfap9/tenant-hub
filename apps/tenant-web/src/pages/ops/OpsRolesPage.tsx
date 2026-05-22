@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   Button,
   Card,
@@ -11,26 +11,38 @@ import {
   Table,
   Tag,
   message,
-} from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from "@ant-design/icons";
-import { getAdminRoles, createAdminRole, updateAdminRole, deleteAdminRole } from "@/api/admin";
-import PageHeader from "@/components/ui/PageHeader";
+} from 'antd';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SafetyOutlined,
+} from '@ant-design/icons';
+import {
+  getAdminRoles,
+  createAdminRole,
+  updateAdminRole,
+  deleteAdminRole,
+} from '@/api/admin';
+import PageHeader from '@/components/ui/PageHeader';
 
 const permissionOptions = [
-  { code: "*", name: "全部权限" },
-  { code: "apartment:view", name: "查看公寓" },
-  { code: "apartment:manage", name: "管理公寓" },
-  { code: "room:view", name: "查看房间" },
-  { code: "room:manage", name: "管理房间" },
-  { code: "lease:view", name: "查看租约" },
-  { code: "lease:manage", name: "管理租约" },
-  { code: "bill:view", name: "查看账单" },
-  { code: "bill:manage", name: "管理账单" },
-  { code: "org:manage", name: "管理组织信息" },
-  { code: "member:manage", name: "管理组织成员" },
+  { code: '*', name: '全部权限' },
+  { code: 'apartment:view', name: '查看公寓' },
+  { code: 'apartment:manage', name: '管理公寓' },
+  { code: 'room:view', name: '查看房间' },
+  { code: 'room:manage', name: '管理房间' },
+  { code: 'lease:view', name: '查看租约' },
+  { code: 'lease:manage', name: '管理租约' },
+  { code: 'bill:view', name: '查看账单' },
+  { code: 'bill:manage', name: '管理账单' },
+  { code: 'org:manage', name: '管理组织信息' },
+  { code: 'member:manage', name: '管理组织成员' },
 ];
 
-const permissionNameMap = new Map(permissionOptions.map((item) => [item.code, item.name]));
+const permissionNameMap = new Map(
+  permissionOptions.map((item) => [item.code, item.name])
+);
 
 interface RoleItem {
   id: string;
@@ -63,10 +75,10 @@ export default function OpsRolesPage() {
   const handleDelete = async (row: RoleItem) => {
     try {
       await deleteAdminRole(row.id);
-      message.success("角色已删除");
+      message.success('角色已删除');
       load();
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "删除失败");
+      message.error(e instanceof Error ? e.message : '删除失败');
     }
   };
 
@@ -75,30 +87,30 @@ export default function OpsRolesPage() {
     const payload = {
       code: String(values.code),
       name: String(values.name),
-      description: String(values.description || ""),
+      description: String(values.description || ''),
       permissions,
     };
     try {
       if (editingRole) {
         await updateAdminRole(editingRole.id, payload);
-        message.success("角色已更新");
+        message.success('角色已更新');
       } else {
         await createAdminRole(payload);
-        message.success("角色已新增");
+        message.success('角色已新增');
       }
       setModalOpen(false);
       setEditingRole(undefined);
       form.resetFields();
       load();
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "保存失败");
+      message.error(e instanceof Error ? e.message : '保存失败');
     }
   };
 
   const openCreate = () => {
     setEditingRole(undefined);
     form.setFieldsValue({
-      permissions: ["apartment:view", "room:view", "lease:view", "bill:view"],
+      permissions: ['apartment:view', 'room:view', 'lease:view', 'bill:view'],
     });
     setModalOpen(true);
   };
@@ -115,9 +127,14 @@ export default function OpsRolesPage() {
   return (
     <div className="page-content">
       <PageHeader
-        breadcrumb={[{ label: "运营端" }, { label: "角色权限" }]}
+        breadcrumb={[{ label: '运营端' }, { label: '角色权限' }]}
         actions={
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} size="large">
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={openCreate}
+            size="large"
+          >
             新增角色
           </Button>
         }
@@ -125,8 +142,8 @@ export default function OpsRolesPage() {
 
       <Card
         style={{
-          borderRadius: "var(--th-radius-lg)",
-          boxShadow: "var(--th-shadow)",
+          borderRadius: 'var(--th-radius-lg)',
+          boxShadow: 'var(--th-shadow)',
         }}
       >
         <Table
@@ -134,27 +151,28 @@ export default function OpsRolesPage() {
           loading={loading}
           dataSource={roles}
           pagination={{ pageSize: 10 }}
-          scroll={{ x: "max-content" }}
+          scroll={{ x: 'max-content' }}
           columns={[
-            { title: "名称", dataIndex: "name", ellipsis: true },
-            { title: "编码", dataIndex: "code" },
+            { title: '名称', dataIndex: 'name', ellipsis: true },
+            { title: '编码', dataIndex: 'code' },
             {
-              title: "系统预置",
-              dataIndex: "system",
-              render: (v: boolean) => (v ? <Tag color="warning">是</Tag> : <Tag>否</Tag>),
+              title: '系统预置',
+              dataIndex: 'system',
+              render: (v: boolean) =>
+                v ? <Tag color="warning">是</Tag> : <Tag>否</Tag>,
             },
             {
-              title: "权限",
-              dataIndex: "permissions",
+              title: '权限',
+              dataIndex: 'permissions',
               render: (items: string[]) =>
                 items?.map((item) => (
-                  <Tag key={item} color={item === "*" ? "warning" : "default"}>
+                  <Tag key={item} color={item === '*' ? 'warning' : 'default'}>
                     {permissionNameMap.get(item) ?? item}
                   </Tag>
                 )),
             },
             {
-              title: "操作",
+              title: '操作',
               render: (_: unknown, row: RoleItem) => (
                 <Space>
                   <Button
@@ -166,13 +184,20 @@ export default function OpsRolesPage() {
                   </Button>
                   <Popconfirm
                     title="确认删除角色？"
-                    description={row.system ? "系统预置角色不可删除" : "删除后不可恢复"}
+                    description={
+                      row.system ? '系统预置角色不可删除' : '删除后不可恢复'
+                    }
                     okText="删除"
                     cancelText="取消"
                     disabled={row.system}
                     onConfirm={() => handleDelete(row)}
                   >
-                    <Button type="link" danger disabled={row.system} icon={<DeleteOutlined />}>
+                    <Button
+                      type="link"
+                      danger
+                      disabled={row.system}
+                      icon={<DeleteOutlined />}
+                    >
                       删除
                     </Button>
                   </Popconfirm>
@@ -186,9 +211,9 @@ export default function OpsRolesPage() {
       <Modal
         open={modalOpen}
         title={
-          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
             <SafetyOutlined style={{ marginRight: 8 }} />
-            {editingRole ? "编辑角色" : "新增角色"}
+            {editingRole ? '编辑角色' : '新增角色'}
           </span>
         }
         footer={null}
@@ -199,13 +224,17 @@ export default function OpsRolesPage() {
         }}
       >
         <Form
-          key={editingRole?.id ?? "new-role"}
+          key={editingRole?.id ?? 'new-role'}
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
         >
           <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
-            <Input size="large" placeholder="请输入角色名称" style={{ borderRadius: "var(--th-radius)" }} />
+            <Input
+              size="large"
+              placeholder="请输入角色名称"
+              style={{ borderRadius: 'var(--th-radius)' }}
+            />
           </Form.Item>
           <Form.Item
             name="code"
@@ -217,19 +246,27 @@ export default function OpsRolesPage() {
               size="large"
               disabled={editingRole?.system}
               placeholder="例如：manager"
-              style={{ borderRadius: "var(--th-radius)" }}
+              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={2} placeholder="角色描述（可选）" style={{ borderRadius: "var(--th-radius)" }} />
+            <Input.TextArea
+              rows={2}
+              placeholder="角色描述（可选）"
+              style={{ borderRadius: 'var(--th-radius)' }}
+            />
           </Form.Item>
           <Form.Item
             name="permissions"
             label="权限码"
-            rules={[{ required: true, message: "请选择权限码" }]}
+            rules={[{ required: true, message: '请选择权限码' }]}
           >
             <Checkbox.Group
-              style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 8,
+              }}
             >
               {permissionOptions.map((item) => (
                 <Checkbox
@@ -237,13 +274,24 @@ export default function OpsRolesPage() {
                   value={item.code}
                   style={{
                     padding: 8,
-                    border: "1px solid var(--th-border-light)",
-                    borderRadius: "var(--th-radius-sm)",
-                    background: "var(--th-bg)",
+                    border: '1px solid var(--th-border-light)',
+                    borderRadius: 'var(--th-radius-sm)',
+                    background: 'var(--th-bg)',
                   }}
                 >
-                  <div style={{ color: "var(--th-foreground)", fontWeight: 500 }}>{item.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--th-foreground-muted)" }}>{item.code}</div>
+                  <div
+                    style={{ color: 'var(--th-foreground)', fontWeight: 500 }}
+                  >
+                    {item.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--th-foreground-muted)',
+                    }}
+                  >
+                    {item.code}
+                  </div>
                 </Checkbox>
               ))}
             </Checkbox.Group>

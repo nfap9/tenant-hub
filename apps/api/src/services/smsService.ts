@@ -1,6 +1,6 @@
 export interface SmsConfig {
   url: string;
-  method: "GET" | "POST" | "PUT";
+  method: 'GET' | 'POST' | 'PUT';
   headers?: Record<string, string>;
   params?: Record<string, string>;
 }
@@ -22,13 +22,13 @@ function replaceVars(template: string, vars: Record<string, string>): string {
 }
 
 export async function sendSms(options: SendSmsOptions): Promise<void> {
-  const { targets, code, name = "TenantHub", number = 5, config } = options;
+  const { targets, code, name = 'TenantHub', number = 5, config } = options;
 
   if (!config.url) {
-    throw new Error("短信服务 URL 未配置");
+    throw new Error('短信服务 URL 未配置');
   }
 
-  const phoneList = Array.isArray(targets) ? targets.join(",") : targets;
+  const phoneList = Array.isArray(targets) ? targets.join(',') : targets;
   const vars = { code, targets: phoneList, name, number: String(number) };
 
   let url = replaceVars(config.url, vars);
@@ -48,24 +48,24 @@ export async function sendSms(options: SendSmsOptions): Promise<void> {
   }
 
   let body: string | undefined;
-  if (config.method === "GET") {
+  if (config.method === 'GET') {
     const query = new URLSearchParams(params).toString();
     if (query) {
-      url += (url.includes("?") ? "&" : "?") + query;
+      url += (url.includes('?') ? '&' : '?') + query;
     }
   } else {
     body = JSON.stringify(params);
-    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   }
 
   const res = await fetch(url, {
     method: config.method,
     headers,
-    body
+    body,
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    const text = await res.text().catch(() => '');
     throw new Error(`短信发送失败: ${res.status} ${text}`);
   }
 }

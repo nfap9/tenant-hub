@@ -18,7 +18,7 @@ export function Input({
   label,
   type = 'text',
   password,
-  error
+  error,
 }: InputProps) {
   return (
     <View className={`input-wrapper ${error ? 'input-wrapper--error' : ''}`}>

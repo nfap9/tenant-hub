@@ -1,22 +1,37 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { Card, Form, Input, InputNumber, Select, Button, message, Spin } from "antd";
-import { SaveOutlined, HomeOutlined, BuildOutlined, NumberOutlined, AppstoreOutlined } from "@ant-design/icons";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { useAppSession, useHasPermission } from "@/context/AppSessionContext";
-import { getApartments } from "@/api/apartments";
-import { createRoom, updateRoom } from "@/api/rooms";
-import type { Apartment, Room } from "@/types/domain";
-import { optionalNumber, toFacilityArray } from "@/utils/format";
-import { emptyRoomForm, roomStatuses, statusLabels } from "./constants";
-import { roomLayoutOptions } from "@/pages/apartments/constants";
-import PageHeader from "@/components/ui/PageHeader";
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  Card,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Button,
+  message,
+  Spin,
+} from 'antd';
+import {
+  SaveOutlined,
+  HomeOutlined,
+  BuildOutlined,
+  NumberOutlined,
+  AppstoreOutlined,
+} from '@ant-design/icons';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
+import { getApartments } from '@/api/apartments';
+import { createRoom, updateRoom } from '@/api/rooms';
+import type { Apartment, Room } from '@/types/domain';
+import { optionalNumber, toFacilityArray } from '@/utils/format';
+import { emptyRoomForm, roomStatuses, statusLabels } from './constants';
+import { roomLayoutOptions } from '@/pages/apartments/constants';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function RoomFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentOrgId } = useAppSession();
-  const canManageRoom = useHasPermission("room:manage");
+  const canManageRoom = useHasPermission('room:manage');
   const isEdit = Boolean(id);
   const [form] = Form.useForm();
 
@@ -26,7 +41,7 @@ export default function RoomFormPage() {
   const [saving, setSaving] = useState(false);
   const initializedRef = useRef(false);
 
-  const urlApartmentId = searchParams.get("apartmentId");
+  const urlApartmentId = searchParams.get('apartmentId');
 
   useEffect(() => {
     if (!currentOrgId) return;
@@ -53,7 +68,7 @@ export default function RoomFormPage() {
         roomNo: editingRoom.roomNo,
         layout: editingRoom.layout,
         area: editingRoom.area ? Number(editingRoom.area) : undefined,
-        facilities: editingRoom.facilities?.join(",") ?? "",
+        facilities: editingRoom.facilities?.join(',') ?? '',
         status: editingRoom.status,
       });
       initializedRef.current = true;
@@ -69,8 +84,14 @@ export default function RoomFormPage() {
 
   const handleSubmit = async (values: Record<string, unknown>) => {
     if (!currentOrgId) return;
-    if (!canManageRoom) { message.warning("当前角色没有管理房间权限"); return; }
-    if (!values.roomNo || !values.layout) { message.warning("请填写房间号和户型"); return; }
+    if (!canManageRoom) {
+      message.warning('当前角色没有管理房间权限');
+      return;
+    }
+    if (!values.roomNo || !values.layout) {
+      message.warning('请填写房间号和户型');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -82,26 +103,35 @@ export default function RoomFormPage() {
           facilities: toFacilityArray(String(values.facilities)),
           status: String(values.status),
         });
-        message.success("房间信息已更新");
-        navigate("/rooms");
+        message.success('房间信息已更新');
+        navigate('/rooms');
       } else {
         const apartmentId = String(values.apartmentId);
-        if (!apartmentId) { message.warning("请选择所属公寓"); return; }
+        if (!apartmentId) {
+          message.warning('请选择所属公寓');
+          return;
+        }
         await createRoom(currentOrgId, apartmentId, {
           roomNo: String(values.roomNo).trim(),
           layout: String(values.layout).trim(),
           area: optionalNumber(values.area),
           facilities: toFacilityArray(String(values.facilities)),
         });
-        message.success("房间已添加");
+        message.success('房间已添加');
         if (urlApartmentId) {
           navigate(`/apartments/${urlApartmentId}`);
         } else {
-          navigate("/rooms");
+          navigate('/rooms');
         }
       }
     } catch (e) {
-      message.error(e instanceof Error ? e.message : (isEdit ? "更新房间失败" : "添加房间失败"));
+      message.error(
+        e instanceof Error
+          ? e.message
+          : isEdit
+            ? '更新房间失败'
+            : '添加房间失败'
+      );
     } finally {
       setSaving(false);
     }
@@ -110,10 +140,16 @@ export default function RoomFormPage() {
   return (
     <div className="page-content">
       <PageHeader
-        back={isEdit ? "/rooms" : urlApartmentId ? `/apartments/${urlApartmentId}` : "/rooms"}
+        back={
+          isEdit
+            ? '/rooms'
+            : urlApartmentId
+              ? `/apartments/${urlApartmentId}`
+              : '/rooms'
+        }
         breadcrumb={[
-          { label: "房间管理", path: "/rooms" },
-          { label: isEdit ? "编辑房间" : "新增房间" },
+          { label: '房间管理', path: '/rooms' },
+          { label: isEdit ? '编辑房间' : '新增房间' },
         ]}
       />
 
@@ -121,28 +157,55 @@ export default function RoomFormPage() {
         <div style={{ maxWidth: 640 }}>
           <Card>
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
-              <Form.Item label="所属公寓" name="apartmentId" rules={[{ required: !isEdit, message: "请选择公寓" }]}>
+              <Form.Item
+                label="所属公寓"
+                name="apartmentId"
+                rules={[{ required: !isEdit, message: '请选择公寓' }]}
+              >
                 <Select
                   placeholder="请选择公寓"
                   disabled={isEdit}
-                  options={apartments.map((a) => ({ label: a.name, value: a.id }))}
+                  options={apartments.map((a) => ({
+                    label: a.name,
+                    value: a.id,
+                  }))}
                   size="large"
                   prefix={<HomeOutlined />}
                 />
               </Form.Item>
-              <Form.Item label="房号" name="roomNo" rules={[{ required: true, message: "请输入房号" }]}>
-                <Input placeholder="例如 301" size="large" prefix={<NumberOutlined />} />
+              <Form.Item
+                label="房号"
+                name="roomNo"
+                rules={[{ required: true, message: '请输入房号' }]}
+              >
+                <Input
+                  placeholder="例如 301"
+                  size="large"
+                  prefix={<NumberOutlined />}
+                />
               </Form.Item>
-              <Form.Item label="户型" name="layout" rules={[{ required: true, message: "请选择户型" }]}>
+              <Form.Item
+                label="户型"
+                name="layout"
+                rules={[{ required: true, message: '请选择户型' }]}
+              >
                 <Select
                   placeholder="请选择户型"
-                  options={roomLayoutOptions.map((l) => ({ label: l, value: l }))}
+                  options={roomLayoutOptions.map((l) => ({
+                    label: l,
+                    value: l,
+                  }))}
                   size="large"
                   prefix={<BuildOutlined />}
                 />
               </Form.Item>
               <Form.Item label="面积（㎡）" name="area">
-                <InputNumber min={0} style={{ width: "100%" }} size="large" placeholder="请输入面积" />
+                <InputNumber
+                  min={0}
+                  style={{ width: '100%' }}
+                  size="large"
+                  placeholder="请输入面积"
+                />
               </Form.Item>
               <Form.Item label="设施" name="facilities">
                 <Input
@@ -152,21 +215,43 @@ export default function RoomFormPage() {
                 />
               </Form.Item>
               {isEdit && (
-                <Form.Item label="状态" name="status" rules={[{ required: true }]}>
+                <Form.Item
+                  label="状态"
+                  name="status"
+                  rules={[{ required: true }]}
+                >
                   <Select
-                    options={roomStatuses.map((s) => ({ label: statusLabels[s], value: s }))}
+                    options={roomStatuses.map((s) => ({
+                      label: statusLabels[s],
+                      value: s,
+                    }))}
                     size="large"
                   />
                 </Form.Item>
               )}
               <Form.Item style={{ marginTop: 24 }}>
-                <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving} size="large">
-                  {isEdit ? "保存修改" : "保存房间"}
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<SaveOutlined />}
+                  loading={saving}
+                  disabled={saving}
+                  size="large"
+                >
+                  {isEdit ? '保存修改' : '保存房间'}
                 </Button>
                 <Button
                   size="large"
                   style={{ marginLeft: 12 }}
-                  onClick={() => navigate(isEdit ? "/rooms" : urlApartmentId ? `/apartments/${urlApartmentId}` : "/rooms")}
+                  onClick={() =>
+                    navigate(
+                      isEdit
+                        ? '/rooms'
+                        : urlApartmentId
+                          ? `/apartments/${urlApartmentId}`
+                          : '/rooms'
+                    )
+                  }
                 >
                   取消
                 </Button>

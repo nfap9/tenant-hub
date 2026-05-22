@@ -11,7 +11,7 @@ export function compactMoney(value: unknown): string {
 }
 
 export function day(value: string | undefined): string {
-  if (!value) return "";
+  if (!value) return '';
   return value.slice(0, 10);
 }
 
@@ -39,9 +39,9 @@ export function daysUntil(value: string | undefined): number {
 export function monthlyAmount(value: unknown, cycle: string): number {
   const n = Number(value || 0);
   switch (cycle) {
-    case "QUARTERLY":
+    case 'QUARTERLY':
       return n / 3;
-    case "YEARLY":
+    case 'YEARLY':
       return n / 12;
     default:
       return n;
@@ -49,28 +49,31 @@ export function monthlyAmount(value: unknown, cycle: string): number {
 }
 
 export function numberValue(value: unknown): number {
-  if (value === "" || value === null || value === undefined) return 0;
+  if (value === '' || value === null || value === undefined) return 0;
   const n = Number(value);
   return Number.isNaN(n) ? 0 : n;
 }
 
 export function optionalNumber(value: unknown): number | undefined {
-  if (value === "" || value === null || value === undefined) return undefined;
+  if (value === '' || value === null || value === undefined) return undefined;
   const n = Number(value);
   return Number.isNaN(n) ? undefined : n;
 }
 
 export function optionalText(value: unknown): string | undefined {
-  if (value === "" || value === null || value === undefined) return undefined;
+  if (value === '' || value === null || value === undefined) return undefined;
   return String(value);
 }
 
 export function toFacilityArray(value: string | undefined): string[] {
   if (!value) return [];
-  return value.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+  return value
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 export function facilitiesText(facilities?: string[]): string {
-  if (!facilities || facilities.length === 0) return "-";
-  return facilities.join("、");
+  if (!facilities || facilities.length === 0) return '-';
+  return facilities.join('、');
 }

@@ -8,21 +8,33 @@ import './index.scss';
 
 export default function AccountPage() {
   const { session } = useAppSession();
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const changePassword = async () => {
-    if (!newPassword || !oldPassword) return Taro.showToast({ title: "请填写完整", icon: "none" });
-    if (newPassword !== confirmPassword) return Taro.showToast({ title: "两次密码不一致", icon: "none" });
+    if (!newPassword || !oldPassword)
+      return Taro.showToast({ title: '请填写完整', icon: 'none' });
+    if (newPassword !== confirmPassword)
+      return Taro.showToast({ title: '两次密码不一致', icon: 'none' });
     try {
-      await apiClient("/auth/password", { method: "PUT", body: { currentPassword: oldPassword, newPassword, confirmPassword: newPassword } });
-      Taro.showToast({ title: "密码已修改", icon: "success" });
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      await apiClient('/auth/password', {
+        method: 'PUT',
+        body: {
+          currentPassword: oldPassword,
+          newPassword,
+          confirmPassword: newPassword,
+        },
+      });
+      Taro.showToast({ title: '密码已修改', icon: 'success' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "修改失败", icon: "none" });
+      Taro.showToast({
+        title: e instanceof Error ? e.message : '修改失败',
+        icon: 'none',
+      });
     }
   };
 
@@ -40,9 +52,27 @@ export default function AccountPage() {
       </Card>
 
       <Card title="修改密码">
-        <Input label="当前密码" placeholder="请输入当前密码" password value={oldPassword} onChange={setOldPassword} />
-        <Input label="新密码" placeholder="请输入新密码" password value={newPassword} onChange={setNewPassword} />
-        <Input label="确认新密码" placeholder="再次输入新密码" password value={confirmPassword} onChange={setConfirmPassword} />
+        <Input
+          label="当前密码"
+          placeholder="请输入当前密码"
+          password
+          value={oldPassword}
+          onChange={setOldPassword}
+        />
+        <Input
+          label="新密码"
+          placeholder="请输入新密码"
+          password
+          value={newPassword}
+          onChange={setNewPassword}
+        />
+        <Input
+          label="确认新密码"
+          placeholder="再次输入新密码"
+          password
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+        />
         <Button onClick={changePassword}>确认修改</Button>
       </Card>
     </View>

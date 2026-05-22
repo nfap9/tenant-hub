@@ -1,4 +1,4 @@
-@use "../../theme/tokens.scss";
+@use '../../theme/tokens.scss';
 
 .page-container {
   background: #f7faf8;
@@ -175,7 +175,7 @@
 }
 
 .settings-link::after {
-  content: "›";
+  content: '›';
   position: absolute;
   right: 0;
   top: 50%;

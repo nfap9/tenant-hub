@@ -49,7 +49,11 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const { count: countdown, running: otpBusy, start: startCountdown } = useCountdown();
+  const {
+    count: countdown,
+    running: otpBusy,
+    start: startCountdown,
+  } = useCountdown();
 
   const isRegister = authMode === 'register';
 
@@ -62,7 +66,10 @@ export default function LoginPage() {
     try {
       await apiClient('/auth/otp', {
         method: 'POST',
-        body: { phone: phone.trim(), purpose: isRegister ? 'REGISTER' : 'LOGIN' }
+        body: {
+          phone: phone.trim(),
+          purpose: isRegister ? 'REGISTER' : 'LOGIN',
+        },
       });
       showToast('验证码已发送，请查看短信', 'success');
       startCountdown(60);
@@ -104,15 +111,21 @@ export default function LoginPage() {
           : '/auth/login/otp';
 
       const body = isRegister
-        ? { phone: phone.trim(), username: username.trim(), password, confirmPassword, code }
+        ? {
+            phone: phone.trim(),
+            username: username.trim(),
+            password,
+            confirmPassword,
+            code,
+          }
         : mode === 'password'
           ? { phone: phone.trim(), password }
           : { phone: phone.trim(), code };
 
-      const result = await apiClient<{ token: string; user: { id: string; username: string; phone: string } }>(
-        path,
-        { method: 'POST', body }
-      );
+      const result = await apiClient<{
+        token: string;
+        user: { id: string; username: string; phone: string };
+      }>(path, { method: 'POST', body });
 
       await signIn(result);
       showToast(isRegister ? '注册成功' : '登录成功', 'success');
@@ -138,13 +151,21 @@ export default function LoginPage() {
       <View className="login-hero">
         <Text className="login-hero__brand">{platformInfo.name}</Text>
         <Text className="login-hero__subtitle">
-          {isRegister ? '注册后即可开始管理你的公寓' : '给二房东和小型物业公司的移动经营台'}
+          {isRegister
+            ? '注册后即可开始管理你的公寓'
+            : '给二房东和小型物业公司的移动经营台'}
         </Text>
       </View>
 
       <Card variant="warm">
-        <Text className="login-card__title">{isRegister ? '注册账号' : '欢迎回来'}</Text>
-        <Text className="login-card__subtitle">{isRegister ? '手机号验证后即可创建账号' : '使用手机号登录你的公寓经营工作台'}</Text>
+        <Text className="login-card__title">
+          {isRegister ? '注册账号' : '欢迎回来'}
+        </Text>
+        <Text className="login-card__subtitle">
+          {isRegister
+            ? '手机号验证后即可创建账号'
+            : '使用手机号登录你的公寓经营工作台'}
+        </Text>
 
         {!isRegister && (
           <View className="login-segment">
@@ -152,13 +173,21 @@ export default function LoginPage() {
               className={`login-segment__item ${mode === 'code' ? 'login-segment__item--active' : ''}`}
               onClick={() => setMode('code')}
             >
-              <Text className={`login-segment__text ${mode === 'code' ? 'login-segment__text--active' : ''}`}>验证码登录</Text>
+              <Text
+                className={`login-segment__text ${mode === 'code' ? 'login-segment__text--active' : ''}`}
+              >
+                验证码登录
+              </Text>
             </View>
             <View
               className={`login-segment__item ${mode === 'password' ? 'login-segment__item--active' : ''}`}
               onClick={() => setMode('password')}
             >
-              <Text className={`login-segment__text ${mode === 'password' ? 'login-segment__text--active' : ''}`}>密码登录</Text>
+              <Text
+                className={`login-segment__text ${mode === 'password' ? 'login-segment__text--active' : ''}`}
+              >
+                密码登录
+              </Text>
             </View>
           </View>
         )}
@@ -218,7 +247,11 @@ export default function LoginPage() {
                   disabled={otpBusy || busy || countdown > 0}
                   onClick={sendOtp}
                 >
-                  {countdown > 0 ? `${countdown}s 后重试` : otpBusy ? '发送中' : '获取验证码'}
+                  {countdown > 0
+                    ? `${countdown}s 后重试`
+                    : otpBusy
+                      ? '发送中'
+                      : '获取验证码'}
                 </Button>
               </View>
             </View>
@@ -229,7 +262,9 @@ export default function LoginPage() {
           </Button>
 
           <View className="login-switch">
-            <Text className="login-switch__text" onClick={toggleAuthMode}>{isRegister ? '已有账号，去登录' : '注册新账号'}</Text>
+            <Text className="login-switch__text" onClick={toggleAuthMode}>
+              {isRegister ? '已有账号，去登录' : '注册新账号'}
+            </Text>
           </View>
         </View>
       </Card>

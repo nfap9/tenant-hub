@@ -1,13 +1,20 @@
-import { useEffect, useState } from "react";
-import { Button, Card, Form, Input, Switch, message } from "antd";
-import { SaveOutlined, SettingOutlined, BlockOutlined, GlobalOutlined, PhoneOutlined, LinkOutlined } from "@ant-design/icons";
+import { useEffect, useState } from 'react';
+import { Button, Card, Form, Input, Switch, message } from 'antd';
+import {
+  SaveOutlined,
+  SettingOutlined,
+  BlockOutlined,
+  GlobalOutlined,
+  PhoneOutlined,
+  LinkOutlined,
+} from '@ant-design/icons';
 import {
   getQuotaLimitEnabled,
   updateQuotaLimitEnabled,
   getPlatformInfoSetting,
   updatePlatformInfoSetting,
-} from "@/api/admin";
-import PageHeader from "@/components/ui/PageHeader";
+} from '@/api/admin';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface PlatformInfoValue {
   name: string;
@@ -18,9 +25,9 @@ interface PlatformInfoValue {
 export default function OpsSystemSettingsPage() {
   const [quotaLimitEnabled, setQuotaLimitEnabled] = useState<boolean>(false);
   const [platformInfo, setPlatformInfo] = useState<PlatformInfoValue>({
-    name: "",
-    logoUrl: "",
-    contactPhone: "",
+    name: '',
+    logoUrl: '',
+    contactPhone: '',
   });
   const [loadingQuota, setLoadingQuota] = useState(false);
   const [loadingPlatform, setLoadingPlatform] = useState(false);
@@ -39,9 +46,11 @@ export default function OpsSystemSettingsPage() {
     setLoadingPlatform(true);
     getPlatformInfoSetting()
       .then((data) =>
-        setPlatformInfo(data.value ?? { name: "", logoUrl: "", contactPhone: "" })
+        setPlatformInfo(
+          data.value ?? { name: '', logoUrl: '', contactPhone: '' }
+        )
       )
-      .catch(() => setPlatformInfo({ name: "", logoUrl: "", contactPhone: "" }))
+      .catch(() => setPlatformInfo({ name: '', logoUrl: '', contactPhone: '' }))
       .finally(() => setLoadingPlatform(false));
   }, []);
 
@@ -51,11 +60,11 @@ export default function OpsSystemSettingsPage() {
       await updateQuotaLimitEnabled({
         value: { enabled: quotaLimitEnabled },
         description:
-          "是否开启用量限制：开启后用户需订阅套餐才能使用，关闭后所有用户不限量",
+          '是否开启用量限制：开启后用户需订阅套餐才能使用，关闭后所有用户不限量',
       });
-      message.success("用量限制配置已保存");
+      message.success('用量限制配置已保存');
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "保存失败");
+      message.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setSavingQuota(false);
     }
@@ -66,15 +75,15 @@ export default function OpsSystemSettingsPage() {
     try {
       await updatePlatformInfoSetting({
         value: {
-          name: platformInfo.name || "Tenant Hub",
+          name: platformInfo.name || 'Tenant Hub',
           logoUrl: platformInfo.logoUrl,
           contactPhone: platformInfo.contactPhone,
         },
-        description: "平台基础信息：名称、Logo、客服电话",
+        description: '平台基础信息：名称、Logo、客服电话',
       });
-      message.success("平台基础信息已保存");
+      message.success('平台基础信息已保存');
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "保存失败");
+      message.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setSavingPlatform(false);
     }
@@ -82,20 +91,20 @@ export default function OpsSystemSettingsPage() {
 
   return (
     <div className="page-content">
-      <PageHeader breadcrumb={[{ label: "运营端" }, { label: "系统配置" }]} />
+      <PageHeader breadcrumb={[{ label: '运营端' }, { label: '系统配置' }]} />
 
       <Card
         loading={loadingPlatform}
         title={
-          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
             <GlobalOutlined style={{ marginRight: 8 }} />
             平台基础信息
           </span>
         }
         style={{
           maxWidth: 720,
-          borderRadius: "var(--th-radius-lg)",
-          boxShadow: "var(--th-shadow)",
+          borderRadius: 'var(--th-radius-lg)',
+          boxShadow: 'var(--th-shadow)',
           marginBottom: 24,
         }}
       >
@@ -108,8 +117,12 @@ export default function OpsSystemSettingsPage() {
                 setPlatformInfo((prev) => ({ ...prev, name: e.target.value }))
               }
               size="large"
-              prefix={<SettingOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
-              style={{ borderRadius: "var(--th-radius)" }}
+              prefix={
+                <SettingOutlined
+                  style={{ color: 'var(--th-foreground-subtle)' }}
+                />
+              }
+              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item label="Logo URL" extra="填写图片地址，将在小程序端展示">
@@ -117,11 +130,18 @@ export default function OpsSystemSettingsPage() {
               placeholder="https://example.com/logo.png"
               value={platformInfo.logoUrl}
               onChange={(e) =>
-                setPlatformInfo((prev) => ({ ...prev, logoUrl: e.target.value }))
+                setPlatformInfo((prev) => ({
+                  ...prev,
+                  logoUrl: e.target.value,
+                }))
               }
               size="large"
-              prefix={<LinkOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
-              style={{ borderRadius: "var(--th-radius)" }}
+              prefix={
+                <LinkOutlined
+                  style={{ color: 'var(--th-foreground-subtle)' }}
+                />
+              }
+              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item label="客服电话">
@@ -135,8 +155,12 @@ export default function OpsSystemSettingsPage() {
                 }))
               }
               size="large"
-              prefix={<PhoneOutlined style={{ color: "var(--th-foreground-subtle)" }} />}
-              style={{ borderRadius: "var(--th-radius)" }}
+              prefix={
+                <PhoneOutlined
+                  style={{ color: 'var(--th-foreground-subtle)' }}
+                />
+              }
+              style={{ borderRadius: 'var(--th-radius)' }}
             />
           </Form.Item>
           <Form.Item>
@@ -156,15 +180,15 @@ export default function OpsSystemSettingsPage() {
       <Card
         loading={loadingQuota}
         title={
-          <span style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+          <span style={{ fontWeight: 600, color: 'var(--th-foreground)' }}>
             <BlockOutlined style={{ marginRight: 8 }} />
             用量限制
           </span>
         }
         style={{
           maxWidth: 720,
-          borderRadius: "var(--th-radius-lg)",
-          boxShadow: "var(--th-shadow)",
+          borderRadius: 'var(--th-radius-lg)',
+          boxShadow: 'var(--th-shadow)',
         }}
       >
         <Form layout="vertical">

@@ -11,23 +11,28 @@ import './index.scss';
 const statusLabels: Record<LeaseStatus, string> = {
   ACTIVE: '生效中',
   TERMINATED: '已终止',
-  EXPIRED: '已到期'
+  EXPIRED: '已到期',
 };
 
 const toneForStatus: Record<LeaseStatus, 'success' | 'warning' | 'danger'> = {
   ACTIVE: 'success',
   TERMINATED: 'warning',
-  EXPIRED: 'danger'
+  EXPIRED: 'danger',
 };
 
-type LeaseFilter = 'ALL' | 'ACTIVE' | 'AUTO_RENEW' | 'EXPIRING_SOON' | 'TERMINATED';
+type LeaseFilter =
+  | 'ALL'
+  | 'ACTIVE'
+  | 'AUTO_RENEW'
+  | 'EXPIRING_SOON'
+  | 'TERMINATED';
 
 const filterLabels: Record<LeaseFilter, string> = {
   ALL: '全部',
   ACTIVE: '有效',
   AUTO_RENEW: '自动续约',
   EXPIRING_SOON: '近到期',
-  TERMINATED: '已终止'
+  TERMINATED: '已终止',
 };
 
 export default function LeasesPage() {
@@ -39,10 +44,15 @@ export default function LeasesPage() {
   const loadLeases = useCallback(async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Lease[]>('/leases', { organizationId: currentOrgId });
+      const data = await apiClient<Lease[]>('/leases', {
+        organizationId: currentOrgId,
+      });
       setLeases(data);
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : '加载失败', icon: 'none' });
+      Taro.showToast({
+        title: e instanceof Error ? e.message : '加载失败',
+        icon: 'none',
+      });
     }
   }, [currentOrgId]);
 
@@ -64,9 +74,13 @@ export default function LeasesPage() {
     } else if (filter === 'EXPIRING_SOON') {
       const soon = new Date();
       soon.setDate(soon.getDate() + 30);
-      result = result.filter((l) => l.status === 'ACTIVE' && new Date(l.endDate) <= soon);
+      result = result.filter(
+        (l) => l.status === 'ACTIVE' && new Date(l.endDate) <= soon
+      );
     } else if (filter === 'TERMINATED') {
-      result = result.filter((l) => l.status === 'TERMINATED' || l.status === 'EXPIRED');
+      result = result.filter(
+        (l) => l.status === 'TERMINATED' || l.status === 'EXPIRED'
+      );
     }
 
     const q = search.trim().toLowerCase();
@@ -86,7 +100,13 @@ export default function LeasesPage() {
   if (!currentOrgId) {
     return (
       <View className="page-container">
-        <Card><EmptyState icon="apartment" title="尚未选择组织" subtitle="请先从更多页中选择一个组织" /></Card>
+        <Card>
+          <EmptyState
+            icon="apartment"
+            title="尚未选择组织"
+            subtitle="请先从更多页中选择一个组织"
+          />
+        </Card>
       </View>
     );
   }
@@ -106,7 +126,11 @@ export default function LeasesPage() {
               className={`filter-chip ${filter === key ? 'filter-chip--active' : ''}`}
               onClick={() => setFilter(key)}
             >
-              <Text className={`filter-chip__text ${filter === key ? 'filter-chip__text--active' : ''}`}>{filterLabels[key]}</Text>
+              <Text
+                className={`filter-chip__text ${filter === key ? 'filter-chip__text--active' : ''}`}
+              >
+                {filterLabels[key]}
+              </Text>
             </View>
           ))}
         </View>
@@ -114,24 +138,38 @@ export default function LeasesPage() {
 
       <Card title="所有租约" subtitle={`共 ${filteredLeases.length} 份`}>
         {filteredLeases.length === 0 ? (
-          <EmptyState icon="contract" title="暂无租约" subtitle={search ? '请尝试其他搜索条件' : '请到房间页签约入住'} />
+          <EmptyState
+            icon="contract"
+            title="暂无租约"
+            subtitle={search ? '请尝试其他搜索条件' : '请到房间页签约入住'}
+          />
         ) : null}
         {filteredLeases.map((lease) => (
           <View key={lease.id} className="lease-card">
             <View className="detail-row">
               <View>
                 <Text className="card-title">{lease.tenantName}</Text>
-                <Text className="text-muted">{lease.room?.apartment?.name} · {lease.room?.roomNo}</Text>
+                <Text className="text-muted">
+                  {lease.room?.apartment?.name} · {lease.room?.roomNo}
+                </Text>
               </View>
-              <Badge tone={toneForStatus[lease.status]}>{statusLabels[lease.status]}</Badge>
+              <Badge tone={toneForStatus[lease.status]}>
+                {statusLabels[lease.status]}
+              </Badge>
             </View>
             <View className="detail-row">
-              <Text className="text-muted">{day(lease.startDate)} 至 {day(lease.endDate)}</Text>
+              <Text className="text-muted">
+                {day(lease.startDate)} 至 {day(lease.endDate)}
+              </Text>
               <Text className="card-stat">¥{money(lease.rentAmount)}</Text>
             </View>
             <View className="detail-row">
-              <Text className="text-muted">押金 ¥{money(lease.depositAmount)}</Text>
-              <Text className="text-muted">{lease.autoRenew ? '自动续约' : '不自动续约'}</Text>
+              <Text className="text-muted">
+                押金 ¥{money(lease.depositAmount)}
+              </Text>
+              <Text className="text-muted">
+                {lease.autoRenew ? '自动续约' : '不自动续约'}
+              </Text>
             </View>
             {lease.status !== 'ACTIVE' ? (
               <Text className="text-muted">

@@ -8,12 +8,12 @@ export function showToast(
     success: 'success',
     error: 'error',
     warning: 'none',
-    info: 'none'
+    info: 'none',
   };
 
   Taro.showToast({
     title: message,
     icon: iconMap[type] as 'success' | 'error' | 'none',
-    duration: 3000
+    duration: 3000,
   });
 }

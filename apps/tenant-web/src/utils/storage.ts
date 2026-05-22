@@ -1,5 +1,5 @@
-const SESSION_KEY = "tenantHubSession";
-const ORG_KEY = "tenantHubCurrentOrgId";
+const SESSION_KEY = 'tenantHubSession';
+const ORG_KEY = 'tenantHubCurrentOrgId';
 
 export type WebSession = {
   token: string;

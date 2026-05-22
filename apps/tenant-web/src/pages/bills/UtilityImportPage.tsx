@@ -1,24 +1,19 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Card,
-  Upload,
-  Button,
-  message,
-} from "antd";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Upload, Button, message } from 'antd';
 import {
   UploadOutlined,
   ImportOutlined,
   CheckCircleOutlined,
-} from "@ant-design/icons";
-import { useAppSession } from "@/context/AppSessionContext";
-import { importUtilityCsv } from "@/api/bills";
-import PageHeader from "@/components/ui/PageHeader";
+} from '@ant-design/icons';
+import { useAppSession } from '@/context/AppSessionContext';
+import { importUtilityCsv } from '@/api/bills';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function UtilityImportPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
-  const [fileContent, setFileContent] = useState<string>("");
+  const [fileContent, setFileContent] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleUpload = (file: File) => {
@@ -33,16 +28,16 @@ export default function UtilityImportPage() {
 
   const handleSubmit = async () => {
     if (!currentOrgId || !fileContent.trim()) {
-      message.error("请先上传 CSV 文件");
+      message.error('请先上传 CSV 文件');
       return;
     }
     setSubmitting(true);
     try {
       const result = await importUtilityCsv(currentOrgId, fileContent);
       message.success(`导入成功，共 ${result.count} 条记录`);
-      navigate("/bills");
+      navigate('/bills');
     } catch (e) {
-      message.error(e instanceof Error ? e.message : "导入失败");
+      message.error(e instanceof Error ? e.message : '导入失败');
     } finally {
       setSubmitting(false);
     }
@@ -53,48 +48,61 @@ export default function UtilityImportPage() {
       <PageHeader
         back={true}
         breadcrumb={[
-          { label: "财务管理", path: "/bills" },
-          { label: "批量导入水电" },
+          { label: '财务管理', path: '/bills' },
+          { label: '批量导入水电' },
         ]}
       />
 
       <Card>
-        <Upload.Dragger
-          beforeUpload={handleUpload}
-          maxCount={1}
-          accept=".csv"
-        >
+        <Upload.Dragger beforeUpload={handleUpload} maxCount={1} accept=".csv">
           <p className="ant-upload-drag-icon">
-            <UploadOutlined style={{ fontSize: 48, color: "var(--th-primary)" }} />
+            <UploadOutlined
+              style={{ fontSize: 48, color: 'var(--th-primary)' }}
+            />
           </p>
-          <p className="ant-upload-text" style={{ fontWeight: 600, color: "var(--th-foreground)" }}>
+          <p
+            className="ant-upload-text"
+            style={{ fontWeight: 600, color: 'var(--th-foreground)' }}
+          >
             点击或拖拽 CSV 文件到此区域上传
           </p>
-          <p className="ant-upload-hint" style={{ color: "var(--th-foreground-muted)" }}>
+          <p
+            className="ant-upload-hint"
+            style={{ color: 'var(--th-foreground-muted)' }}
+          >
             支持 CSV 格式批量导入水电读数
           </p>
         </Upload.Dragger>
 
         {fileContent && (
           <div style={{ marginTop: 24 }}>
-            <div style={{ color: "var(--th-success)", marginBottom: 12, fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+            <div
+              style={{
+                color: 'var(--th-success)',
+                marginBottom: 12,
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
               <CheckCircleOutlined />
               文件已读取
             </div>
             <pre
               style={{
-                background: "var(--th-surface-hover)",
-                padding: "var(--th-space-4)",
-                borderRadius: "var(--th-radius)",
+                background: 'var(--th-surface-hover)',
+                padding: 'var(--th-space-4)',
+                borderRadius: 'var(--th-radius)',
                 maxHeight: 200,
-                overflow: "auto",
+                overflow: 'auto',
                 fontSize: 12,
-                border: "1px solid var(--th-border-light)",
-                color: "var(--th-foreground-muted)",
+                border: '1px solid var(--th-border-light)',
+                color: 'var(--th-foreground-muted)',
               }}
             >
               {fileContent.slice(0, 2000)}
-              {fileContent.length > 2000 ? "..." : ""}
+              {fileContent.length > 2000 ? '...' : ''}
             </pre>
           </div>
         )}

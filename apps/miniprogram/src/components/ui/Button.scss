@@ -8,10 +8,16 @@
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-bold);
   border: 1rpx solid transparent;
-  transition: opacity 0.15s, transform 0.15s;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
 
   &--primary {
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-primary-dark)
+    );
     color: #fff;
     box-shadow: 0 12rpx 22rpx rgba(20, 108, 92, 0.18);
   }
