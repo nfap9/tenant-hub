@@ -1,4 +1,4 @@
-@import '@/styles/variables';
+@use '@/styles/variables' as *;
 
 .empty-state {
   display: flex;
@@ -17,11 +17,6 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 20px;
-
-    .anticon {
-      font-size: 32px;
-      color: $th-primary-light;
-    }
   }
 
   .empty-state-title {

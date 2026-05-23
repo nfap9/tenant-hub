@@ -1,19 +1,11 @@
-@import '@/styles/variables';
+@use '@/styles/variables' as *;
 
 .page-header {
   margin-bottom: 28px;
 
-  .ant-breadcrumb {
-    margin-bottom: 16px;
-  }
-
   .breadcrumb-back {
     cursor: pointer;
     color: $th-primary;
-
-    .anticon {
-      margin-right: 4px;
-    }
   }
 
   .breadcrumb-link {

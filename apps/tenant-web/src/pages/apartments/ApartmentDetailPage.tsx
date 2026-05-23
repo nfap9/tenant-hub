@@ -23,7 +23,8 @@ import { contractText } from './utils';
 import { statusLabels, toneForStatus } from './constants';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './ApartmentDetailPage.scss';
+import styles from './ApartmentDetailPage.module.scss';
+import clsx from 'clsx';
 
 export default function ApartmentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -128,7 +129,7 @@ export default function ApartmentDetailPage() {
   };
 
   return (
-    <div className="page-content apartment-detail-page">
+    <div className={clsx(styles.apartmentDetailPage, 'page-content')}>
       <PageHeader
         back="/apartments"
         breadcrumb={[
@@ -137,7 +138,7 @@ export default function ApartmentDetailPage() {
         ]}
         actions={
           canManageApartment && (
-            <div className="action-group">
+            <div className={styles.actionGroup}>
               <Button
                 icon={<EditOutlined />}
                 onClick={() => navigate(`/apartments/${id}/edit`)}
@@ -168,43 +169,43 @@ export default function ApartmentDetailPage() {
               key: 'detail',
               label: '公寓详情',
               children: (
-                <div className="detail-grid">
+                <div className={styles.detailGrid}>
                   <Card
                     title={
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <HomeOutlined className="text-primary" />
                         基本信息
                       </div>
                     }
                   >
-                    <div className="info-card-body">
-                      <div className="flex-row">
+                    <div className={styles.infoCardBody}>
+                      <div className={styles.flexRow}>
                         <EnvironmentOutlined className="text-subtle" />
-                        <span className="info-label">地址</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>地址</span>
+                        <span className={styles.infoValue}>
                           {apartment.location || '未填写'}
                         </span>
                       </div>
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <BuildOutlined className="text-subtle" />
-                        <span className="info-label">楼层数</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>楼层数</span>
+                        <span className={styles.infoValue}>
                           {apartment.floors} 层
                         </span>
                       </div>
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <AreaChartOutlined className="text-subtle" />
-                        <span className="info-label">占地面积</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>占地面积</span>
+                        <span className={styles.infoValue}>
                           {apartment.landArea
                             ? `${apartment.landArea} ㎡`
                             : '未填'}
                         </span>
                       </div>
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <AreaChartOutlined className="text-subtle" />
-                        <span className="info-label">总面积</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>总面积</span>
+                        <span className={styles.infoValue}>
                           {apartment.totalArea
                             ? `${apartment.totalArea} ㎡`
                             : '未填'}
@@ -215,38 +216,38 @@ export default function ApartmentDetailPage() {
 
                   <Card
                     title={
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <UserOutlined className="text-primary" />
                         上游信息
                       </div>
                     }
                   >
-                    <div className="info-card-body">
-                      <div className="flex-row">
+                    <div className={styles.infoCardBody}>
+                      <div className={styles.flexRow}>
                         <UserOutlined className="text-subtle" />
-                        <span className="info-label">房东姓名</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>房东姓名</span>
+                        <span className={styles.infoValue}>
                           {apartment.landlordName || '未维护'}
                         </span>
                       </div>
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <PhoneOutlined className="text-subtle" />
-                        <span className="info-label">联系方式</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>联系方式</span>
+                        <span className={styles.infoValue}>
                           {apartment.landlordPhone || '未维护'}
                         </span>
                       </div>
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <CalendarOutlined className="text-subtle" />
-                        <span className="info-label">合同期</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>合同期</span>
+                        <span className={styles.infoValue}>
                           {contractText(apartment)}
                         </span>
                       </div>
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <DollarOutlined className="text-subtle" />
-                        <span className="info-label">上游租金</span>
-                        <span className="info-value">
+                        <span className={styles.infoLabel}>上游租金</span>
+                        <span className={styles.infoValue}>
                           ¥{money(apartment.rentAmount)}
                         </span>
                       </div>
@@ -255,7 +256,7 @@ export default function ApartmentDetailPage() {
 
                   <Card
                     title={
-                      <div className="flex-row">
+                      <div className={styles.flexRow}>
                         <DollarOutlined className="text-primary" />
                         经营花费
                       </div>
@@ -288,13 +289,13 @@ export default function ApartmentDetailPage() {
                         }
                       />
                     ) : (
-                      <div className="expense-list">
+                      <div className={styles.expenseList}>
                         {(apartment.expenses ?? []).map((item) => (
-                          <div key={item.id} className="expense-item">
+                          <div key={item.id} className={styles.expenseItem}>
                             <span>
                               {item.name} · {item.spentAt.slice(0, 10)}
                             </span>
-                            <span className="expense-amount">
+                            <span className={styles.expenseAmount}>
                               ¥{money(item.amount)}
                             </span>
                           </div>
@@ -311,9 +312,9 @@ export default function ApartmentDetailPage() {
               children: (
                 <Card
                   title={
-                    <div className="rooms-title">
-                      <span className="rooms-title-text">房间概览</span>
-                      <div className="rooms-stats">
+                    <div className={styles.roomsTitle}>
+                      <span className={styles.roomsTitleText}>房间概览</span>
+                      <div className={styles.roomsStats}>
                         <span>共 {apartmentRooms.length} 间</span>
                         <span>·</span>
                         <span className="text-success">
@@ -328,7 +329,7 @@ export default function ApartmentDetailPage() {
                   }
                   extra={
                     canManageRoom && (
-                      <div className="action-group">
+                      <div className={styles.actionGroup}>
                         <Button
                           icon={<PlusOutlined />}
                           onClick={() =>
@@ -364,7 +365,7 @@ export default function ApartmentDetailPage() {
                       }
                     />
                   ) : (
-                    <div className="rooms-grid">
+                    <div className={styles.roomsGrid}>
                       {apartmentRooms.map((room) => (
                         <Card
                           key={room.id}
@@ -372,7 +373,7 @@ export default function ApartmentDetailPage() {
                           hoverable
                           title={
                             <div className="flex-between">
-                              <span className="room-card-title-text">
+                              <span className={styles.roomCardTitleText}>
                                 {room.roomNo}
                               </span>
                               <Tag
@@ -385,15 +386,15 @@ export default function ApartmentDetailPage() {
                             </div>
                           }
                         >
-                          <div className="room-layout">
+                          <div className={styles.roomLayout}>
                             {room.layout} ·{' '}
                             {room.area ? `${room.area} ㎡` : '未填面积'}
                           </div>
-                          <div className="room-facilities">
+                          <div className={styles.roomFacilities}>
                             {facilitiesText(room.facilities)}
                           </div>
                           {canManageRoom && (
-                            <div className="action-group">
+                            <div className={styles.actionGroup}>
                               <Button
                                 size="small"
                                 onClick={() =>

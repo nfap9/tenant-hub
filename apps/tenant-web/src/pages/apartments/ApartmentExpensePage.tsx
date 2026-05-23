@@ -15,7 +15,7 @@ import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { createApartmentExpense } from '@/api/apartments';
 import { optionalText } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
-import './ApartmentExpensePage.scss';
+import styles from './ApartmentExpensePage.module.scss';
 
 export default function ApartmentExpensePage() {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +64,7 @@ export default function ApartmentExpensePage() {
         ]}
       />
 
-      <Card className="expense-form-card">
+      <Card className={styles.expenseFormCard}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             label="花费名称"
@@ -114,7 +114,7 @@ export default function ApartmentExpensePage() {
             </Button>
             <Button
               size="large"
-              className="cancel-btn"
+              className={styles.cancelBtn}
               onClick={() => navigate(`/apartments/${id}`)}
             >
               取消

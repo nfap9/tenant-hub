@@ -5,7 +5,7 @@ import { SaveOutlined, TagOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { updateBillItem } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
-import './EditItemPage.scss';
+import styles from './EditItemPage.module.scss';
 
 export default function EditItemPage() {
   const { currentOrgId } = useAppSession();
@@ -60,7 +60,7 @@ export default function EditItemPage() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          className="edit-item-form"
+          className={styles.editItemForm}
         >
           <Form.Item label="名称" name="name">
             <Input disabled size="large" prefix={<TagOutlined />} />

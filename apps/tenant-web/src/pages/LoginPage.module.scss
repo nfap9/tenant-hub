@@ -1,5 +1,5 @@
-@import '@/styles/variables';
-@import '@/styles/mixins';
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
 
 .login-page {
   min-height: 100vh;
@@ -73,10 +73,6 @@
     0 8px 24px rgba(0, 0, 0, 0.06);
   position: relative;
   z-index: 1;
-
-  .ant-card-body {
-    padding: 40px 36px;
-  }
 }
 
 .login-logo-wrapper {

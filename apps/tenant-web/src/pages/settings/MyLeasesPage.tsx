@@ -1,7 +1,7 @@
 import { Card } from 'antd';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './MyLeasesPage.scss';
+import styles from './MyLeasesPage.module.scss';
 
 export default function MyLeasesPage() {
   return (
@@ -13,7 +13,7 @@ export default function MyLeasesPage() {
           { label: '我的租约' },
         ]}
       />
-      <Card className="settings-card">
+      <Card className={styles.settingsCard}>
         <EmptyState title="暂无租约" description="当前没有关联的租约记录" />
       </Card>
     </div>

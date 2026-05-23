@@ -22,7 +22,8 @@ import {
   loginWithOtp,
   register,
 } from '@/api/auth';
-import './LoginPage.scss';
+import styles from './LoginPage.module.scss';
+import clsx from 'clsx';
 
 const { Title, Text } = Typography;
 
@@ -134,23 +135,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
+    <div className={styles.loginPage}>
       {/* 装饰性几何元素 */}
-      <div className="login-bg-shape login-bg-shape--1" />
-      <div className="login-bg-shape login-bg-shape--2" />
-      <div className="login-bg-shape login-bg-shape--3" />
-      <div className="login-bg-shape login-bg-shape--4" />
+      <div className={clsx(styles.loginBgShape, styles.loginBgShape1)} />
+      <div className={clsx(styles.loginBgShape, styles.loginBgShape2)} />
+      <div className={clsx(styles.loginBgShape, styles.loginBgShape3)} />
+      <div className={clsx(styles.loginBgShape, styles.loginBgShape4)} />
 
-      <Card className="login-card">
-        <div className="login-logo-wrapper">
+      <Card className={styles.loginCard}>
+        <div className={styles.loginLogoWrapper}>
           {/* Logo 区 */}
-          <div className="login-logo-box">
-            <HomeOutlined className="login-logo-icon" />
+          <div className={styles.loginLogoBox}>
+            <HomeOutlined className={styles.loginLogoIcon} />
           </div>
-          <Title level={3} className="login-title">
+          <Title level={3} className={styles.loginTitle}>
             {platformInfo.name}
           </Title>
-          <Text type="secondary" className="login-subtitle">
+          <Text type="secondary" className={styles.loginSubtitle}>
             {isRegister
               ? '手机号验证后即可创建账号'
               : '使用手机号登录你的公寓经营工作台'}
@@ -158,7 +159,7 @@ export default function LoginPage() {
         </div>
 
         {!isRegister && (
-          <div className="login-segmented-wrapper">
+          <div className={styles.loginSegmentedWrapper}>
             <Segmented
               value={mode}
               onChange={(v) => setMode(v as LoginMode)}
@@ -185,7 +186,7 @@ export default function LoginPage() {
               size="large"
               placeholder="请输入手机号"
               maxLength={11}
-              prefix={<MobileOutlined className="login-input-prefix" />}
+              prefix={<MobileOutlined className={styles.loginInputPrefix} />}
             />
           </Form.Item>
 
@@ -199,7 +200,7 @@ export default function LoginPage() {
                 size="large"
                 placeholder="请输入用户名"
                 maxLength={24}
-                prefix={<UserOutlined className="login-input-prefix" />}
+                prefix={<UserOutlined className={styles.loginInputPrefix} />}
               />
             </Form.Item>
           )}
@@ -216,7 +217,7 @@ export default function LoginPage() {
               <Input.Password
                 size="large"
                 placeholder={isRegister ? '至少 8 位密码' : '请输入密码'}
-                prefix={<SafetyOutlined className="login-input-prefix" />}
+                prefix={<SafetyOutlined className={styles.loginInputPrefix} />}
               />
             </Form.Item>
           )}
@@ -240,7 +241,7 @@ export default function LoginPage() {
               <Input.Password
                 size="large"
                 placeholder="再次输入密码"
-                prefix={<SafetyOutlined className="login-input-prefix" />}
+                prefix={<SafetyOutlined className={styles.loginInputPrefix} />}
               />
             </Form.Item>
           )}
@@ -255,7 +256,7 @@ export default function LoginPage() {
                 size="large"
                 placeholder="6 位验证码"
                 maxLength={6}
-                prefix={<SafetyOutlined className="login-input-prefix" />}
+                prefix={<SafetyOutlined className={styles.loginInputPrefix} />}
                 suffix={
                   <Button
                     type="link"
@@ -272,21 +273,21 @@ export default function LoginPage() {
             </Form.Item>
           )}
 
-          <Form.Item className="login-form-item--submit">
+          <Form.Item className={styles.loginFormItemSubmit}>
             <Button
               type="primary"
               htmlType="submit"
               size="large"
               block
               loading={busy}
-              className="login-submit-btn"
+              className={styles.loginSubmitBtn}
             >
               {busy ? '处理中' : isRegister ? '注册并登录' : '登录'}
             </Button>
           </Form.Item>
         </Form>
 
-        <div className="login-auth-toggle">
+        <div className={styles.loginAuthToggle}>
           <Button type="link" onClick={toggleAuthMode}>
             {isRegister ? '已有账号，去登录' : '注册新账号'}
           </Button>

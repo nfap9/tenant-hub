@@ -32,7 +32,8 @@ import {
 } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './LeaseTerminatePage.scss';
+import styles from './LeaseTerminatePage.module.scss';
+import clsx from 'clsx';
 
 export default function LeaseTerminatePage() {
   const { id } = useParams<{ id: string }>();
@@ -172,7 +173,7 @@ export default function LeaseTerminatePage() {
       />
 
       <Spin spinning={loading}>
-        <div className="lease-terminate-container">
+        <div className={styles.leaseTerminateContainer}>
           <Card>
             {lease ? (
               <Form form={form} layout="vertical" onFinish={handleSubmit}>
@@ -204,22 +205,38 @@ export default function LeaseTerminatePage() {
                   />
                 </Form.Item>
 
-                <Divider orientation="left" className="section-divider">
+                <Divider orientation="left" className={styles.sectionDivider}>
                   押金与房租
                 </Divider>
-                <div className="summary-row flex-between mb-8 text-muted">
+                <div
+                  className={clsx(
+                    styles.summaryRow,
+                    'flex-between',
+                    'mb-8',
+                    'text-muted'
+                  )}
+                >
                   <span>原押金</span>
-                  <span className="summary-value">
+                  <span className={styles.summaryValue}>
                     ¥{money(lease.depositAmount)}
                   </span>
                 </div>
-                <div className="summary-row flex-between mb-16 text-muted">
+                <div
+                  className={clsx(
+                    styles.summaryRow,
+                    'flex-between',
+                    'mb-16',
+                    'text-muted'
+                  )}
+                >
                   <span>预计退押金</span>
-                  <span className="summary-value text-success">
+                  <span
+                    className={clsx(styles.summaryValue, styles.textSuccess)}
+                  >
                     ¥{money(preview.depositRefund)}
                   </span>
                 </div>
-                <div className="form-grid-2">
+                <div className={styles.formGrid2}>
                   <Form.Item label="押金扣款" name="depositDeductionAmount">
                     <InputNumber
                       min={0}
@@ -245,10 +262,10 @@ export default function LeaseTerminatePage() {
                   />
                 </Form.Item>
 
-                <Divider orientation="left" className="section-divider">
+                <Divider orientation="left" className={styles.sectionDivider}>
                   水电读数
                 </Divider>
-                <div className="form-grid-2">
+                <div className={styles.formGrid2}>
                   <Form.Item
                     label={`退租水表读数（上次 ${money(previousReadings.previousWater)}）`}
                     name="currentWater"
@@ -262,9 +279,18 @@ export default function LeaseTerminatePage() {
                     <InputNumber min={0} className="w-full" size="large" />
                   </Form.Item>
                 </div>
-                <div className="summary-row flex-between mb-16 text-muted">
+                <div
+                  className={clsx(
+                    styles.summaryRow,
+                    'flex-between',
+                    'mb-16',
+                    'text-muted'
+                  )}
+                >
                   <span>预估水电费</span>
-                  <span className="summary-value text-warning">
+                  <span
+                    className={clsx(styles.summaryValue, styles.textWarning)}
+                  >
                     ¥{money(preview.utility)}
                   </span>
                 </div>
@@ -285,25 +311,34 @@ export default function LeaseTerminatePage() {
                   />
                 </Form.Item>
 
-                <Divider orientation="left" className="section-divider">
+                <Divider orientation="left" className={styles.sectionDivider}>
                   结算预览
                 </Divider>
-                <div className="settlement-preview mb-16">
+                <div className={clsx(styles.settlementPreview, 'mb-16')}>
                   <div className="flex-between mb-8 text-muted">
                     <span>应收</span>
-                    <span className="summary-value">
+                    <span className={styles.summaryValue}>
                       ¥{money(preview.receivable)}
                     </span>
                   </div>
                   <div className="flex-between mb-8 text-muted">
                     <span>应退</span>
-                    <span className="summary-value">
+                    <span className={styles.summaryValue}>
                       ¥{money(preview.refundable)}
                     </span>
                   </div>
-                  <div className="summary-result flex-between text-muted">
+                  <div
+                    className={clsx(
+                      styles.summaryResult,
+                      'flex-between',
+                      'text-muted'
+                    )}
+                  >
                     <span>结算结果</span>
-                    <span className="summary-net" style={{ color: netColor }}>
+                    <span
+                      className={styles.summaryNet}
+                      style={{ color: netColor }}
+                    >
                       {preview.net > 0
                         ? `租客补交 ¥${money(preview.net)}`
                         : preview.net < 0
@@ -326,7 +361,7 @@ export default function LeaseTerminatePage() {
                   />
                 )}
 
-                <Form.Item className="form-actions">
+                <Form.Item className={styles.formActions}>
                   <Button
                     type="primary"
                     danger
@@ -340,7 +375,7 @@ export default function LeaseTerminatePage() {
                   </Button>
                   <Button
                     size="large"
-                    className="cancel-btn"
+                    className={styles.cancelBtn}
                     onClick={() => navigate('/rooms')}
                   >
                     取消

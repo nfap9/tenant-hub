@@ -9,7 +9,7 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { importUtilityCsv } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
-import './UtilityImportPage.scss';
+import styles from './UtilityImportPage.module.scss';
 
 export default function UtilityImportPage() {
   const { currentOrgId } = useAppSession();
@@ -56,24 +56,22 @@ export default function UtilityImportPage() {
 
       <Card>
         <Upload.Dragger beforeUpload={handleUpload} maxCount={1} accept=".csv">
-          <p className="ant-upload-drag-icon">
-            <UploadOutlined className="import-upload-icon" />
+          <p>
+            <UploadOutlined className={styles.importUploadIcon} />
           </p>
-          <p className="ant-upload-text import-upload-text">
+          <p className={styles.importUploadText}>
             点击或拖拽 CSV 文件到此区域上传
           </p>
-          <p className="ant-upload-hint text-muted">
-            支持 CSV 格式批量导入水电读数
-          </p>
+          <p className="text-muted">支持 CSV 格式批量导入水电读数</p>
         </Upload.Dragger>
 
         {fileContent && (
-          <div className="import-mt-24">
-            <div className="import-success">
+          <div className={styles.importMt24}>
+            <div className={styles.importSuccess}>
               <CheckCircleOutlined />
               文件已读取
             </div>
-            <pre className="import-pre">
+            <pre className={styles.importPre}>
               {fileContent.slice(0, 2000)}
               {fileContent.length > 2000 ? '...' : ''}
             </pre>
@@ -82,7 +80,7 @@ export default function UtilityImportPage() {
 
         <Button
           type="primary"
-          className="import-mt-24"
+          className={styles.importMt24}
           loading={submitting}
           onClick={handleSubmit}
           disabled={!fileContent}

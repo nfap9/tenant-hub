@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import clsx from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Select, Space, Tag, Spin, message } from 'antd';
 import {
@@ -21,7 +22,7 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import type { MonthlyBill, Room } from '@/types/domain';
-import './PaymentPage.scss';
+import styles from './PaymentPage.module.scss';
 
 export default function PaymentPage() {
   const { currentOrgId } = useAppSession();
@@ -163,12 +164,12 @@ export default function PaymentPage() {
       <Spin spinning={loading}>
         <Card
           title={
-            <span className="payment-card-title">
+            <span className={styles.paymentCardTitle}>
               <HomeOutlined />
               选择房间
             </span>
           }
-          className="payment-mb-24"
+          className={styles.paymentMb24}
         >
           {rooms.length === 0 ? (
             <EmptyState description="暂无房间" />
@@ -190,34 +191,37 @@ export default function PaymentPage() {
         {paymentRoomId && (
           <Card
             title={
-              <span className="payment-card-title">
+              <span className={styles.paymentCardTitle}>
                 <FileTextOutlined />
                 选择账单
               </span>
             }
-            className="payment-mb-24"
+            className={styles.paymentMb24}
           >
             {roomBills.length === 0 ? (
               <EmptyState description="该房间暂无待收账单" />
             ) : (
-              <Space direction="vertical" className="payment-space-full">
+              <Space direction="vertical" className={styles.paymentSpaceFull}>
                 {roomBills.map((bill) => (
                   <Card
                     key={bill.id}
                     size="small"
                     className={
                       form.monthlyBillId === bill.id
-                        ? 'payment-bill-card payment-bill-card--selected'
-                        : 'payment-bill-card'
+                        ? clsx(
+                            styles.paymentBillCard,
+                            styles.paymentBillCardSelected
+                          )
+                        : styles.paymentBillCard
                     }
                     onClick={() => handleBillClick(bill)}
                   >
                     <div className="flex-between">
                       <div>
-                        <div className="payment-bill-title">
+                        <div className={styles.paymentBillTitle}>
                           {bill.billingDate.slice(0, 10)}
                         </div>
-                        <div className="payment-bill-meta">
+                        <div className={styles.paymentBillMeta}>
                           剩余 ¥{money(remainingAmount(bill))}
                         </div>
                       </div>
@@ -234,7 +238,7 @@ export default function PaymentPage() {
 
         <Card
           title={
-            <span className="payment-card-title">
+            <span className={styles.paymentCardTitle}>
               <WalletOutlined />
               收款信息
             </span>
@@ -242,7 +246,7 @@ export default function PaymentPage() {
         >
           <Space
             direction="vertical"
-            className="payment-space-full"
+            className={styles.paymentSpaceFull}
             size="large"
           >
             <Input
@@ -261,7 +265,7 @@ export default function PaymentPage() {
               onChange={(value) =>
                 setForm((old) => ({ ...old, method: value }))
               }
-              className="payment-select-full"
+              className={styles.paymentSelectFull}
               options={[
                 { label: '线下收款', value: '线下收款' },
                 { label: '现金', value: '现金' },

@@ -9,7 +9,7 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { getBillDetail, recordUtilityReading } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
-import './UtilityPage.scss';
+import styles from './UtilityPage.module.scss';
 
 export default function UtilityPage() {
   const { currentOrgId } = useAppSession();
@@ -80,16 +80,16 @@ export default function UtilityPage() {
       <Spin spinning={loading}>
         <Card
           title={
-            <span className="utility-card-title">
+            <span className={styles.utilityCardTitle}>
               <DashboardOutlined />
               水表读数
             </span>
           }
-          className="utility-mb-24"
+          className={styles.utilityMb24}
         >
           <Space
             direction="vertical"
-            className="utility-space-full"
+            className={styles.utilitySpaceFull}
             size="middle"
           >
             <Input
@@ -115,16 +115,16 @@ export default function UtilityPage() {
 
         <Card
           title={
-            <span className="utility-card-title">
+            <span className={styles.utilityCardTitle}>
               <DashboardOutlined />
               电表读数
             </span>
           }
-          className="utility-mb-24"
+          className={styles.utilityMb24}
         >
           <Space
             direction="vertical"
-            className="utility-space-full"
+            className={styles.utilitySpaceFull}
             size="middle"
           >
             <Input

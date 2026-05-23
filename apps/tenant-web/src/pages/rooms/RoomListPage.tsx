@@ -21,7 +21,8 @@ import { statusLabels, toneForStatus, filters } from './constants';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
-import './RoomListPage.scss';
+import styles from './RoomListPage.module.scss';
+import clsx from 'clsx';
 
 export default function RoomListPage() {
   const navigate = useNavigate();
@@ -101,7 +102,7 @@ export default function RoomListPage() {
         }
       />
 
-      <div className="stats-grid">
+      <div className={styles.statsGrid}>
         <StatCard
           title="总房间"
           value={rooms.length}
@@ -128,7 +129,7 @@ export default function RoomListPage() {
         />
       </div>
 
-      <Card className="filter-card">
+      <Card className={styles.filterCard}>
         <Radio.Group value={filter} onChange={(e) => setFilter(e.target.value)}>
           {filters.map((f) => (
             <Radio.Button key={f} value={f}>
@@ -154,7 +155,7 @@ export default function RoomListPage() {
             />
           </Card>
         ) : (
-          <div className="room-grid">
+          <div className={styles.roomGrid}>
             {filteredRooms.map((room) => {
               const activeLease = room.leases?.find(
                 (l) => l.status === 'ACTIVE'
@@ -164,7 +165,7 @@ export default function RoomListPage() {
                   key={room.id}
                   title={
                     <div className="flex-between">
-                      <span className="room-title">{room.roomNo}</span>
+                      <span className={styles.roomTitle}>{room.roomNo}</span>
                       <Tag color={statusColorMap[toneForStatus[room.status]]}>
                         {statusLabels[room.status]}
                       </Tag>
@@ -174,17 +175,17 @@ export default function RoomListPage() {
                   <div className="mb-4 text-muted">
                     {room.apartment?.name} · {room.layout}
                   </div>
-                  <div className="room-meta text-subtle">
+                  <div className={clsx(styles.roomMeta, 'text-subtle')}>
                     {room.area ? `${room.area} ㎡ · ` : ''}
                     {room.facilities?.join('、') || '无设施'}
                   </div>
 
                   {activeLease && (
-                    <div className="lease-info">
-                      <div className="lease-tenant">
+                    <div className={styles.leaseInfo}>
+                      <div className={styles.leaseTenant}>
                         {activeLease.tenantName} · {activeLease.tenantPhone}
                       </div>
-                      <div className="text-muted lease-rent">
+                      <div className={clsx(styles.leaseRent, 'text-muted')}>
                         租金 ¥{money(activeLease.rentAmount)}/
                         {activeLease.cycle === 'MONTHLY'
                           ? '月'
@@ -199,7 +200,7 @@ export default function RoomListPage() {
                     </div>
                   )}
 
-                  <div className="room-actions">
+                  <div className={styles.roomActions}>
                     {canManageRoom && (
                       <>
                         <Button

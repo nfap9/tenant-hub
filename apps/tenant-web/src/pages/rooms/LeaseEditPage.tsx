@@ -19,7 +19,8 @@ import { selectableFeeTypes, type LeaseFeeFormItem } from './constants';
 import { buildLeaseFeesPayload } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './LeaseEditPage.scss';
+import styles from './LeaseEditPage.module.scss';
+import clsx from 'clsx';
 
 export default function LeaseEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -147,11 +148,11 @@ export default function LeaseEditPage() {
       />
 
       <Spin spinning={loading}>
-        <div className="lease-edit-container">
+        <div className={styles.leaseEditContainer}>
           <Card>
             {lease ? (
               <Form form={form} layout="vertical" onFinish={handleSubmit}>
-                <div className="form-grid-2">
+                <div className={styles.formGrid2}>
                   <Form.Item label="租金" name="rentAmount">
                     <InputNumber
                       min={0}
@@ -171,7 +172,7 @@ export default function LeaseEditPage() {
                     />
                   </Form.Item>
                 </div>
-                <div className="form-grid-2">
+                <div className={styles.formGrid2}>
                   <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
                     <InputNumber min={0} className="w-full" size="large" />
                   </Form.Item>
@@ -180,13 +181,17 @@ export default function LeaseEditPage() {
                   </Form.Item>
                 </div>
 
-                <Divider orientation="left" className="section-divider">
+                <Divider orientation="left" className={styles.sectionDivider}>
                   费用项目
                 </Divider>
-                <div className="fee-list mb-16">
+                <div className={clsx(styles.feeList, 'mb-16')}>
                   {fees.map((item) => (
-                    <Space key={item.id} className="fee-item" align="baseline">
-                      <span className="fee-label">{item.name}</span>
+                    <Space
+                      key={item.id}
+                      className={styles.feeItem}
+                      align="baseline"
+                    >
+                      <span className={styles.feeLabel}>{item.name}</span>
                       <InputNumber
                         min={0}
                         placeholder="价格"
@@ -220,7 +225,7 @@ export default function LeaseEditPage() {
                   </Button>
                 </div>
 
-                <Form.Item className="form-actions">
+                <Form.Item className={styles.formActions}>
                   <Button
                     type="primary"
                     htmlType="submit"
@@ -233,7 +238,7 @@ export default function LeaseEditPage() {
                   </Button>
                   <Button
                     size="large"
-                    className="cancel-btn"
+                    className={styles.cancelBtn}
                     onClick={() => navigate('/rooms')}
                   >
                     取消

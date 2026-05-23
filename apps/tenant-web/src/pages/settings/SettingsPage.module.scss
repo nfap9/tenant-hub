@@ -1,23 +1,13 @@
-@import '@/styles/variables';
-@import '@/styles/mixins';
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
 
 .settings-card {
   @include card-elevated;
   margin-bottom: 16px;
 }
 
-.settings-menu-card {
-  .ant-card-body {
-    padding: 0;
-  }
-}
-
 .settings-action-card {
   @include card-elevated;
-
-  .ant-card-body {
-    padding: $th-space-4;
-  }
 }
 
 .profile-header {
@@ -44,7 +34,7 @@
   font-size: 14px;
 }
 
-.settings-menu-card .ant-list-item.settings-menu-item {
+.settings-menu-item {
   cursor: pointer;
   padding: $th-space-4 $th-space-6;
   transition: $th-transition;

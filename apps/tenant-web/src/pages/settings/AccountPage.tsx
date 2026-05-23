@@ -9,7 +9,8 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { updatePassword } from '@/api/auth';
 import PageHeader from '@/components/ui/PageHeader';
-import './AccountPage.scss';
+import styles from './AccountPage.module.scss';
+import clsx from 'clsx';
 
 export default function AccountPage() {
   const { session } = useAppSession();
@@ -63,9 +64,9 @@ export default function AccountPage() {
       />
 
       <Card
-        className="settings-card settings-card--spaced"
+        className={clsx(styles.settingsCard, styles.settingsCardSpaced)}
         title={
-          <span className="settings-card-title">
+          <span className={styles.settingsCardTitle}>
             <UserOutlined />
             基本信息
           </span>
@@ -75,7 +76,7 @@ export default function AccountPage() {
           form={form}
           layout="vertical"
           onFinish={handleUpdateProfile}
-          className="settings-form"
+          className={styles.settingsForm}
         >
           <Form.Item label="用户名" name="username">
             <Input
@@ -104,9 +105,9 @@ export default function AccountPage() {
       </Card>
 
       <Card
-        className="settings-card"
+        className={styles.settingsCard}
         title={
-          <span className="settings-card-title">
+          <span className={styles.settingsCardTitle}>
             <LockOutlined />
             修改密码
           </span>
@@ -116,7 +117,7 @@ export default function AccountPage() {
           form={passwordForm}
           layout="vertical"
           onFinish={handleUpdatePassword}
-          className="settings-form"
+          className={styles.settingsForm}
         >
           <Form.Item
             label="原密码"

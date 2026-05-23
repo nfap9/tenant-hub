@@ -1,6 +1,7 @@
 import { Button } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
-import './EmptyState.scss';
+import styles from './EmptyState.module.scss';
+import clsx from 'clsx';
 
 interface EmptyStateProps {
   title?: string;
@@ -14,12 +15,12 @@ export default function EmptyState({
   action,
 }: EmptyStateProps) {
   return (
-    <div className="empty-state">
-      <div className="empty-state-icon-box">
+    <div className={styles.emptyState}>
+      <div className={styles.emptyStateIconBox}>
         <InboxOutlined />
       </div>
-      <div className="empty-state-title">{title}</div>
-      <div className={`empty-state-desc ${action ? 'has-action' : ''}`}>
+      <div className={styles.emptyStateTitle}>{title}</div>
+      <div className={clsx(styles.emptyStateDesc, action && styles.hasAction)}>
         {description}
       </div>
       {action && (

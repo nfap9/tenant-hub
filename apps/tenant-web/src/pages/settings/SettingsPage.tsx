@@ -11,7 +11,8 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { message } from 'antd';
 import PageHeader from '@/components/ui/PageHeader';
-import './SettingsPage.scss';
+import styles from './SettingsPage.module.scss';
+import clsx from 'clsx';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -65,18 +66,18 @@ export default function SettingsPage() {
     <div className="page-content">
       <PageHeader breadcrumb={[{ label: '设置' }]} />
 
-      <Card className="settings-card">
-        <div className="profile-header">
+      <Card className={styles.settingsCard}>
+        <div className={styles.profileHeader}>
           <Avatar
             size={64}
             icon={<UserOutlined />}
-            className="avatar-primary"
+            className={styles.avatarPrimary}
           />
           <div className="page-content">
-            <div className="profile-name">
+            <div className={styles.profileName}>
               {session?.user?.username || session?.user?.phone}
             </div>
-            <div className="profile-phone">{session?.user?.phone}</div>
+            <div className={styles.profilePhone}>{session?.user?.phone}</div>
           </div>
         </div>
         {currentMembership && (
@@ -91,26 +92,28 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card className="settings-card settings-menu-card">
+      <Card className={clsx(styles.settingsCard, 'settings-menu-card')}>
         <List
           itemLayout="horizontal"
           dataSource={menuItems}
           renderItem={(item) => (
             <List.Item
-              className="settings-menu-item"
+              className={styles.settingsMenuItem}
               onClick={() => navigate(item.path)}
               actions={[<RightOutlined key="arrow" className="text-subtle" />]}
             >
               <List.Item.Meta
-                avatar={<Avatar icon={item.icon} className="menu-avatar" />}
-                title={<span className="menu-title">{item.title}</span>}
+                avatar={
+                  <Avatar icon={item.icon} className={styles.menuAvatar} />
+                }
+                title={<span className={styles.menuTitle}>{item.title}</span>}
               />
             </List.Item>
           )}
         />
       </Card>
 
-      <Card className="settings-action-card">
+      <Card className={styles.settingsActionCard}>
         <Button
           type="primary"
           danger
@@ -123,7 +126,7 @@ export default function SettingsPage() {
         </Button>
       </Card>
 
-      <div className="settings-footer">
+      <div className={styles.settingsFooter}>
         {platformInfo.name} © {new Date().getFullYear()}
       </div>
     </div>

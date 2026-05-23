@@ -11,7 +11,7 @@ import {
 } from '@/utils/batchRooms';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './RoomBatchPage.scss';
+import styles from './RoomBatchPage.module.scss';
 
 export default function RoomBatchPage() {
   const { id } = useParams<{ id: string }>();
@@ -103,9 +103,9 @@ export default function RoomBatchPage() {
         ]}
       />
 
-      <Card className="batch-form-card">
+      <Card className={styles.batchFormCard}>
         <Form layout="vertical">
-          <div className="form-grid-3">
+          <div className={styles.formGrid3}>
             <Form.Item label="开始楼层">
               <InputNumber
                 min={1}
@@ -141,14 +141,14 @@ export default function RoomBatchPage() {
         </Form>
 
         <div className="mt-16">
-          <div className="preview-header">
-            <span className="preview-title">生成房间号</span>
+          <div className={styles.previewHeader}>
+            <span className={styles.previewTitle}>生成房间号</span>
             <span className="text-muted">
               已选 {selectedGeneratedBatchRoomNos.length}/
               {generatedBatchRoomNos.length}
               {generatedBatchRoomNos.length > 0 && (
                 <Checkbox
-                  className="checkbox-ml"
+                  className={styles.checkboxMl}
                   checked={allSelected}
                   onChange={(e) =>
                     setSelectedBatchRoomNos(
@@ -168,11 +168,11 @@ export default function RoomBatchPage() {
               description="输入有效的楼层范围和每层房间数后会自动生成房间号"
             />
           ) : (
-            <div className="groups-container">
+            <div className={styles.groupsContainer}>
               {batchRoomGroups.map((group) => (
                 <div key={group.floor}>
-                  <div className="floor-label">{group.floor}层</div>
-                  <div className="room-buttons">
+                  <div className={styles.floorLabel}>{group.floor}层</div>
+                  <div className={styles.roomButtons}>
                     {group.roomNos.map((roomNo) => {
                       const selected = selectedBatchRoomNos.includes(roomNo);
                       return (
@@ -180,7 +180,7 @@ export default function RoomBatchPage() {
                           key={roomNo}
                           type={selected ? 'primary' : 'default'}
                           size="small"
-                          className="room-btn"
+                          className={styles.roomBtn}
                           onClick={() =>
                             setSelectedBatchRoomNos((old) =>
                               toggleBatchRoomSelection(old, roomNo)
@@ -198,7 +198,7 @@ export default function RoomBatchPage() {
           )}
         </div>
 
-        <div className="actions-container">
+        <div className={styles.actionsContainer}>
           <Button
             type="primary"
             icon={<SaveOutlined />}
@@ -211,7 +211,7 @@ export default function RoomBatchPage() {
           </Button>
           <Button
             size="large"
-            className="cancel-btn"
+            className={styles.cancelBtn}
             onClick={() => navigate(`/apartments/${id}`)}
           >
             取消

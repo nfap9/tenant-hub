@@ -30,7 +30,7 @@ import {
 import type { Apartment } from '@/types/domain';
 import { optionalNumber, optionalText } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
-import './ApartmentFormPage.scss';
+import styles from './ApartmentFormPage.module.scss';
 
 export default function ApartmentFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -142,7 +142,7 @@ export default function ApartmentFormPage() {
       />
 
       <Spin spinning={loading}>
-        <Card className="apartment-form-card">
+        <Card className={styles.apartmentFormCard}>
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
             <Form.Item
               label="公寓名称"
@@ -179,7 +179,7 @@ export default function ApartmentFormPage() {
                 placeholder="例如 6"
               />
             </Form.Item>
-            <div className="form-row">
+            <div className={styles.formRow}>
               <Form.Item label="占地面积（㎡）" name="landArea">
                 <InputNumber
                   min={0}
@@ -213,7 +213,7 @@ export default function ApartmentFormPage() {
                 placeholder="请输入手机号"
               />
             </Form.Item>
-            <div className="form-row">
+            <div className={styles.formRow}>
               <Form.Item label="合同开始日期" name="contractStart">
                 <DatePicker size="large" className="w-full" />
               </Form.Item>
@@ -243,7 +243,7 @@ export default function ApartmentFormPage() {
               </Button>
               <Button
                 size="large"
-                className="cancel-btn"
+                className={styles.cancelBtn}
                 onClick={() =>
                   navigate(isEdit ? `/apartments/${id}` : '/apartments')
                 }

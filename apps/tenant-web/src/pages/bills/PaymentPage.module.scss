@@ -1,4 +1,4 @@
-@import '@/styles/variables';
+@use '@/styles/variables' as *;
 
 .payment-card-title {
   display: flex;
@@ -13,10 +13,6 @@
 .payment-bill-card {
   cursor: pointer;
   margin-bottom: 12px;
-
-  .ant-card-body {
-    padding: $th-space-4;
-  }
 
   &--selected {
     border-color: $th-primary;

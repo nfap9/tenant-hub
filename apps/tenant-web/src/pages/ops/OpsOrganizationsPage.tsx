@@ -3,7 +3,7 @@ import { Card, Select, Table, Tag, message } from 'antd';
 import { getAdminOrganizations } from '@/api/admin';
 import { apiClient } from '@/api/client';
 import PageHeader from '@/components/ui/PageHeader';
-import './OpsOrganizationsPage.scss';
+import styles from './OpsOrganizationsPage.module.scss';
 
 export default function OpsOrganizationsPage() {
   const [orgs, setOrgs] = useState<
@@ -108,7 +108,7 @@ export default function OpsOrganizationsPage() {
               render: (_: unknown, row: (typeof orgs)[0]) => (
                 <Select
                   value={row.status}
-                  className="status-select"
+                  className={styles.statusSelect}
                   size="middle"
                   options={['ACTIVE', 'SUSPENDED', 'DELETED'].map((value) => ({
                     value,

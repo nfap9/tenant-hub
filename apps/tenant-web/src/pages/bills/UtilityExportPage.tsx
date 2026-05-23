@@ -5,7 +5,7 @@ import { useAppSession } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import { exportUtilityPendingCsv } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
-import './UtilityExportPage.scss';
+import styles from './UtilityExportPage.module.scss';
 import type { Apartment } from '@/types/domain';
 
 export default function UtilityExportPage() {
@@ -57,7 +57,11 @@ export default function UtilityExportPage() {
       />
 
       <Card>
-        <Form form={form} layout="vertical" className="utility-export-form">
+        <Form
+          form={form}
+          layout="vertical"
+          className={styles.utilityExportForm}
+        >
           <Form.Item label="公寓" name="apartmentId">
             <Select
               placeholder="全部公寓"

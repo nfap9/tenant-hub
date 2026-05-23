@@ -45,7 +45,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Bill, BillStatus, MonthlyBill } from '@/types/domain';
-import './BillListPage.scss';
+import styles from './BillListPage.module.scss';
+import clsx from 'clsx';
 
 export default function BillListPage() {
   const { currentOrgId } = useAppSession();
@@ -150,32 +151,36 @@ export default function BillListPage() {
       <Card
         key={bill.id}
         size="small"
-        className="bill-card cursor-pointer"
+        className={clsx(styles.billCard, 'cursor-pointer')}
         onClick={() => navigate(`/bills/monthly/${bill.id}`)}
         bodyStyle={{ padding: 'var(--th-space-5)' }}
       >
         <div className="flex-start">
           <div>
-            <div className="bill-card-title">{summary.title}</div>
-            <div className="bill-card-meta">{summary.meta}</div>
+            <div className={styles.billCardTitle}>{summary.title}</div>
+            <div className={styles.billCardMeta}>{summary.meta}</div>
           </div>
           <Tag color={toneForBillStatus(bill.status)}>
             {statusLabels[bill.status]}
           </Tag>
         </div>
-        <div className="bill-card-footer">
-          <div className="bill-card-amount">¥{money(summary.totalAmount)}</div>
-          <div className="text-right">
-            <div className="bill-card-muted">
+        <div className={styles.billCardFooter}>
+          <div className={styles.billCardAmount}>
+            ¥{money(summary.totalAmount)}
+          </div>
+          <div className={styles.textRight}>
+            <div className={styles.billCardMuted}>
               剩余 ¥{money(summary.remainingAmount)}
             </div>
-            <div className="bill-card-subtle">
+            <div className={styles.billCardSubtle}>
               已收 ¥{money(summary.paidAmount)}
             </div>
           </div>
         </div>
-        <div className="bill-card-actions">
-          <span className="bill-card-count">{summary.detailCountText}</span>
+        <div className={styles.billCardActions}>
+          <span className={styles.billCardCount}>
+            {summary.detailCountText}
+          </span>
           <Space>
             {showDelete && bill.status !== 'PAID' && (
               <Button
@@ -204,16 +209,16 @@ export default function BillListPage() {
     <Card
       key={bill.id}
       size="small"
-      className="bill-card"
+      className={styles.billCard}
       bodyStyle={{ padding: 'var(--th-space-5)' }}
     >
       <div className="flex-start">
         <div>
-          <div className="bill-card-title">
+          <div className={styles.billCardTitle}>
             {bill.lease?.tenantName ?? '租客'} ·{' '}
             {bill.lease?.room?.roomNo ?? '房间'}
           </div>
-          <div className="bill-card-meta">
+          <div className={styles.billCardMeta}>
             {bill.periodStart?.slice(0, 10)} 至 {bill.periodEnd?.slice(0, 10)}
           </div>
         </div>
@@ -221,11 +226,11 @@ export default function BillListPage() {
           {statusLabels[bill.status]}
         </Tag>
       </div>
-      <div className="bill-card-alert">
-        <ExclamationCircleOutlined className="bill-list-alert-icon" />
+      <div className={styles.billCardAlert}>
+        <ExclamationCircleOutlined className={styles.billListAlertIcon} />
         {bill.failureReason ?? '需要补录或修正水电读数'}
       </div>
-      <div className="pending-actions">
+      <div className={styles.pendingActions}>
         <Space>
           <Button size="small" onClick={() => handleRetry(bill)}>
             重新出账
@@ -262,7 +267,7 @@ export default function BillListPage() {
 
       <Spin spinning={loading}>
         {/* 统计 */}
-        <Row gutter={[16, 16]} className="stats-row">
+        <Row gutter={[16, 16]} className={styles.statsRow}>
           {tab === 'unpaid' && (
             <>
               <Col xs={24} sm={12}>

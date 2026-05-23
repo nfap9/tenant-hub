@@ -30,7 +30,7 @@ import { getPaymentAmountError } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import type { MonthlyBill } from '@/types/domain';
-import './MonthlyDetailPage.scss';
+import styles from './MonthlyDetailPage.module.scss';
 
 export default function MonthlyDetailPage() {
   const { currentOrgId } = useAppSession();
@@ -150,18 +150,18 @@ export default function MonthlyDetailPage() {
 
       <Spin spinning={loading}>
         {/* 账单概览 */}
-        <Card className="mdp-mb-24">
+        <Card className={styles.mdpMb24}>
           <div className="flex-start">
             <div>
-              <div className="mdp-title">
-                <HomeOutlined className="mdp-icon-primary" />
+              <div className={styles.mdpTitle}>
+                <HomeOutlined className={styles.mdpIconPrimary} />
                 {bill.lease?.room?.roomNo ?? '房间'} · 到期 {day(bill.dueDate)}
               </div>
-              <div className="mdp-meta">
+              <div className={styles.mdpMeta}>
                 应收 ¥{money(bill.totalAmount)} · 已收 ¥{money(bill.paidAmount)}
               </div>
-              <div className="mdp-phone-row">
-                <PhoneOutlined className="mdp-icon-small" />
+              <div className={styles.mdpPhoneRow}>
+                <PhoneOutlined className={styles.mdpIconSmall} />
                 租客 {bill.tenantName} · {bill.lease?.tenantPhone}
               </div>
             </div>
@@ -175,12 +175,12 @@ export default function MonthlyDetailPage() {
         {canPay && (
           <Card
             title={
-              <span className="mdp-card-title">
+              <span className={styles.mdpCardTitle}>
                 <WalletOutlined />
                 登记收款
               </span>
             }
-            className="mdp-mb-24"
+            className={styles.mdpMb24}
           >
             <Space direction="vertical" className="w-full" size="middle">
               <Input
@@ -232,12 +232,12 @@ export default function MonthlyDetailPage() {
         {/* 子账单明细 */}
         <Card
           title={
-            <span className="mdp-card-title">
+            <span className={styles.mdpCardTitle}>
               <FileTextOutlined />
               账单明细
             </span>
           }
-          className="mdp-mb-24"
+          className={styles.mdpMb24}
         >
           {(bill.bills ?? []).length === 0 ? (
             <EmptyState
@@ -250,13 +250,13 @@ export default function MonthlyDetailPage() {
                 <div key={child.id} className="w-full">
                   <div className="flex-between">
                     <div>
-                      <span className="mdp-child-title">
+                      <span className={styles.mdpChildTitle}>
                         {billModeText(child.mode)} · {day(child.periodStart)} 至{' '}
                         {day(child.periodEnd)}
                       </span>
                     </div>
                     <Space>
-                      <span className="mdp-child-amount">
+                      <span className={styles.mdpChildAmount}>
                         ¥{money(child.totalAmount)}
                       </span>
                       {child.status !== 'PAID' && (
@@ -272,9 +272,9 @@ export default function MonthlyDetailPage() {
                       )}
                     </Space>
                   </div>
-                  <div className="mdp-items-wrap">
+                  <div className={styles.mdpItemsWrap}>
                     {(child.items ?? []).map((item) => (
-                      <div key={item.id} className="mdp-item-row">
+                      <div key={item.id} className={styles.mdpItemRow}>
                         <span className="text-muted">
                           {item.name}
                           {item.note ? ` · ${item.note}` : ''}
@@ -312,12 +312,12 @@ export default function MonthlyDetailPage() {
                       onClick={() =>
                         navigate(`/bills/utility?billId=${child.id}`)
                       }
-                      className="mdp-btn-mt"
+                      className={styles.mdpBtnMt}
                     >
                       录入本期水电
                     </Button>
                   )}
-                  <Divider className="mdp-divider" />
+                  <Divider className={styles.mdpDivider} />
                 </div>
               ))}
             </Space>
@@ -327,7 +327,7 @@ export default function MonthlyDetailPage() {
         {/* 收款记录 */}
         <Card
           title={
-            <span className="mdp-card-title">
+            <span className={styles.mdpCardTitle}>
               <WalletOutlined />
               收款记录
             </span>
@@ -338,12 +338,12 @@ export default function MonthlyDetailPage() {
           ) : (
             <Space direction="vertical" className="w-full">
               {(bill.payments ?? []).map((payment) => (
-                <div key={payment.id} className="mdp-payment-row">
+                <div key={payment.id} className={styles.mdpPaymentRow}>
                   <span className="text-muted">
                     {day(payment.paidAt)} · {payment.method}
                     {payment.note ? ` · ${payment.note}` : ''}
                   </span>
-                  <span className="mdp-payment-amount">
+                  <span className={styles.mdpPaymentAmount}>
                     ¥{money(payment.amount)}
                   </span>
                 </div>

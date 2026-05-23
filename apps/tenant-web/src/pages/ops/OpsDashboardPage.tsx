@@ -11,7 +11,7 @@ import {
 import { getAdminSummary, getAdminOrganizations } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
-import './OpsDashboardPage.scss';
+import styles from './OpsDashboardPage.module.scss';
 
 export default function OpsDashboardPage() {
   const [summary, setSummary] = useState<{
@@ -88,7 +88,7 @@ export default function OpsDashboardPage() {
     <div className="page-content">
       <PageHeader breadcrumb={[{ label: '运营总览' }]} />
 
-      <div className="ops-stats-grid">
+      <div className={styles.opsStatsGrid}>
         {stats.map((item) => (
           <StatCard
             key={item.title}

@@ -25,7 +25,7 @@ import {
   deleteAdminRole,
 } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
-import './OpsRolesPage.scss';
+import styles from './OpsRolesPage.module.scss';
 
 const permissionOptions = [
   { code: '*', name: '全部权限' },
@@ -248,15 +248,15 @@ export default function OpsRolesPage() {
             label="权限码"
             rules={[{ required: true, message: '请选择权限码' }]}
           >
-            <Checkbox.Group className="permission-grid">
+            <Checkbox.Group className={styles.permissionGrid}>
               {permissionOptions.map((item) => (
                 <Checkbox
                   key={item.code}
                   value={item.code}
-                  className="permission-checkbox"
+                  className={styles.permissionCheckbox}
                 >
-                  <div className="permission-label">{item.name}</div>
-                  <div className="permission-code">{item.code}</div>
+                  <div className={styles.permissionLabel}>{item.name}</div>
+                  <div className={styles.permissionCode}>{item.code}</div>
                 </Checkbox>
               ))}
             </Checkbox.Group>

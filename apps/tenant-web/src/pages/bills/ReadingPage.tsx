@@ -13,7 +13,7 @@ import { createMeterReading } from '@/api/bills';
 import { today } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import type { Room } from '@/types/domain';
-import './ReadingPage.scss';
+import styles from './ReadingPage.module.scss';
 import dayjs from 'dayjs';
 
 export default function ReadingPage() {
@@ -81,12 +81,12 @@ export default function ReadingPage() {
       <Spin spinning={loading}>
         <Card
           title={
-            <span className="reading-card-title">
+            <span className={styles.readingCardTitle}>
               <HomeOutlined />
               选择房间
             </span>
           }
-          className="reading-mb-24"
+          className={styles.readingMb24}
         >
           <Space wrap>
             {rooms.map((room) => (
@@ -103,12 +103,12 @@ export default function ReadingPage() {
 
         <Card
           title={
-            <span className="reading-card-title">
+            <span className={styles.readingCardTitle}>
               <DashboardOutlined />
               表类型
             </span>
           }
-          className="reading-mb-24"
+          className={styles.readingMb24}
         >
           <Space>
             {(['WATER', 'POWER'] as const).map((type) => (
@@ -125,7 +125,7 @@ export default function ReadingPage() {
 
         <Card
           title={
-            <span className="reading-card-title">
+            <span className={styles.readingCardTitle}>
               <ThunderboltOutlined />
               读数信息
             </span>
@@ -133,7 +133,7 @@ export default function ReadingPage() {
         >
           <Space
             direction="vertical"
-            className="reading-space-full"
+            className={styles.readingSpaceFull}
             size="large"
           >
             <DatePicker

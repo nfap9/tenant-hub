@@ -1,7 +1,7 @@
 import { Card } from 'antd';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './PlanPage.scss';
+import styles from './PlanPage.module.scss';
 
 export default function PlanPage() {
   return (
@@ -13,7 +13,7 @@ export default function PlanPage() {
           { label: '套餐订阅' },
         ]}
       />
-      <Card className="settings-card">
+      <Card className={styles.settingsCard}>
         <EmptyState
           title="暂无订阅信息"
           description="您当前没有活跃的套餐订阅"

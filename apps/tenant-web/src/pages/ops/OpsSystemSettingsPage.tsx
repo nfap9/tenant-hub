@@ -15,7 +15,7 @@ import {
   updatePlatformInfoSetting,
 } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
-import './OpsSystemSettingsPage.scss';
+import styles from './OpsSystemSettingsPage.module.scss';
 
 interface PlatformInfoValue {
   name: string;
@@ -102,7 +102,7 @@ export default function OpsSystemSettingsPage() {
             平台基础信息
           </span>
         }
-        className="settings-card"
+        className={styles.settingsCard}
       >
         <Form layout="vertical">
           <Form.Item label="平台名称" required>
@@ -166,7 +166,7 @@ export default function OpsSystemSettingsPage() {
             用量限制
           </span>
         }
-        className="settings-card"
+        className={styles.settingsCard}
       >
         <Form layout="vertical">
           <Form.Item

@@ -15,7 +15,8 @@ import { money, day } from '@/utils/format';
 import { apartmentMonthlyIncome, apartmentMonthlyExpense } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './ApartmentListPage.scss';
+import styles from './ApartmentListPage.module.scss';
+import clsx from 'clsx';
 
 export default function ApartmentListPage() {
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ export default function ApartmentListPage() {
             />
           </Card>
         ) : (
-          <div className="apartments-grid">
+          <div className={styles.apartmentsGrid}>
             {apartments.map((apt) => {
               const roomCount = apt.rooms?.length ?? 0;
               const occupiedCount =
@@ -100,13 +101,13 @@ export default function ApartmentListPage() {
                   key={apt.id}
                   hoverable
                   title={
-                    <div className="card-title">
+                    <div className={styles.cardTitle}>
                       <HomeOutlined className="text-primary" />
-                      <span className="card-title-text">{apt.name}</span>
+                      <span className={styles.cardTitleText}>{apt.name}</span>
                     </div>
                   }
                   extra={
-                    <div className="card-extra">
+                    <div className={styles.cardExtra}>
                       <Tooltip title="详情">
                         <Button
                           type="text"
@@ -149,34 +150,44 @@ export default function ApartmentListPage() {
                     </div>
                   }
                 >
-                  <div className="tag-row">
+                  <div className={styles.tagRow}>
                     <Tag color="blue">{apt.location || '未填写地址'}</Tag>
-                    <Tag className="floors-tag">{apt.floors} 层</Tag>
+                    <Tag className={styles.floorsTag}>{apt.floors} 层</Tag>
                   </div>
-                  <div className="stats-grid">
+                  <div className={styles.statsGrid}>
                     <div>
-                      <div className="stat-label">房间数</div>
-                      <div className="stat-value">{roomCount} 间</div>
+                      <div className={styles.statLabel}>房间数</div>
+                      <div className={styles.statValue}>{roomCount} 间</div>
                     </div>
                     <div>
-                      <div className="stat-label">在租</div>
-                      <div className="stat-value">{occupiedCount} 间</div>
+                      <div className={styles.statLabel}>在租</div>
+                      <div className={styles.statValue}>{occupiedCount} 间</div>
                     </div>
                     <div>
-                      <div className="stat-label">本月收入</div>
-                      <div className="stat-value stat-value--success">
+                      <div className={styles.statLabel}>本月收入</div>
+                      <div
+                        className={clsx(
+                          styles.statValue,
+                          styles.statValueSuccess
+                        )}
+                      >
                         ¥{money(income)}
                       </div>
                     </div>
                     <div>
-                      <div className="stat-label">本月支出</div>
-                      <div className="stat-value stat-value--danger">
+                      <div className={styles.statLabel}>本月支出</div>
+                      <div
+                        className={clsx(
+                          styles.statValue,
+                          styles.statValueDanger
+                        )}
+                      >
                         ¥{money(expense)}
                       </div>
                     </div>
                   </div>
                   {apt.contractStart && (
-                    <div className="contract-period">
+                    <div className={styles.contractPeriod}>
                       合同期：{day(apt.contractStart)} 至 {day(apt.contractEnd)}
                     </div>
                   )}

@@ -28,7 +28,8 @@ import {
 import type { OrgInvite, Membership } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import './OrganizationPage.scss';
+import styles from './OrganizationPage.module.scss';
+import clsx from 'clsx';
 
 export default function OrganizationPage() {
   const { memberships, currentOrgId, reload } = useAppSession();
@@ -150,7 +151,7 @@ export default function OrganizationPage() {
           {
             key: 'my-orgs',
             label: (
-              <span className="tab-label">
+              <span className={styles.tabLabel}>
                 <TeamOutlined />
                 我的组织
               </span>
@@ -158,7 +159,12 @@ export default function OrganizationPage() {
             children: (
               <div className="page-content">
                 {memberships.length > 0 ? (
-                  <Card className="settings-card settings-card--spaced">
+                  <Card
+                    className={clsx(
+                      styles.settingsCard,
+                      styles.settingsCardSpaced
+                    )}
+                  >
                     <Table
                       dataSource={memberships}
                       columns={orgColumns}
@@ -168,7 +174,12 @@ export default function OrganizationPage() {
                     />
                   </Card>
                 ) : (
-                  <Card className="settings-card settings-card--spaced">
+                  <Card
+                    className={clsx(
+                      styles.settingsCard,
+                      styles.settingsCardSpaced
+                    )}
+                  >
                     <EmptyState
                       title="暂无组织"
                       description="您还没有加入任何组织，请先创建或加入一个组织"
@@ -179,12 +190,12 @@ export default function OrganizationPage() {
                 {isInOrg && (
                   <Card
                     title={
-                      <span className="settings-card-title">
+                      <span className={styles.settingsCardTitle}>
                         <UserAddOutlined />
                         邀请码管理
                       </span>
                     }
-                    className="settings-card"
+                    className={styles.settingsCard}
                   >
                     <Button
                       type="primary"
@@ -214,8 +225,10 @@ export default function OrganizationPage() {
                             ]}
                           >
                             <div className="page-content">
-                              <div className="invite-code">{invite.code}</div>
-                              <div className="invite-meta">
+                              <div className={styles.inviteCode}>
+                                {invite.code}
+                              </div>
+                              <div className={styles.inviteMeta}>
                                 有效期至{' '}
                                 {invite.expiresAt
                                   .slice(0, 16)
@@ -244,18 +257,18 @@ export default function OrganizationPage() {
           {
             key: 'create',
             label: (
-              <span className="tab-label">
+              <span className={styles.tabLabel}>
                 <BuildOutlined />
                 创建组织
               </span>
             ),
             children: (
-              <Card className="settings-card">
+              <Card className={styles.settingsCard}>
                 <Form
                   form={createForm}
                   layout="vertical"
                   onFinish={handleCreate}
-                  className="settings-form"
+                  className={styles.settingsForm}
                 >
                   <Form.Item
                     label="组织名称"
@@ -272,7 +285,7 @@ export default function OrganizationPage() {
                     <Input.TextArea
                       placeholder="简要描述你的组织"
                       rows={3}
-                      className="input-radius-md"
+                      className="w-full"
                     />
                   </Form.Item>
                   <Form.Item>
@@ -293,18 +306,18 @@ export default function OrganizationPage() {
           {
             key: 'join',
             label: (
-              <span className="tab-label">
+              <span className={styles.tabLabel}>
                 <UserAddOutlined />
                 加入组织
               </span>
             ),
             children: (
-              <Card className="settings-card">
+              <Card className={styles.settingsCard}>
                 <Form
                   form={joinForm}
                   layout="vertical"
                   onFinish={handleJoin}
-                  className="settings-form"
+                  className={styles.settingsForm}
                 >
                   <Form.Item
                     label="邀请码"
@@ -314,7 +327,7 @@ export default function OrganizationPage() {
                     <Input
                       size="large"
                       placeholder="请输入邀请码"
-                      className="input-radius-md"
+                      className="w-full"
                     />
                   </Form.Item>
                   <Form.Item>

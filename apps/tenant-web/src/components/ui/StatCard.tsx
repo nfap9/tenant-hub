@@ -1,6 +1,7 @@
 import { Card } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
-import './StatCard.scss';
+import styles from './StatCard.module.scss';
+import clsx from 'clsx';
 
 interface StatCardProps {
   title: string;
@@ -38,21 +39,21 @@ export default function StatCard({
 
   return (
     <Card
-      className={`stat-card ${onClick ? 'clickable' : ''}`}
+      className={clsx(styles.statCard, onClick && styles.clickable)}
       bodyStyle={{ padding: 'var(--th-space-6)' }}
       onClick={onClick}
       hoverable={!!onClick}
     >
-      <div className="stat-card-header">
+      <div className={styles.statCardHeader}>
         <div
-          className="stat-card-icon"
+          className={styles.statCardIcon}
           style={{ background: c.bg, color: c.icon }}
         >
           {icon}
         </div>
         {trend !== undefined && (
           <div
-            className="stat-card-trend"
+            className={styles.statCardTrend}
             style={{
               color: trendUp ? '#22C55E' : '#DC2626',
               background: trendUp
@@ -65,15 +66,15 @@ export default function StatCard({
           </div>
         )}
       </div>
-      <div className="stat-card-value">
-        {prefix && <span className="prefix">{prefix}</span>}
+      <div className={styles.statCardValue}>
+        {prefix && <span className={styles.prefix}>{prefix}</span>}
         {value}
-        {suffix && <span className="suffix">{suffix}</span>}
+        {suffix && <span className={styles.suffix}>{suffix}</span>}
       </div>
-      <div className="stat-card-title-row">
-        <span className="stat-card-title">{title}</span>
+      <div className={styles.statCardTitleRow}>
+        <span className={styles.statCardTitle}>{title}</span>
         {trendLabel && (
-          <span className="stat-card-trend-label">{trendLabel}</span>
+          <span className={styles.statCardTrendLabel}>{trendLabel}</span>
         )}
       </div>
     </Card>

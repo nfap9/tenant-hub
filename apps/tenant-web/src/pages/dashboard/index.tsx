@@ -39,7 +39,8 @@ import {
 } from '@/utils/format';
 import type { Apartment, Room, Lease, MonthlyBill, Bill } from '@/types/domain';
 import Overview from './OverviewCard';
-import './index.scss';
+import styles from './index.module.scss';
+import clsx from 'clsx';
 
 const leaseMonthlyIncome = (lease: Lease) => {
   const rent = monthlyAmount(lease.rentAmount, lease.cycle);
@@ -230,7 +231,7 @@ export default function DashboardPage() {
   }[];
 
   return (
-    <div className="page-content dashboard-page">
+    <div className={clsx(styles.dashboardPage, 'page-content')}>
       <PageHeader
         breadcrumb={[{ label: '首页' }]}
         actions={
@@ -311,25 +312,27 @@ export default function DashboardPage() {
         </Row>
 
         {/* 出租率 */}
-        <Row gutter={[16, 16]} className="stat-grid">
+        <Row gutter={[16, 16]} className={styles.statGrid}>
           <Col xs={24} lg={12}>
             <Card
-              title={<span className="dashboard-card-title">出租情况</span>}
+              title={
+                <span className={styles.dashboardCardTitle}>出租情况</span>
+              }
             >
               <Row gutter={16}>
                 <Col span={12} className="text-center">
-                  <div className="stat-value-success">{vacantCount}</div>
+                  <div className={styles.statValueSuccess}>{vacantCount}</div>
                   <div className="text-muted">空闲房间</div>
                 </Col>
                 <Col span={12} className="text-center">
-                  <div className="stat-value-primary">{occupiedCount}</div>
+                  <div className={styles.statValuePrimary}>{occupiedCount}</div>
                   <div className="text-muted">已租房间</div>
                 </Col>
               </Row>
               <div className="mt-20">
-                <div className="progress-header">
-                  <span className="progress-label">出租率</span>
-                  <span className="progress-value">{occupancyRate}%</span>
+                <div className={styles.progressHeader}>
+                  <span className={styles.progressLabel}>出租率</span>
+                  <span className={styles.progressValue}>{occupancyRate}%</span>
                 </div>
                 <Progress
                   percent={occupancyRate}
@@ -340,8 +343,8 @@ export default function DashboardPage() {
                 />
               </div>
               {vacantLayoutStats.length > 0 && (
-                <div className="vacant-layouts">
-                  <div className="vacant-layouts-label">空闲户型</div>
+                <div className={styles.vacantLayouts}>
+                  <div className={styles.vacantLayoutsLabel}>空闲户型</div>
                   <Space wrap>
                     {vacantLayoutStats.map(([layout, count]) => (
                       <Tag key={layout} color="default">
@@ -358,16 +361,16 @@ export default function DashboardPage() {
           <Col xs={24} lg={12}>
             <Card
               title={
-                <span className="dashboard-card-title">
+                <span className={styles.dashboardCardTitle}>
                   待办事项 {todos.length > 0 ? `(${todos.length} 项)` : ''}
                 </span>
               }
             >
               {todos.length === 0 ? (
-                <div className="todo-empty">
-                  <CheckCircleOutlined className="todo-empty-icon" />
-                  <div className="todo-empty-title">暂无紧急待办</div>
-                  <div className="todo-empty-desc">经营状态稳定</div>
+                <div className={styles.todoEmpty}>
+                  <CheckCircleOutlined className={styles.todoEmptyIcon} />
+                  <div className={styles.todoEmptyTitle}>暂无紧急待办</div>
+                  <div className={styles.todoEmptyDesc}>经营状态稳定</div>
                 </div>
               ) : (
                 <Space direction="vertical" className="w-full" size="middle">
@@ -377,7 +380,7 @@ export default function DashboardPage() {
                       <Card
                         key={todo.key}
                         size="small"
-                        className="todo-card"
+                        className={styles.todoCard}
                         style={{
                           borderLeft: `4px solid ${tone.color}`,
                         }}
@@ -396,10 +399,10 @@ export default function DashboardPage() {
                             'none';
                         }}
                       >
-                        <div className="todo-item">
-                          <div className="todo-main">
+                        <div className={styles.todoItem}>
+                          <div className={styles.todoMain}>
                             <div
-                              className="todo-icon"
+                              className={styles.todoIcon}
                               style={{
                                 background: tone.bg,
                                 color: tone.color,
@@ -407,12 +410,16 @@ export default function DashboardPage() {
                             >
                               {tone.icon}
                             </div>
-                            <div className="todo-text">
-                              <div className="todo-title">{todo.title}</div>
-                              <div className="todo-detail">{todo.detail}</div>
+                            <div className={styles.todoText}>
+                              <div className={styles.todoTitle}>
+                                {todo.title}
+                              </div>
+                              <div className={styles.todoDetail}>
+                                {todo.detail}
+                              </div>
                             </div>
                           </div>
-                          <Space className="todo-meta">
+                          <Space className={styles.todoMeta}>
                             <Tag color={todo.tone}>{todo.badge}</Tag>
                             <RightOutlined className="text-muted" />
                           </Space>

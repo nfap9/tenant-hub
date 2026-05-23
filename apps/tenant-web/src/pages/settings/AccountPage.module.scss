@@ -1,5 +1,5 @@
-@import '@/styles/variables';
-@import '@/styles/mixins';
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
 
 .settings-card {
   @include card-elevated;
@@ -12,10 +12,6 @@
 .settings-card-title {
   font-weight: 600;
   color: $th-foreground;
-
-  .anticon {
-    margin-right: 8px;
-  }
 }
 
 .settings-form {

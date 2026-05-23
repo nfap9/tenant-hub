@@ -29,7 +29,7 @@ import {
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo } from 'react';
-import './MainLayout.scss';
+import styles from './MainLayout.module.scss';
 
 const { Header, Sider, Content } = Layout;
 
@@ -202,48 +202,48 @@ export default function MainLayout() {
   };
 
   return (
-    <Layout className="main-layout">
-      <Sider width={240} theme="light" className="main-sider">
+    <Layout className={styles.mainLayout}>
+      <Sider width={240} theme="light" className={styles.mainSider}>
         {/* Logo */}
-        <div className="sider-logo">
-          <div className="logo-icon">
+        <div className={styles.siderLogo}>
+          <div className={styles.logoIcon}>
             <HomeOutlined />
           </div>
           <div>
-            <div className="logo-title">{platformInfo.name}</div>
-            <div className="logo-subtitle">公寓管理工作台</div>
+            <div className={styles.logoTitle}>{platformInfo.name}</div>
+            <div className={styles.logoSubtitle}>公寓管理工作台</div>
           </div>
         </div>
 
         {/* Navigation */}
-        <div className="sider-menu-wrap">
-          <div className="menu-label">主菜单</div>
+        <div className={styles.siderMenuWrap}>
+          <div className={styles.menuLabel}>主菜单</div>
           <Menu
             mode="inline"
             selectedKeys={[selectedKey]}
-            className="main-menu"
+            className={styles.mainMenu}
             items={menuItems}
             onClick={({ key }) => handleMenuClick(key)}
           />
         </div>
 
         {/* Bottom section */}
-        <div className="sider-footer">
-          <div className="user-phone">{session?.user?.phone}</div>
+        <div className={styles.siderFooter}>
+          <div className={styles.userPhone}>{session?.user?.phone}</div>
         </div>
       </Sider>
 
-      <Layout className="main-content-layout">
-        <Header className="main-header">
+      <Layout className={styles.mainContentLayout}>
+        <Header className={styles.mainHeader}>
           {/* Breadcrumb placeholder / page title could go here */}
-          <div className="header-page-title">
+          <div className={styles.headerPageTitle}>
             {getMenuLabel(menuItems, selectedKey)}
           </div>
 
-          <div className="header-right">
+          <div className={styles.headerRight}>
             {/* Notifications */}
             <Badge dot>
-              <BellOutlined className="header-icon-btn" />
+              <BellOutlined className={styles.headerIconBtn} />
             </Badge>
 
             {/* Org Switcher */}
@@ -256,14 +256,14 @@ export default function MainLayout() {
                   onClick: (e) => setCurrentOrgId(e.key),
                 }}
               >
-                <span className="org-switcher org-switcher-hover">
-                  <SwapOutlined className="switcher-icon" />
+                <span className={styles.orgSwitcher}>
+                  <SwapOutlined className={styles.switcherIcon} />
                   {currentMembership?.organization.name || '选择组织'}
-                  <DownOutlined className="switcher-caret" />
+                  <DownOutlined className={styles.switcherCaret} />
                 </span>
               </Dropdown>
             ) : (
-              <span className="org-name-static">
+              <span className={styles.orgNameStatic}>
                 {currentMembership?.organization.name ||
                   (noOrg ? '未加入组织' : '')}
               </span>
@@ -288,26 +288,26 @@ export default function MainLayout() {
                 ],
               }}
             >
-              <span className="user-trigger">
-                <Avatar size={34} className="user-avatar">
+              <span className={styles.userTrigger}>
+                <Avatar size={34} className={styles.userAvatar}>
                   {(
                     session?.user?.username?.[0] ||
                     session?.user?.phone?.slice(-1) ||
                     '?'
                   ).toUpperCase()}
                 </Avatar>
-                <span className="user-name">
+                <span className={styles.userName}>
                   {session?.user?.username || session?.user?.phone}
                 </span>
-                <DownOutlined className="user-caret" />
+                <DownOutlined className={styles.userCaret} />
               </span>
             </Dropdown>
           </div>
         </Header>
 
-        <Content className="main-content">
+        <Content className={styles.mainContent}>
           {loading ? (
-            <div className="content-loading">
+            <div className={styles.contentLoading}>
               <Spin size="large" />
             </div>
           ) : (

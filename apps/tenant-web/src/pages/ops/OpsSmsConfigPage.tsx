@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons';
 import { getSmsConfig, updateSmsConfig } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
-import './OpsSmsConfigPage.scss';
+import styles from './OpsSmsConfigPage.module.scss';
 
 const methodOptions = [
   { value: 'POST', label: 'POST' },
@@ -111,7 +111,7 @@ export default function OpsSmsConfigPage() {
       {(fields, { add, remove }) => (
         <div>
           {fields.map((field) => (
-            <Space key={field.key} align="baseline" className="kv-space">
+            <Space key={field.key} align="baseline" className={styles.kvSpace}>
               <Form.Item
                 {...field}
                 name={[field.name, 'key']}
@@ -120,7 +120,7 @@ export default function OpsSmsConfigPage() {
               >
                 <Input
                   placeholder={keyPlaceholder}
-                  className="kv-input--key"
+                  className={styles.kvInputKey}
                   size="large"
                 />
               </Form.Item>
@@ -132,7 +132,7 @@ export default function OpsSmsConfigPage() {
               >
                 <Input
                   placeholder={valuePlaceholder}
-                  className="kv-input--value"
+                  className={styles.kvInputValue}
                   size="large"
                 />
               </Form.Item>
@@ -146,7 +146,7 @@ export default function OpsSmsConfigPage() {
             onClick={() => add()}
             block
             size="large"
-            className="btn-radius-md"
+            className={styles.btnRadiusMd}
           >
             新增字段
           </Button>
@@ -167,7 +167,7 @@ export default function OpsSmsConfigPage() {
             通用短信服务配置
           </span>
         }
-        className="sms-config-card"
+        className={styles.smsConfigCard}
       >
         <Form form={form} layout="vertical" onFinish={handleSave}>
           <Form.Item
@@ -224,13 +224,13 @@ export default function OpsSmsConfigPage() {
           </span>
         }
         size="small"
-        className="sms-config-card--bg"
+        className={styles.smsConfigCardBg}
       >
-        <Typography.Paragraph className="sms-config-text">
+        <Typography.Paragraph className={styles.smsConfigText}>
           在 URL、Headers、Params
           中均可使用以下变量，发送时会被自动替换为实际值：
         </Typography.Paragraph>
-        <ul className="sms-config-list">
+        <ul className={styles.smsConfigList}>
           <li>
             <Typography.Text code>{'{{code}}'}</Typography.Text> — 验证码（6
             位数字）
@@ -250,7 +250,7 @@ export default function OpsSmsConfigPage() {
             5）
           </li>
         </ul>
-        <Typography.Paragraph type="secondary" className="sms-config-hint">
+        <Typography.Paragraph type="secondary">
           GET 请求：参数自动拼接到 URL Query String。
           <br />
           POST / PUT 请求：参数作为 JSON Body 发送。
