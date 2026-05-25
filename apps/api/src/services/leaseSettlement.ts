@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, DepositStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import { calculateUtilityAmount } from './billing.js';
@@ -6,7 +6,7 @@ import { calculateUtilityAmount } from './billing.js';
 type DecimalValue = Prisma.Decimal.Value;
 
 type SettlementCalculationInput = {
-  depositAmount: DecimalValue;
+  depositPaidAmount: DecimalValue;
   depositDeductionAmount: DecimalValue;
   rentAdjustmentAmount: DecimalValue;
   previousWater: DecimalValue;
@@ -38,17 +38,17 @@ export const calculateSettlementAmounts = (
 ) => {
   validateMoveOutReadings(input);
 
-  const depositAmount = new Prisma.Decimal(input.depositAmount);
+  const depositPaidAmount = new Prisma.Decimal(input.depositPaidAmount);
   const depositDeductionAmount = new Prisma.Decimal(
     input.depositDeductionAmount
   );
-  if (depositDeductionAmount.greaterThan(depositAmount))
-    throw new Error('押金扣款不能超过原押金');
+  if (depositDeductionAmount.greaterThan(depositPaidAmount))
+    throw new Error('押金扣款不能超过已收押金');
 
   const rentAdjustmentAmount = new Prisma.Decimal(input.rentAdjustmentAmount);
   const utilityAmount = calculateUtilityAmount(input);
   const otherFeeAmount = new Prisma.Decimal(input.otherFeeAmount);
-  const depositRefundAmount = depositAmount.minus(depositDeductionAmount);
+  const depositRefundAmount = depositPaidAmount.minus(depositDeductionAmount);
   const rentReceivable = rentAdjustmentAmount.greaterThan(0)
     ? rentAdjustmentAmount
     : new Prisma.Decimal(0);
@@ -141,7 +141,7 @@ export const createLeaseSettlement = async ({
 }) => {
   const lease = await prisma.lease.findFirst({
     where: { id: leaseId, organizationId },
-    include: { room: true },
+    include: { room: true, deposit: true },
   });
   if (!lease) throw new HttpError(404, '租约不存在');
   if (lease.status !== 'ACTIVE')
@@ -167,10 +167,12 @@ export const createLeaseSettlement = async ({
     ),
   ]);
 
+  const depositPaidAmount = lease.deposit?.paidAmount ?? new Prisma.Decimal(0);
+
   let amounts;
   try {
     amounts = calculateSettlementAmounts({
-      depositAmount: lease.depositAmount,
+      depositPaidAmount,
       depositDeductionAmount: input.depositDeductionAmount,
       rentAdjustmentAmount: input.rentAdjustmentAmount,
       previousWater,
@@ -219,6 +221,63 @@ export const createLeaseSettlement = async ({
         status,
       },
     });
+
+    // 更新押金记录：登记扣款与退款
+    if (lease.deposit) {
+      const newDeducted = new Prisma.Decimal(lease.deposit.deductedAmount).plus(
+        input.depositDeductionAmount
+      );
+      const newRefunded = new Prisma.Decimal(lease.deposit.refundedAmount).plus(
+        amounts.depositRefundAmount
+      );
+      let depositStatus: DepositStatus = 'PAID';
+      if (
+        newRefunded.greaterThan(0) &&
+        newRefunded.lessThan(lease.deposit.paidAmount)
+      ) {
+        depositStatus = 'PARTIAL_REFUNDED';
+      } else if (
+        newRefunded.equals(lease.deposit.paidAmount) ||
+        newDeducted.plus(newRefunded).equals(lease.deposit.paidAmount)
+      ) {
+        depositStatus = newRefunded.greaterThan(0)
+          ? 'FULLY_REFUNDED'
+          : 'DEDUCTED';
+      }
+
+      if (new Prisma.Decimal(input.depositDeductionAmount).greaterThan(0)) {
+        await tx.depositPayment.create({
+          data: {
+            depositId: lease.deposit.id,
+            userId,
+            type: 'DEDUCT',
+            amount: input.depositDeductionAmount,
+            method: '退租结算扣款',
+            note: input.depositDeductionReason || '退租结算押金扣款',
+          },
+        });
+      }
+      if (amounts.depositRefundAmount.greaterThan(0)) {
+        await tx.depositPayment.create({
+          data: {
+            depositId: lease.deposit.id,
+            userId,
+            type: 'REFUND',
+            amount: amounts.depositRefundAmount,
+            method: '退租结算退款',
+            note: '退租结算押金退款',
+          },
+        });
+      }
+      await tx.deposit.update({
+        where: { id: lease.deposit.id },
+        data: {
+          deductedAmount: newDeducted,
+          refundedAmount: newRefunded,
+          status: depositStatus,
+        },
+      });
+    }
 
     await tx.meterReading.createMany({
       data: [

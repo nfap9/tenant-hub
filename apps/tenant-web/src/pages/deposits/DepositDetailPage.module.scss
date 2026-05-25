@@ -1,0 +1,18 @@
+.paymentHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.paymentAmount {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.paymentMeta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  margin-bottom: 2px;
+}

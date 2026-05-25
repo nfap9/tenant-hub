@@ -509,11 +509,6 @@ export const generateLeaseBills = async (
     const dueDate = startOfDay(billingDate)
       .add(lease.graceDays, 'day')
       .toDate();
-    const isFirstBill = startOfDay(billingDate).isSame(
-      startOfDay(lease.startDate),
-      'day'
-    );
-
     const prepaid = await prisma.bill.upsert({
       where: {
         leaseId_billingDate_mode: {
@@ -546,17 +541,6 @@ export const generateLeaseBills = async (
               amount: fee.amount,
               status: 'UNPAID' as const,
             })),
-            ...(isFirstBill &&
-            new Prisma.Decimal(lease.depositAmount).greaterThan(0)
-              ? [
-                  {
-                    type: 'DEPOSIT' as const,
-                    name: '押金',
-                    amount: lease.depositAmount,
-                    status: 'UNPAID' as const,
-                  },
-                ]
-              : []),
           ],
         },
       },

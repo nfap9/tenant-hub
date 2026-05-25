@@ -7,7 +7,7 @@ import {
 
 describe('lease settlement', () => {
   const base = {
-    depositAmount: 3000,
+    depositPaidAmount: 3000,
     depositDeductionAmount: 500,
     rentAdjustmentAmount: -300,
     previousWater: 10,

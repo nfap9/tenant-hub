@@ -147,6 +147,15 @@ export default function SettingsPage() {
         </View>
         <View
           className="settings-link"
+          onClick={() => goTo('/pages/settings/deposits')}
+        >
+          <View>
+            <Text className="card-title">押金管理</Text>
+            <Text className="text-muted">查看押金收退记录</Text>
+          </View>
+        </View>
+        <View
+          className="settings-link"
           onClick={() => goTo('/pages/settings/organization')}
         >
           <View>

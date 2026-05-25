@@ -33,6 +33,12 @@ const LeaseTerminatePage = lazy(
   () => import('@/pages/rooms/LeaseTerminatePage')
 );
 
+// 押金
+const DepositsPage = lazy(() => import('@/pages/deposits/DepositsPage'));
+const DepositDetailPage = lazy(
+  () => import('@/pages/deposits/DepositDetailPage')
+);
+
 // 账单
 const BillListPage = lazy(() => import('@/pages/bills/BillListPage'));
 const PaymentPage = lazy(() => import('@/pages/bills/PaymentPage'));
@@ -240,6 +246,24 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <LeaseTerminatePage />
+              </RequireOrg>
+            }
+          />
+
+          {/* 押金 */}
+          <Route
+            path="/deposits"
+            element={
+              <RequireOrg>
+                <DepositsPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/deposits/:id"
+            element={
+              <RequireOrg>
+                <DepositDetailPage />
               </RequireOrg>
             }
           />

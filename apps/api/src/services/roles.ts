@@ -9,6 +9,8 @@ export const PERMISSIONS = {
   LEASE_MANAGE: 'lease:manage',
   BILL_VIEW: 'bill:view',
   BILL_MANAGE: 'bill:manage',
+  DEPOSIT_VIEW: 'deposit:view',
+  DEPOSIT_MANAGE: 'deposit:manage',
   ORG_MANAGE: 'org:manage',
   MEMBER_MANAGE: 'member:manage',
 } as const;
@@ -36,6 +38,8 @@ export const ensureSystemRoles = async (
         PERMISSIONS.LEASE_MANAGE,
         PERMISSIONS.BILL_VIEW,
         PERMISSIONS.BILL_MANAGE,
+        PERMISSIONS.DEPOSIT_VIEW,
+        PERMISSIONS.DEPOSIT_MANAGE,
       ],
     },
     {
@@ -47,6 +51,7 @@ export const ensureSystemRoles = async (
         PERMISSIONS.ROOM_VIEW,
         PERMISSIONS.LEASE_VIEW,
         PERMISSIONS.BILL_VIEW,
+        PERMISSIONS.DEPOSIT_VIEW,
       ],
     },
   ];

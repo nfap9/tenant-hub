@@ -11,6 +11,8 @@ describe('roles', () => {
     expect(PERMISSIONS.LEASE_MANAGE).toBe('lease:manage');
     expect(PERMISSIONS.BILL_VIEW).toBe('bill:view');
     expect(PERMISSIONS.BILL_MANAGE).toBe('bill:manage');
+    expect(PERMISSIONS.DEPOSIT_VIEW).toBe('deposit:view');
+    expect(PERMISSIONS.DEPOSIT_MANAGE).toBe('deposit:manage');
     expect(PERMISSIONS.ORG_MANAGE).toBe('org:manage');
     expect(PERMISSIONS.MEMBER_MANAGE).toBe('member:manage');
   });
@@ -49,6 +51,8 @@ describe('roles', () => {
       PERMISSIONS.LEASE_MANAGE,
       PERMISSIONS.BILL_VIEW,
       PERMISSIONS.BILL_MANAGE,
+      PERMISSIONS.DEPOSIT_VIEW,
+      PERMISSIONS.DEPOSIT_MANAGE,
     ]);
   });
 
@@ -65,6 +69,7 @@ describe('roles', () => {
       PERMISSIONS.ROOM_VIEW,
       PERMISSIONS.LEASE_VIEW,
       PERMISSIONS.BILL_VIEW,
+      PERMISSIONS.DEPOSIT_VIEW,
     ]);
   });
 });

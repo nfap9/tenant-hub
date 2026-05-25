@@ -23,6 +23,7 @@ export default defineAppConfig({
     'pages/settings/index',
     'pages/login/index',
     'pages/settings/leases',
+    'pages/settings/deposits',
     'pages/settings/organization',
     'pages/settings/account',
     'pages/settings/plan',

@@ -38,6 +38,7 @@ function getMenuKeyFromPath(pathname: string): string {
   if (pathname === '/') return 'dashboard';
   if (pathname.startsWith('/apartments')) return 'apartments';
   if (pathname.startsWith('/rooms')) return 'rooms';
+  if (pathname.startsWith('/deposits')) return 'deposits';
   if (pathname.startsWith('/bills')) return 'bills';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname === '/ops') return 'ops-dashboard';
@@ -96,6 +97,7 @@ export default function MainLayout() {
       : [
           { key: 'dashboard', icon: <HomeOutlined />, label: '首页' },
           { key: 'rooms', icon: <HomeFilled />, label: '房间' },
+          { key: 'deposits', icon: <FileTextOutlined />, label: '押金' },
           { key: 'bills', icon: <FileTextOutlined />, label: '账单' },
           { key: 'apartments', icon: <ApartmentOutlined />, label: '公寓' },
         ]),
@@ -147,6 +149,9 @@ export default function MainLayout() {
         break;
       case 'rooms':
         navigate('/rooms');
+        break;
+      case 'deposits':
+        navigate('/deposits');
         break;
       case 'bills':
         navigate('/bills');

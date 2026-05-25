@@ -215,9 +215,22 @@ export default function LeaseTerminatePage() {
                     'text-muted'
                   )}
                 >
-                  <span>原押金</span>
+                  <span>约定押金</span>
                   <span className={styles.summaryValue}>
                     ¥{money(lease.depositAmount)}
+                  </span>
+                </div>
+                <div
+                  className={clsx(
+                    styles.summaryRow,
+                    'flex-between',
+                    'mb-8',
+                    'text-muted'
+                  )}
+                >
+                  <span>已收押金</span>
+                  <span className={styles.summaryValue}>
+                    ¥{money(lease.deposit?.paidAmount ?? 0)}
                   </span>
                 </div>
                 <div

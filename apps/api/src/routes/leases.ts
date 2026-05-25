@@ -27,6 +27,7 @@ leaseRouter.use(requireAuth, requireOrg);
 const leaseInclude = {
   room: { include: { apartment: true } },
   fees: true,
+  deposit: true,
 } as const;
 const amountSchema = z.coerce.number().nonnegative();
 const feeItemTypeSchema = z
@@ -107,6 +108,17 @@ leaseRouter.post(
         organizationId: req.organizationId!,
         roomId,
         fees: { create: fees },
+        ...(leaseData.depositAmount > 0
+          ? {
+              deposit: {
+                create: {
+                  organizationId: req.organizationId!,
+                  amount: leaseData.depositAmount,
+                  status: 'UNPAID',
+                },
+              },
+            }
+          : {}),
       },
       include: leaseInclude,
     });
@@ -162,6 +174,17 @@ leaseRouter.put(
         await tx.leaseFee.createMany({
           data: fees.map((fee) => ({ ...fee, leaseId: lease.id })),
         });
+      }
+      if (leaseData.depositAmount !== undefined) {
+        const deposit = await tx.deposit.findUnique({
+          where: { leaseId: lease.id },
+        });
+        if (deposit && deposit.status === 'UNPAID') {
+          await tx.deposit.update({
+            where: { leaseId: lease.id },
+            data: { amount: leaseData.depositAmount },
+          });
+        }
       }
       return tx.lease.update({
         where: { id: lease.id },

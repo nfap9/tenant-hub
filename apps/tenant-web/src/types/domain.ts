@@ -154,6 +154,7 @@ export type Lease = {
   terminatedAt?: string;
   fees?: LeaseFee[];
   room?: Room;
+  deposit?: Deposit;
 };
 
 export type Room = {
@@ -206,6 +207,42 @@ export type Payment = {
   id: string;
   billId?: string;
   monthlyBillId?: string;
+  amount: string | number;
+  paidAt: string;
+  method: string;
+  note?: string;
+  user?: { id: string; username: string; phone: string };
+};
+
+export type DepositStatus =
+  | 'UNPAID'
+  | 'PAID'
+  | 'PARTIAL_REFUNDED'
+  | 'FULLY_REFUNDED'
+  | 'DEDUCTED';
+export type DepositPaymentType = 'COLLECT' | 'REFUND' | 'DEDUCT';
+
+export type Deposit = {
+  id: string;
+  organizationId: string;
+  leaseId: string;
+  amount: string | number;
+  paidAmount: string | number;
+  refundedAmount: string | number;
+  deductedAmount: string | number;
+  status: DepositStatus;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  lease?: Lease & { room?: Room };
+  payments?: DepositPayment[];
+};
+
+export type DepositPayment = {
+  id: string;
+  depositId: string;
+  userId: string;
+  type: DepositPaymentType;
   amount: string | number;
   paidAt: string;
   method: string;
