@@ -10,6 +10,7 @@ import {
   Avatar,
 } from 'antd';
 import {
+  HomeTwoTone,
   HomeOutlined,
   ApartmentOutlined,
   HomeFilled,
@@ -207,7 +208,7 @@ export default function MainLayout() {
         {/* Logo */}
         <div className={styles.siderLogo}>
           <div className={styles.logoIcon}>
-            <HomeOutlined />
+            <HomeTwoTone />
           </div>
           <div>
             <div className={styles.logoTitle}>{platformInfo.name}</div>
