@@ -1,14 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Layout,
-  Menu,
-  Dropdown,
-  Spin,
-  message,
-  Modal,
-  Badge,
-  Avatar,
-} from 'antd';
+import { Layout, Menu, Dropdown, Spin, message, Modal, Avatar } from 'antd';
 import {
   HomeTwoTone,
   HomeOutlined,
@@ -248,9 +239,10 @@ export default function MainLayout() {
 
           <div className={styles.headerRight}>
             {/* Notifications */}
-            <Badge dot>
-              <BellOutlined className={styles.headerIconBtn} />
-            </Badge>
+            <BellOutlined
+              className={styles.headerIconBtn}
+              onClick={() => message.warning('暂无通知')}
+            />
 
             {/* Org Switcher */}
             {memberships.length > 1 ? (
