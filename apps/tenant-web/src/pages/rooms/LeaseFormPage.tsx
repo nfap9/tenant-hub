@@ -66,6 +66,18 @@ export default function LeaseFormPage() {
     ]);
   };
 
+  const updateFeeType = (id: string, type: string) => {
+    const selected = selectableFeeTypes.find((item) => item.type === type);
+    if (!selected) return;
+    setFees((old) =>
+      old.map((item) =>
+        item.id === id
+          ? { ...item, type: selected.type, name: selected.label }
+          : item
+      )
+    );
+  };
+
   const updateFeeAmount = (id: string, amount: string) => {
     setFees((old) =>
       old.map((item) => (item.id === id ? { ...item, amount } : item))
@@ -254,7 +266,18 @@ export default function LeaseFormPage() {
                   className={styles.feeItem}
                   align="baseline"
                 >
-                  <span className={styles.feeLabel}>{item.name}</span>
+                  <Select
+                    value={item.type}
+                    onChange={(value) => updateFeeType(item.id, value)}
+                    options={selectableFeeTypes
+                      .filter(
+                        (t) =>
+                          t.type === item.type ||
+                          !fees.some((f) => f.type === t.type)
+                      )
+                      .map((t) => ({ label: t.label, value: t.type }))}
+                    style={{ width: 120 }}
+                  />
                   <InputNumber
                     min={0}
                     placeholder="价格"
