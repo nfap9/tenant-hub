@@ -1,42 +1,42 @@
 ---
 name: tenant-web-style
-description: Enforce consistent visual style and component usage patterns for the Tenant Hub Web admin dashboard (apps/tenant-web). Use when modifying or creating React pages, components, global styles, or Ant Design theme configurations in the tenant-web app. Covers color tokens, layout rules, card/shadow standards, button/ input/ table usage, page structure patterns, Tabs usage, and content deduplication guidelines.
+description: 约束 Tenant Hub Web 管理后台（apps/tenant-web）的视觉样式与组件使用规范。在修改或新建 tenant-web 的页面、组件、全局样式、Ant Design 主题配置时使用。涵盖颜色令牌、布局、卡片阴影、按钮/输入框/表格/弹窗/表单用法、页面结构、标签页、加载空态、消息反馈、内容去重等规范。
 ---
 
-# Tenant Web Frontend Style Guide
+# Tenant Web 前端样式规范
 
-## Color Tokens
+## 颜色令牌
 
-| Token         | Value     | Usage                         |
-| ------------- | --------- | ----------------------------- |
-| Primary       | `#2563EB` | Buttons, links, active states |
-| Primary-light | `#3B82F6` | Hover states                  |
-| Primary-dark  | `#1D4ED8` | Active/pressed states         |
-| Success       | `#22C55E` | Enabled, success              |
-| Warning       | `#EA580C` | Pending, warning              |
-| Error         | `#DC2626` | Error, delete, disabled       |
-| Layout bg     | `#F3F4F6` | Sidebar, outer content area   |
-| Content bg    | `#FFFFFF` | Main content, cards           |
-| Text          | `#1F2937` | Headings, body text           |
-| Text muted    | `#6B7280` | Descriptions, secondary info  |
-| Border        | `#E5E7EB` | Dividers, form borders        |
-| Border light  | `#F3F4F6` | Card borders                  |
+| 用途     | 色值      | 说明                   |
+| -------- | --------- | ---------------------- |
+| 主色     | `#2563EB` | 按钮、链接、选中态     |
+| 主色浅   | `#3B82F6` | Hover 状态             |
+| 主色深   | `#1D4ED8` | Active / 按下状态      |
+| 成功色   | `#22C55E` | 成功、已启用           |
+| 警告色   | `#EA580C` | 警告、待处理           |
+| 错误色   | `#DC2626` | 错误、删除、禁用       |
+| 布局背景 | `#F3F4F6` | 侧边栏、内容区外围背景 |
+| 内容背景 | `#FFFFFF` | 主内容区、卡片背景     |
+| 主文字   | `#1F2937` | 标题、正文             |
+| 次要文字 | `#6B7280` | 描述、辅助信息         |
+| 边框     | `#E5E7EB` | 分割线、表单边框       |
+| 边框浅   | `#F3F4F6` | 卡片边框               |
 
-**Prohibited**: Never use gradients anywhere (logo, avatar, overview cards, etc.).
+**禁止**：任何位置不得使用渐变色（logo、头像、概览卡片等）。
 
-Sync CSS custom properties (`--th-*` in `src/styles/global.scss`) with Ant Design `ConfigProvider` theme tokens in `src/App.tsx`.
+所有颜色通过 CSS 自定义属性管理（`src/styles/global.scss`），Ant Design `ConfigProvider` 的 `theme.token` 与之同步。
 
-## Layout
+## 布局
 
-| Element | Style                                                    |
-| ------- | -------------------------------------------------------- |
-| Sidebar | Fixed 240px, white, shadow `1px 0 4px rgb(0 0 0 / 0.06)` |
-| Header  | Sticky, white, shadow `0 1px 4px rgb(0 0 0 / 0.06)`      |
-| Content | White `#FFFFFF`, padding `28px 32px`                     |
+| 元素        | 样式                                                          |
+| ----------- | ------------------------------------------------------------- |
+| 侧边栏      | 固定 240px，白色背景，右侧阴影 `1px 0 4px rgb(0 0 0 / 0.06)`  |
+| 顶部 Header | Sticky 定位，白色背景，底部阴影 `0 1px 4px rgb(0 0 0 / 0.06)` |
+| 主内容区    | 纯白背景 `#FFFFFF`，padding `28px 32px`                       |
 
-## Cards & Shadows
+## 卡片与阴影
 
-Apply this shadow globally to `.ant-card`:
+全局 `.ant-card` 统一应用阴影：
 
 ```css
 box-shadow:
@@ -45,124 +45,244 @@ box-shadow:
 border: 1px solid var(--th-border-light);
 ```
 
-**Reduce card nesting**:
+**减少卡片堆砌**：
 
-- List pages: Render Table directly, do not wrap with `<Card>`
-- Settings/config pages: Merge related sections into one Card with dividers
-- Ops admin list pages: Show Table directly without outer `<Card>`
+- **列表页**：Table 直接展示，**不要**外加 `<Card>` 包裹
+- **设置/配置页**：同类信息合并到一个 Card 内，用分割线分隔
+- **运营后台列表页**：组织列表、租户列表等直接展示 Table，去掉外层 Card
 
-## Border Radius & Shadow Scale
+## 圆角与阴影层级
 
-| Level   | Radius | Shadow                                                               |
-| ------- | ------ | -------------------------------------------------------------------- |
-| sm      | `6px`  | `0 1px 2px rgb(0 0 0 / 0.06)`                                        |
-| default | `8px`  | `0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)`        |
-| md      | `8px`  | `0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`   |
-| lg      | `12px` | `0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)` |
+| 级别 | 圆角值 | 阴影值                                                               |
+| ---- | ------ | -------------------------------------------------------------------- |
+| sm   | `6px`  | `0 1px 2px rgb(0 0 0 / 0.06)`                                        |
+| 默认 | `8px`  | `0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)`        |
+| md   | `8px`  | `0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`   |
+| lg   | `12px` | `0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)` |
 
-Card radius: `12px`. Button radius: `8px`. Input radius: `8px`.
+Card 圆角 `12px`，按钮圆角 `8px`，输入框圆角 `8px`。
 
-## Button Rules
+## 按钮规则
 
-### Primary Button Rule
+### 主按钮规则
 
-Each button group must have exactly **one** primary (`type="primary"`) button. Delete actions use `type="primary" danger`.
+每组按钮有且仅有一个主色按钮（`type="primary"`）。删除/危险操作使用 `type="primary" danger`。
 
-### Default Style
+### 默认样式
 
-- Default size: do not set `size` (uses Ant Design default `middle`)
-- Default type: `type="default"` (outlined button with border)
+- 默认大小：不设置 `size`（使用 Ant Design 默认 `middle`）
+- 默认类型：`type="default"`（带边框的普通按钮）
 
-### Context-Specific Sizes & Types
+### 不同场景的按钮规格
 
-| Context                   | Size    | Type           | Notes                              |
-| ------------------------- | ------- | -------------- | ---------------------------------- |
-| PageHeader actions        | default | default        | Normal outlined button             |
-| Table cell inline actions | `small` | `link`         | Text button (no border/background) |
-| Card internal operations  | default | icon           | Icon button with tooltip on hover  |
-| Form submit               | default | primary        | Only primary in the form           |
-| Delete / destructive      | default | primary danger | `danger` prop on primary           |
+| 场景               | 大小    | 类型           | 说明                         |
+| ------------------ | ------- | -------------- | ---------------------------- |
+| PageHeader 操作区  | 默认    | default        | 普通带边框按钮               |
+| 表格单元格内嵌操作 | `small` | `link`         | 文字按钮（无边框/无背景）    |
+| 卡片内部操作       | 默认    | icon           | 图标按钮，hover 显示操作名称 |
+| 表单提交           | 默认    | primary        | 表单内唯一主色按钮           |
+| 删除 / 危险操作    | 默认    | primary danger | `danger` 属性加在主色按钮上  |
 
-**Card icon button pattern**: Use `<Button type="text" icon={<Icon />} />` with `<Tooltip title="Action name">`. Show the action name only on hover via tooltip, not as visible text.
+**卡片图标按钮模式**：使用 `<Button type="text" icon={<Icon />} />` 配合 `<Tooltip title="操作名称">`。操作名称仅通过 tooltip 在 hover 时显示，不作为可见文本。
 
-## Input & Data Entry Rules
+## 输入框与数据录入规则
 
-### Default Size
+### 默认大小
 
-Do not set `size` on any input component — use the Ant Design default (`middle`).
+所有输入组件不设置 `size`，使用 Ant Design 默认大小（`middle`）。
 
-### Search Input
+### 搜索输入框
 
-Always use Ant Design `Search` component (`<Input.Search />`). The Search component already includes a search icon at the end. Do **not** add an additional search icon inside the input.
+必须使用 Ant Design `Search` 组件（`<Input.Search />`）。Search 组件末尾自带搜索图标，**禁止**在输入框内再嵌入搜索图标。
 
-### Number Input
+### 数字输入框
 
-Use `InputNumber` with stepper controls (up/down arrows) enabled. Set `min` and `step` as appropriate.
+使用 `InputNumber`，开启拨轮（上下箭头）。按需设置 `min` 和 `step`。
 
-### Select / DatePicker / TimePicker
+### 选择框 / 日期选择 / 时间选择
 
-All use default size. No `size="large"` anywhere.
+均使用默认大小。任何地方禁止使用 `size="large"`。
 
-## Table Rules
+## 表格规则
 
-### Height & Scrolling
+### 高度与滚动
 
-Table height must adapt to the page height. The page itself must not scroll because the table is too tall. Instead, constrain the table container height so that only the **table body scrolls** while headers remain fixed.
+表格高度必须和页面高度自适应。不允许因表格过高导致页面整体滚动。应限制表格容器高度，仅让**表格内容区滚动**，表头保持固定。
 
-Set `scroll={{ y: <calculated-height> }}` based on available viewport height.
+使用 `scroll={{ y: <计算高度> }}` 根据视口可用高度设置。
 
-### Action Column
+### 操作列
 
-Fix the action column to the right: `fixed: 'right'`.
+操作列固定在最右侧：`fixed: 'right'`。
 
-### Top Actions
+### 顶部操作按钮
 
-Table toolbar buttons align to the **right** side of the table header area.
+表格顶部操作按钮靠右对齐。
 
-### General
+### 分页
 
-- List page Table renders directly without outer `<Card>` wrapper
-- Operation buttons in table cells use `small` + `type="link"` (text button)
-- Select in table cells uses `size="small"`
+仅使用 Table 内置的 `pagination` prop，不使用独立的 `<Pagination>` 组件。
+默认：`pagination={{ pageSize: 10 }}`。不添加 `showSizeChanger` 和 `showTotal`。
 
-## Page Structure Patterns
+### 通用
 
-### List Page
+- 列表页 Table 直接展示，不加外层 `<Card>` 包裹
+- 表格单元格内操作按钮用 `small` + `type="link"`（文字按钮）
+- 表格单元格内 Select 用 `size="small"`
+- 数据加载使用 `loading={loading}` prop，不用 `<Spin>` 包裹 Table
+
+## 弹窗与对话框规则
+
+### 表单弹窗模式
+
+- 始终设置 `footer={null}` — 提交按钮放在 Form 内部
+- `onCancel` 中调用 `form.resetFields()`
+- 同一弹窗切换新增/编辑时，在 `<Form>` 上加 `key={editingItem?.id ?? 'new'}` 强制重新挂载
+
+### 删除确认
+
+- 内联删除操作（表格行、卡片底部）：使用 `<Popconfirm>`
+- `Popconfirm` 必须设置 `okButtonProps={{ danger: true }}`
+- 有条件禁用时，`disabled` 需同时设置在 `Popconfirm` 和触发 Button 上
+- 禁止用 `Modal.confirm` 做内联删除
+
+### 文字提示
+
+Tooltip **仅**用于纯图标按钮提供可访问标签。不使用 Drawer 或 Popover。
+
+## 表单规则
+
+### 布局
+
+- 统一使用 `layout="vertical"`
+- 不使用 `labelCol` / `wrapperCol`
+- 表单容器限制最大宽度：复杂表单 `max-width: 720px`，简单表单 `max-width: 600px`
+
+### 多列并排
+
+表单内并排字段使用 CSS Grid：
+
+```scss
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr; // 或 1fr 1fr 1fr
+  gap: 16px;
+}
+```
+
+### 校验
+
+- 在每个 `Form.Item` 上通过 `rules` prop 内联定义
+- 使用 `{ required: true, message: '请输入/选择xxx' }` 模式
+- 不使用外部校验库（Zod、Yup 等）
+
+### Switch
+
+Form 内的 Switch 必须设置 `valuePropName="checked"`。
+
+### 动态字段
+
+动态键值对或可重复字段使用 `Form.List`。
+
+### 编辑回填数据
+
+使用 `useEffect` + `form.setFieldsValue()` 模式：
+
+```tsx
+useEffect(() => {
+  if (isEdit && data && !initializedRef.current) {
+    form.setFieldsValue({ ... });
+    initializedRef.current = true;
+  }
+}, [isEdit, data, form]);
+```
+
+### 表单操作按钮
+
+提交/取消按钮组：提交按钮 `margin-top: 24px`，取消按钮 `margin-left: 12px`。
+
+## 加载与空态
+
+### 空态
+
+始终使用自定义 `<EmptyState>` 组件（`components/ui/EmptyState.tsx`），不使用 Ant Design `<Empty>`。默认标题为 `"暂无数据"`。
+
+### 页面加载
+
+用 `<Spin spinning={loading}>...</Spin>` 包裹页面内容，使用默认大小。
+
+### 表单提交加载
+
+提交按钮使用独立的 `saving` / `submitting` 状态控制 `loading` prop，不要复用数据加载状态。
+
+### 骨架屏
+
+任何地方禁止使用 `<Skeleton>`。
+
+### 路由加载
+
+所有页面使用 `lazy()` 懒加载，Suspense fallback 使用 `<PageLoading />`（内部渲染 `<Spin size="large" />`）。
+
+## 消息与反馈
+
+- 使用 `message.success('操作成功')`、`message.error(e.message \|\| '操作失败')`、`message.warning('提示信息')`
+- 禁止使用 `message.info`、`message.loading` 和 `notification`
+- 从 `antd` 解构导入：`import { message } from 'antd'`
+
+## 标签与状态展示
+
+- 所有状态展示使用 `<Tag>`。禁止创建自定义 `<StatusTag>` 组件。
+- 状态值不使用 `<Badge>`（通知红点除外）。
+- 状态颜色映射：
+  - `success`（绿）：正常、激活、已支付、空闲、已启用
+  - `warning`（橙）：已租、待支付、部分支付、待处理、系统预设
+  - `error`（红）：维修中、失败、作废、已删除
+  - `default`（灰）：预留、出账中、草稿、普通用户角色、未激活
+
+## 分割线
+
+- 表单内区块标题：`<Divider orientation="left">区块标题</Divider>`
+- 列表项分隔：纯 `<Divider />` 不带 orientation
+- 禁止使用竖向分割线
+
+## 页面结构规范
+
+### 列表页
 
 ```
-PageHeader (breadcrumb + title + actions)
-  → Tabs (filter with count labels, never Radio.Group)
-    → Table / Card grid (direct, no Card wrapper)
+PageHeader（面包屑 + 标题 + 右侧操作按钮）
+  → Tabs（筛选，标签显示数量，不用 Radio.Group）
+    → Table / 卡片网格（直接展示，不加 Card 包裹）
 ```
 
-- Do not add stat cards — Tabs already show counts
-- Place action buttons in `PageHeader` actions (top-right)
-- Use `Tabs` for filtering, matching the bill list page style
+- **不要放统计卡片**：Tab 标签已显示数量，避免信息重复
+- 操作按钮统一放在 `PageHeader` 的 `actions` 中（页面右上角）
+- 筛选使用 `Tabs` 组件，保持与账单页风格一致
 
-### Detail Page
+### 详情页
 
 ```
-PageHeader (breadcrumb + title + actions)
-  → Tabs (info sections)
-    → Card (basic info)
-    → Card (sub-lists/tables)
+PageHeader（面包屑 + 标题 + 右侧操作按钮）
+  → Tabs（不同信息区块）
+    → Card（基本信息）
+    → Card（子列表/表格）
 ```
 
-### Settings/Config Page
+### 设置/配置页
 
-- Merge related sections into one Card with dividers
-- Keep Card titles clear and specific
+- 同类信息合并到一个 Card，内部用分割线分隔区块
+- 表单区块保持 Card 标题明确
 
-### Ops Admin List Pages
+### 运营后台列表页
 
-- Show Table directly, remove outer `<Card>` wrapper
-- Place action buttons in `PageHeader` actions
+- Table 直接展示，去掉外层 `<Card>` 包裹
+- 操作按钮统一放在 `PageHeader` 的 `actions` 中
 
-## Tabs Usage
+## Tab 组件规范
 
-- Use Ant Design `Tabs` for all page-level filtering and switching
-- Do not use `Radio.Group` + `Radio.Button` for page-level filters
-- Add bottom border to Tabs navigation:
+- 所有筛选切换统一使用 Ant Design `Tabs` 组件
+- 不要用 `Radio.Group` + `Radio.Button` 做页面级筛选
+- Tabs 导航增加底部边框区分内容区：
 
 ```css
 .ant-tabs-nav {
@@ -171,35 +291,43 @@ PageHeader (breadcrumb + title + actions)
 }
 ```
 
-## Content Deduplication
+## 内容去重原则
 
-- Dashboard already has business overview and stats — do not repeat on other pages
-- Room page: Tabs show counts per status, remove top StatCard row
-- Bill page: Tabs show unpaid/pending/all counts, remove top stat card row
+- **首页 Dashboard** 已有经营概览和统计信息，其他列表页不要重复展示统计卡片
+- **房间页**：Tab 已显示各状态数量，去掉顶部 StatCard
+- **账单页**：Tab 已显示待支付/待处理/全部数量，去掉顶部统计卡片行
 
-## Style File Conventions
+## 样式文件规范
 
-- Use `.module.scss` for component-level styles
-- Import global variables via `@use '@/styles/variables' as *`
-- Manage non-Ant Design styles with CSS variables (`var(--th-*)`) or SCSS variables (`$th-*`)
-- Keep shared utility classes in `global.scss` (e.g. `.flex-between`, `.text-muted`)
+- 组件级样式使用 `.module.scss`，通过 `@use '@/styles/variables' as *` 引用全局变量
+- 非 Ant Design 元素的样式通过 CSS 变量（`var(--th-*)`）或 SCSS 变量（`$th-*`）管理
+- 公共工具类写在 `global.scss` 中（如 `.flex-between`、`.text-muted`、`.mt-16`、`.mb-16`、`.w-full` 等）
 
-## Page Checklist
+## 新增/修改页面检查清单
 
-After creating or modifying a page, verify:
+开发或修改页面后，对照以下清单检查：
 
-- [ ] Colors follow white/gray/blue theme, no gradients
-- [ ] Each button group has exactly one primary button; delete uses danger
-- [ ] Default buttons use `type="default"` outlined style, no size prop
-- [ ] Table cell buttons use `size="small" type="link"`
-- [ ] Card operation buttons use icon button with tooltip
-- [ ] Inputs use default size; Search uses `<Input.Search />` without extra icon
-- [ ] Number inputs use `InputNumber` with steppers
-- [ ] Table height adapts to viewport; only table body scrolls
-- [ ] Table action column is `fixed: 'right'`
-- [ ] Table top actions align right
-- [ ] List page Table renders directly without outer `<Card>`
-- [ ] Action buttons are in `PageHeader` actions
-- [ ] Filters use `Tabs` (not `Radio.Group`)
-- [ ] No duplicated stats that already exist on Dashboard
-- [ ] Card shadows render correctly
+- [ ] 配色是否遵循白/灰/蓝主色调，无渐变
+- [ ] 每组按钮是否仅有一个主色按钮；删除是否使用 danger
+- [ ] 默认按钮是否使用 `type="default"` 带边框样式，不写 size
+- [ ] 表格单元格按钮是否使用 `size="small" type="link"`
+- [ ] 卡片操作按钮是否使用图标按钮 + Tooltip
+- [ ] 输入框是否默认大小；Search 是否用 `<Input.Search />` 且无额外图标
+- [ ] 数字输入框是否使用 `InputNumber` 带拨轮
+- [ ] 表格高度是否自适应视口，仅表体滚动
+- [ ] 表格操作列是否 `fixed: 'right'`
+- [ ] 表格顶部操作按钮是否靠右
+- [ ] 表格分页是否使用 `pageSize: 10`，无独立 Pagination
+- [ ] 表单弹窗是否 `footer={null}`，提交按钮在 Form 内
+- [ ] 表单是否使用 `layout="vertical"`，容器宽度 600-720px
+- [ ] Form 内的 Switch 是否设置 `valuePropName="checked"`
+- [ ] 空态是否使用 `<EmptyState>` 组件
+- [ ] 页面加载是否用 `<Spin>`，表格加载用 `loading` prop
+- [ ] 表单提交是否使用独立的 saving 状态控制按钮 loading
+- [ ] message 是否仅用 `.success`/`.error`/`.warning`
+- [ ] 状态展示是否使用 `<Tag>` 且颜色映射正确
+- [ ] 列表页 Table 是否直接展示（无外层 Card）
+- [ ] 操作按钮是否统一放在 PageHeader 右侧
+- [ ] 筛选是否使用 Tabs（不用 Radio.Group）
+- [ ] 是否存在与首页或其他页面重复的统计信息
+- [ ] Card 阴影是否正常显示
