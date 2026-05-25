@@ -170,7 +170,6 @@ export default function RoomFormPage() {
                     label: a.name,
                     value: a.id,
                   }))}
-                  size="large"
                   prefix={<HomeOutlined />}
                 />
               </Form.Item>
@@ -179,11 +178,7 @@ export default function RoomFormPage() {
                 name="roomNo"
                 rules={[{ required: true, message: '请输入房号' }]}
               >
-                <Input
-                  placeholder="例如 301"
-                  size="large"
-                  prefix={<NumberOutlined />}
-                />
+                <Input placeholder="例如 301" prefix={<NumberOutlined />} />
               </Form.Item>
               <Form.Item
                 label="户型"
@@ -196,7 +191,6 @@ export default function RoomFormPage() {
                     label: l,
                     value: l,
                   }))}
-                  size="large"
                   prefix={<BuildOutlined />}
                 />
               </Form.Item>
@@ -204,14 +198,12 @@ export default function RoomFormPage() {
                 <InputNumber
                   min={0}
                   className="w-full"
-                  size="large"
                   placeholder="请输入面积"
                 />
               </Form.Item>
               <Form.Item label="设施" name="facilities">
                 <Input
                   placeholder="多个设施用逗号分隔，如：空调,热水器,洗衣机"
-                  size="large"
                   prefix={<AppstoreOutlined />}
                 />
               </Form.Item>
@@ -226,7 +218,6 @@ export default function RoomFormPage() {
                       label: statusLabels[s],
                       value: s,
                     }))}
-                    size="large"
                   />
                 </Form.Item>
               )}
@@ -237,12 +228,10 @@ export default function RoomFormPage() {
                   icon={<SaveOutlined />}
                   loading={saving}
                   disabled={saving}
-                  size="large"
                 >
                   {isEdit ? '保存修改' : '保存房间'}
                 </Button>
                 <Button
-                  size="large"
                   className={styles.cancelBtn}
                   onClick={() =>
                     navigate(

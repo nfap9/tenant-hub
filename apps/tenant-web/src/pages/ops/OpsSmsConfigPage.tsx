@@ -121,7 +121,6 @@ export default function OpsSmsConfigPage() {
                 <Input
                   placeholder={keyPlaceholder}
                   className={styles.kvInputKey}
-                  size="large"
                 />
               </Form.Item>
               <Form.Item
@@ -133,7 +132,6 @@ export default function OpsSmsConfigPage() {
                 <Input
                   placeholder={valuePlaceholder}
                   className={styles.kvInputValue}
-                  size="large"
                 />
               </Form.Item>
               <Button type="link" danger onClick={() => remove(field.name)}>
@@ -145,7 +143,6 @@ export default function OpsSmsConfigPage() {
             type="dashed"
             onClick={() => add()}
             block
-            size="large"
             className={styles.btnRadiusMd}
           >
             新增字段
@@ -176,7 +173,6 @@ export default function OpsSmsConfigPage() {
             rules={[{ required: true, message: '请输入短信接口地址' }]}
           >
             <Input
-              size="large"
               prefix={<LinkOutlined className="text-subtle" />}
               placeholder="https://api.example.com/sms/send"
             />
@@ -186,7 +182,7 @@ export default function OpsSmsConfigPage() {
             label="请求方式"
             rules={[{ required: true, message: '请选择请求方式' }]}
           >
-            <Select options={methodOptions} size="large" />
+            <Select options={methodOptions} />
           </Form.Item>
           <Form.Item label="请求头 (Headers)">
             {renderKeyValueList(
@@ -208,7 +204,6 @@ export default function OpsSmsConfigPage() {
               htmlType="submit"
               loading={saving}
               icon={<SaveOutlined />}
-              size="large"
             >
               保存配置
             </Button>

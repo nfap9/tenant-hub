@@ -203,7 +203,6 @@ export default function OrganizationPage() {
                       onClick={handleCreateInvite}
                       loading={inviteLoading}
                       className="mb-16"
-                      size="large"
                     >
                       创建邀请码
                     </Button>
@@ -276,7 +275,6 @@ export default function OrganizationPage() {
                     rules={[{ required: true, message: '请输入组织名称' }]}
                   >
                     <Input
-                      size="large"
                       prefix={<HomeOutlined className="text-subtle" />}
                       placeholder="例如：阳光公寓"
                     />
@@ -294,7 +292,6 @@ export default function OrganizationPage() {
                       htmlType="submit"
                       loading={createLoading}
                       icon={<PlusOutlined />}
-                      size="large"
                     >
                       创建组织
                     </Button>
@@ -324,18 +321,13 @@ export default function OrganizationPage() {
                     name="inviteCode"
                     rules={[{ required: true, message: '请输入邀请码' }]}
                   >
-                    <Input
-                      size="large"
-                      placeholder="请输入邀请码"
-                      className="w-full"
-                    />
+                    <Input placeholder="请输入邀请码" className="w-full" />
                   </Form.Item>
                   <Form.Item>
                     <Button
                       type="primary"
                       htmlType="submit"
                       loading={joinLoading}
-                      size="large"
                     >
                       加入组织
                     </Button>

@@ -63,14 +63,14 @@ export default function EditItemPage() {
           className={styles.editItemForm}
         >
           <Form.Item label="名称" name="name">
-            <Input disabled size="large" prefix={<TagOutlined />} />
+            <Input disabled prefix={<TagOutlined />} />
           </Form.Item>
           <Form.Item
             label="金额"
             name="amount"
             rules={[{ required: true, message: '请输入金额' }]}
           >
-            <InputNumber min={0} className="w-full" prefix="¥" size="large" />
+            <InputNumber min={0} className="w-full" prefix="¥" />
           </Form.Item>
           <Form.Item label="备注" name="note">
             <Input.TextArea rows={3} placeholder="请输入备注（可选）" />
@@ -81,7 +81,6 @@ export default function EditItemPage() {
               htmlType="submit"
               icon={<SaveOutlined />}
               loading={submitting}
-              size="large"
             >
               保存
             </Button>

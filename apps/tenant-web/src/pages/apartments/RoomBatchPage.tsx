@@ -109,7 +109,6 @@ export default function RoomBatchPage() {
             <Form.Item label="开始楼层">
               <InputNumber
                 min={1}
-                size="large"
                 className="w-full"
                 prefix={<BuildOutlined className="text-subtle" />}
                 value={Number(batchStartFloor) || undefined}
@@ -119,7 +118,6 @@ export default function RoomBatchPage() {
             <Form.Item label="结束楼层">
               <InputNumber
                 min={1}
-                size="large"
                 className="w-full"
                 prefix={<BuildOutlined className="text-subtle" />}
                 value={Number(batchEndFloor) || undefined}
@@ -130,7 +128,6 @@ export default function RoomBatchPage() {
               <InputNumber
                 min={1}
                 max={200}
-                size="large"
                 className="w-full"
                 prefix={<HomeOutlined className="text-subtle" />}
                 value={Number(batchRoomCount) || undefined}
@@ -205,12 +202,10 @@ export default function RoomBatchPage() {
             loading={saving}
             disabled={saving || selectedGeneratedBatchRoomNos.length === 0}
             onClick={handleSave}
-            size="large"
           >
             确认添加房间
           </Button>
           <Button
-            size="large"
             className={styles.cancelBtn}
             onClick={() => navigate(`/apartments/${id}`)}
           >

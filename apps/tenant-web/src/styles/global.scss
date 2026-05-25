@@ -1,19 +1,19 @@
 :root {
   /* TenantHub Design Tokens */
-  --th-primary: #0f766e;
-  --th-primary-light: #14b8a6;
-  --th-primary-dark: #134e4a;
-  --th-accent: #0369a1;
-  --th-accent-light: #38bdf8;
-  --th-bg: #f0fdfa;
+  --th-primary: #2563eb;
+  --th-primary-light: #3b82f6;
+  --th-primary-dark: #1d4ed8;
+  --th-accent: #2563eb;
+  --th-accent-light: #60a5fa;
+  --th-bg: #f3f4f6;
   --th-bg-elevated: #ffffff;
   --th-surface: #ffffff;
-  --th-surface-hover: #f8fafc;
-  --th-foreground: #134e4a;
-  --th-foreground-muted: #64748b;
-  --th-foreground-subtle: #94a3b8;
-  --th-border: #e2e8f0;
-  --th-border-light: #f1f5f9;
+  --th-surface-hover: #f3f4f6;
+  --th-foreground: #1f2937;
+  --th-foreground-muted: #6b7280;
+  --th-foreground-subtle: #9ca3af;
+  --th-border: #e5e7eb;
+  --th-border-light: #f3f4f6;
   --th-danger: #dc2626;
   --th-danger-bg: #fef2f2;
   --th-success: #22c55e;
@@ -23,20 +23,20 @@
   --th-ring: #0f766e;
 
   /* Shadows */
-  --th-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --th-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  --th-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --th-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --th-shadow-md:
-    0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --th-shadow-lg:
-    0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --th-shadow-xl:
-    0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
   /* Radius */
-  --th-radius-sm: 8px;
-  --th-radius: 12px;
-  --th-radius-lg: 16px;
-  --th-radius-xl: 20px;
+  --th-radius-sm: 6px;
+  --th-radius: 8px;
+  --th-radius-lg: 12px;
+  --th-radius-xl: 16px;
 
   /* Spacing scale */
   --th-space-1: 4px;
@@ -109,6 +109,18 @@ body {
 
 .page-content {
   animation: pageFadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ant-card {
+  box-shadow:
+    0 2px 8px 0 rgb(0 0 0 / 0.12),
+    0 1px 3px -1px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--th-border-light);
+}
+
+.ant-tabs-nav {
+  border-bottom: 1px solid var(--th-border);
+  margin-bottom: 20px;
 }
 
 .card-title {

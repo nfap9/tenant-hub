@@ -244,15 +244,10 @@ export default function PaymentPage() {
             </span>
           }
         >
-          <Space
-            direction="vertical"
-            className={styles.paymentSpaceFull}
-            size="large"
-          >
+          <Space direction="vertical" className={styles.paymentSpaceFull}>
             <Input
               placeholder="收款金额"
               prefix="¥"
-              size="large"
               value={form.amount}
               onChange={(e) =>
                 setForm((old) => ({ ...old, amount: e.target.value }))
@@ -261,7 +256,6 @@ export default function PaymentPage() {
             <Select
               placeholder="收款方式"
               value={form.method}
-              size="large"
               onChange={(value) =>
                 setForm((old) => ({ ...old, method: value }))
               }
@@ -288,7 +282,6 @@ export default function PaymentPage() {
               loading={submitting}
               onClick={handleSubmit}
               disabled={!form.monthlyBillId}
-              size="large"
             >
               确认收款
             </Button>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Input, Select, Table, Tag, message } from 'antd';
+import { Input, Select, Table, Tag, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { getAdminUsers, updateUserPlatformRole } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
@@ -52,61 +52,58 @@ export default function OpsUsersPage() {
             onSearch={load}
             prefix={<SearchOutlined className="text-subtle" />}
             className={styles.searchInput}
-            size="large"
           />
         }
       />
 
-      <Card>
-        <Table
-          rowKey="id"
-          loading={loading}
-          dataSource={users}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            { title: '用户名', dataIndex: 'username', ellipsis: true },
-            { title: '手机号', dataIndex: 'phone' },
-            {
-              title: '组织数',
-              render: (_: unknown, row: (typeof users)[0]) =>
-                row._count?.memberships ?? 0,
-            },
-            {
-              title: '运营权限',
-              dataIndex: 'platformRole',
-              render: (value: string) => (
-                <Tag color={value === 'USER' ? 'default' : 'success'}>
-                  {platformRoleMap.get(value) ?? value}
-                </Tag>
-              ),
-            },
-            {
-              title: '操作',
-              render: (_: unknown, row: (typeof users)[0]) => (
-                <Select
-                  value={row.platformRole}
-                  className={styles.roleSelect}
-                  size="middle"
-                  options={platformRoleOptions}
-                  onChange={async (platformRole) => {
-                    try {
-                      await updateUserPlatformRole(row.id, platformRole);
-                      message.success('运营权限已更新');
-                      load();
-                    } catch (e) {
-                      message.error(
-                        e instanceof Error ? e.message : '运营权限更新失败'
-                      );
-                      load();
-                    }
-                  }}
-                />
-              ),
-            },
-          ]}
-        />
-      </Card>
+      <Table
+        rowKey="id"
+        loading={loading}
+        dataSource={users}
+        pagination={{ pageSize: 10 }}
+        scroll={{ x: 'max-content' }}
+        columns={[
+          { title: '用户名', dataIndex: 'username', ellipsis: true },
+          { title: '手机号', dataIndex: 'phone' },
+          {
+            title: '组织数',
+            render: (_: unknown, row: (typeof users)[0]) =>
+              row._count?.memberships ?? 0,
+          },
+          {
+            title: '运营权限',
+            dataIndex: 'platformRole',
+            render: (value: string) => (
+              <Tag color={value === 'USER' ? 'default' : 'success'}>
+                {platformRoleMap.get(value) ?? value}
+              </Tag>
+            ),
+          },
+          {
+            title: '操作',
+            render: (_: unknown, row: (typeof users)[0]) => (
+              <Select
+                value={row.platformRole}
+                className={styles.roleSelect}
+                size="small"
+                options={platformRoleOptions}
+                onChange={async (platformRole) => {
+                  try {
+                    await updateUserPlatformRole(row.id, platformRole);
+                    message.success('运营权限已更新');
+                    load();
+                  } catch (e) {
+                    message.error(
+                      e instanceof Error ? e.message : '运营权限更新失败'
+                    );
+                    load();
+                  }
+                }}
+              />
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

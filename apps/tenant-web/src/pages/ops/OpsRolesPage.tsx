@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Button,
-  Card,
   Checkbox,
   Form,
   Input,
@@ -130,79 +129,72 @@ export default function OpsRolesPage() {
       <PageHeader
         breadcrumb={[{ label: '运营端' }, { label: '角色权限' }]}
         actions={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={openCreate}
-            size="large"
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
             新增角色
           </Button>
         }
       />
 
-      <Card>
-        <Table
-          rowKey="id"
-          loading={loading}
-          dataSource={roles}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            { title: '名称', dataIndex: 'name', ellipsis: true },
-            { title: '编码', dataIndex: 'code' },
-            {
-              title: '系统预置',
-              dataIndex: 'system',
-              render: (v: boolean) =>
-                v ? <Tag color="warning">是</Tag> : <Tag>否</Tag>,
-            },
-            {
-              title: '权限',
-              dataIndex: 'permissions',
-              render: (items: string[]) =>
-                items?.map((item) => (
-                  <Tag key={item} color={item === '*' ? 'warning' : 'default'}>
-                    {permissionNameMap.get(item) ?? item}
-                  </Tag>
-                )),
-            },
-            {
-              title: '操作',
-              render: (_: unknown, row: RoleItem) => (
-                <Space>
+      <Table
+        rowKey="id"
+        loading={loading}
+        dataSource={roles}
+        pagination={{ pageSize: 10 }}
+        scroll={{ x: 'max-content' }}
+        columns={[
+          { title: '名称', dataIndex: 'name', ellipsis: true },
+          { title: '编码', dataIndex: 'code' },
+          {
+            title: '系统预置',
+            dataIndex: 'system',
+            render: (v: boolean) =>
+              v ? <Tag color="warning">是</Tag> : <Tag>否</Tag>,
+          },
+          {
+            title: '权限',
+            dataIndex: 'permissions',
+            render: (items: string[]) =>
+              items?.map((item) => (
+                <Tag key={item} color={item === '*' ? 'warning' : 'default'}>
+                  {permissionNameMap.get(item) ?? item}
+                </Tag>
+              )),
+          },
+          {
+            title: '操作',
+            render: (_: unknown, row: RoleItem) => (
+              <Space>
+                <Button
+                  type="link"
+                  icon={<EditOutlined />}
+                  onClick={() => openEdit(row)}
+                >
+                  编辑
+                </Button>
+                <Popconfirm
+                  title="确认删除角色？"
+                  description={
+                    row.system ? '系统预置角色不可删除' : '删除后不可恢复'
+                  }
+                  okText="删除"
+                  cancelText="取消"
+                  disabled={row.system}
+                  onConfirm={() => handleDelete(row)}
+                >
                   <Button
                     type="link"
-                    icon={<EditOutlined />}
-                    onClick={() => openEdit(row)}
-                  >
-                    编辑
-                  </Button>
-                  <Popconfirm
-                    title="确认删除角色？"
-                    description={
-                      row.system ? '系统预置角色不可删除' : '删除后不可恢复'
-                    }
-                    okText="删除"
-                    cancelText="取消"
+                    danger
                     disabled={row.system}
-                    onConfirm={() => handleDelete(row)}
+                    icon={<DeleteOutlined />}
                   >
-                    <Button
-                      type="link"
-                      danger
-                      disabled={row.system}
-                      icon={<DeleteOutlined />}
-                    >
-                      删除
-                    </Button>
-                  </Popconfirm>
-                </Space>
-              ),
-            },
-          ]}
-        />
-      </Card>
+                    删除
+                  </Button>
+                </Popconfirm>
+              </Space>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         open={modalOpen}
@@ -226,7 +218,7 @@ export default function OpsRolesPage() {
           onFinish={handleSubmit}
         >
           <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
-            <Input size="large" placeholder="请输入角色名称" />
+            <Input placeholder="请输入角色名称" />
           </Form.Item>
           <Form.Item
             name="code"
@@ -234,11 +226,7 @@ export default function OpsRolesPage() {
             rules={[{ required: true }]}
             extra="使用小写字母、数字、下划线或中划线"
           >
-            <Input
-              size="large"
-              disabled={editingRole?.system}
-              placeholder="例如：manager"
-            />
+            <Input disabled={editingRole?.system} placeholder="例如：manager" />
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} placeholder="角色描述（可选）" />
@@ -261,7 +249,7 @@ export default function OpsRolesPage() {
               ))}
             </Checkbox.Group>
           </Form.Item>
-          <Button type="primary" htmlType="submit" size="large">
+          <Button type="primary" htmlType="submit">
             保存
           </Button>
         </Form>

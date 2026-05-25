@@ -9,21 +9,21 @@ export function App() {
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: '#0F766E',
+          colorPrimary: '#2563EB',
           colorSuccess: '#22C55E',
           colorWarning: '#EA580C',
           colorError: '#DC2626',
-          colorInfo: '#0369A1',
-          borderRadius: 12,
+          colorInfo: '#2563EB',
+          borderRadius: 8,
           fontFamily:
             "'Open Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif",
           colorBgContainer: '#FFFFFF',
-          colorBgLayout: '#F0FDFA',
-          colorText: '#134E4A',
-          colorTextSecondary: '#64748B',
-          colorTextTertiary: '#94A3B8',
-          colorBorder: '#E2E8F0',
-          colorBorderSecondary: '#F1F5F9',
+          colorBgLayout: '#F3F4F6',
+          colorText: '#1F2937',
+          colorTextSecondary: '#6B7280',
+          colorTextTertiary: '#9CA3AF',
+          colorBorder: '#E5E7EB',
+          colorBorderSecondary: '#F3F4F6',
           controlHeight: 40,
         },
         components: {
@@ -34,17 +34,17 @@ export function App() {
             siderBg: '#FFFFFF',
           },
           Menu: {
-            itemBorderRadius: 8,
+            itemBorderRadius: 6,
             itemMarginInline: 12,
             itemMarginBlock: 4,
-            itemHoverBg: '#F8FAFC',
-            itemHoverColor: '#0F766E',
-            itemSelectedBg: 'rgba(15, 118, 110, 0.08)',
-            itemSelectedColor: '#0F766E',
+            itemHoverBg: '#F3F4F6',
+            itemHoverColor: '#2563EB',
+            itemSelectedBg: 'rgba(37, 99, 235, 0.08)',
+            itemSelectedColor: '#2563EB',
           },
           Card: {
-            borderRadiusLG: 16,
-            borderRadius: 12,
+            borderRadiusLG: 12,
+            borderRadius: 8,
           },
           Button: {
             borderRadius: 8,
@@ -52,7 +52,7 @@ export function App() {
           },
           Input: {
             borderRadius: 8,
-            activeShadow: '0 0 0 3px rgba(15, 118, 110, 0.12)',
+            activeShadow: '0 0 0 3px rgba(37, 99, 235, 0.12)',
           },
           Table: {
             headerBg: '#F8FAFC',

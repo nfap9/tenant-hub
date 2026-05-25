@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Button, Card, Tag, message, Popconfirm, Spin, Radio } from 'antd';
+import { Button, Card, Tag, message, Popconfirm, Spin, Tabs } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
@@ -7,10 +7,6 @@ import {
   UserAddOutlined,
   EditOutlined as EditLeaseIcon,
   LogoutOutlined,
-  HomeOutlined,
-  CheckCircleOutlined,
-  UserOutlined,
-  ToolOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
@@ -19,7 +15,6 @@ import type { Room, RoomStatus } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForStatus, filters } from './constants';
 import PageHeader from '@/components/ui/PageHeader';
-import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
 import styles from './RoomListPage.module.scss';
 import clsx from 'clsx';
@@ -55,13 +50,6 @@ export default function RoomListPage() {
     if (filter === 'ALL') return rooms;
     return rooms.filter((r) => r.status === filter);
   }, [rooms, filter]);
-
-  const vacantCount = rooms.filter((r) => r.status === 'VACANT').length;
-  const occupiedCount = rooms.filter((r) => r.status === 'OCCUPIED').length;
-  const reservedCount = rooms.filter((r) => r.status === 'RESERVED').length;
-  const maintenanceCount = rooms.filter(
-    (r) => r.status === 'MAINTENANCE'
-  ).length;
 
   const handleDelete = async (room: Room) => {
     if (!currentOrgId) return;
@@ -102,58 +90,30 @@ export default function RoomListPage() {
         }
       />
 
-      <div className={styles.statsGrid}>
-        <StatCard
-          title="总房间"
-          value={rooms.length}
-          icon={<HomeOutlined />}
-          color="primary"
-        />
-        <StatCard
-          title="空闲"
-          value={vacantCount}
-          icon={<CheckCircleOutlined />}
-          color="success"
-        />
-        <StatCard
-          title="已租"
-          value={occupiedCount}
-          icon={<UserOutlined />}
-          color="warning"
-        />
-        <StatCard
-          title="预留/维修"
-          value={reservedCount + maintenanceCount}
-          icon={<ToolOutlined />}
-          color="danger"
-        />
-      </div>
-
-      <Card className={styles.filterCard}>
-        <Radio.Group value={filter} onChange={(e) => setFilter(e.target.value)}>
-          {filters.map((f) => (
-            <Radio.Button key={f} value={f}>
-              {f === 'ALL'
-                ? `全部 (${rooms.length})`
-                : `${statusLabels[f]} (${rooms.filter((r) => r.status === f).length})`}
-            </Radio.Button>
-          ))}
-        </Radio.Group>
-      </Card>
+      <Tabs
+        activeKey={filter}
+        onChange={(key) => setFilter(key as RoomStatus | 'ALL')}
+        items={filters.map((f) => ({
+          key: f,
+          label:
+            f === 'ALL'
+              ? `全部 (${rooms.length})`
+              : `${statusLabels[f]} (${rooms.filter((r) => r.status === f).length})`,
+        }))}
+        className={styles.roomTabs}
+      />
 
       <Spin spinning={loading}>
         {filteredRooms.length === 0 ? (
-          <Card>
-            <EmptyState
-              title="暂无房间数据"
-              description="当前还没有创建任何房间，点击右上角按钮新增"
-              action={
-                canManageRoom
-                  ? { label: '新增房间', onClick: () => navigate('/rooms/new') }
-                  : undefined
-              }
-            />
-          </Card>
+          <EmptyState
+            title="暂无房间数据"
+            description="当前还没有创建任何房间，点击右上角按钮新增"
+            action={
+              canManageRoom
+                ? { label: '新增房间', onClick: () => navigate('/rooms/new') }
+                : undefined
+            }
+          />
         ) : (
           <div className={styles.roomGrid}>
             {filteredRooms.map((room) => {

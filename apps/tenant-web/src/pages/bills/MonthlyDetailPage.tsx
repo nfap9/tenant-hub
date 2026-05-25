@@ -186,7 +186,6 @@ export default function MonthlyDetailPage() {
               <Input
                 placeholder="收款金额"
                 prefix="¥"
-                size="large"
                 value={paymentForm.amount}
                 onChange={(e) =>
                   setPaymentForm((old) => ({ ...old, amount: e.target.value }))
@@ -195,7 +194,6 @@ export default function MonthlyDetailPage() {
               <Select
                 placeholder="收款方式"
                 value={paymentForm.method}
-                size="large"
                 onChange={(value) =>
                   setPaymentForm((old) => ({ ...old, method: value }))
                 }
@@ -221,7 +219,6 @@ export default function MonthlyDetailPage() {
                 icon={<SaveOutlined />}
                 loading={paying}
                 onClick={handlePayment}
-                size="large"
               >
                 确认收款
               </Button>

@@ -72,7 +72,6 @@ export default function ApartmentExpensePage() {
             rules={[{ required: true, message: '请输入花费名称' }]}
           >
             <Input
-              size="large"
               prefix={<FormOutlined className="text-subtle" />}
               placeholder="例如 维修材料"
             />
@@ -84,7 +83,6 @@ export default function ApartmentExpensePage() {
           >
             <InputNumber
               min={0}
-              size="large"
               className="w-full"
               prefix={<DollarOutlined className="text-subtle" />}
               placeholder="请输入金额"
@@ -96,7 +94,7 @@ export default function ApartmentExpensePage() {
             rules={[{ required: true, message: '请选择日期' }]}
             initialValue={dayjs()}
           >
-            <DatePicker size="large" className="w-full" />
+            <DatePicker className="w-full" />
           </Form.Item>
           <Form.Item label="备注" name="note">
             <Input.TextArea rows={3} placeholder="可选" />
@@ -108,12 +106,10 @@ export default function ApartmentExpensePage() {
               icon={<SaveOutlined />}
               loading={saving}
               disabled={saving}
-              size="large"
             >
               保存花费
             </Button>
             <Button
-              size="large"
               className={styles.cancelBtn}
               onClick={() => navigate(`/apartments/${id}`)}
             >

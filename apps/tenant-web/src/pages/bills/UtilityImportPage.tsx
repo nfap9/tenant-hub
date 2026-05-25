@@ -85,7 +85,6 @@ export default function UtilityImportPage() {
           onClick={handleSubmit}
           disabled={!fileContent}
           icon={<ImportOutlined />}
-          size="large"
         >
           确认导入
         </Button>

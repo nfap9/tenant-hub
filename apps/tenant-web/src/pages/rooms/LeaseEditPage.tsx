@@ -159,7 +159,6 @@ export default function LeaseEditPage() {
                       className="w-full"
                       prefix="¥"
                       placeholder="每期金额"
-                      size="large"
                     />
                   </Form.Item>
                   <Form.Item label="押金" name="depositAmount">
@@ -168,16 +167,15 @@ export default function LeaseEditPage() {
                       className="w-full"
                       prefix="¥"
                       placeholder="请输入押金"
-                      size="large"
                     />
                   </Form.Item>
                 </div>
                 <div className={styles.formGrid2}>
                   <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
-                    <InputNumber min={0} className="w-full" size="large" />
+                    <InputNumber min={0} className="w-full" />
                   </Form.Item>
                   <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
-                    <InputNumber min={0} className="w-full" size="large" />
+                    <InputNumber min={0} className="w-full" />
                   </Form.Item>
                 </div>
 
@@ -199,7 +197,6 @@ export default function LeaseEditPage() {
                         onChange={(v) =>
                           updateFeeAmount(item.id, String(v || 0))
                         }
-                        size="large"
                         prefix="¥"
                       />
                       <Button
@@ -218,7 +215,6 @@ export default function LeaseEditPage() {
                     type="dashed"
                     icon={<PlusOutlined />}
                     onClick={addFee}
-                    size="large"
                     className="w-full"
                   >
                     添加费用
@@ -232,12 +228,10 @@ export default function LeaseEditPage() {
                     icon={<SaveOutlined />}
                     loading={saving}
                     disabled={saving}
-                    size="large"
                   >
                     保存修改
                   </Button>
                   <Button
-                    size="large"
                     className={styles.cancelBtn}
                     onClick={() => navigate('/rooms')}
                   >

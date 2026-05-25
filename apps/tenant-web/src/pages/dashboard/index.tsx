@@ -12,21 +12,17 @@ import {
   message,
 } from 'antd';
 import {
-  ApartmentOutlined,
-  HomeOutlined,
   FileTextOutlined,
   WalletOutlined,
   ReloadOutlined,
   RightOutlined,
   ThunderboltOutlined,
   CheckCircleOutlined,
-  TeamOutlined,
   EditOutlined,
   PlusOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import PageHeader from '@/components/ui/PageHeader';
-import StatCard from '@/components/ui/StatCard';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
@@ -274,42 +270,6 @@ export default function DashboardPage() {
           unpaidTotal={unpaidTotal}
           thisMonthExpense={thisMonthExpense}
         ></Overview>
-
-        {/* 统计卡片 */}
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <StatCard
-              title="公寓总数"
-              value={apartments.length}
-              icon={<ApartmentOutlined />}
-              color="primary"
-            />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <StatCard
-              title="房间总数"
-              value={rooms.length}
-              icon={<HomeOutlined />}
-              color="accent"
-            />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <StatCard
-              title="在租租约"
-              value={activeLeases.length}
-              icon={<TeamOutlined />}
-              color="success"
-            />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <StatCard
-              title="待收账单"
-              value={monthlyBills.filter(isUnpaid).length}
-              icon={<FileTextOutlined />}
-              color="warning"
-            />
-          </Col>
-        </Row>
 
         {/* 出租率 */}
         <Row gutter={[16, 16]} className={styles.statGrid}>

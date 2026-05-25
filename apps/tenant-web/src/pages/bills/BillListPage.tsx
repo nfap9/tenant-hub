@@ -10,8 +10,6 @@ import {
   Spin,
   message,
   Modal,
-  Row,
-  Col,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,8 +20,6 @@ import {
   DownloadOutlined,
   UploadOutlined,
   ThunderboltOutlined,
-  WalletOutlined,
-  FileTextOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
@@ -36,13 +32,8 @@ import {
 import { getRooms } from '@/api/rooms';
 import { money } from '@/utils/format';
 import { statusLabels, toneForBillStatus } from './constants';
-import {
-  remainingAmount,
-  sortMonthlyBillsForList,
-  getMonthlyBillCardSummary,
-} from './utils';
+import { sortMonthlyBillsForList, getMonthlyBillCardSummary } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
-import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Bill, BillStatus, MonthlyBill } from '@/types/domain';
 import styles from './BillListPage.module.scss';
@@ -93,12 +84,6 @@ export default function BillListPage() {
       ),
     [monthlyBills]
   );
-  const unpaidTotal = useMemo(
-    () =>
-      unpaidMonthlyBills.reduce((sum, bill) => sum + remainingAmount(bill), 0),
-    [unpaidMonthlyBills]
-  );
-
   const filteredAllBills = useMemo(() => {
     let result = [...monthlyBills];
     if (searchQuery.trim()) {
@@ -255,73 +240,6 @@ export default function BillListPage() {
           { label: '账单管理' },
         ]}
         actions={
-          <Button
-            icon={<ReloadOutlined />}
-            loading={loading}
-            onClick={loadData}
-          >
-            刷新
-          </Button>
-        }
-      />
-
-      <Spin spinning={loading}>
-        {/* 统计 */}
-        <Row gutter={[16, 16]} className={styles.statsRow}>
-          {tab === 'unpaid' && (
-            <>
-              <Col xs={24} sm={12}>
-                <StatCard
-                  title="待支付账单"
-                  value={unpaidMonthlyBills.length}
-                  icon={<FileTextOutlined />}
-                  color="warning"
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <StatCard
-                  title="待收金额"
-                  value={`¥${money(unpaidTotal)}`}
-                  icon={<WalletOutlined />}
-                  color="danger"
-                />
-              </Col>
-            </>
-          )}
-          {tab === 'pending' && (
-            <Col span={24}>
-              <StatCard
-                title="待处理账单"
-                value={reviewBills.length}
-                icon={<ExclamationCircleOutlined />}
-                color="warning"
-              />
-            </Col>
-          )}
-          {tab === 'all' && (
-            <>
-              <Col xs={24} sm={12}>
-                <StatCard
-                  title="全部账单"
-                  value={monthlyBills.length}
-                  icon={<FileTextOutlined />}
-                  color="primary"
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <StatCard
-                  title="待收金额"
-                  value={`¥${money(unpaidTotal)}`}
-                  icon={<WalletOutlined />}
-                  color="danger"
-                />
-              </Col>
-            </>
-          )}
-        </Row>
-
-        {/* 操作栏 */}
-        <div className="mb-16">
           <Space>
             {tab === 'unpaid' && (
               <Button
@@ -354,9 +272,18 @@ export default function BillListPage() {
                 </Button>
               </>
             )}
+            <Button
+              icon={<ReloadOutlined />}
+              loading={loading}
+              onClick={loadData}
+            >
+              刷新
+            </Button>
           </Space>
-        </div>
+        }
+      />
 
+      <Spin spinning={loading}>
         <Tabs
           activeKey={tab}
           onChange={(key) => {
@@ -411,7 +338,6 @@ export default function BillListPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="mb-16"
                     allowClear
-                    size="large"
                   />
                   <Space wrap className="mb-16">
                     {(

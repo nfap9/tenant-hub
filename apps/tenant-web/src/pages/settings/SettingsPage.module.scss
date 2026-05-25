@@ -1,13 +1,7 @@
 @use '@/styles/variables' as *;
-@use '@/styles/mixins' as *;
 
 .settings-card {
-  @include card-elevated;
   margin-bottom: 16px;
-}
-
-.settings-action-card {
-  @include card-elevated;
 }
 
 .profile-header {
@@ -32,6 +26,12 @@
 .profile-phone {
   color: $th-foreground-muted;
   font-size: 14px;
+}
+
+.divider {
+  height: 1px;
+  background: $th-border;
+  margin: 16px 0;
 }
 
 .settings-menu-item {

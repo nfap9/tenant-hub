@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Button,
-  Card,
   Form,
   Input,
   InputNumber,
@@ -71,54 +70,49 @@ export default function OpsPlansPage() {
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setModalOpen(true)}
-            size="large"
           >
             新增套餐
           </Button>
         }
       />
 
-      <Card>
-        <Table
-          rowKey="id"
-          loading={loading}
-          dataSource={plans}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            { title: '名称', dataIndex: 'name', ellipsis: true },
-            { title: '公寓数', dataIndex: 'apartmentLimit' },
-            { title: '房间数', dataIndex: 'roomLimit' },
-            { title: '成员数', dataIndex: 'memberLimit' },
-            {
-              title: '价格',
-              dataIndex: 'price',
-              render: (v: string | number) => `${v}元/年`,
-            },
-            {
-              title: '状态',
-              dataIndex: 'enabled',
-              render: (v: boolean) => (
-                <Tag color={v ? 'success' : 'default'}>
-                  {v ? '启用' : '停用'}
-                </Tag>
-              ),
-            },
-            {
-              title: '操作',
-              render: (_: unknown, row: Plan) => (
-                <Button
-                  type="link"
-                  danger={row.enabled}
-                  onClick={() => handleToggle(row)}
-                >
-                  {row.enabled ? '停用' : '启用'}
-                </Button>
-              ),
-            },
-          ]}
-        />
-      </Card>
+      <Table
+        rowKey="id"
+        loading={loading}
+        dataSource={plans}
+        pagination={{ pageSize: 10 }}
+        scroll={{ x: 'max-content' }}
+        columns={[
+          { title: '名称', dataIndex: 'name', ellipsis: true },
+          { title: '公寓数', dataIndex: 'apartmentLimit' },
+          { title: '房间数', dataIndex: 'roomLimit' },
+          { title: '成员数', dataIndex: 'memberLimit' },
+          {
+            title: '价格',
+            dataIndex: 'price',
+            render: (v: string | number) => `${v}元/年`,
+          },
+          {
+            title: '状态',
+            dataIndex: 'enabled',
+            render: (v: boolean) => (
+              <Tag color={v ? 'success' : 'default'}>{v ? '启用' : '停用'}</Tag>
+            ),
+          },
+          {
+            title: '操作',
+            render: (_: unknown, row: Plan) => (
+              <Button
+                type="link"
+                danger={row.enabled}
+                onClick={() => handleToggle(row)}
+              >
+                {row.enabled ? '停用' : '启用'}
+              </Button>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         open={modalOpen}
@@ -136,24 +130,24 @@ export default function OpsPlansPage() {
       >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="套餐名称" rules={[{ required: true }]}>
-            <Input size="large" placeholder="请输入套餐名称" />
+            <Input placeholder="请输入套餐名称" />
           </Form.Item>
           <Space wrap>
             <Form.Item name="apartmentLimit" label="公寓数" initialValue={1}>
-              <InputNumber min={0} size="large" />
+              <InputNumber min={0} />
             </Form.Item>
             <Form.Item name="roomLimit" label="房间数" initialValue={20}>
-              <InputNumber min={0} size="large" />
+              <InputNumber min={0} />
             </Form.Item>
             <Form.Item name="memberLimit" label="成员数" initialValue={3}>
-              <InputNumber min={0} size="large" />
+              <InputNumber min={0} />
             </Form.Item>
             <Form.Item name="price" label="年费价格" initialValue={0}>
-              <InputNumber min={0} size="large" />
+              <InputNumber min={0} />
             </Form.Item>
           </Space>
           <Form.Item className="mt-16">
-            <Button type="primary" htmlType="submit" size="large">
+            <Button type="primary" htmlType="submit">
               保存
             </Button>
           </Form.Item>

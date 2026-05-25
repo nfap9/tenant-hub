@@ -200,7 +200,6 @@ export default function LeaseTerminatePage() {
                 >
                   <DatePicker
                     className="w-full"
-                    size="large"
                     prefix={<CalendarOutlined />}
                   />
                 </Form.Item>
@@ -238,28 +237,18 @@ export default function LeaseTerminatePage() {
                 </div>
                 <div className={styles.formGrid2}>
                   <Form.Item label="押金扣款" name="depositDeductionAmount">
-                    <InputNumber
-                      min={0}
-                      className="w-full"
-                      prefix="¥"
-                      size="large"
-                    />
+                    <InputNumber min={0} className="w-full" prefix="¥" />
                   </Form.Item>
                   <Form.Item label="房租退补" name="rentAdjustmentAmount">
                     <InputNumber
                       className="w-full"
                       prefix="¥"
                       placeholder="正数补收，负数退款"
-                      size="large"
                     />
                   </Form.Item>
                 </div>
                 <Form.Item label="押金扣款原因" name="depositDeductionReason">
-                  <Input
-                    placeholder="可选"
-                    size="large"
-                    prefix={<InfoCircleOutlined />}
-                  />
+                  <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
                 </Form.Item>
 
                 <Divider orientation="left" className={styles.sectionDivider}>
@@ -270,13 +259,13 @@ export default function LeaseTerminatePage() {
                     label={`退租水表读数（上次 ${money(previousReadings.previousWater)}）`}
                     name="currentWater"
                   >
-                    <InputNumber min={0} className="w-full" size="large" />
+                    <InputNumber min={0} className="w-full" />
                   </Form.Item>
                   <Form.Item
                     label={`退租电表读数（上次 ${money(previousReadings.previousPower)}）`}
                     name="currentPower"
                   >
-                    <InputNumber min={0} className="w-full" size="large" />
+                    <InputNumber min={0} className="w-full" />
                   </Form.Item>
                 </div>
                 <div
@@ -296,19 +285,10 @@ export default function LeaseTerminatePage() {
                 </div>
 
                 <Form.Item label="其他费用" name="otherFeeAmount">
-                  <InputNumber
-                    min={0}
-                    className="w-full"
-                    prefix="¥"
-                    size="large"
-                  />
+                  <InputNumber min={0} className="w-full" prefix="¥" />
                 </Form.Item>
                 <Form.Item label="其他费用说明" name="otherFeeReason">
-                  <Input
-                    placeholder="可选"
-                    size="large"
-                    prefix={<InfoCircleOutlined />}
-                  />
+                  <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
                 </Form.Item>
 
                 <Divider orientation="left" className={styles.sectionDivider}>
@@ -369,12 +349,10 @@ export default function LeaseTerminatePage() {
                     icon={<CheckOutlined />}
                     loading={submitting}
                     disabled={submitting}
-                    size="large"
                   >
                     确认终止合约
                   </Button>
                   <Button
-                    size="large"
                     className={styles.cancelBtn}
                     onClick={() => navigate('/rooms')}
                   >

@@ -1,12 +1,5 @@
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.filter-card {
-  margin-bottom: 16px;
+.room-tabs {
+  margin-bottom: 20px;
 }
 
 .room-grid {
@@ -28,7 +21,7 @@
 }
 
 .lease-info {
-  background: var(--th-success-bg);
+  background: #f0f7ff;
   padding: 12px;
   border-radius: var(--th-radius-sm);
   margin-bottom: 12px;

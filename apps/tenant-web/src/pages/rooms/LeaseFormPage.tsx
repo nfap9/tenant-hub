@@ -150,22 +150,14 @@ export default function LeaseFormPage() {
               name="tenantName"
               rules={[{ required: true, message: '请输入租客姓名' }]}
             >
-              <Input
-                placeholder="请输入姓名"
-                size="large"
-                prefix={<UserOutlined />}
-              />
+              <Input placeholder="请输入姓名" prefix={<UserOutlined />} />
             </Form.Item>
             <Form.Item
               label="租客电话"
               name="tenantPhone"
               rules={[{ required: true, message: '请输入租客电话' }]}
             >
-              <Input
-                placeholder="请输入手机号"
-                size="large"
-                prefix={<PhoneOutlined />}
-              />
+              <Input placeholder="请输入手机号" prefix={<PhoneOutlined />} />
             </Form.Item>
             <div className={styles.formGrid2}>
               <Form.Item
@@ -173,22 +165,14 @@ export default function LeaseFormPage() {
                 name="startDate"
                 rules={[{ required: true, message: '请选择开始日期' }]}
               >
-                <DatePicker
-                  className="w-full"
-                  size="large"
-                  prefix={<CalendarOutlined />}
-                />
+                <DatePicker className="w-full" prefix={<CalendarOutlined />} />
               </Form.Item>
               <Form.Item
                 label="结束日期"
                 name="endDate"
                 rules={[{ required: true, message: '请选择结束日期' }]}
               >
-                <DatePicker
-                  className="w-full"
-                  size="large"
-                  prefix={<CalendarOutlined />}
-                />
+                <DatePicker className="w-full" prefix={<CalendarOutlined />} />
               </Form.Item>
             </div>
             <div className={styles.formGrid2}>
@@ -202,7 +186,6 @@ export default function LeaseFormPage() {
                   className="w-full"
                   prefix="¥"
                   placeholder="每期金额"
-                  size="large"
                 />
               </Form.Item>
               <Form.Item label="押金" name="depositAmount">
@@ -211,7 +194,6 @@ export default function LeaseFormPage() {
                   className="w-full"
                   prefix="¥"
                   placeholder="请输入押金"
-                  size="large"
                 />
               </Form.Item>
             </div>
@@ -220,7 +202,6 @@ export default function LeaseFormPage() {
                 min={0}
                 className="w-full"
                 placeholder="交租日后几日内"
-                size="large"
               />
             </Form.Item>
             <Form.Item
@@ -232,15 +213,14 @@ export default function LeaseFormPage() {
                 options={(
                   ['MONTHLY', 'QUARTERLY', 'YEARLY'] as RentCycle[]
                 ).map((c) => ({ label: cycleLabels[c], value: c }))}
-                size="large"
               />
             </Form.Item>
             <div className={styles.formGrid2}>
               <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
-                <InputNumber min={0} className="w-full" size="large" />
+                <InputNumber min={0} className="w-full" />
               </Form.Item>
               <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
-                <InputNumber min={0} className="w-full" size="large" />
+                <InputNumber min={0} className="w-full" />
               </Form.Item>
             </div>
             <Form.Item
@@ -280,7 +260,6 @@ export default function LeaseFormPage() {
                     placeholder="价格"
                     value={item.amount ? Number(item.amount) : undefined}
                     onChange={(v) => updateFeeAmount(item.id, String(v || 0))}
-                    size="large"
                     prefix="¥"
                   />
                   <Button
@@ -299,7 +278,6 @@ export default function LeaseFormPage() {
                 type="dashed"
                 icon={<PlusOutlined />}
                 onClick={addFee}
-                size="large"
                 className="w-full"
               >
                 添加费用
@@ -313,12 +291,10 @@ export default function LeaseFormPage() {
                 icon={<SaveOutlined />}
                 loading={saving}
                 disabled={saving}
-                size="large"
               >
                 确认签约
               </Button>
               <Button
-                size="large"
                 className={styles.cancelBtn}
                 onClick={() => navigate('/rooms')}
               >

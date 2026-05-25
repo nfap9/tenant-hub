@@ -150,7 +150,6 @@ export default function ApartmentFormPage() {
               rules={[{ required: true, message: '请输入公寓名称' }]}
             >
               <Input
-                size="large"
                 prefix={<HomeOutlined className="text-subtle" />}
                 placeholder="例如 阳光公寓"
               />
@@ -161,7 +160,6 @@ export default function ApartmentFormPage() {
               rules={[{ required: true, message: '请输入地址' }]}
             >
               <Input
-                size="large"
                 prefix={<EnvironmentOutlined className="text-subtle" />}
                 placeholder="请输入地址或片区"
               />
@@ -173,7 +171,6 @@ export default function ApartmentFormPage() {
             >
               <InputNumber
                 min={1}
-                size="large"
                 className="w-full"
                 prefix={<BuildOutlined className="text-subtle" />}
                 placeholder="例如 6"
@@ -183,7 +180,6 @@ export default function ApartmentFormPage() {
               <Form.Item label="占地面积（㎡）" name="landArea">
                 <InputNumber
                   min={0}
-                  size="large"
                   className="w-full"
                   prefix={<AreaChartOutlined className="text-subtle" />}
                   placeholder="例如 500"
@@ -192,7 +188,6 @@ export default function ApartmentFormPage() {
               <Form.Item label="总面积（㎡）" name="totalArea">
                 <InputNumber
                   min={0}
-                  size="large"
                   className="w-full"
                   prefix={<AreaChartOutlined className="text-subtle" />}
                   placeholder="例如 3000"
@@ -201,30 +196,27 @@ export default function ApartmentFormPage() {
             </div>
             <Form.Item label="房东姓名" name="landlordName">
               <Input
-                size="large"
                 prefix={<UserOutlined className="text-subtle" />}
                 placeholder="请输入房东姓名"
               />
             </Form.Item>
             <Form.Item label="房东电话" name="landlordPhone">
               <Input
-                size="large"
                 prefix={<PhoneOutlined className="text-subtle" />}
                 placeholder="请输入手机号"
               />
             </Form.Item>
             <div className={styles.formRow}>
               <Form.Item label="合同开始日期" name="contractStart">
-                <DatePicker size="large" className="w-full" />
+                <DatePicker className="w-full" />
               </Form.Item>
               <Form.Item label="合同结束日期" name="contractEnd">
-                <DatePicker size="large" className="w-full" />
+                <DatePicker className="w-full" />
               </Form.Item>
             </div>
             <Form.Item label="上游租金" name="rentAmount">
               <InputNumber
                 min={0}
-                size="large"
                 className="w-full"
                 prefix={<DollarOutlined className="text-subtle" />}
                 placeholder="每期金额"
@@ -237,12 +229,10 @@ export default function ApartmentFormPage() {
                 icon={<SaveOutlined />}
                 loading={saving}
                 disabled={saving}
-                size="large"
               >
                 {isEdit ? '保存公寓信息' : '创建公寓'}
               </Button>
               <Button
-                size="large"
                 className={styles.cancelBtn}
                 onClick={() =>
                   navigate(isEdit ? `/apartments/${id}` : '/apartments')

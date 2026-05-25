@@ -79,25 +79,16 @@ export default function AccountPage() {
           className={styles.settingsForm}
         >
           <Form.Item label="用户名" name="username">
-            <Input
-              size="large"
-              prefix={<UserOutlined className="text-subtle" />}
-            />
+            <Input prefix={<UserOutlined className="text-subtle" />} />
           </Form.Item>
           <Form.Item label="手机号" name="phone">
             <Input
-              size="large"
               prefix={<MobileOutlined className="text-subtle" />}
               disabled
             />
           </Form.Item>
           <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<SaveOutlined />}
-              size="large"
-            >
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
               保存
             </Button>
           </Form.Item>
@@ -125,7 +116,6 @@ export default function AccountPage() {
             rules={[{ required: true, message: '请输入原密码' }]}
           >
             <Input.Password
-              size="large"
               prefix={<LockOutlined className="text-subtle" />}
               placeholder="请输入原密码"
             />
@@ -139,7 +129,6 @@ export default function AccountPage() {
             ]}
           >
             <Input.Password
-              size="large"
               prefix={<LockOutlined className="text-subtle" />}
               placeholder="至少 8 位密码"
             />
@@ -160,18 +149,12 @@ export default function AccountPage() {
             ]}
           >
             <Input.Password
-              size="large"
               prefix={<LockOutlined className="text-subtle" />}
               placeholder="再次输入新密码"
             />
           </Form.Item>
           <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<SaveOutlined />}
-              size="large"
-            >
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
               更新密码
             </Button>
           </Form.Item>

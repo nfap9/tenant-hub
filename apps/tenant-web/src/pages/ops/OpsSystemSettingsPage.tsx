@@ -112,7 +112,6 @@ export default function OpsSystemSettingsPage() {
               onChange={(e) =>
                 setPlatformInfo((prev) => ({ ...prev, name: e.target.value }))
               }
-              size="large"
               prefix={<SettingOutlined className="text-subtle" />}
             />
           </Form.Item>
@@ -126,7 +125,6 @@ export default function OpsSystemSettingsPage() {
                   logoUrl: e.target.value,
                 }))
               }
-              size="large"
               prefix={<LinkOutlined className="text-subtle" />}
             />
           </Form.Item>
@@ -140,7 +138,6 @@ export default function OpsSystemSettingsPage() {
                   contactPhone: e.target.value,
                 }))
               }
-              size="large"
               prefix={<PhoneOutlined className="text-subtle" />}
             />
           </Form.Item>
@@ -150,7 +147,6 @@ export default function OpsSystemSettingsPage() {
               onClick={handleSavePlatform}
               loading={savingPlatform}
               icon={<SaveOutlined />}
-              size="large"
             >
               保存平台信息
             </Button>
@@ -186,7 +182,6 @@ export default function OpsSystemSettingsPage() {
               onClick={handleSaveQuota}
               loading={savingQuota}
               icon={<SaveOutlined />}
-              size="large"
             >
               保存用量配置
             </Button>

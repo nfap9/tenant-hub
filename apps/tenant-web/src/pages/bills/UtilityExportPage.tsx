@@ -67,12 +67,11 @@ export default function UtilityExportPage() {
               placeholder="全部公寓"
               loading={loading}
               allowClear
-              size="large"
               options={apartments.map((a) => ({ label: a.name, value: a.id }))}
             />
           </Form.Item>
           <Form.Item label="月份" name="month">
-            <DatePicker.MonthPicker className="w-full" size="large" />
+            <DatePicker.MonthPicker className="w-full" />
           </Form.Item>
           <Form.Item>
             <Space>
@@ -81,7 +80,6 @@ export default function UtilityExportPage() {
                 icon={<DownloadOutlined />}
                 loading={exporting}
                 onClick={handleExport}
-                size="large"
               >
                 导出待录入模板
               </Button>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, message } from 'antd';
+import { Table, Tag, message } from 'antd';
 import {
   ApartmentOutlined,
   TeamOutlined,
@@ -100,45 +100,41 @@ export default function OpsDashboardPage() {
         ))}
       </div>
 
-      <Card
-        title={<span className="card-title">组织列表</span>}
+      <Table
+        rowKey="id"
+        dataSource={organizations}
         loading={loading}
-      >
-        <Table
-          rowKey="id"
-          dataSource={organizations}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            { title: '组织', dataIndex: 'name', ellipsis: true },
-            { title: '编码', dataIndex: 'code' },
-            {
-              title: '公寓数',
-              render: (_: unknown, row: (typeof organizations)[0]) =>
-                row._count?.apartments,
-            },
-            {
-              title: '成员数',
-              render: (_: unknown, row: (typeof organizations)[0]) =>
-                row._count?.members,
-            },
-            {
-              title: '账单数',
-              render: (_: unknown, row: (typeof organizations)[0]) =>
-                row._count?.bills,
-            },
-            {
-              title: '状态',
-              dataIndex: 'status',
-              render: (value: string) => (
-                <Tag color={value === 'ACTIVE' ? 'success' : 'warning'}>
-                  {value}
-                </Tag>
-              ),
-            },
-          ]}
-        />
-      </Card>
+        pagination={{ pageSize: 10 }}
+        scroll={{ x: 'max-content' }}
+        columns={[
+          { title: '组织', dataIndex: 'name', ellipsis: true },
+          { title: '编码', dataIndex: 'code' },
+          {
+            title: '公寓数',
+            render: (_: unknown, row: (typeof organizations)[0]) =>
+              row._count?.apartments,
+          },
+          {
+            title: '成员数',
+            render: (_: unknown, row: (typeof organizations)[0]) =>
+              row._count?.members,
+          },
+          {
+            title: '账单数',
+            render: (_: unknown, row: (typeof organizations)[0]) =>
+              row._count?.bills,
+          },
+          {
+            title: '状态',
+            dataIndex: 'status',
+            render: (value: string) => (
+              <Tag color={value === 'ACTIVE' ? 'success' : 'warning'}>
+                {value}
+              </Tag>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

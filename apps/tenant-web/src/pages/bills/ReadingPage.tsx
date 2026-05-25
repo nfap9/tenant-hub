@@ -131,14 +131,9 @@ export default function ReadingPage() {
             </span>
           }
         >
-          <Space
-            direction="vertical"
-            className={styles.readingSpaceFull}
-            size="large"
-          >
+          <Space direction="vertical" className={styles.readingSpaceFull}>
             <DatePicker
               className="w-full"
-              size="large"
               value={form.readingDate ? dayjs(form.readingDate) : undefined}
               onChange={(date) =>
                 setForm((old) => ({
@@ -150,7 +145,6 @@ export default function ReadingPage() {
             <Input
               placeholder="读数"
               prefix={<ThunderboltOutlined />}
-              size="large"
               value={form.value}
               onChange={(e) =>
                 setForm((old) => ({ ...old, value: e.target.value }))
@@ -169,7 +163,6 @@ export default function ReadingPage() {
               icon={<SaveOutlined />}
               loading={submitting}
               onClick={handleSubmit}
-              size="large"
             >
               保存读数
             </Button>

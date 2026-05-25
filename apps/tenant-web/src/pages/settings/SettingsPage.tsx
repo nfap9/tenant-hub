@@ -12,7 +12,6 @@ import { useAppSession } from '@/context/AppSessionContext';
 import { message } from 'antd';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './SettingsPage.module.scss';
-import clsx from 'clsx';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -73,7 +72,7 @@ export default function SettingsPage() {
             icon={<UserOutlined />}
             className={styles.avatarPrimary}
           />
-          <div className="page-content">
+          <div>
             <div className={styles.profileName}>
               {session?.user?.username || session?.user?.phone}
             </div>
@@ -90,9 +89,9 @@ export default function SettingsPage() {
             </Descriptions.Item>
           </Descriptions>
         )}
-      </Card>
 
-      <Card className={clsx(styles.settingsCard, 'settings-menu-card')}>
+        <div className={styles.divider} />
+
         <List
           itemLayout="horizontal"
           dataSource={menuItems}
@@ -111,16 +110,15 @@ export default function SettingsPage() {
             </List.Item>
           )}
         />
-      </Card>
 
-      <Card className={styles.settingsActionCard}>
+        <div className={styles.divider} />
+
         <Button
           type="primary"
           danger
           block
           icon={<LogoutOutlined />}
           onClick={handleSignOut}
-          size="large"
         >
           退出登录
         </Button>

@@ -95,7 +95,6 @@ export default function UtilityPage() {
             <Input
               placeholder="上期水表读数"
               prefix={<ThunderboltOutlined />}
-              size="large"
               value={form.previousWater}
               onChange={(e) =>
                 setForm((old) => ({ ...old, previousWater: e.target.value }))
@@ -104,7 +103,6 @@ export default function UtilityPage() {
             <Input
               placeholder="本期水表读数"
               prefix={<ThunderboltOutlined />}
-              size="large"
               value={form.currentWater}
               onChange={(e) =>
                 setForm((old) => ({ ...old, currentWater: e.target.value }))
@@ -130,7 +128,6 @@ export default function UtilityPage() {
             <Input
               placeholder="上期电表读数"
               prefix={<ThunderboltOutlined />}
-              size="large"
               value={form.previousPower}
               onChange={(e) =>
                 setForm((old) => ({ ...old, previousPower: e.target.value }))
@@ -139,7 +136,6 @@ export default function UtilityPage() {
             <Input
               placeholder="本期电表读数"
               prefix={<ThunderboltOutlined />}
-              size="large"
               value={form.currentPower}
               onChange={(e) =>
                 setForm((old) => ({ ...old, currentPower: e.target.value }))
@@ -154,7 +150,6 @@ export default function UtilityPage() {
           loading={submitting}
           onClick={handleSubmit}
           block
-          size="large"
         >
           保存水电读数
         </Button>

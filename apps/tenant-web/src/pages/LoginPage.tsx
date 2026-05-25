@@ -183,7 +183,6 @@ export default function LoginPage() {
             rules={[{ required: true, message: '请输入手机号' }]}
           >
             <Input
-              size="large"
               placeholder="请输入手机号"
               maxLength={11}
               prefix={<MobileOutlined className={styles.loginInputPrefix} />}
@@ -197,7 +196,6 @@ export default function LoginPage() {
               rules={[{ required: true, message: '请输入用户名' }]}
             >
               <Input
-                size="large"
                 placeholder="请输入用户名"
                 maxLength={24}
                 prefix={<UserOutlined className={styles.loginInputPrefix} />}
@@ -215,7 +213,6 @@ export default function LoginPage() {
               ]}
             >
               <Input.Password
-                size="large"
                 placeholder={isRegister ? '至少 8 位密码' : '请输入密码'}
                 prefix={<SafetyOutlined className={styles.loginInputPrefix} />}
               />
@@ -239,7 +236,6 @@ export default function LoginPage() {
               ]}
             >
               <Input.Password
-                size="large"
                 placeholder="再次输入密码"
                 prefix={<SafetyOutlined className={styles.loginInputPrefix} />}
               />
@@ -253,7 +249,6 @@ export default function LoginPage() {
               rules={[{ required: true, message: '请输入验证码' }]}
             >
               <Input
-                size="large"
                 placeholder="6 位验证码"
                 maxLength={6}
                 prefix={<SafetyOutlined className={styles.loginInputPrefix} />}
@@ -277,7 +272,6 @@ export default function LoginPage() {
             <Button
               type="primary"
               htmlType="submit"
-              size="large"
               block
               loading={busy}
               className={styles.loginSubmitBtn}
