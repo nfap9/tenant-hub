@@ -18,7 +18,7 @@
     "typecheck": "pnpm -r typecheck",
     "db:generate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma generate",
     "db:migrate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma migrate dev",
-    "prepare": "husky 2>/dev/null || true",
+    "prepare": "husky && pnpm db:generate",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
