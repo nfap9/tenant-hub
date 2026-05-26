@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Card, Button, Tabs, Tag, message, Popconfirm, Spin } from 'antd';
+import { Card, Button, Tabs, message, Popconfirm, Spin } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   EditOutlined,
@@ -17,10 +17,10 @@ import {
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getApartments, deleteApartment } from '@/api/apartments';
-import type { Apartment, Room } from '@/types/domain';
-import { money, facilitiesText } from '@/utils/format';
+import type { Apartment } from '@/types/domain';
+import { money } from '@/utils/format';
 import { contractText } from './utils';
-import { statusLabels, toneForStatus } from './constants';
+import RoomCard from '@/components/rooms/RoomCard';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import styles from './ApartmentDetailPage.module.scss';
@@ -85,22 +85,6 @@ export default function ApartmentDetailPage() {
     }
   };
 
-  const handleDeleteRoom = async (room: Room) => {
-    if (!currentOrgId) return;
-    if (room.status === 'OCCUPIED') {
-      message.warning('已租房间不能删除，请先退租');
-      return;
-    }
-    try {
-      const { deleteRoom } = await import('@/api/rooms');
-      await deleteRoom(currentOrgId, room.id);
-      message.success('房间已删除');
-      loadApartments();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '删除房间失败');
-    }
-  };
-
   if (!apartment) {
     return (
       <div className="page-content">
@@ -120,13 +104,6 @@ export default function ApartmentDetailPage() {
       </div>
     );
   }
-
-  const statusColorMap: Record<string, string> = {
-    success: 'success',
-    neutral: 'default',
-    warning: 'warning',
-    danger: 'error',
-  };
 
   return (
     <div className={clsx(styles.apartmentDetailPage, 'page-content')}>
@@ -367,63 +344,11 @@ export default function ApartmentDetailPage() {
                   ) : (
                     <div className={styles.roomsGrid}>
                       {apartmentRooms.map((room) => (
-                        <Card
+                        <RoomCard
                           key={room.id}
-                          size="small"
-                          hoverable
-                          title={
-                            <div className="flex-between">
-                              <span className={styles.roomCardTitleText}>
-                                {room.roomNo}
-                              </span>
-                              <Tag
-                                color={
-                                  statusColorMap[toneForStatus[room.status]]
-                                }
-                              >
-                                {statusLabels[room.status]}
-                              </Tag>
-                            </div>
-                          }
-                        >
-                          <div className={styles.roomLayout}>
-                            {room.layout} ·{' '}
-                            {room.area ? `${room.area} ㎡` : '未填面积'}
-                          </div>
-                          <div className={styles.roomFacilities}>
-                            {facilitiesText(room.facilities)}
-                          </div>
-                          {canManageRoom && (
-                            <div className={styles.actionGroup}>
-                              <Button
-                                size="small"
-                                onClick={() =>
-                                  navigate(
-                                    `/rooms/${room.id}/edit?apartmentId=${id}`
-                                  )
-                                }
-                              >
-                                编辑
-                              </Button>
-                              <Popconfirm
-                                title="删除房间"
-                                description="删除后房间资料不可恢复，请确认当前房间没有有效租约。"
-                                onConfirm={() => handleDeleteRoom(room)}
-                                okText="确认删除"
-                                cancelText="取消"
-                                disabled={room.status === 'OCCUPIED'}
-                              >
-                                <Button
-                                  size="small"
-                                  danger
-                                  disabled={room.status === 'OCCUPIED'}
-                                >
-                                  删除
-                                </Button>
-                              </Popconfirm>
-                            </div>
-                          )}
-                        </Card>
+                          room={room}
+                          apartmentName={apartment.name}
+                        />
                       ))}
                     </div>
                   )}

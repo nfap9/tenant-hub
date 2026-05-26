@@ -313,6 +313,54 @@ apartmentRouter.put(
   })
 );
 
+apartmentRouter.get(
+  '/rooms/:roomId',
+  requirePermission(PERMISSIONS.ROOM_VIEW),
+  asyncHandler(async (req, res) => {
+    const currentMonthBillWindow = getCurrentMonthBillWindow();
+    const currentMonthBillLabel = getBillMonthLabel(
+      currentMonthBillWindow.start
+    );
+    const room = await prisma.room.findFirst({
+      where: {
+        id: req.params.roomId,
+        apartment: { organizationId: req.organizationId! },
+      },
+      include: {
+        apartment: true,
+        leases: {
+          where: { status: 'ACTIVE' },
+          include: {
+            fees: true,
+            monthlyBills: {
+              where: {
+                billingDate: {
+                  gte: currentMonthBillWindow.start,
+                  lt: currentMonthBillWindow.end,
+                },
+              },
+              select: { id: true, status: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+    if (!room) throw new HttpError(404, '房间不存在');
+    ok(res, {
+      ...room,
+      leases: room.leases.map(({ monthlyBills, ...lease }) => ({
+        ...withLeaseLifecycle(lease),
+        currentMonthBillGenerated: monthlyBills.length > 0,
+        currentMonthBillSettled: monthlyBills.some(
+          (bill) => bill.status === 'PAID'
+        ),
+        currentMonthBillLabel,
+      })),
+    });
+  })
+);
+
 apartmentRouter.delete(
   '/rooms/:roomId',
   requirePermission(PERMISSIONS.ROOM_MANAGE),

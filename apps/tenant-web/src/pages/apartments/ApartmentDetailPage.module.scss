@@ -76,20 +76,4 @@
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 20px;
   }
-
-  .room-card-title-text {
-    font-weight: 600;
-    font-family: var(--th-font-heading);
-  }
-
-  .room-layout {
-    margin-bottom: 8px;
-    color: var(--th-foreground-muted);
-  }
-
-  .room-facilities {
-    font-size: 12px;
-    margin-bottom: 12px;
-    color: var(--th-foreground-subtle);
-  }
 }

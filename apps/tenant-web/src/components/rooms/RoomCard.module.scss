@@ -1,0 +1,26 @@
+.room-card {
+  cursor: pointer;
+}
+
+.room-title {
+  font-family: var(--th-font-heading);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.room-subtitle {
+  font-size: 13px;
+  color: var(--th-foreground-muted);
+  margin-bottom: 8px;
+}
+
+.room-meta {
+  font-size: 12px;
+  color: var(--th-foreground-subtle);
+  margin-bottom: 4px;
+}
+
+.room-facilities {
+  font-size: 12px;
+  color: var(--th-foreground-subtle);
+}

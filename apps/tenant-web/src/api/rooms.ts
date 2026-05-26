@@ -5,6 +5,10 @@ export async function getRooms(organizationId: string) {
   return apiClient<Room[]>('/apartments/rooms', { organizationId });
 }
 
+export async function getRoomDetail(organizationId: string, roomId: string) {
+  return apiClient<Room>(`/apartments/rooms/${roomId}`, { organizationId });
+}
+
 export async function createRoom(
   organizationId: string,
   apartmentId: string,

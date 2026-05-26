@@ -1,0 +1,15 @@
+.fee-section {
+  margin-top: 16px;
+}
+
+.fee-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--th-foreground);
+}
+
+.fee-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

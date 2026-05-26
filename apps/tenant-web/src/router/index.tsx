@@ -26,6 +26,7 @@ const RoomBatchPage = lazy(() => import('@/pages/apartments/RoomBatchPage'));
 
 // 房间
 const RoomListPage = lazy(() => import('@/pages/rooms/RoomListPage'));
+const RoomDetailPage = lazy(() => import('@/pages/rooms/RoomDetailPage'));
 const RoomFormPage = lazy(() => import('@/pages/rooms/RoomFormPage'));
 const LeaseFormPage = lazy(() => import('@/pages/rooms/LeaseFormPage'));
 const LeaseEditPage = lazy(() => import('@/pages/rooms/LeaseEditPage'));
@@ -206,6 +207,14 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <RoomListPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/rooms/:id"
+            element={
+              <RequireOrg>
+                <RoomDetailPage />
               </RequireOrg>
             }
           />

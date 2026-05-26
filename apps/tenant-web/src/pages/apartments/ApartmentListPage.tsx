@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Tag, Spin, message, Popconfirm, Tooltip } from 'antd';
-import {
-  PlusOutlined,
-  EyeOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  HomeOutlined,
-} from '@ant-design/icons';
+import { Button, Card, Tag, Spin, message } from 'antd';
+import { PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
-import { getApartments, deleteApartment } from '@/api/apartments';
+import { getApartments } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import { apartmentMonthlyIncome, apartmentMonthlyExpense } from './utils';
@@ -42,17 +36,6 @@ export default function ApartmentListPage() {
   useEffect(() => {
     loadApartments();
   }, [loadApartments]);
-
-  const handleDelete = async (id: string) => {
-    if (!currentOrgId) return;
-    try {
-      await deleteApartment(currentOrgId, id);
-      message.success('公寓已删除');
-      loadApartments();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '删除公寓失败');
-    }
-  };
 
   return (
     <div className="page-content">
@@ -100,53 +83,11 @@ export default function ApartmentListPage() {
                 <Card
                   key={apt.id}
                   hoverable
+                  onClick={() => navigate(`/apartments/${apt.id}`)}
                   title={
                     <div className={styles.cardTitle}>
                       <HomeOutlined className="text-primary" />
                       <span className={styles.cardTitleText}>{apt.name}</span>
-                    </div>
-                  }
-                  extra={
-                    <div className={styles.cardExtra}>
-                      <Tooltip title="详情">
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<EyeOutlined />}
-                          onClick={() => navigate(`/apartments/${apt.id}`)}
-                        />
-                      </Tooltip>
-                      {canManageApartment && (
-                        <>
-                          <Tooltip title="编辑">
-                            <Button
-                              type="text"
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={() =>
-                                navigate(`/apartments/${apt.id}/edit`)
-                              }
-                            />
-                          </Tooltip>
-                          <Popconfirm
-                            title="删除公寓"
-                            description="删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。"
-                            onConfirm={() => handleDelete(apt.id)}
-                            okText="确认删除"
-                            cancelText="取消"
-                            okButtonProps={{ danger: true }}
-                          >
-                            <Tooltip title="删除">
-                              <Button
-                                type="text"
-                                danger
-                                size="small"
-                                icon={<DeleteOutlined />}
-                              />
-                            </Tooltip>
-                          </Popconfirm>
-                        </>
-                      )}
                     </div>
                   }
                 >
