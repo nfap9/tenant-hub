@@ -24,3 +24,11 @@
   font-size: 12px;
   color: var(--th-foreground-subtle);
 }
+
+.room-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--th-border-light);
+}

@@ -1,7 +1,9 @@
-import { Card, Tag } from 'antd';
+import { Card, Tag, Button, Tooltip } from 'antd';
+import { UserAddOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { Room } from '@/types/domain';
 import { statusLabels, toneForStatus } from '@/pages/rooms/constants';
+import { useHasPermission } from '@/context/AppSessionContext';
 import styles from './RoomCard.module.scss';
 import clsx from 'clsx';
 
@@ -24,7 +26,15 @@ export default function RoomCard({
   size = 'default',
 }: RoomCardProps) {
   const navigate = useNavigate();
+  const canManageLease = useHasPermission('lease:manage');
   const subtitle = apartmentName ?? room.apartment?.name;
+
+  const handleLeaseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/rooms/${room.id}/lease/new`);
+  };
+
+  const showLeaseButton = canManageLease && room.status === 'VACANT';
 
   return (
     <Card
@@ -49,6 +59,17 @@ export default function RoomCard({
       <div className={clsx(styles.roomFacilities, 'text-subtle')}>
         {room.facilities?.join('、') || '无设施'}
       </div>
+      {showLeaseButton && (
+        <div className={styles.roomActions}>
+          <Tooltip title="签约">
+            <Button
+              type="text"
+              icon={<UserAddOutlined />}
+              onClick={handleLeaseClick}
+            />
+          </Tooltip>
+        </div>
+      )}
     </Card>
   );
 }
