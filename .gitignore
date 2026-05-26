@@ -19,6 +19,8 @@ coverage/
 apps/api/.env
 apps/ops-web/.env
 apps/wxapp/project.config.json
+apps/miniprogram/project.config.json
+apps/miniprogram/project.private.config.json
 
 # Logs
 *.log
@@ -41,6 +43,10 @@ pnpm-debug.log*
 
 # Vite
 .vite/
+
+# SWC cache
+.swc/
+**/.swc/
 
 # Expo / React Native
 .expo/

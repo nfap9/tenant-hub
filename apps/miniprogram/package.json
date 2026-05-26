@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build:weapp": "taro build --type weapp",
+    "build:h5": "taro build --type h5",
     "dev:weapp": "npm run build:weapp -- --watch",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
