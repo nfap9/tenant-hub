@@ -23,6 +23,7 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import PageHeader from '@/components/ui/PageHeader';
+import PaymentDialog from '@/components/PaymentDialog';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
@@ -79,6 +80,7 @@ const todoToneMap: Record<
 export default function DashboardPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
@@ -235,7 +237,7 @@ export default function DashboardPage() {
             <Button
               type="primary"
               icon={<WalletOutlined />}
-              onClick={() => navigate('/bills/payment')}
+              onClick={() => setPaymentOpen(true)}
             >
               登记收款
             </Button>
@@ -386,6 +388,12 @@ export default function DashboardPage() {
           </Col>
         </Row>
       </Spin>
+
+      <PaymentDialog
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

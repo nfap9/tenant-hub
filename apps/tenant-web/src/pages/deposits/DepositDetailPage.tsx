@@ -14,12 +14,17 @@ import {
   Descriptions,
   Timeline,
 } from 'antd';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  WalletOutlined,
+} from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getDepositDetail, recordDepositPayment } from '@/api/deposits';
 import { money } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import PaymentDialog from '@/components/PaymentDialog';
 import type { Deposit, DepositStatus, Payment } from '@/types/domain';
 import styles from './DepositDetailPage.module.scss';
 
@@ -54,6 +59,7 @@ export default function DepositDetailPage() {
   const [deposit, setDeposit] = useState<Deposit | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [form] = Form.useForm();
 
   const loadData = useCallback(async () => {
@@ -138,9 +144,17 @@ export default function DepositDetailPage() {
             >
               刷新
             </Button>
-            {canManageDeposit && availableTypes().length > 0 && (
+            {deposit?.leaseId && (
               <Button
                 type="primary"
+                icon={<WalletOutlined />}
+                onClick={() => setPaymentOpen(true)}
+              >
+                登记收款
+              </Button>
+            )}
+            {canManageDeposit && availableTypes().length > 0 && (
+              <Button
                 icon={<PlusOutlined />}
                 onClick={() => setModalOpen(true)}
               >
@@ -278,6 +292,13 @@ export default function DepositDetailPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <PaymentDialog
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onSuccess={loadData}
+        defaultLeaseId={deposit?.leaseId}
+      />
     </div>
   );
 }

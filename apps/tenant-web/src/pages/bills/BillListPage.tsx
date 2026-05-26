@@ -42,6 +42,7 @@ import {
 } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import PaymentDialog from '@/components/PaymentDialog';
 import type { Bill, BillStatus } from '@/types/domain';
 import styles from './BillListPage.module.scss';
 import clsx from 'clsx';
@@ -50,6 +51,7 @@ export default function BillListPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
   const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [, setRooms] = useState<import('@/types/domain').Room[]>([]);
@@ -254,7 +256,7 @@ export default function BillListPage() {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => navigate('/bills/payment')}
+                onClick={() => setPaymentOpen(true)}
               >
                 登记收款
               </Button>
@@ -408,6 +410,12 @@ export default function BillListPage() {
           ]}
         />
       </Spin>
+
+      <PaymentDialog
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onSuccess={loadData}
+      />
     </div>
   );
 }
