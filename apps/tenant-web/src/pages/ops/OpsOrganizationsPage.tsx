@@ -103,6 +103,7 @@ export default function OpsOrganizationsPage() {
           },
           {
             title: '操作',
+            fixed: 'right',
             render: (_: unknown, row: (typeof orgs)[0]) => (
               <Select
                 value={row.status}

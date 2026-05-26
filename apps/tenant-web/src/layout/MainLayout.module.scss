@@ -12,7 +12,13 @@
     top: 0;
     bottom: 0;
     z-index: 20;
-    overflow: auto;
+    overflow: hidden;
+
+    :global(.ant-layout-sider-children) {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
 
     .sider-logo {
       padding: 20px 16px;
@@ -51,6 +57,9 @@
 
     .sider-menu-wrap {
       padding: 0 8px;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
 
       .menu-label {
         font-size: 11px;
@@ -62,20 +71,16 @@
       }
 
       .main-menu {
-        height: 100%;
         border-right: 0;
         background: transparent;
       }
     }
 
     .sider-footer {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
       padding: 16px 20px;
       border-top: 1px solid $th-border-light;
       background: $th-surface;
+      flex-shrink: 0;
 
       .user-phone {
         font-size: 12px;

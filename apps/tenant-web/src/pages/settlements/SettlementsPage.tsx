@@ -158,7 +158,7 @@ export default function SettlementsPage() {
             rowKey="id"
             dataSource={filteredSettlements}
             pagination={{ pageSize: 10 }}
-            scroll={{ x: 'max-content', y: 'calc(100vh - 320px)' }}
+            scroll={{ x: 'max-content' }}
             columns={[
               {
                 title: '房间',

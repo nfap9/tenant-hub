@@ -101,6 +101,7 @@ export default function OpsPlansPage() {
           },
           {
             title: '操作',
+            fixed: 'right',
             render: (_: unknown, row: Plan) => (
               <Button
                 type="link"

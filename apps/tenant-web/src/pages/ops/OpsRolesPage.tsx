@@ -162,6 +162,7 @@ export default function OpsRolesPage() {
           },
           {
             title: '操作',
+            fixed: 'right',
             render: (_: unknown, row: RoleItem) => (
               <Space>
                 <Button

@@ -81,6 +81,7 @@ export default function OpsUsersPage() {
           },
           {
             title: '操作',
+            fixed: 'right',
             render: (_: unknown, row: (typeof users)[0]) => (
               <Select
                 value={row.platformRole}
