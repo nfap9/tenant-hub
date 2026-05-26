@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Lease, LeaseSettlement } from '@/types/domain';
+import type { Lease, LeaseSettlement, SettlementPayment } from '@/types/domain';
 
 export async function createLease(
   organizationId: string,
@@ -59,6 +59,10 @@ export async function getSettlementPreview(
   );
 }
 
+export async function getLeases(organizationId: string) {
+  return apiClient<Lease[]>('/leases', { organizationId });
+}
+
 export async function terminateLease(
   organizationId: string,
   leaseId: string,
@@ -80,4 +84,30 @@ export async function terminateLease(
     body: payload,
     organizationId,
   });
+}
+
+export async function getSettlements(organizationId: string) {
+  return apiClient<LeaseSettlement[]>('/leases/settlements', {
+    organizationId,
+  });
+}
+
+export async function recordSettlementPayment(
+  organizationId: string,
+  settlementId: string,
+  payload: {
+    direction: 'RECEIVE' | 'REFUND';
+    amount: number;
+    method: string;
+    note?: string;
+  }
+) {
+  return apiClient<SettlementPayment>(
+    `/leases/settlements/${settlementId}/payments`,
+    {
+      method: 'POST',
+      body: payload,
+      organizationId,
+    }
+  );
 }

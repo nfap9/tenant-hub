@@ -253,6 +253,18 @@ export type DepositPayment = {
 export type SettlementStatus = 'PENDING' | 'SETTLED';
 export type SettlementPaymentDirection = 'RECEIVE' | 'REFUND';
 
+export type SettlementPayment = {
+  id: string;
+  settlementId: string;
+  userId: string;
+  direction: SettlementPaymentDirection;
+  amount: string | number;
+  paidAt: string;
+  method: string;
+  note?: string;
+  user?: { id: string; username: string; phone: string };
+};
+
 export type LeaseSettlement = {
   id: string;
   organizationId: string;
@@ -279,6 +291,10 @@ export type LeaseSettlement = {
   refundableAmount: string | number;
   netAmount: string | number;
   status: SettlementStatus;
+  lease?: Lease & { room?: Room; fees?: LeaseFee[] };
+  room?: Room;
+  payments?: SettlementPayment[];
+  createdAt?: string;
 };
 
 export type MonthlyBill = {

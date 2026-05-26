@@ -29,9 +29,13 @@ export default function PageHeader({
                     title: (
                       <span
                         className={styles.breadcrumbBack}
-                        onClick={() =>
-                          navigate(typeof back === 'string' ? back : '..')
-                        }
+                        onClick={() => {
+                          if (typeof back === 'string') {
+                            navigate(back);
+                          } else {
+                            navigate(-1);
+                          }
+                        }}
                       >
                         <ArrowLeftOutlined />
                         返回

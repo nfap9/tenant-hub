@@ -1,7 +1,6 @@
 import { Card, List, Avatar, Button, Tag, Descriptions, Modal } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileTextOutlined,
   TeamOutlined,
   UserOutlined,
   CrownOutlined,
@@ -31,15 +30,6 @@ export default function SettingsPage() {
   };
 
   const menuItems = [
-    ...(memberships.length === 0
-      ? []
-      : [
-          {
-            title: '我的租约',
-            icon: <FileTextOutlined />,
-            path: '/settings/leases',
-          },
-        ]),
     {
       title: '组织管理',
       icon: <TeamOutlined />,

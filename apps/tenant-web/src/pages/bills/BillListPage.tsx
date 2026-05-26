@@ -21,6 +21,7 @@ import {
   UploadOutlined,
   ThunderboltOutlined,
   ExclamationCircleOutlined,
+  ThunderboltFilled,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
@@ -28,6 +29,7 @@ import {
   getBillsByStatus,
   deleteMonthlyBill,
   retryBillBilling,
+  generateBills,
 } from '@/api/bills';
 import { getRooms } from '@/api/rooms';
 import { money } from '@/utils/format';
@@ -272,6 +274,31 @@ export default function BillListPage() {
                 </Button>
               </>
             )}
+            <Button
+              icon={<ThunderboltFilled />}
+              onClick={async () => {
+                if (!currentOrgId) return;
+                Modal.confirm({
+                  title: '手动生成账单',
+                  content:
+                    '将为所有有效租约生成到当前日期为止的账单，是否继续？',
+                  okText: '确认生成',
+                  onOk: async () => {
+                    try {
+                      const result = await generateBills(currentOrgId);
+                      message.success(`已生成 ${result.billIds.length} 笔账单`);
+                      await loadData();
+                    } catch (e) {
+                      message.error(
+                        e instanceof Error ? e.message : '生成失败'
+                      );
+                    }
+                  },
+                });
+              }}
+            >
+              生成账单
+            </Button>
             <Button
               icon={<ReloadOutlined />}
               loading={loading}

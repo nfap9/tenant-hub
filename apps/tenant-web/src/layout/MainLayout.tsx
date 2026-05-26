@@ -29,6 +29,8 @@ function getMenuKeyFromPath(pathname: string): string {
   if (pathname === '/') return 'dashboard';
   if (pathname.startsWith('/apartments')) return 'apartments';
   if (pathname.startsWith('/rooms')) return 'rooms';
+  if (pathname.startsWith('/leases')) return 'leases';
+  if (pathname.startsWith('/settlements')) return 'settlements';
   if (pathname.startsWith('/deposits')) return 'deposits';
   if (pathname.startsWith('/bills')) return 'bills';
   if (pathname.startsWith('/settings')) return 'settings';
@@ -88,8 +90,10 @@ export default function MainLayout() {
       : [
           { key: 'dashboard', icon: <HomeOutlined />, label: '首页' },
           { key: 'rooms', icon: <HomeFilled />, label: '房间' },
-          { key: 'deposits', icon: <FileTextOutlined />, label: '押金' },
           { key: 'bills', icon: <FileTextOutlined />, label: '账单' },
+          { key: 'leases', icon: <FileTextOutlined />, label: '租约' },
+          { key: 'deposits', icon: <FileTextOutlined />, label: '押金' },
+          { key: 'settlements', icon: <FileTextOutlined />, label: '退租结算' },
           { key: 'apartments', icon: <ApartmentOutlined />, label: '公寓' },
         ]),
     { key: 'settings', icon: <SettingOutlined />, label: '更多' },
@@ -140,6 +144,12 @@ export default function MainLayout() {
         break;
       case 'rooms':
         navigate('/rooms');
+        break;
+      case 'leases':
+        navigate('/leases');
+        break;
+      case 'settlements':
+        navigate('/settlements');
         break;
       case 'deposits':
         navigate('/deposits');

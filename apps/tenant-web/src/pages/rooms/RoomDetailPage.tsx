@@ -93,7 +93,7 @@ export default function RoomDetailPage() {
   return (
     <div className="page-content">
       <PageHeader
-        back="/rooms"
+        back={true}
         breadcrumb={[
           { label: '房间管理', path: '/rooms' },
           { label: room?.roomNo || '房间详情' },

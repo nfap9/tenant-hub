@@ -204,7 +204,7 @@ export default function DashboardPage() {
           detail: `${expiringLeases[0].lease.tenantName} ${expiringLeases[0].remainingDays} 天后到期，共 ${expiringLeases.length} 份需跟进`,
           badge: '续租',
           tone: 'orange' as const,
-          onClick: () => navigate('/settings/leases'),
+          onClick: () => navigate('/leases'),
         }
       : undefined,
     vacantCount

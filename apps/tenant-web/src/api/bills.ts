@@ -118,3 +118,17 @@ export async function createMeterReading(
     organizationId,
   });
 }
+
+export async function generateBills(
+  organizationId: string,
+  payload?: { leaseId?: string; today?: string }
+) {
+  return apiClient<{ leaseCount: number; billIds: string[] }>(
+    '/bills/generate',
+    {
+      method: 'POST',
+      body: payload ?? {},
+      organizationId,
+    }
+  );
+}

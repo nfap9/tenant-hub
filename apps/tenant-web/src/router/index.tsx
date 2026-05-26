@@ -34,6 +34,12 @@ const LeaseTerminatePage = lazy(
   () => import('@/pages/rooms/LeaseTerminatePage')
 );
 
+// 租约
+const LeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
+const SettlementsPage = lazy(
+  () => import('@/pages/settlements/SettlementsPage')
+);
+
 // 押金
 const DepositsPage = lazy(() => import('@/pages/deposits/DepositsPage'));
 const DepositDetailPage = lazy(
@@ -52,7 +58,7 @@ const EditItemPage = lazy(() => import('@/pages/bills/EditItemPage'));
 
 // 设置
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
-const MyLeasesPage = lazy(() => import('@/pages/settings/MyLeasesPage'));
+const MyLeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
 const OrganizationPage = lazy(
   () => import('@/pages/settings/OrganizationPage')
 );
@@ -197,6 +203,24 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <RoomBatchPage />
+              </RequireOrg>
+            }
+          />
+
+          {/* 租约 */}
+          <Route
+            path="/leases"
+            element={
+              <RequireOrg>
+                <LeasesPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/settlements"
+            element={
+              <RequireOrg>
+                <SettlementsPage />
               </RequireOrg>
             }
           />

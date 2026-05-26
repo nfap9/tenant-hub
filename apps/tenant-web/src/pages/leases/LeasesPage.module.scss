@@ -1,0 +1,12 @@
+@use '@/styles/variables' as *;
+
+.searchInput {
+  width: 280px;
+}
+
+.leaseTabs {
+  :global(.ant-tabs-nav) {
+    border-bottom: 1px solid var(--th-border);
+    margin-bottom: 20px;
+  }
+}
