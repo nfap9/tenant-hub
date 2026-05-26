@@ -20,5 +20,26 @@ export const toneForBillStatus = (
   return 'warning';
 };
 
-export const billModeText = (mode: string) =>
-  mode === 'PREPAID' ? '预付' : '后付';
+export const billModeText = (mode: string) => {
+  if (mode === 'PREPAID') return '预付';
+  if (mode === 'POSTPAID') return '后付';
+  if (mode === 'DEPOSIT') return '押金';
+  return mode;
+};
+
+export const billItemTypeText = (type: string) => {
+  const map: Record<string, string> = {
+    RENT: '房租',
+    UTILITY: '水电费',
+    WATER: '水费',
+    POWER: '电费',
+    DEPOSIT: '押金',
+    MANAGEMENT: '管理费',
+    SANITATION: '卫生费',
+    ELEVATOR: '电梯费',
+    PROPERTY: '物业费',
+    NETWORK: '网费',
+    OTHER: '其他',
+  };
+  return map[type] || type;
+};

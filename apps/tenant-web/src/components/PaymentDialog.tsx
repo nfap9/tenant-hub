@@ -14,7 +14,11 @@ import { useAppSession } from '@/context/AppSessionContext';
 import { getBills, createPayment } from '@/api/bills';
 import { getLeases } from '@/api/leases';
 import { money, day } from '@/utils/format';
-import { statusLabels, billModeText } from '@/pages/bills/constants';
+import {
+  statusLabels,
+  billModeText,
+  billItemTypeText,
+} from '@/pages/bills/constants';
 import { remainingAmount } from '@/pages/bills/utils';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Bill, Lease } from '@/types/domain';
@@ -253,6 +257,15 @@ export default function PaymentDialog({
                         >
                           {bill.billingDate.slice(0, 10)} ·{' '}
                           {billModeText(bill.mode)}
+                          {bill.items && bill.items.length > 0 && (
+                            <span style={{ color: '#6b7280', fontWeight: 400 }}>
+                              {' '}
+                              ·{' '}
+                              {bill.items
+                                .map((i) => billItemTypeText(i.type))
+                                .join('、')}
+                            </span>
+                          )}
                         </div>
                         <div
                           style={{
