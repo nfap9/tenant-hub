@@ -9,20 +9,20 @@ import { statusLabels, toneForBillStatus } from './constants';
 import {
   remainingAmount,
   roomKeyForBill,
-  sortMonthlyBillsForList,
+  sortBillsForList,
   getPaymentAmountError,
 } from './utils';
-import type { MonthlyBill, Room } from '../../types/domain';
+import type { Bill, Room } from '../../types/domain';
 import './index.scss';
 
 export default function PaymentPage() {
   const { currentOrgId } = useAppSession();
 
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [bills, setBills] = useState<MonthlyBill[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [paymentRoomId, setPaymentRoomId] = useState('');
   const [form, setForm] = useState({
-    monthlyBillId: '',
+    billId: '',
     amount: '',
     method: '线下收款',
     note: '',
@@ -32,16 +32,16 @@ export default function PaymentPage() {
   const loadData = async () => {
     if (!currentOrgId) return;
     try {
-      const [nextRooms, nextBills] = await Promise.all([
+      const [nextRooms, allBills] = await Promise.all([
         apiClient<Room[]>('/apartments/rooms', {
           organizationId: currentOrgId,
         }),
-        apiClient<MonthlyBill[]>('/bills/monthly', {
+        apiClient<Bill[]>('/bills', {
           organizationId: currentOrgId,
         }),
       ]);
       setRooms(nextRooms);
-      setBills(nextBills);
+      setBills(allBills);
     } catch (e) {
       Taro.showToast({
         title: e instanceof Error ? e.message : '加载失败',
@@ -56,7 +56,7 @@ export default function PaymentPage() {
 
   const paymentBills = useMemo(
     () =>
-      sortMonthlyBillsForList(
+      sortBillsForList(
         bills.filter(
           (b) => b.status === 'UNPAID' || b.status === 'PARTIAL_PAID'
         )
@@ -75,7 +75,7 @@ export default function PaymentPage() {
         setPaymentRoomId(roomKeyForBill(first));
         const isPayable = first.status !== 'PAID' && first.status !== 'VOID';
         setForm({
-          monthlyBillId: isPayable ? first.id : '',
+          billId: isPayable ? first.id : '',
           amount: isPayable ? String(remainingAmount(first)) : '',
           method: '线下收款',
           note: '',
@@ -93,20 +93,20 @@ export default function PaymentPage() {
       const isPayable =
         firstBill.status !== 'PAID' && firstBill.status !== 'VOID';
       setForm({
-        monthlyBillId: isPayable ? firstBill.id : '',
+        billId: isPayable ? firstBill.id : '',
         amount: isPayable ? String(remainingAmount(firstBill)) : '',
         method: '线下收款',
         note: '',
       });
     } else {
-      setForm({ monthlyBillId: '', amount: '', method: '线下收款', note: '' });
+      setForm({ billId: '', amount: '', method: '线下收款', note: '' });
     }
   };
 
-  const handleBillClick = (bill: MonthlyBill) => {
+  const handleBillClick = (bill: Bill) => {
     const isPayable = bill.status !== 'PAID' && bill.status !== 'VOID';
     setForm({
-      monthlyBillId: isPayable ? bill.id : '',
+      billId: isPayable ? bill.id : '',
       amount: isPayable ? String(remainingAmount(bill)) : '',
       method: '线下收款',
       note: '',
@@ -118,8 +118,8 @@ export default function PaymentPage() {
   };
 
   const handleSubmit = async () => {
-    if (!currentOrgId || !form.monthlyBillId || !form.amount.trim()) return;
-    const bill = bills.find((item) => item.id === form.monthlyBillId);
+    if (!currentOrgId || !form.billId || !form.amount.trim()) return;
+    const bill = bills.find((item) => item.id === form.billId);
     if (!bill || bill.status === 'PAID' || bill.status === 'VOID') return;
     const amountError = getPaymentAmountError(
       form.amount,
@@ -131,7 +131,7 @@ export default function PaymentPage() {
     }
     setSubmitting(true);
     try {
-      await apiClient(`/bills/monthly/${form.monthlyBillId}/payments`, {
+      await apiClient(`/bills/${form.billId}/payments`, {
         method: 'POST',
         body: {
           amount: Number(form.amount),
@@ -185,7 +185,7 @@ export default function PaymentPage() {
         {roomBills.map((bill) => (
           <View
             key={bill.id}
-            className={`bill-select-card ${form.monthlyBillId === bill.id ? 'bill-select-card--active' : ''}`}
+            className={`bill-select-card ${form.billId === bill.id ? 'bill-select-card--active' : ''}`}
             onClick={() => handleBillClick(bill)}
           >
             <Text className="card-title">{bill.billingDate.slice(0, 10)}</Text>

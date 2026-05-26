@@ -78,8 +78,9 @@ export type BillStatus =
   | 'PARTIAL_PAID'
   | 'PAID'
   | 'FAILED'
-  | 'VOID';
-export type BillMode = 'PREPAID' | 'POSTPAID';
+  | 'VOID'
+  | 'REFUNDED';
+export type BillMode = 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
 export type BillItemType =
   | 'RENT'
   | 'UTILITY'
@@ -189,7 +190,6 @@ export type Bill = {
   id: string;
   organizationId: string;
   leaseId: string;
-  monthlyBillId?: string;
   mode: BillMode;
   billingDate: string;
   periodStart: string;
@@ -201,12 +201,13 @@ export type Bill = {
   failureReason?: string;
   lease?: Lease;
   items?: BillItem[];
+  payments?: Payment[];
 };
 
 export type Payment = {
   id: string;
-  billId?: string;
-  monthlyBillId?: string;
+  billId: string;
+  type: 'RECEIVE' | 'REFUND' | 'DEDUCT';
   amount: string | number;
   paidAt: string;
   method: string;
@@ -235,7 +236,7 @@ export type Deposit = {
   createdAt: string;
   updatedAt: string;
   lease?: Lease & { room?: Room };
-  payments?: DepositPayment[];
+  bill?: Bill & { payments?: Payment[] };
 };
 
 export type DepositPayment = {

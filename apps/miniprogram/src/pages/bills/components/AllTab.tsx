@@ -3,13 +3,14 @@ import Taro from '@tarojs/taro';
 import { EmptyState, Input } from '../../../components/ui';
 import { BillCard } from './BillCard';
 import { statusLabels } from '../constants';
-import { sortMonthlyBillsForList } from '../utils';
+import { sortBillGroupsForList } from '../utils';
 import { useAppSession } from '../../../context/AppSessionContext';
 import { apiClient } from '../../../api/client';
-import type { MonthlyBill, BillStatus } from '../../../types/domain';
+import type { BillGroup } from '../utils';
+import type { BillStatus } from '../../../types/domain';
 
 interface AllTabProps {
-  bills: MonthlyBill[];
+  groups: BillGroup[];
   searchQuery: string;
   onSearchChange: (value: string) => void;
   statusFilter: BillStatus | '';
@@ -17,31 +18,34 @@ interface AllTabProps {
 }
 
 export function AllTab({
-  bills,
+  groups,
   searchQuery,
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
 }: AllTabProps) {
   const { currentOrgId } = useAppSession();
-  const sorted = sortMonthlyBillsForList(bills);
+  const sorted = sortBillGroupsForList(groups);
 
-  const handleDelete = async (bill: MonthlyBill) => {
+  const handleDelete = async (group: BillGroup) => {
     if (!currentOrgId) return;
     const res = await Taro.showModal({
-      title: '删除月度账单',
-      content: '删除后不可恢复，是否确认？',
+      title: '删除账单组',
+      content: `将删除该组 ${group.bills.length} 笔账单，删除后不可恢复，是否确认？`,
       confirmText: '确认删除',
       confirmColor: '#ff4d4f',
     });
     if (!res.confirm) return;
     try {
-      await apiClient(`/bills/monthly/${bill.id}`, {
-        method: 'DELETE',
-        organizationId: currentOrgId,
-      });
-      Taro.showToast({ title: '月度账单已删除', icon: 'success' });
-      // Parent page will refresh on didShow
+      await Promise.all(
+        group.bills.map((b) =>
+          apiClient(`/bills/${b.id}`, {
+            method: 'DELETE',
+            organizationId: currentOrgId,
+          })
+        )
+      );
+      Taro.showToast({ title: '账单组已删除', icon: 'success' });
     } catch (e) {
       Taro.showToast({
         title: e instanceof Error ? e.message : '删除失败',
@@ -82,17 +86,17 @@ export function AllTab({
           subtitle="尝试调整搜索条件或过滤状态"
         />
       ) : null}
-      {sorted.map((bill) => (
+      {sorted.map((group) => (
         <BillCard
-          key={bill.id}
-          bill={bill}
+          key={group.id}
+          group={group}
           onClick={() =>
             Taro.navigateTo({
-              url: `/pages/bills/monthly-detail?id=${bill.id}`,
+              url: `/pages/bills/monthly-detail?id=${group.id}`,
             })
           }
-          showDelete={bill.status !== 'PAID'}
-          onDelete={() => handleDelete(bill)}
+          showDelete={group.status !== 'PAID'}
+          onDelete={() => handleDelete(group)}
         />
       ))}
     </>

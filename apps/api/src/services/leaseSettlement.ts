@@ -246,28 +246,34 @@ export const createLeaseSettlement = async ({
       }
 
       if (new Prisma.Decimal(input.depositDeductionAmount).greaterThan(0)) {
-        await tx.depositPayment.create({
-          data: {
-            depositId: lease.deposit.id,
-            userId,
-            type: 'DEDUCT',
-            amount: input.depositDeductionAmount,
-            method: '退租结算扣款',
-            note: input.depositDeductionReason || '退租结算押金扣款',
-          },
-        });
+        if (lease.deposit.billId) {
+          await tx.payment.create({
+            data: {
+              billId: lease.deposit.billId,
+              userId,
+              type: 'DEDUCT',
+              amount: input.depositDeductionAmount,
+              method: '退租结算扣款',
+              note: input.depositDeductionReason || '退租结算押金扣款',
+              status: 'COMPLETED',
+            },
+          });
+        }
       }
       if (amounts.depositRefundAmount.greaterThan(0)) {
-        await tx.depositPayment.create({
-          data: {
-            depositId: lease.deposit.id,
-            userId,
-            type: 'REFUND',
-            amount: amounts.depositRefundAmount,
-            method: '退租结算退款',
-            note: '退租结算押金退款',
-          },
-        });
+        if (lease.deposit.billId) {
+          await tx.payment.create({
+            data: {
+              billId: lease.deposit.billId,
+              userId,
+              type: 'REFUND',
+              amount: amounts.depositRefundAmount,
+              method: '退租结算退款',
+              note: '退租结算押金退款',
+              status: 'COMPLETED',
+            },
+          });
+        }
       }
       await tx.deposit.update({
         where: { id: lease.deposit.id },
@@ -311,17 +317,17 @@ export const createLeaseSettlement = async ({
     });
 
     // 结清该租约下所有未结清账单
-    const pendingMonthlyBills = await tx.monthlyBill.findMany({
+    const pendingBills = await tx.bill.findMany({
       where: { leaseId: lease.id, status: { notIn: ['PAID', 'VOID'] } },
     });
-    for (const monthlyBill of pendingMonthlyBills) {
-      const remaining = new Prisma.Decimal(monthlyBill.totalAmount).minus(
-        monthlyBill.paidAmount
+    for (const bill of pendingBills) {
+      const remaining = new Prisma.Decimal(bill.totalAmount).minus(
+        bill.paidAmount
       );
       if (remaining.greaterThan(0)) {
         await tx.payment.create({
           data: {
-            monthlyBillId: monthlyBill.id,
+            billId: bill.id,
             userId,
             amount: remaining,
             method: '退租自动结清',
@@ -330,9 +336,9 @@ export const createLeaseSettlement = async ({
           },
         });
       }
-      await tx.monthlyBill.update({
-        where: { id: monthlyBill.id },
-        data: { status: 'PAID', paidAmount: monthlyBill.totalAmount },
+      await tx.bill.update({
+        where: { id: bill.id },
+        data: { status: 'PAID', paidAmount: bill.totalAmount },
       });
     }
 

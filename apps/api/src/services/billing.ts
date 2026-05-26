@@ -41,10 +41,6 @@ type BillPaymentTarget = PaymentTarget & {
   amount: Prisma.Decimal.Value;
 };
 
-type MonthlyBillPaymentTarget = BillPaymentTarget & {
-  childBillPaymentsCount: number;
-};
-
 const startOfDay = (date: Date) => dayjs.utc(date).startOf('day');
 
 export const calculateBillingPeriods = ({
@@ -179,53 +175,11 @@ export const assertBillPaymentAllowed = ({
     );
 };
 
-export const assertMonthlyBillPaymentAllowed = ({
-  status,
-  totalAmount,
-  paidAmount,
-  childBillPaymentsCount,
-  amount,
-}: MonthlyBillPaymentTarget) => {
-  if (childBillPaymentsCount > 0)
-    throw new HttpError(
-      400,
-      '子账单已有独立收款，请继续按子账单收款或先冲销原收款'
-    );
-  assertBillPaymentAllowed({ status, totalAmount, paidAmount, amount });
-};
-
 const classifyFeeItemType = (name: string) => {
   if (name.includes('网')) return 'NETWORK' as const;
   if (name.includes('物业') || name.includes('管理'))
     return 'MANAGEMENT' as const;
   return 'OTHER' as const;
-};
-
-export const refreshMonthlyBillTotals = async (monthlyBillId: string) => {
-  const monthlyBill = await prisma.monthlyBill.findUnique({
-    where: { id: monthlyBillId },
-    include: { bills: true, payments: true },
-  });
-  if (!monthlyBill) return;
-
-  const totalAmount = monthlyBill.bills.reduce(
-    (sum, bill) => sum.plus(bill.totalAmount),
-    new Prisma.Decimal(0)
-  );
-  const paidAmount = monthlyBill.payments.reduce(
-    (sum, payment) => sum.plus(payment.amount),
-    new Prisma.Decimal(0)
-  );
-  const status = paidAmount.greaterThanOrEqualTo(totalAmount)
-    ? 'PAID'
-    : paidAmount.greaterThan(0)
-      ? 'PARTIAL_PAID'
-      : 'UNPAID';
-
-  await prisma.monthlyBill.update({
-    where: { id: monthlyBillId },
-    data: { totalAmount, paidAmount, status },
-  });
 };
 
 export const refreshBillTotals = async (billId: string) => {
@@ -253,12 +207,10 @@ export const refreshBillTotals = async (billId: string) => {
           ? 'BILLING'
           : 'UNPAID';
 
-  const updated = await prisma.bill.update({
+  await prisma.bill.update({
     where: { id: billId },
     data: { totalAmount, paidAmount, status },
   });
-  if (updated.monthlyBillId)
-    await refreshMonthlyBillTotals(updated.monthlyBillId);
 };
 
 const findReadingAtOrBefore = async ({
@@ -412,65 +364,6 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
   });
 };
 
-export const tryCreateMonthlyBill = async (
-  leaseId: string,
-  billingDate: Date
-) => {
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: { bills: true },
-  });
-  if (!lease) return null;
-
-  const children = await prisma.bill.findMany({
-    where: { leaseId, billingDate: startOfDay(billingDate).toDate() },
-    include: { items: true },
-  });
-  const hasBlockedBill = children.some(
-    (bill) => bill.status === 'BILLING' || bill.status === 'FAILED'
-  );
-  if (!children.length || hasBlockedBill) return null;
-
-  const totalAmount = children.reduce(
-    (sum, bill) => sum.plus(bill.totalAmount),
-    new Prisma.Decimal(0)
-  );
-  const monthlyBill = await prisma.monthlyBill.upsert({
-    where: {
-      leaseId_billingDate: {
-        leaseId,
-        billingDate: startOfDay(billingDate).toDate(),
-      },
-    },
-    create: {
-      organizationId: lease.organizationId,
-      leaseId,
-      tenantName: lease.tenantName,
-      tenantPhone: lease.tenantPhone,
-      billingDate: startOfDay(billingDate).toDate(),
-      dueDate: startOfDay(billingDate).add(lease.graceDays, 'day').toDate(),
-      totalAmount,
-      status: 'UNPAID',
-    },
-    update: { totalAmount },
-  });
-
-  await prisma.bill.updateMany({
-    where: {
-      leaseId,
-      billingDate: startOfDay(billingDate).toDate(),
-      monthlyBillId: null,
-    },
-    data: { monthlyBillId: monthlyBill.id },
-  });
-
-  await refreshMonthlyBillTotals(monthlyBill.id);
-  return prisma.monthlyBill.findUnique({
-    where: { id: monthlyBill.id },
-    include: { bills: { include: { items: true } }, payments: true },
-  });
-};
-
 export const generateLeaseBills = async (
   leaseId: string,
   today = new Date(),
@@ -598,8 +491,6 @@ export const generateLeaseBills = async (
         await completePostpaidBillFromReadings(postpaid.id);
       }
     }
-
-    await tryCreateMonthlyBill(lease.id, billingDate);
   }
 
   return generatedIds;
@@ -645,73 +536,7 @@ export const generateActiveAutoRenewBills = async (organizationId: string) => {
 };
 
 export const retryPostpaidBillAndMonthlyBill = async (billId: string) => {
-  const bill = await completePostpaidBillFromReadings(billId);
-  if (!bill) return null;
-  await tryCreateMonthlyBill(bill.leaseId, bill.billingDate);
-  return prisma.bill.findUnique({
-    where: { id: bill.id },
-    include: { items: true, monthlyBill: true },
-  });
-};
-
-export const recordMonthlyBillPayment = async ({
-  monthlyBillId,
-  userId,
-  amount,
-  method,
-  note,
-}: {
-  monthlyBillId: string;
-  userId: string;
-  amount: Prisma.Decimal.Value;
-  method: string;
-  note?: string;
-}) => {
-  const current = await prisma.monthlyBill.findUnique({
-    where: { id: monthlyBillId },
-    include: {
-      bills: { include: { payments: { where: { monthlyBillId: null } } } },
-    },
-  });
-  if (!current) throw new HttpError(404, '月度账单不存在');
-  const childBillPaymentsCount = current.bills.reduce(
-    (sum, bill) => sum + bill.payments.length,
-    0
-  );
-  assertMonthlyBillPaymentAllowed({
-    ...current,
-    childBillPaymentsCount,
-    amount,
-  });
-
-  let unapplied = new Prisma.Decimal(amount);
-  const payments = [];
-  for (const bill of current.bills) {
-    if (unapplied.lessThanOrEqualTo(0)) break;
-    const billRemaining = remainingAmountFor(bill);
-    if (billRemaining.lessThanOrEqualTo(0)) continue;
-    const billAmount = unapplied.greaterThan(billRemaining)
-      ? billRemaining
-      : unapplied;
-    payments.push(
-      await prisma.payment.create({
-        data: {
-          billId: bill.id,
-          monthlyBillId,
-          userId,
-          amount: billAmount,
-          method,
-          note,
-          status: 'COMPLETED',
-        },
-      })
-    );
-    unapplied = unapplied.minus(billAmount);
-  }
-
-  await Promise.all(current.bills.map((bill) => refreshBillTotals(bill.id)));
-  await refreshMonthlyBillTotals(monthlyBillId);
-  return payments[0];
+  return completePostpaidBillFromReadings(billId);
 };
 
 export const recordBillPayment = async ({
@@ -731,11 +556,8 @@ export const recordBillPayment = async ({
 }) => {
   const bill = await prisma.bill.findFirst({
     where: { id: billId, organizationId },
-    include: { monthlyBill: { include: { payments: true } } },
   });
   if (!bill) throw new HttpError(404, '账单不存在');
-  if (bill.monthlyBill?.payments.length)
-    throw new HttpError(400, '所属月度账单已有收款，请继续按月度账单收款');
   assertBillPaymentAllowed({ ...bill, amount });
 
   const payment = await prisma.payment.create({

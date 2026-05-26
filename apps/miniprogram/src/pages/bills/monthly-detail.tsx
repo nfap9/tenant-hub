@@ -6,16 +6,17 @@ import { apiClient } from '../../api/client';
 import { Button, Input, Badge } from '../../components/ui';
 import { money, day } from '../../utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
-import { remainingAmount, getPaymentAmountError } from './utils';
-import type { MonthlyBill } from '../../types/domain';
+import { getPaymentAmountError, groupBills } from './utils';
+import type { Bill } from '../../types/domain';
+import type { BillGroup } from './utils';
 import './index.scss';
 
 export default function MonthlyDetailPage() {
   const { currentOrgId } = useAppSession();
   const { params } = useRouter();
-  const monthlyBillId = params.id;
+  const groupId = params.id;
 
-  const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
+  const [allBills, setAllBills] = useState<Bill[]>([]);
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     method: '线下收款',
@@ -26,10 +27,10 @@ export default function MonthlyDetailPage() {
   const loadData = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<MonthlyBill[]>('/bills/monthly', {
+      const data = await apiClient<Bill[]>('/bills', {
         organizationId: currentOrgId,
       });
-      setMonthlyBills(data);
+      setAllBills(data);
     } catch (e) {
       Taro.showToast({
         title: e instanceof Error ? e.message : '加载失败',
@@ -42,17 +43,19 @@ export default function MonthlyDetailPage() {
     loadData();
   });
 
-  const bill = useMemo(
-    () => monthlyBills.find((b) => b.id === monthlyBillId),
-    [monthlyBills, monthlyBillId]
-  );
+  const group = useMemo<BillGroup | undefined>(() => {
+    if (!groupId) return undefined;
+    const groups = groupBills(allBills);
+    return groups.find((g) => g.id === groupId);
+  }, [allBills, groupId]);
+
   const remaining = useMemo(
-    () => (bill ? Number(bill.totalAmount) - Number(bill.paidAmount) : 0),
-    [bill]
+    () => (group ? group.totalAmount - group.paidAmount : 0),
+    [group]
   );
   const canPay = useMemo(
-    () => bill && bill.status !== 'PAID' && bill.status !== 'VOID',
-    [bill]
+    () => group && group.status !== 'PAID' && group.status !== 'VOID',
+    [group]
   );
 
   const handleBack = () => {
@@ -60,7 +63,7 @@ export default function MonthlyDetailPage() {
   };
 
   const handlePayment = async () => {
-    if (!currentOrgId || !bill) return;
+    if (!currentOrgId || !group) return;
     const error = getPaymentAmountError(paymentForm.amount, remaining);
     if (error) {
       Taro.showToast({ title: error, icon: 'none' });
@@ -68,15 +71,27 @@ export default function MonthlyDetailPage() {
     }
     setPaying(true);
     try {
-      await apiClient(`/bills/monthly/${bill.id}/payments`, {
-        method: 'POST',
-        body: {
-          amount: Number(paymentForm.amount),
-          method: paymentForm.method.trim() || '线下收款',
-          note: paymentForm.note.trim() || undefined,
-        },
-        organizationId: currentOrgId,
-      });
+      let unapplied = Number(paymentForm.amount);
+      const unpaidBills = group.bills.filter(
+        (b) => b.status !== 'PAID' && b.status !== 'VOID'
+      );
+      for (const bill of unpaidBills) {
+        if (unapplied <= 0) break;
+        const billRemaining =
+          Number(bill.totalAmount) - Number(bill.paidAmount);
+        if (billRemaining <= 0) continue;
+        const applyAmount = Math.min(unapplied, billRemaining);
+        await apiClient(`/bills/${bill.id}/payments`, {
+          method: 'POST',
+          body: {
+            amount: applyAmount,
+            method: paymentForm.method.trim() || '线下收款',
+            note: paymentForm.note.trim() || undefined,
+          },
+          organizationId: currentOrgId,
+        });
+        unapplied -= applyAmount;
+      }
       Taro.showToast({ title: '收款已登记', icon: 'success' });
       setPaymentForm({ amount: '', method: '线下收款', note: '' });
       await loadData();
@@ -130,7 +145,7 @@ export default function MonthlyDetailPage() {
     });
   };
 
-  if (!bill) {
+  if (!group) {
     return (
       <View className="page-container">
         <Text className="text-muted">账单不存在或已删除</Text>
@@ -155,14 +170,14 @@ export default function MonthlyDetailPage() {
         <View className="bill-card-header">
           <View>
             <Text className="card-title">
-              {bill.lease?.room?.roomNo ?? '房间'} · 到期 {day(bill.dueDate)}
+              {group.lease?.room?.roomNo ?? '房间'} · 到期 {day(group.dueDate)}
             </Text>
             <Text className="text-muted">
-              应收 ¥{money(bill.totalAmount)} · 已收 ¥{money(bill.paidAmount)}
+              应收 ¥{money(group.totalAmount)} · 已收 ¥{money(group.paidAmount)}
             </Text>
           </View>
-          <Badge tone={toneForBillStatus(bill.status)}>
-            {statusLabels[bill.status]}
+          <Badge tone={toneForBillStatus(group.status)}>
+            {statusLabels[group.status]}
           </Badge>
         </View>
       </View>
@@ -203,7 +218,7 @@ export default function MonthlyDetailPage() {
         </View>
       ) : null}
 
-      {(bill.bills ?? []).map((child) => (
+      {(group.bills ?? []).map((child) => (
         <View key={child.id} className="detail-panel">
           <View className="detail-row">
             <Text className="text-muted">
@@ -261,10 +276,10 @@ export default function MonthlyDetailPage() {
         </View>
       ))}
 
-      {(bill.payments ?? []).length ? (
+      {(group.payments ?? []).length ? (
         <View className="detail-panel">
           <Text className="field-label">收款记录</Text>
-          {(bill.payments ?? []).map((payment) => (
+          {(group.payments ?? []).map((payment) => (
             <View key={payment.id} className="detail-row">
               <Text className="text-muted">
                 {day(payment.paidAt)} · {payment.method}

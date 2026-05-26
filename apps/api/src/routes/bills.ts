@@ -11,11 +11,8 @@ import {
   generateCurrentLeaseBills,
   generateLeaseBills,
   recordBillPayment,
-  recordMonthlyBillPayment,
   refreshBillTotals,
-  refreshMonthlyBillTotals,
   retryPostpaidBillAndMonthlyBill,
-  tryCreateMonthlyBill,
 } from '../services/billing.js';
 import { toCsv } from '../services/csv.js';
 import { PERMISSIONS } from '../services/roles.js';
@@ -55,40 +52,6 @@ billRouter.get(
           payments: true,
         },
         orderBy: { dueDate: 'asc' },
-      })
-    );
-  })
-);
-
-billRouter.get(
-  '/monthly',
-  requirePermission(PERMISSIONS.BILL_VIEW),
-  asyncHandler(async (req, res) => {
-    const status = z
-      .enum([
-        'DRAFT',
-        'BILLING',
-        'UNPAID',
-        'PARTIAL_PAID',
-        'PAID',
-        'FAILED',
-        'VOID',
-      ])
-      .optional()
-      .parse(req.query.status);
-    ok(
-      res,
-      await prisma.monthlyBill.findMany({
-        where: {
-          organizationId: req.organizationId!,
-          ...(status ? { status } : {}),
-        },
-        include: {
-          lease: { include: { room: true } },
-          bills: { include: { items: true } },
-          payments: true,
-        },
-        orderBy: { billingDate: 'desc' },
       })
     );
   })
@@ -221,32 +184,6 @@ billRouter.post(
   })
 );
 
-billRouter.post(
-  '/monthly/:id/payments',
-  requirePermission(PERMISSIONS.BILL_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        amount: z.coerce.number().positive(),
-        method: z.string().min(1),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
-    const monthlyBill = await prisma.monthlyBill.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
-    });
-    if (!monthlyBill) throw new HttpError(404, '月度账单不存在');
-    ok(
-      res,
-      await recordMonthlyBillPayment({
-        monthlyBillId: monthlyBill.id,
-        userId: req.user!.id,
-        ...input,
-      })
-    );
-  })
-);
-
 const applyUtilityReadingToBill = async ({
   billId,
   organizationId,
@@ -366,7 +303,6 @@ const applyUtilityReadingToBill = async ({
     }),
   ]);
   await refreshBillTotals(bill.id);
-  await tryCreateMonthlyBill(bill.leaseId, bill.billingDate);
   return prisma.bill.findUnique({
     where: { id: bill.id },
     include: { items: true },
@@ -572,46 +508,9 @@ billRouter.delete(
     if (!bill) throw new HttpError(404, '账单不存在');
     if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不能删除');
 
-    const monthlyBillId = bill.monthlyBillId;
     await prisma.$transaction([
       prisma.payment.deleteMany({ where: { billId: bill.id } }),
       prisma.bill.delete({ where: { id: bill.id } }),
-    ]);
-
-    if (monthlyBillId) {
-      const remainingBills = await prisma.bill.count({
-        where: { monthlyBillId },
-      });
-      if (remainingBills === 0) {
-        await prisma.payment.deleteMany({ where: { monthlyBillId } });
-        await prisma.monthlyBill.delete({ where: { id: monthlyBillId } });
-      } else {
-        await refreshMonthlyBillTotals(monthlyBillId);
-      }
-    }
-
-    ok(res, { deleted: true });
-  })
-);
-
-billRouter.delete(
-  '/monthly/:id',
-  requirePermission(PERMISSIONS.BILL_MANAGE),
-  asyncHandler(async (req, res) => {
-    const monthlyBill = await prisma.monthlyBill.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
-      include: { bills: true, payments: true },
-    });
-    if (!monthlyBill) throw new HttpError(404, '月度账单不存在');
-    if (monthlyBill.status === 'PAID')
-      throw new HttpError(400, '已结清月度账单不能删除');
-
-    const billIds = monthlyBill.bills.map((b) => b.id);
-    await prisma.$transaction([
-      prisma.payment.deleteMany({ where: { billId: { in: billIds } } }),
-      prisma.bill.deleteMany({ where: { id: { in: billIds } } }),
-      prisma.payment.deleteMany({ where: { monthlyBillId: monthlyBill.id } }),
-      prisma.monthlyBill.delete({ where: { id: monthlyBill.id } }),
     ]);
 
     ok(res, { deleted: true });

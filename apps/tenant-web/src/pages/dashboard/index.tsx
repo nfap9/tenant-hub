@@ -26,14 +26,14 @@ import PageHeader from '@/components/ui/PageHeader';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
-import { getMonthlyBills, getBillsByStatus } from '@/api/bills';
+import { getBills, getBillsByStatus } from '@/api/bills';
 import {
   compactMoney,
   isThisMonth,
   daysUntil,
   monthlyAmount,
 } from '@/utils/format';
-import type { Apartment, Room, Lease, MonthlyBill, Bill } from '@/types/domain';
+import type { Apartment, Room, Lease, Bill } from '@/types/domain';
 import Overview from './OverviewCard';
 import styles from './index.module.scss';
 import clsx from 'clsx';
@@ -47,11 +47,13 @@ const leaseMonthlyIncome = (lease: Lease) => {
   return rent + fees;
 };
 
-const isUnpaid = (bill: MonthlyBill) =>
-  bill.status !== 'PAID' && bill.status !== 'VOID';
-const isOverdue = (bill: MonthlyBill) =>
-  isUnpaid(bill) &&
-  bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
+import { groupBills, type BillGroup } from '@/pages/bills/utils';
+
+const isUnpaid = (group: BillGroup) =>
+  group.status !== 'PAID' && group.status !== 'VOID';
+const isOverdue = (group: BillGroup) =>
+  isUnpaid(group) &&
+  group.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
 
 const todoToneMap: Record<
   string,
@@ -79,7 +81,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
+  const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -87,22 +89,17 @@ export default function DashboardPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [
-        nextApartments,
-        nextRooms,
-        nextMonthlyBills,
-        failedBills,
-        billingBills,
-      ] = await Promise.all([
-        getApartments(currentOrgId),
-        getRooms(currentOrgId),
-        getMonthlyBills(currentOrgId),
-        getBillsByStatus(currentOrgId, 'FAILED'),
-        getBillsByStatus(currentOrgId, 'BILLING'),
-      ]);
+      const [nextApartments, nextRooms, allBills, failedBills, billingBills] =
+        await Promise.all([
+          getApartments(currentOrgId),
+          getRooms(currentOrgId),
+          getBills(currentOrgId),
+          getBillsByStatus(currentOrgId, 'FAILED'),
+          getBillsByStatus(currentOrgId, 'BILLING'),
+        ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
-      setMonthlyBills(nextMonthlyBills);
+      setBillGroups(groupBills(allBills));
       setReviewBills(
         [...failedBills, ...billingBills].filter(
           (bill) => bill.mode === 'POSTPAID'
@@ -155,16 +152,13 @@ export default function DashboardPage() {
     .flatMap((apartment) => apartment.expenses ?? [])
     .filter((expense) => isThisMonth(expense.spentAt))
     .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
-  const unpaidTotal = monthlyBills
+  const unpaidTotal = billGroups
     .filter(isUnpaid)
-    .reduce(
-      (sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount),
-      0
-    );
-  const paidThisMonth = monthlyBills
-    .filter((bill) => isThisMonth(bill.billingDate))
-    .reduce((sum, bill) => sum + Number(bill.paidAmount ?? 0), 0);
-  const overdueBills = monthlyBills.filter(isOverdue);
+    .reduce((sum, group) => sum + group.totalAmount - group.paidAmount, 0);
+  const paidThisMonth = billGroups
+    .filter((group) => isThisMonth(group.billingDate))
+    .reduce((sum, group) => sum + group.paidAmount, 0);
+  const overdueBills = billGroups.filter(isOverdue);
   const expiringLeases = activeLeases
     .map((lease) => ({ lease, remainingDays: daysUntil(lease.endDate) }))
     .filter((item) => item.remainingDays >= 0 && item.remainingDays <= 30)
@@ -177,8 +171,7 @@ export default function DashboardPage() {
           title: '逾期账单',
           detail: `${overdueBills.length} 张账单已过应收日，剩余待收 ¥${compactMoney(
             overdueBills.reduce(
-              (sum, bill) =>
-                sum + Number(bill.totalAmount) - Number(bill.paidAmount),
+              (sum, group) => sum + group.totalAmount - group.paidAmount,
               0
             )
           )}`,

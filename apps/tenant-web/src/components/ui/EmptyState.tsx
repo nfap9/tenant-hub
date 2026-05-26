@@ -7,15 +7,22 @@ interface EmptyStateProps {
   title?: string;
   description?: string;
   action?: { label: string; onClick: () => void };
+  size?: 'default' | 'small';
 }
 
 export default function EmptyState({
   title = '暂无数据',
   description = '当前没有相关记录',
   action,
+  size = 'default',
 }: EmptyStateProps) {
   return (
-    <div className={styles.emptyState}>
+    <div
+      className={clsx(
+        styles.emptyState,
+        size === 'small' && styles.emptyStateSmall
+      )}
+    >
       <div className={styles.emptyStateIconBox}>
         <InboxOutlined />
       </div>

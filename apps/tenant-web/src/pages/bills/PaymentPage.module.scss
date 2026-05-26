@@ -1,37 +1,143 @@
 @use '@/styles/variables' as *;
 
-.payment-card-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.payment-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
 }
 
-.payment-mb-24 {
-  margin-bottom: 24px;
-}
-
-.payment-bill-card {
-  cursor: pointer;
-  margin-bottom: 12px;
-
-  &--selected {
-    border-color: $th-primary;
-    background: rgba(15, 118, 110, 0.04);
+@media (max-width: 900px) {
+  .payment-layout {
+    grid-template-columns: 1fr;
   }
 }
 
-.payment-bill-title {
+.payment-panel {
+  background: $th-surface;
+  border: 1px solid $th-border-light;
+  border-radius: $th-radius-lg;
+  padding: 20px;
+}
+
+.payment-panel-title {
   font-weight: 600;
+  font-size: 15px;
+  font-family: $th-font-heading;
   color: $th-foreground;
+  margin-bottom: 16px;
+}
+
+.lease-select {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.bill-list {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.bill-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid $th-border-light;
+  border-radius: $th-radius;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: $th-primary;
+  }
+
+  &.bill-option-selected {
+    border-color: $th-primary;
+    background: rgba($th-primary, 0.04);
+  }
+}
+
+.bill-option-info {
+  flex: 1;
+}
+
+.bill-option-title {
+  font-weight: 500;
+  color: $th-foreground;
+  font-size: 14px;
+}
+
+.bill-option-meta {
+  color: $th-foreground-muted;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.bill-option-amount {
+  font-weight: 600;
+  color: $th-primary;
+  font-family: $th-font-heading;
+  font-size: 14px;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: $th-foreground;
+  margin-bottom: 10px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid $th-border-light;
+  font-size: 13px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.detail-item-name {
+  color: $th-foreground;
+}
+
+.detail-item-amount {
+  color: $th-foreground-muted;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 2px solid $th-border;
+  margin-top: 8px;
+}
+
+.summary-label {
+  font-weight: 600;
+  font-size: 15px;
+  color: $th-foreground;
+}
+
+.summary-amount {
+  font-weight: 700;
+  font-size: 18px;
+  color: $th-primary;
   font-family: $th-font-heading;
 }
 
-.payment-bill-meta {
+.empty-bills {
+  text-align: center;
+  padding: 40px 0;
   color: $th-foreground-muted;
-  font-size: 13px;
-}
-
-.payment-space-full,
-.payment-select-full {
-  width: 100%;
 }

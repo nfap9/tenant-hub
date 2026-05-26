@@ -8,6 +8,7 @@ export const statusLabels: Record<BillStatus, string> = {
   PAID: '已支付',
   FAILED: '出账失败',
   VOID: '已作废',
+  REFUNDED: '已退款',
 };
 
 export const toneForBillStatus = (

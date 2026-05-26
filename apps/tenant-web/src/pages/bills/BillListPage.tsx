@@ -25,19 +25,24 @@ import {
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
-  getMonthlyBills,
+  getBills,
   getBillsByStatus,
-  deleteMonthlyBill,
+  deleteBill,
   retryBillBilling,
   generateBills,
 } from '@/api/bills';
 import { getRooms } from '@/api/rooms';
 import { money } from '@/utils/format';
 import { statusLabels, toneForBillStatus } from './constants';
-import { sortMonthlyBillsForList, getMonthlyBillCardSummary } from './utils';
+import {
+  groupBills,
+  sortBillGroupsForList,
+  getBillGroupCardSummary,
+  type BillGroup,
+} from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import type { Bill, BillStatus, MonthlyBill } from '@/types/domain';
+import type { Bill, BillStatus } from '@/types/domain';
 import styles from './BillListPage.module.scss';
 import clsx from 'clsx';
 
@@ -45,7 +50,7 @@ export default function BillListPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
   const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
-  const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
+  const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [, setRooms] = useState<import('@/types/domain').Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,16 +61,17 @@ export default function BillListPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const nextMonthlyBills = await getMonthlyBills(currentOrgId);
-      const [failedBills, billingBills, nextRooms] = await Promise.all([
-        getBillsByStatus(currentOrgId, 'FAILED'),
-        getBillsByStatus(currentOrgId, 'BILLING'),
-        getRooms(currentOrgId),
-      ]);
+      const [allBills, failedBills, billingBills, nextRooms] =
+        await Promise.all([
+          getBills(currentOrgId),
+          getBillsByStatus(currentOrgId, 'FAILED'),
+          getBillsByStatus(currentOrgId, 'BILLING'),
+          getRooms(currentOrgId),
+        ]);
       const postpaidReviewBills = [...failedBills, ...billingBills].filter(
         (bill) => bill.mode === 'POSTPAID'
       );
-      setMonthlyBills(nextMonthlyBills);
+      setBillGroups(groupBills(allBills));
       setReviewBills(postpaidReviewBills);
       setRooms(nextRooms);
     } catch (e) {
@@ -79,40 +85,41 @@ export default function BillListPage() {
     loadData();
   }, [loadData]);
 
-  const unpaidMonthlyBills = useMemo(
+  const unpaidGroups = useMemo(
     () =>
-      monthlyBills.filter(
-        (bill) => bill.status === 'UNPAID' || bill.status === 'PARTIAL_PAID'
+      billGroups.filter(
+        (g) => g.status === 'UNPAID' || g.status === 'PARTIAL_PAID'
       ),
-    [monthlyBills]
+    [billGroups]
   );
-  const filteredAllBills = useMemo(() => {
-    let result = [...monthlyBills];
+  const filteredAllGroups = useMemo(() => {
+    let result = [...billGroups];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       result = result.filter(
-        (bill) =>
-          bill.tenantName?.toLowerCase().includes(q) ||
-          bill.lease?.room?.roomNo?.toLowerCase().includes(q) ||
-          bill.lease?.tenantPhone?.includes(q)
+        (g) =>
+          g.tenantName?.toLowerCase().includes(q) ||
+          g.lease?.room?.roomNo?.toLowerCase().includes(q) ||
+          g.tenantPhone?.includes(q)
       );
     }
-    if (statusFilter)
-      result = result.filter((bill) => bill.status === statusFilter);
-    return sortMonthlyBillsForList(result);
-  }, [monthlyBills, searchQuery, statusFilter]);
+    if (statusFilter) result = result.filter((g) => g.status === statusFilter);
+    return sortBillGroupsForList(result);
+  }, [billGroups, searchQuery, statusFilter]);
 
-  const handleDelete = async (bill: MonthlyBill) => {
+  const handleDeleteGroup = async (group: BillGroup) => {
     if (!currentOrgId) return;
     Modal.confirm({
-      title: '删除月度账单',
-      content: '删除后不可恢复，是否确认？',
+      title: '删除账单组',
+      content: `将删除该组 ${group.bills.length} 笔账单，删除后不可恢复，是否确认？`,
       okText: '确认删除',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await deleteMonthlyBill(currentOrgId, bill.id);
-          message.success('月度账单已删除');
+          await Promise.all(
+            group.bills.map((b) => deleteBill(currentOrgId, b.id))
+          );
+          message.success('账单组已删除');
           await loadData();
         } catch (e) {
           message.error(e instanceof Error ? e.message : '删除失败');
@@ -132,14 +139,14 @@ export default function BillListPage() {
     }
   };
 
-  const renderBillCard = (bill: MonthlyBill, showDelete = false) => {
-    const summary = getMonthlyBillCardSummary(bill);
+  const renderBillCard = (group: BillGroup, showDelete = false) => {
+    const summary = getBillGroupCardSummary(group);
     return (
       <Card
-        key={bill.id}
+        key={group.id}
         size="small"
         className={clsx(styles.billCard, 'cursor-pointer')}
-        onClick={() => navigate(`/bills/monthly/${bill.id}`)}
+        onClick={() => navigate(`/bills/monthly/${group.id}`)}
         bodyStyle={{ padding: 'var(--th-space-5)' }}
       >
         <div className="flex-start">
@@ -147,8 +154,8 @@ export default function BillListPage() {
             <div className={styles.billCardTitle}>{summary.title}</div>
             <div className={styles.billCardMeta}>{summary.meta}</div>
           </div>
-          <Tag color={toneForBillStatus(bill.status)}>
-            {statusLabels[bill.status]}
+          <Tag color={toneForBillStatus(group.status)}>
+            {statusLabels[group.status]}
           </Tag>
         </div>
         <div className={styles.billCardFooter}>
@@ -169,7 +176,7 @@ export default function BillListPage() {
             {summary.detailCountText}
           </span>
           <Space>
-            {showDelete && bill.status !== 'PAID' && (
+            {showDelete && group.status !== 'PAID' && (
               <Button
                 type="text"
                 danger
@@ -177,7 +184,7 @@ export default function BillListPage() {
                 icon={<DeleteOutlined />}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete(bill);
+                  handleDeleteGroup(group);
                 }}
               >
                 删除
@@ -321,17 +328,17 @@ export default function BillListPage() {
           items={[
             {
               key: 'unpaid',
-              label: `待支付 (${unpaidMonthlyBills.length})`,
+              label: `待支付 (${unpaidGroups.length})`,
               children: (
                 <div>
-                  {unpaidMonthlyBills.length === 0 ? (
+                  {unpaidGroups.length === 0 ? (
                     <EmptyState
                       title="暂无待支付账单"
                       description="当前没有待支付的账单记录"
                     />
                   ) : (
-                    sortMonthlyBillsForList(unpaidMonthlyBills).map((bill) =>
-                      renderBillCard(bill)
+                    sortBillGroupsForList(unpaidGroups).map((g) =>
+                      renderBillCard(g)
                     )
                   )}
                 </div>
@@ -355,7 +362,7 @@ export default function BillListPage() {
             },
             {
               key: 'all',
-              label: `全部 (${monthlyBills.length})`,
+              label: `全部 (${billGroups.length})`,
               children: (
                 <div>
                   <Input
@@ -387,13 +394,13 @@ export default function BillListPage() {
                       </Button>
                     ))}
                   </Space>
-                  {filteredAllBills.length === 0 ? (
+                  {filteredAllGroups.length === 0 ? (
                     <EmptyState
                       title="未找到账单"
                       description="请尝试调整搜索条件或筛选状态"
                     />
                   ) : (
-                    filteredAllBills.map((bill) => renderBillCard(bill, true))
+                    filteredAllGroups.map((g) => renderBillCard(g, true))
                   )}
                 </div>
               ),

@@ -1,42 +1,29 @@
 import { useState, useMemo, useEffect } from 'react';
-import clsx from 'clsx';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Input, Select, Space, Tag, Spin, message } from 'antd';
-import {
-  SaveOutlined,
-  WalletOutlined,
-  HomeOutlined,
-  FileTextOutlined,
-} from '@ant-design/icons';
+import { Button, Input, Select, Form, Spin, message, Checkbox } from 'antd';
+import { SaveOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getMonthlyBills, createPayment } from '@/api/bills';
-import { getRooms } from '@/api/rooms';
-import { money } from '@/utils/format';
-import { statusLabels, toneForBillStatus } from './constants';
-import {
-  remainingAmount,
-  roomKeyForBill,
-  sortMonthlyBillsForList,
-  getPaymentAmountError,
-} from './utils';
+import { getBills, createPayment } from '@/api/bills';
+import { getLeases } from '@/api/leases';
+import { money, day } from '@/utils/format';
+import { statusLabels, billModeText } from './constants';
+import { remainingAmount } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import type { MonthlyBill, Room } from '@/types/domain';
+import type { Bill, Lease } from '@/types/domain';
 import styles from './PaymentPage.module.scss';
 
 export default function PaymentPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
+  const [form] = Form.useForm();
 
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [bills, setBills] = useState<MonthlyBill[]>([]);
-  const [paymentRoomId, setPaymentRoomId] = useState('');
-  const [form, setForm] = useState({
-    monthlyBillId: '',
-    amount: '',
-    method: '线下收款',
-    note: '',
-  });
+  const [leases, setLeases] = useState<Lease[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [selectedLeaseId, setSelectedLeaseId] = useState<string>('');
+  const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(
+    new Set()
+  );
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -44,11 +31,11 @@ export default function PaymentPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [nextRooms, nextBills] = await Promise.all([
-        getRooms(currentOrgId),
-        getMonthlyBills(currentOrgId),
+      const [nextLeases, nextBills] = await Promise.all([
+        getLeases(currentOrgId),
+        getBills(currentOrgId),
       ]);
-      setRooms(nextRooms);
+      setLeases(nextLeases);
       setBills(nextBills);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载失败');
@@ -61,87 +48,96 @@ export default function PaymentPage() {
     loadData();
   }, [currentOrgId]);
 
-  const paymentBills = useMemo(
-    () =>
-      sortMonthlyBillsForList(
-        bills.filter(
-          (b) => b.status === 'UNPAID' || b.status === 'PARTIAL_PAID'
-        )
-      ),
-    [bills]
-  );
-  const roomBills = useMemo(
-    () => paymentBills.filter((bill) => roomKeyForBill(bill) === paymentRoomId),
-    [paymentBills, paymentRoomId]
+  const leaseOptions = useMemo(() => {
+    return leases
+      .filter((l) => l.status === 'ACTIVE')
+      .map((l) => ({
+        label: `${l.tenantName} · ${l.room?.roomNo ?? '房间'}`,
+        value: l.id,
+      }));
+  }, [leases]);
+
+  const leaseBills = useMemo(() => {
+    if (!selectedLeaseId) return [];
+    return bills
+      .filter(
+        (b) =>
+          b.leaseId === selectedLeaseId &&
+          (b.status === 'UNPAID' || b.status === 'PARTIAL_PAID')
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.billingDate).getTime() - new Date(b.billingDate).getTime()
+      );
+  }, [bills, selectedLeaseId]);
+
+  const selectedBills = useMemo(
+    () => leaseBills.filter((b) => selectedBillIds.has(b.id)),
+    [leaseBills, selectedBillIds]
   );
 
-  useEffect(() => {
-    if (paymentBills.length > 0 && !paymentRoomId) {
-      const first = paymentBills[0];
-      if (first) {
-        const key = roomKeyForBill(first);
-        setPaymentRoomId(key);
-        const isPayable = first.status !== 'PAID' && first.status !== 'VOID';
-        setForm({
-          monthlyBillId: isPayable ? first.id : '',
-          amount: isPayable ? String(remainingAmount(first)) : '',
-          method: '线下收款',
-          note: '',
+  const totalPayable = useMemo(
+    () => selectedBills.reduce((sum, b) => sum + remainingAmount(b), 0),
+    [selectedBills]
+  );
+
+  const detailItems = useMemo(() => {
+    const items: { name: string; amount: number }[] = [];
+    for (const bill of selectedBills) {
+      for (const item of bill.items ?? []) {
+        items.push({
+          name: `${bill.billingDate.slice(0, 10)} ${item.name}`,
+          amount: Number(item.amount),
         });
       }
     }
-  }, [paymentBills, paymentRoomId]);
+    return items;
+  }, [selectedBills]);
 
-  const handleRoomClick = (roomId: string) => {
-    setPaymentRoomId(roomId);
-    const firstBill = paymentBills.find(
-      (bill) => roomKeyForBill(bill) === roomId
-    );
-    if (firstBill) {
-      const isPayable =
-        firstBill.status !== 'PAID' && firstBill.status !== 'VOID';
-      setForm({
-        monthlyBillId: isPayable ? firstBill.id : '',
-        amount: isPayable ? String(remainingAmount(firstBill)) : '',
-        method: '线下收款',
-        note: '',
-      });
-    } else {
-      setForm({ monthlyBillId: '', amount: '', method: '线下收款', note: '' });
-    }
-  };
-
-  const handleBillClick = (bill: MonthlyBill) => {
-    const isPayable = bill.status !== 'PAID' && bill.status !== 'VOID';
-    setForm({
-      monthlyBillId: isPayable ? bill.id : '',
-      amount: isPayable ? String(remainingAmount(bill)) : '',
-      method: '线下收款',
-      note: '',
+  const toggleBill = (billId: string) => {
+    setSelectedBillIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(billId)) {
+        next.delete(billId);
+      } else {
+        next.add(billId);
+      }
+      return next;
     });
   };
 
-  const handleSubmit = async () => {
-    if (!currentOrgId || !form.monthlyBillId || !form.amount.trim()) return;
-    const bill = bills.find((item) => item.id === form.monthlyBillId);
-    if (!bill || bill.status === 'PAID' || bill.status === 'VOID') return;
-    const amountError = getPaymentAmountError(
-      form.amount,
-      remainingAmount(bill)
-    );
-    if (amountError) {
-      message.error(amountError);
+  const handleLeaseChange = (leaseId: string) => {
+    setSelectedLeaseId(leaseId);
+    setSelectedBillIds(new Set());
+    form.setFieldsValue({ amount: undefined });
+  };
+
+  const handleSubmit = async (values: {
+    amount: string;
+    method: string;
+    note?: string;
+  }) => {
+    if (!currentOrgId || selectedBills.length === 0) return;
+
+    const paidAmount = Number(values.amount);
+    if (paidAmount !== totalPayable) {
+      message.error(`实付金额必须等于应付金额 ¥${money(totalPayable)}`);
       return;
     }
+
     setSubmitting(true);
     try {
-      await createPayment(currentOrgId, {
-        monthlyBillId: bill.id,
-        amount: Number(form.amount),
-        method: form.method.trim() || '线下收款',
-        note: form.note.trim() || undefined,
-        paidAt: new Date().toISOString(),
-      });
+      for (const bill of selectedBills) {
+        const billRemaining = remainingAmount(bill);
+        if (billRemaining <= 0) continue;
+        await createPayment(currentOrgId, {
+          billId: bill.id,
+          amount: billRemaining,
+          method: values.method.trim() || '线下收款',
+          note: values.note?.trim() || undefined,
+          paidAt: new Date().toISOString(),
+        });
+      }
       message.success('收款已登记');
       navigate('/bills');
     } catch (e) {
@@ -162,131 +158,142 @@ export default function PaymentPage() {
       />
 
       <Spin spinning={loading}>
-        <Card
-          title={
-            <span className={styles.paymentCardTitle}>
-              <HomeOutlined />
-              选择房间
-            </span>
-          }
-          className={styles.paymentMb24}
-        >
-          {rooms.length === 0 ? (
-            <EmptyState description="暂无房间" />
-          ) : (
-            <Space wrap>
-              {rooms.map((room) => (
-                <Button
-                  key={room.id}
-                  type={paymentRoomId === room.id ? 'primary' : 'default'}
-                  onClick={() => handleRoomClick(room.id)}
-                >
-                  {room.roomNo}
-                </Button>
-              ))}
-            </Space>
-          )}
-        </Card>
+        <div className={styles.paymentLayout}>
+          {/* 左侧：租约选择 + 账单选择 */}
+          <div className={styles.paymentPanel}>
+            <div className={styles.paymentPanelTitle}>选择账单</div>
 
-        {paymentRoomId && (
-          <Card
-            title={
-              <span className={styles.paymentCardTitle}>
-                <FileTextOutlined />
-                选择账单
-              </span>
-            }
-            className={styles.paymentMb24}
-          >
-            {roomBills.length === 0 ? (
-              <EmptyState description="该房间暂无待收账单" />
+            <Select
+              className={styles.leaseSelect}
+              placeholder="选择租约"
+              value={selectedLeaseId || undefined}
+              onChange={handleLeaseChange}
+              options={leaseOptions}
+              showSearch
+              optionFilterProp="label"
+            />
+
+            {!selectedLeaseId ? (
+              <EmptyState size="small" description="请先选择租约" />
+            ) : leaseBills.length === 0 ? (
+              <EmptyState size="small" description="该租约暂无待支付账单" />
             ) : (
-              <Space direction="vertical" className={styles.paymentSpaceFull}>
-                {roomBills.map((bill) => (
-                  <Card
-                    key={bill.id}
-                    size="small"
-                    className={
-                      form.monthlyBillId === bill.id
-                        ? clsx(
-                            styles.paymentBillCard,
-                            styles.paymentBillCardSelected
-                          )
-                        : styles.paymentBillCard
-                    }
-                    onClick={() => handleBillClick(bill)}
-                  >
-                    <div className="flex-between">
-                      <div>
-                        <div className={styles.paymentBillTitle}>
-                          {bill.billingDate.slice(0, 10)}
+              <div className={styles.billList}>
+                {leaseBills.map((bill) => {
+                  const checked = selectedBillIds.has(bill.id);
+                  return (
+                    <div
+                      key={bill.id}
+                      className={`${styles.billOption} ${checked ? styles.billOptionSelected : ''}`}
+                      onClick={() => toggleBill(bill.id)}
+                    >
+                      <Checkbox checked={checked} />
+                      <div className={styles.billOptionInfo}>
+                        <div className={styles.billOptionTitle}>
+                          {bill.billingDate.slice(0, 10)} ·{' '}
+                          {billModeText(bill.mode)}
                         </div>
-                        <div className={styles.paymentBillMeta}>
-                          剩余 ¥{money(remainingAmount(bill))}
+                        <div className={styles.billOptionMeta}>
+                          {statusLabels[bill.status]} · {day(bill.periodStart)}{' '}
+                          至 {day(bill.periodEnd)}
                         </div>
                       </div>
-                      <Tag color={toneForBillStatus(bill.status)}>
-                        {statusLabels[bill.status]}
-                      </Tag>
+                      <div className={styles.billOptionAmount}>
+                        ¥{money(remainingAmount(bill))}
+                      </div>
                     </div>
-                  </Card>
-                ))}
-              </Space>
+                  );
+                })}
+              </div>
             )}
-          </Card>
-        )}
+          </div>
 
-        <Card
-          title={
-            <span className={styles.paymentCardTitle}>
-              <WalletOutlined />
-              收款信息
-            </span>
-          }
-        >
-          <Space direction="vertical" className={styles.paymentSpaceFull}>
-            <Input
-              placeholder="收款金额"
-              prefix="¥"
-              value={form.amount}
-              onChange={(e) =>
-                setForm((old) => ({ ...old, amount: e.target.value }))
-              }
-            />
-            <Select
-              placeholder="收款方式"
-              value={form.method}
-              onChange={(value) =>
-                setForm((old) => ({ ...old, method: value }))
-              }
-              className={styles.paymentSelectFull}
-              options={[
-                { label: '线下收款', value: '线下收款' },
-                { label: '现金', value: '现金' },
-                { label: '微信', value: '微信' },
-                { label: '支付宝', value: '支付宝' },
-                { label: '银行转账', value: '银行转账' },
-              ]}
-            />
-            <Input.TextArea
-              placeholder="备注（可选）"
-              value={form.note}
-              onChange={(e) =>
-                setForm((old) => ({ ...old, note: e.target.value }))
-              }
-              rows={3}
-            />
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={submitting}
-              onClick={handleSubmit}
-              disabled={!form.monthlyBillId}
-            >
-              确认收款
-            </Button>
-          </Space>
-        </Card>
+          {/* 右侧：账单明细 + 收款信息 */}
+          <div className={styles.paymentPanel}>
+            <div className={styles.paymentPanelTitle}>收款确认</div>
+
+            {selectedBills.length === 0 ? (
+              <EmptyState size="small" description="请在左侧选择要收款的账单" />
+            ) : (
+              <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                {/* 明细 */}
+                <div className={styles.detailSection}>
+                  <div className={styles.detailSectionTitle}>
+                    账单明细（{selectedBills.length} 笔）
+                  </div>
+                  {detailItems.map((item, idx) => (
+                    <div key={idx} className={styles.detailItem}>
+                      <span className={styles.detailItemName}>{item.name}</span>
+                      <span className={styles.detailItemAmount}>
+                        ¥{money(item.amount)}
+                      </span>
+                    </div>
+                  ))}
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>应付金额</span>
+                    <span className={styles.summaryAmount}>
+                      ¥{money(totalPayable)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 收款信息 */}
+                <Form.Item
+                  name="amount"
+                  label="实付金额"
+                  rules={[
+                    { required: true, message: '请输入实付金额' },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        const num = Number(value);
+                        if (!Number.isFinite(num) || num <= 0) {
+                          return Promise.reject(new Error('金额必须大于 0'));
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                >
+                  <Input prefix="¥" placeholder={`${money(totalPayable)}`} />
+                </Form.Item>
+
+                <Form.Item
+                  name="method"
+                  label="收款方式"
+                  initialValue="线下收款"
+                  rules={[{ required: true, message: '请选择收款方式' }]}
+                >
+                  <Select
+                    options={[
+                      { label: '线下收款', value: '线下收款' },
+                      { label: '现金', value: '现金' },
+                      { label: '微信', value: '微信' },
+                      { label: '支付宝', value: '支付宝' },
+                      { label: '银行转账', value: '银行转账' },
+                    ]}
+                  />
+                </Form.Item>
+
+                <Form.Item name="note" label="备注">
+                  <Input.TextArea placeholder="备注（可选）" rows={2} />
+                </Form.Item>
+
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    icon={<SaveOutlined />}
+                    loading={submitting}
+                    block
+                  >
+                    确认收款
+                  </Button>
+                </Form.Item>
+              </Form>
+            )}
+          </div>
+        </div>
       </Spin>
     </div>
   );

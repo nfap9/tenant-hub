@@ -55,6 +55,7 @@ enum BillStatus {
   UNPAID
   PARTIAL_PAID
   PAID
+  REFUNDED
   FAILED
   VOID
 }
@@ -62,6 +63,7 @@ enum BillStatus {
 enum BillMode {
   PREPAID
   POSTPAID
+  DEPOSIT
 }
 
 enum BillItemType {
@@ -118,8 +120,8 @@ enum DepositStatus {
   DEDUCTED
 }
 
-enum DepositPaymentType {
-  COLLECT
+enum PaymentType {
+  RECEIVE
   REFUND
   DEDUCT
 }
@@ -147,7 +149,6 @@ model User {
   createdOrgInvites OrgInvite[] @relation("OrgInviteCreatedBy")
   usedOrgInvites    OrgInvite[] @relation("OrgInviteUsedBy")
   settlementPayments SettlementPayment[]
-  depositPayments DepositPayment[]
   auditLogs    AuditLog[]
 }
 
@@ -176,7 +177,6 @@ model Organization {
   apartments    Apartment[]
   leases        Lease[]
   bills         Bill[]
-  monthlyBills  MonthlyBill[]
   meterReadings MeterReading[]
   quotas        OrgQuotaPackage[]
   subscriptions Subscription[]
@@ -309,7 +309,6 @@ model Lease {
   room              Room             @relation(fields: [roomId], references: [id])
   fees              LeaseFee[]
   bills             Bill[]
-  monthlyBills      MonthlyBill[]
   meterReadings     MeterReading[]
   settlement        LeaseSettlement?
   deposit           Deposit?
@@ -370,40 +369,27 @@ model SettlementPayment {
 }
 
 model Deposit {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  leaseId        String       @unique
-  amount         Decimal      @db.Decimal(12, 2)
-  paidAmount     Decimal      @default(0) @db.Decimal(12, 2)
-  refundedAmount Decimal      @default(0) @db.Decimal(12, 2)
-  deductedAmount Decimal      @default(0) @db.Decimal(12, 2)
+  leaseId        String        @unique
+  billId         String?       @unique
+  amount         Decimal       @db.Decimal(12, 2)
+  paidAmount     Decimal       @default(0) @db.Decimal(12, 2)
+  refundedAmount Decimal       @default(0) @db.Decimal(12, 2)
+  deductedAmount Decimal       @default(0) @db.Decimal(12, 2)
   status         DepositStatus @default(UNPAID)
   note           String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  lease          Lease        @relation(fields: [leaseId], references: [id])
-  payments       DepositPayment[]
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  lease          Lease         @relation(fields: [leaseId], references: [id])
+  bill           Bill?         @relation("BillDeposit", fields: [billId], references: [id])
 
   @@index([organizationId, status])
 }
 
-model DepositPayment {
-  id        String             @id @default(cuid())
-  depositId String
-  userId    String
-  type      DepositPaymentType
-  amount    Decimal            @db.Decimal(12, 2)
-  paidAt    DateTime           @default(now())
-  method    String
-  note      String?
-  deletedAt DateTime?
-  deposit   Deposit            @relation(fields: [depositId], references: [id], onDelete: Cascade)
-  user      User               @relation(fields: [userId], references: [id])
 
-  @@index([depositId, paidAt])
-}
 
 model LeaseFee {
   id        String            @id @default(cuid())
@@ -419,7 +405,6 @@ model Bill {
   id             String       @id @default(cuid())
   organizationId String
   leaseId        String
-  monthlyBillId  String?
   mode           BillMode     @default(PREPAID)
   billingDate    DateTime
   periodStart    DateTime
@@ -434,9 +419,9 @@ model Bill {
   deletedAt      DateTime?
   organization   Organization @relation(fields: [organizationId], references: [id])
   lease          Lease        @relation(fields: [leaseId], references: [id])
-  monthlyBill    MonthlyBill? @relation(fields: [monthlyBillId], references: [id])
   items          BillItem[]
   payments       Payment[]
+  deposit        Deposit?     @relation("BillDeposit")
 
   @@unique([leaseId, billingDate, mode])
   @@index([organizationId, status])
@@ -462,44 +447,23 @@ model BillItem {
 }
 
 model Payment {
-  id             String        @id @default(cuid())
-  billId         String?
-  monthlyBillId  String?
-  userId         String
-  amount         Decimal       @db.Decimal(12, 2)
-  paidAt         DateTime      @default(now())
-  method         String
-  note           String?
-  status         PaymentStatus @default(COMPLETED)
-  refundedAmount Decimal       @default(0) @db.Decimal(12, 2)
-  deletedAt      DateTime?
-  bill           Bill?         @relation(fields: [billId], references: [id])
-  monthlyBill    MonthlyBill?  @relation(fields: [monthlyBillId], references: [id])
-  user           User          @relation(fields: [userId], references: [id])
+  id        String        @id @default(cuid())
+  billId    String
+  userId    String
+  type      PaymentType   @default(RECEIVE)
+  amount    Decimal       @db.Decimal(12, 2)
+  paidAt    DateTime      @default(now())
+  method    String
+  note      String?
+  status    PaymentStatus @default(COMPLETED)
+  deletedAt DateTime?
+  bill      Bill          @relation(fields: [billId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+
+  @@index([billId, paidAt])
 }
 
-model MonthlyBill {
-  id             String       @id @default(cuid())
-  organizationId String
-  leaseId        String
-  tenantName     String
-  tenantPhone    String
-  billingDate    DateTime
-  dueDate        DateTime
-  status         BillStatus   @default(UNPAID)
-  totalAmount    Decimal      @default(0) @db.Decimal(12, 2)
-  paidAmount     Decimal      @default(0) @db.Decimal(12, 2)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  lease          Lease        @relation(fields: [leaseId], references: [id])
-  bills          Bill[]
-  payments       Payment[]
 
-  @@unique([leaseId, billingDate])
-  @@index([organizationId, status])
-}
 
 model MeterReading {
   id             String             @id @default(cuid())

@@ -23,20 +23,20 @@ import {
   PhoneOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getMonthlyBills, createPayment, deleteBill } from '@/api/bills';
+import { getBills, createPayment, deleteBill } from '@/api/bills';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
-import { getPaymentAmountError } from './utils';
+import { getPaymentAmountError, groupBills, type BillGroup } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import type { MonthlyBill } from '@/types/domain';
+import type { Bill } from '@/types/domain';
 import styles from './MonthlyDetailPage.module.scss';
 
 export default function MonthlyDetailPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
+  const [allBills, setAllBills] = useState<Bill[]>([]);
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     method: '线下收款',
@@ -49,8 +49,8 @@ export default function MonthlyDetailPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const data = await getMonthlyBills(currentOrgId);
-      setMonthlyBills(data);
+      const data = await getBills(currentOrgId);
+      setAllBills(data);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载失败');
     } finally {
@@ -62,21 +62,23 @@ export default function MonthlyDetailPage() {
     loadData();
   }, [loadData]);
 
-  const bill = useMemo(
-    () => monthlyBills.find((b) => b.id === id),
-    [monthlyBills, id]
-  );
+  const group = useMemo<BillGroup | undefined>(() => {
+    if (!id) return undefined;
+    const groups = groupBills(allBills);
+    return groups.find((g) => g.id === id);
+  }, [allBills, id]);
+
   const remaining = useMemo(
-    () => (bill ? Number(bill.totalAmount) - Number(bill.paidAmount) : 0),
-    [bill]
+    () => (group ? group.totalAmount - group.paidAmount : 0),
+    [group]
   );
   const canPay = useMemo(
-    () => bill && bill.status !== 'PAID' && bill.status !== 'VOID',
-    [bill]
+    () => group && group.status !== 'PAID' && group.status !== 'VOID',
+    [group]
   );
 
   const handlePayment = async () => {
-    if (!currentOrgId || !bill) return;
+    if (!currentOrgId || !group) return;
     const error = getPaymentAmountError(paymentForm.amount, remaining);
     if (error) {
       message.error(error);
@@ -84,13 +86,26 @@ export default function MonthlyDetailPage() {
     }
     setPaying(true);
     try {
-      await createPayment(currentOrgId, {
-        monthlyBillId: bill.id,
-        amount: Number(paymentForm.amount),
-        method: paymentForm.method.trim() || '线下收款',
-        note: paymentForm.note.trim() || undefined,
-        paidAt: new Date().toISOString(),
-      });
+      // 按子账单顺序分摊收款金额
+      let unapplied = Number(paymentForm.amount);
+      const unpaidBills = group.bills.filter(
+        (b) => b.status !== 'PAID' && b.status !== 'VOID'
+      );
+      for (const bill of unpaidBills) {
+        if (unapplied <= 0) break;
+        const billRemaining =
+          Number(bill.totalAmount) - Number(bill.paidAmount);
+        if (billRemaining <= 0) continue;
+        const applyAmount = Math.min(unapplied, billRemaining);
+        await createPayment(currentOrgId, {
+          billId: bill.id,
+          amount: applyAmount,
+          method: paymentForm.method.trim() || '线下收款',
+          note: paymentForm.note.trim() || undefined,
+          paidAt: new Date().toISOString(),
+        });
+        unapplied -= applyAmount;
+      }
       message.success('收款已登记');
       setPaymentForm({ amount: '', method: '线下收款', note: '' });
       await loadData();
@@ -120,7 +135,7 @@ export default function MonthlyDetailPage() {
     });
   };
 
-  if (!bill) {
+  if (!group) {
     return (
       <div className="page-content">
         <PageHeader
@@ -155,18 +170,20 @@ export default function MonthlyDetailPage() {
             <div>
               <div className={styles.mdpTitle}>
                 <HomeOutlined className={styles.mdpIconPrimary} />
-                {bill.lease?.room?.roomNo ?? '房间'} · 到期 {day(bill.dueDate)}
+                {group.lease?.room?.roomNo ?? '房间'} · 到期{' '}
+                {day(group.dueDate)}
               </div>
               <div className={styles.mdpMeta}>
-                应收 ¥{money(bill.totalAmount)} · 已收 ¥{money(bill.paidAmount)}
+                应收 ¥{money(group.totalAmount)} · 已收 ¥
+                {money(group.paidAmount)}
               </div>
               <div className={styles.mdpPhoneRow}>
                 <PhoneOutlined className={styles.mdpIconSmall} />
-                租客 {bill.tenantName} · {bill.lease?.tenantPhone}
+                租客 {group.tenantName} · {group.lease?.tenantPhone}
               </div>
             </div>
-            <Tag color={toneForBillStatus(bill.status)}>
-              {statusLabels[bill.status]}
+            <Tag color={toneForBillStatus(group.status)}>
+              {statusLabels[group.status]}
             </Tag>
           </div>
         </Card>
@@ -236,14 +253,14 @@ export default function MonthlyDetailPage() {
           }
           className={styles.mdpMb24}
         >
-          {(bill.bills ?? []).length === 0 ? (
+          {(group.bills ?? []).length === 0 ? (
             <EmptyState
               title="暂无账单明细"
               description="当前账单暂无明细记录"
             />
           ) : (
             <Space direction="vertical" className="w-full">
-              {(bill.bills ?? []).map((child) => (
+              {(group.bills ?? []).map((child) => (
                 <div key={child.id} className="w-full">
                   <div className="flex-between">
                     <div>
@@ -330,11 +347,11 @@ export default function MonthlyDetailPage() {
             </span>
           }
         >
-          {(bill.payments ?? []).length === 0 ? (
+          {(group.payments ?? []).length === 0 ? (
             <EmptyState title="暂无收款记录" description="当前暂无收款记录" />
           ) : (
             <Space direction="vertical" className="w-full">
-              {(bill.payments ?? []).map((payment) => (
+              {(group.payments ?? []).map((payment) => (
                 <div key={payment.id} className={styles.mdpPaymentRow}>
                   <span className="text-muted">
                     {day(payment.paidAt)} · {payment.method}

@@ -20,7 +20,7 @@ import { getDepositDetail, recordDepositPayment } from '@/api/deposits';
 import { money } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import type { Deposit, DepositPayment, DepositStatus } from '@/types/domain';
+import type { Deposit, DepositStatus, Payment } from '@/types/domain';
 import styles from './DepositDetailPage.module.scss';
 
 const statusLabels: Record<DepositStatus, string> = {
@@ -40,7 +40,7 @@ const statusColors: Record<DepositStatus, string> = {
 };
 
 const paymentTypeLabels: Record<string, string> = {
-  COLLECT: '收取',
+  RECEIVE: '收取',
   REFUND: '退还',
   DEDUCT: '扣款',
 };
@@ -119,6 +119,8 @@ export default function DepositDetailPage() {
     );
   }
 
+  const payments = deposit?.bill?.payments ?? [];
+
   return (
     <div className="page-content">
       <PageHeader
@@ -189,15 +191,15 @@ export default function DepositDetailPage() {
             </Card>
 
             <Card title="收退流水">
-              {deposit.payments && deposit.payments.length > 0 ? (
+              {payments.length > 0 ? (
                 <Timeline
-                  items={deposit.payments.map((p: DepositPayment) => ({
+                  items={payments.map((p: Payment) => ({
                     children: (
                       <div>
                         <div className={styles.paymentHeader}>
                           <Tag
                             color={
-                              p.type === 'COLLECT'
+                              p.type === 'RECEIVE'
                                 ? 'success'
                                 : p.type === 'REFUND'
                                   ? 'processing'

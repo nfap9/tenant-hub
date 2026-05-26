@@ -3,7 +3,6 @@ import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
 import { apiClient } from '../../api/client';
-import { getApiBaseUrl } from '../../constants/config';
 import { Button, Card } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { money } from '../../utils/format';
@@ -11,71 +10,70 @@ import { remainingAmount } from './utils';
 import { UnpaidTab } from './components/UnpaidTab';
 import { PendingTab } from './components/PendingTab';
 import { AllTab } from './components/AllTab';
-import type { Bill, BillStatus, MonthlyBill, Room } from '../../types/domain';
+import { groupBills } from './utils';
+import type { Bill, BillStatus, Room } from '../../types/domain';
+import type { BillGroup } from './utils';
 import './index.scss';
 
 export default function BillsPage() {
   const { currentOrgId } = useAppSession();
   const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
-  const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
+  const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BillStatus | ''>('');
 
-  const unpaidMonthlyBills = useMemo(
+  const unpaidGroups = useMemo(
     () =>
-      monthlyBills.filter(
-        (bill) => bill.status === 'UNPAID' || bill.status === 'PARTIAL_PAID'
+      billGroups.filter(
+        (g) => g.status === 'UNPAID' || g.status === 'PARTIAL_PAID'
       ),
-    [monthlyBills]
+    [billGroups]
   );
   const unpaidTotal = useMemo(
     () =>
-      unpaidMonthlyBills.reduce((sum, bill) => sum + remainingAmount(bill), 0),
-    [unpaidMonthlyBills]
+      unpaidGroups.reduce((sum, g) => sum + (g.totalAmount - g.paidAmount), 0),
+    [unpaidGroups]
   );
 
-  const filteredAllBills = useMemo(() => {
-    let result = [...monthlyBills];
+  const filteredAllGroups = useMemo(() => {
+    let result = [...billGroups];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       result = result.filter(
-        (bill) =>
-          bill.tenantName?.toLowerCase().includes(q) ||
-          bill.lease?.room?.roomNo?.toLowerCase().includes(q) ||
-          bill.lease?.tenantPhone?.includes(q)
+        (g) =>
+          g.tenantName?.toLowerCase().includes(q) ||
+          g.lease?.room?.roomNo?.toLowerCase().includes(q) ||
+          g.tenantPhone?.includes(q)
       );
     }
-    if (statusFilter)
-      result = result.filter((bill) => bill.status === statusFilter);
+    if (statusFilter) result = result.filter((g) => g.status === statusFilter);
     return result;
-  }, [monthlyBills, searchQuery, statusFilter]);
+  }, [billGroups, searchQuery, statusFilter]);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const nextMonthlyBills = await apiClient<MonthlyBill[]>(
-        '/bills/monthly',
-        { organizationId: currentOrgId }
-      );
-      const [failedBills, billingBills, nextRooms] = await Promise.all([
-        apiClient<Bill[]>('/bills?status=FAILED', {
-          organizationId: currentOrgId,
-        }),
-        apiClient<Bill[]>('/bills?status=BILLING', {
-          organizationId: currentOrgId,
-        }),
-        apiClient<Room[]>('/apartments/rooms', {
-          organizationId: currentOrgId,
-        }),
-      ]);
+      const [allBills, failedBills, billingBills, nextRooms] =
+        await Promise.all([
+          apiClient<Bill[]>('/bills', { organizationId: currentOrgId }),
+          apiClient<Bill[]>('/bills?status=FAILED', {
+            organizationId: currentOrgId,
+          }),
+          apiClient<Bill[]>('/bills?status=BILLING', {
+            organizationId: currentOrgId,
+          }),
+          apiClient<Room[]>('/apartments/rooms', {
+            organizationId: currentOrgId,
+          }),
+        ]);
       const postpaidReviewBills = [...failedBills, ...billingBills].filter(
         (bill) => bill.mode === 'POSTPAID'
       );
-      setMonthlyBills(nextMonthlyBills);
+      setBillGroups(groupBills(allBills));
       setReviewBills(postpaidReviewBills);
       setRooms(nextRooms);
     } catch (e) {
@@ -97,7 +95,7 @@ export default function BillsPage() {
   });
 
   const openPayment = () => {
-    if (unpaidMonthlyBills.length === 0) {
+    if (unpaidGroups.length === 0) {
       Taro.showToast({ title: '暂无待收账单', icon: 'none' });
       return;
     }
@@ -126,30 +124,6 @@ export default function BillsPage() {
     Taro.navigateTo({ url: '/pages/bills/utility-export' });
   };
 
-  const deleteMonthlyBill = async (id: string) => {
-    if (!currentOrgId) return;
-    const res = await Taro.showModal({
-      title: '删除月度账单',
-      content: '删除后不可恢复，是否确认？',
-      confirmText: '确认删除',
-      confirmColor: '#ff4d4f',
-    });
-    if (!res.confirm) return;
-    try {
-      await apiClient(`/bills/monthly/${id}`, {
-        method: 'DELETE',
-        organizationId: currentOrgId,
-      });
-      Taro.showToast({ title: '月度账单已删除', icon: 'success' });
-      await loadData();
-    } catch (e) {
-      Taro.showToast({
-        title: e instanceof Error ? e.message : '删除失败',
-        icon: 'none',
-      });
-    }
-  };
-
   if (!currentOrgId) {
     return <NoOrganization />;
   }
@@ -161,7 +135,7 @@ export default function BillsPage() {
           <>
             <Card className="stat-card">
               <Text className="stat-label">待支付账单</Text>
-              <Text className="stat-value">{unpaidMonthlyBills.length}</Text>
+              <Text className="stat-value">{unpaidGroups.length}</Text>
             </Card>
             <Card className="stat-card">
               <Text className="stat-label">待收金额</Text>
@@ -177,7 +151,7 @@ export default function BillsPage() {
           <>
             <Card className="stat-card">
               <Text className="stat-label">全部账单</Text>
-              <Text className="stat-value">{monthlyBills.length}</Text>
+              <Text className="stat-value">{billGroups.length}</Text>
             </Card>
             <Card className="stat-card">
               <Text className="stat-label">待收金额</Text>
@@ -255,12 +229,12 @@ export default function BillsPage() {
       </View>
 
       {tab === 'unpaid' ? (
-        <UnpaidTab bills={unpaidMonthlyBills} />
+        <UnpaidTab groups={unpaidGroups} />
       ) : tab === 'pending' ? (
         <PendingTab bills={reviewBills} onRetry={retryBill} />
       ) : (
         <AllTab
-          bills={filteredAllBills}
+          groups={filteredAllGroups}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           statusFilter={statusFilter}

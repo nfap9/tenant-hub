@@ -7,19 +7,12 @@ type DecimalValue = Prisma.Decimal.Value;
 export const refreshDepositStatus = async (depositId: string) => {
   const deposit = await prisma.deposit.findUnique({
     where: { id: depositId },
-    include: { payments: true },
   });
   if (!deposit) return;
 
-  const paid = deposit.payments
-    .filter((p) => p.type === 'COLLECT')
-    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
-  const refunded = deposit.payments
-    .filter((p) => p.type === 'REFUND')
-    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
-  const deducted = deposit.payments
-    .filter((p) => p.type === 'DEDUCT')
-    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
+  const paid = deposit.paidAmount;
+  const refunded = deposit.refundedAmount;
+  const deducted = deposit.deductedAmount;
 
   let status: DepositStatus;
   if (paid.equals(0)) {
@@ -34,12 +27,7 @@ export const refreshDepositStatus = async (depositId: string) => {
 
   await prisma.deposit.update({
     where: { id: depositId },
-    data: {
-      paidAmount: paid,
-      refundedAmount: refunded,
-      deductedAmount: deducted,
-      status,
-    },
+    data: { status },
   });
 };
 
@@ -60,23 +48,17 @@ export const recordDepositPayment = async ({
 }) => {
   const deposit = await prisma.deposit.findUnique({
     where: { id: depositId },
-    include: { payments: true },
   });
   if (!deposit) throw new HttpError(404, '押金记录不存在');
+  if (!deposit.billId) throw new HttpError(400, '押金账单不存在');
 
   const paymentAmount = new Prisma.Decimal(amount);
   if (paymentAmount.lessThanOrEqualTo(0))
     throw new HttpError(400, '金额必须大于 0');
 
-  const paid = deposit.payments
-    .filter((p) => p.type === 'COLLECT')
-    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
-  const refunded = deposit.payments
-    .filter((p) => p.type === 'REFUND')
-    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
-  const deducted = deposit.payments
-    .filter((p) => p.type === 'DEDUCT')
-    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
+  const paid = deposit.paidAmount;
+  const refunded = deposit.refundedAmount;
+  const deducted = deposit.deductedAmount;
 
   if (type === 'COLLECT') {
     const remaining = new Prisma.Decimal(deposit.amount).minus(paid);
@@ -101,9 +83,30 @@ export const recordDepositPayment = async ({
       );
   }
 
-  const payment = await prisma.depositPayment.create({
-    data: { depositId, userId, type, amount: paymentAmount, method, note },
+  const paymentType = type === 'COLLECT' ? 'RECEIVE' : type;
+  const payment = await prisma.payment.create({
+    data: {
+      billId: deposit.billId,
+      userId,
+      type: paymentType as 'RECEIVE' | 'REFUND' | 'DEDUCT',
+      amount: paymentAmount,
+      method,
+      note,
+      status: 'COMPLETED',
+    },
   });
+
+  await prisma.deposit.update({
+    where: { id: depositId },
+    data: {
+      paidAmount: type === 'COLLECT' ? paid.plus(paymentAmount) : paid,
+      refundedAmount:
+        type === 'REFUND' ? refunded.plus(paymentAmount) : refunded,
+      deductedAmount:
+        type === 'DEDUCT' ? deducted.plus(paymentAmount) : deducted,
+    },
+  });
+
   await refreshDepositStatus(depositId);
   return payment;
 };

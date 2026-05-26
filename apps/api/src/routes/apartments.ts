@@ -68,7 +68,7 @@ apartmentRouter.get(
               where: { status: 'ACTIVE' },
               include: {
                 fees: true,
-                monthlyBills: {
+                bills: {
                   where: {
                     billingDate: {
                       gte: currentMonthBillWindow.start,
@@ -92,10 +92,10 @@ apartmentRouter.get(
         ...apartment,
         rooms: apartment.rooms.map((room) => ({
           ...room,
-          leases: room.leases.map(({ monthlyBills, ...lease }) => ({
+          leases: room.leases.map(({ bills, ...lease }) => ({
             ...withLeaseLifecycle(lease),
-            currentMonthBillGenerated: monthlyBills.length > 0,
-            currentMonthBillSettled: monthlyBills.some(
+            currentMonthBillGenerated: bills.length > 0,
+            currentMonthBillSettled: bills.some(
               (bill) => bill.status === 'PAID'
             ),
             currentMonthBillLabel,
@@ -122,7 +122,7 @@ apartmentRouter.get(
           where: { status: 'ACTIVE' },
           include: {
             fees: true,
-            monthlyBills: {
+            bills: {
               where: {
                 billingDate: {
                   gte: currentMonthBillWindow.start,
@@ -141,12 +141,10 @@ apartmentRouter.get(
       res,
       rooms.map((room) => ({
         ...room,
-        leases: room.leases.map(({ monthlyBills, ...lease }) => ({
+        leases: room.leases.map(({ bills, ...lease }) => ({
           ...withLeaseLifecycle(lease),
-          currentMonthBillGenerated: monthlyBills.length > 0,
-          currentMonthBillSettled: monthlyBills.some(
-            (bill) => bill.status === 'PAID'
-          ),
+          currentMonthBillGenerated: bills.length > 0,
+          currentMonthBillSettled: bills.some((bill) => bill.status === 'PAID'),
           currentMonthBillLabel,
         })),
       }))
@@ -332,7 +330,7 @@ apartmentRouter.get(
           where: { status: 'ACTIVE' },
           include: {
             fees: true,
-            monthlyBills: {
+            bills: {
               where: {
                 billingDate: {
                   gte: currentMonthBillWindow.start,
@@ -349,12 +347,10 @@ apartmentRouter.get(
     if (!room) throw new HttpError(404, '房间不存在');
     ok(res, {
       ...room,
-      leases: room.leases.map(({ monthlyBills, ...lease }) => ({
+      leases: room.leases.map(({ bills, ...lease }) => ({
         ...withLeaseLifecycle(lease),
-        currentMonthBillGenerated: monthlyBills.length > 0,
-        currentMonthBillSettled: monthlyBills.some(
-          (bill) => bill.status === 'PAID'
-        ),
+        currentMonthBillGenerated: bills.length > 0,
+        currentMonthBillSettled: bills.some((bill) => bill.status === 'PAID'),
         currentMonthBillLabel,
       })),
     });

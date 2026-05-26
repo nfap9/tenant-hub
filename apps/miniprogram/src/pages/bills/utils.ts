@@ -1,16 +1,33 @@
 import { day, money } from '../../utils/format';
-import type { MonthlyBill, BillStatus } from '../../types/domain';
+import type { Bill, BillStatus } from '../../types/domain';
 
-export const remainingAmount = (bill: MonthlyBill) =>
-  Number(bill.totalAmount) - Number(bill.paidAmount);
+export type BillGroup = {
+  id: string;
+  leaseId: string;
+  billingDate: string;
+  dueDate: string;
+  tenantName: string;
+  tenantPhone: string;
+  status: BillStatus;
+  totalAmount: number;
+  paidAmount: number;
+  lease?: Bill['lease'];
+  bills: Bill[];
+  payments: import('../../types/domain').Payment[];
+};
 
-export const roomKeyForBill = (bill: MonthlyBill) =>
+export const remainingAmount = (bill: {
+  totalAmount: string | number;
+  paidAmount: string | number;
+}) => Number(bill.totalAmount) - Number(bill.paidAmount);
+
+export const roomKeyForBill = (bill: Bill) =>
   bill.lease?.roomId ??
   bill.lease?.room?.id ??
   bill.lease?.room?.roomNo ??
   bill.id;
 
-const statusPriority: Record<MonthlyBill['status'], number> = {
+const statusPriority: Record<BillStatus, number> = {
   UNPAID: 0,
   PARTIAL_PAID: 0,
   BILLING: 1,
@@ -18,9 +35,10 @@ const statusPriority: Record<MonthlyBill['status'], number> = {
   DRAFT: 2,
   PAID: 3,
   VOID: 4,
+  REFUNDED: 5,
 };
 
-export const sortMonthlyBillsForList = (bills: MonthlyBill[]) =>
+export const sortBillsForList = (bills: Bill[]) =>
   [...bills].sort((left, right) => {
     const priorityDiff =
       statusPriority[left.status] - statusPriority[right.status];
@@ -34,16 +52,77 @@ export const sortMonthlyBillsForList = (bills: MonthlyBill[]) =>
     );
   });
 
-export const getMonthlyBillCardSummary = (bill: MonthlyBill) => {
-  const billCount = bill.bills?.length ?? 0;
-  const paymentCount = bill.payments?.length ?? 0;
+export const groupBills = (bills: Bill[]): BillGroup[] => {
+  const map = new Map<string, Bill[]>();
+  for (const bill of bills) {
+    const key = `${bill.leaseId}_${bill.billingDate}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(bill);
+  }
+
+  return Array.from(map.entries()).map(([key, groupBills]) => {
+    const first = groupBills[0];
+    const totalAmount = groupBills.reduce(
+      (sum, b) => sum + Number(b.totalAmount),
+      0
+    );
+    const paidAmount = groupBills.reduce(
+      (sum, b) => sum + Number(b.paidAmount),
+      0
+    );
+    const payments = groupBills.flatMap((b) => b.payments ?? []);
+
+    let status: BillStatus = 'PAID';
+    for (const b of groupBills) {
+      if (b.status === 'UNPAID' || b.status === 'PARTIAL_PAID') {
+        status = b.status;
+        break;
+      }
+      if (b.status === 'BILLING' || b.status === 'FAILED') {
+        status = b.status;
+      }
+    }
+
+    return {
+      id: key,
+      leaseId: first.leaseId,
+      billingDate: first.billingDate,
+      dueDate: first.dueDate,
+      tenantName: first.lease?.tenantName ?? '',
+      tenantPhone: first.lease?.tenantPhone ?? '',
+      status,
+      totalAmount,
+      paidAmount,
+      lease: first.lease,
+      bills: groupBills,
+      payments,
+    };
+  });
+};
+
+export const sortBillGroupsForList = (groups: BillGroup[]) =>
+  [...groups].sort((left, right) => {
+    const priorityDiff =
+      statusPriority[left.status] - statusPriority[right.status];
+    if (priorityDiff !== 0) return priorityDiff;
+    const dueDateDiff =
+      new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime();
+    if (dueDateDiff !== 0) return dueDateDiff;
+    return (
+      new Date(right.billingDate).getTime() -
+      new Date(left.billingDate).getTime()
+    );
+  });
+
+export const getBillGroupCardSummary = (group: BillGroup) => {
+  const billCount = group.bills.length;
+  const paymentCount = group.payments.length;
   return {
-    title: `${bill.tenantName} · ${day(bill.billingDate)}`,
-    meta: `${bill.lease?.room?.roomNo ?? '房间'} · 到期 ${day(bill.dueDate)}`,
-    totalAmount: Number(bill.totalAmount ?? 0),
-    paidAmount: Number(bill.paidAmount ?? 0),
-    remainingAmount:
-      Number(bill.totalAmount ?? 0) - Number(bill.paidAmount ?? 0),
+    title: `${group.tenantName} · ${day(group.billingDate)}`,
+    meta: `${group.lease?.room?.roomNo ?? '房间'} · 到期 ${day(group.dueDate)}`,
+    totalAmount: group.totalAmount,
+    paidAmount: group.paidAmount,
+    remainingAmount: group.totalAmount - group.paidAmount,
     detailCountText: `${billCount} 项账单 · ${paymentCount} 笔收款`,
   };
 };

@@ -2,32 +2,32 @@ import { View, Text } from '@tarojs/components';
 import { Badge } from '../../../components/ui';
 import { money } from '../../../utils/format';
 import { statusLabels, toneForBillStatus } from '../constants';
-import { getMonthlyBillCardSummary } from '../utils';
-import type { MonthlyBill } from '../../../types/domain';
+import { getBillGroupCardSummary } from '../utils';
+import type { BillGroup } from '../utils';
 
 interface BillCardProps {
-  bill: MonthlyBill;
+  group: BillGroup;
   onClick: () => void;
   showDelete?: boolean;
   onDelete?: () => void;
 }
 
 export function BillCard({
-  bill,
+  group,
   onClick,
   showDelete,
   onDelete,
 }: BillCardProps) {
-  const summary = getMonthlyBillCardSummary(bill);
+  const summary = getBillGroupCardSummary(group);
   return (
-    <View key={bill.id} className="bill-card" onClick={onClick}>
+    <View key={group.id} className="bill-card" onClick={onClick}>
       <View className="bill-card-header">
         <View>
           <Text className="card-title">{summary.title}</Text>
           <Text className="text-muted">{summary.meta}</Text>
         </View>
-        <Badge tone={toneForBillStatus(bill.status)}>
-          {statusLabels[bill.status]}
+        <Badge tone={toneForBillStatus(group.status)}>
+          {statusLabels[group.status]}
         </Badge>
       </View>
       <View className="bill-amount-row">

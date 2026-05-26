@@ -11,13 +11,7 @@ import {
   daysUntil,
   monthlyAmount,
 } from '../../utils/format';
-import type {
-  Apartment,
-  Room,
-  Lease,
-  MonthlyBill,
-  Bill,
-} from '../../types/domain';
+import type { Apartment, Room, Lease, Bill } from '../../types/domain';
 import './index.scss';
 
 const leaseMonthlyIncome = (lease: Lease) => {
@@ -28,11 +22,13 @@ const leaseMonthlyIncome = (lease: Lease) => {
   );
   return rent + fees;
 };
-const isUnpaid = (bill: MonthlyBill) =>
-  bill.status !== 'PAID' && bill.status !== 'VOID';
-const isOverdue = (bill: MonthlyBill) =>
-  isUnpaid(bill) &&
-  bill.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
+import { groupBills, type BillGroup } from '../bills/utils';
+
+const isUnpaid = (group: BillGroup) =>
+  group.status !== 'PAID' && group.status !== 'VOID';
+const isOverdue = (group: BillGroup) =>
+  isUnpaid(group) &&
+  group.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10);
 
 type TodoItem = {
   key: string;
@@ -46,7 +42,7 @@ export default function Index() {
   const { currentOrgId, session } = useAppSession();
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [monthlyBills, setMonthlyBills] = useState<MonthlyBill[]>([]);
+  const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -54,30 +50,27 @@ export default function Index() {
     if (!currentOrgId || !session?.token) return;
     setLoading(true);
     try {
-      const [
-        nextApartments,
-        nextRooms,
-        nextMonthlyBills,
-        failedBills,
-        billingBills,
-      ] = await Promise.all([
-        apiClient<Apartment[]>('/apartments', { organizationId: currentOrgId }),
-        apiClient<Room[]>('/apartments/rooms', {
-          organizationId: currentOrgId,
-        }),
-        apiClient<MonthlyBill[]>('/bills/monthly', {
-          organizationId: currentOrgId,
-        }),
-        apiClient<Bill[]>('/bills?status=FAILED', {
-          organizationId: currentOrgId,
-        }),
-        apiClient<Bill[]>('/bills?status=BILLING', {
-          organizationId: currentOrgId,
-        }),
-      ]);
+      const [nextApartments, nextRooms, allBills, failedBills, billingBills] =
+        await Promise.all([
+          apiClient<Apartment[]>('/apartments', {
+            organizationId: currentOrgId,
+          }),
+          apiClient<Room[]>('/apartments/rooms', {
+            organizationId: currentOrgId,
+          }),
+          apiClient<Bill[]>('/bills', {
+            organizationId: currentOrgId,
+          }),
+          apiClient<Bill[]>('/bills?status=FAILED', {
+            organizationId: currentOrgId,
+          }),
+          apiClient<Bill[]>('/bills?status=BILLING', {
+            organizationId: currentOrgId,
+          }),
+        ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
-      setMonthlyBills(nextMonthlyBills);
+      setBillGroups(groupBills(allBills));
       setReviewBills(
         [...failedBills, ...billingBills].filter(
           (bill) => bill.mode === 'POSTPAID'
@@ -136,16 +129,13 @@ export default function Index() {
     .flatMap((apartment) => apartment.expenses ?? [])
     .filter((expense) => isThisMonth(expense.spentAt))
     .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
-  const unpaidTotal = monthlyBills
+  const unpaidTotal = billGroups
     .filter(isUnpaid)
-    .reduce(
-      (sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount),
-      0
-    );
-  const paidThisMonth = monthlyBills
-    .filter((bill) => isThisMonth(bill.billingDate))
-    .reduce((sum, bill) => sum + Number(bill.paidAmount ?? 0), 0);
-  const overdueBills = monthlyBills.filter(isOverdue);
+    .reduce((sum, group) => sum + group.totalAmount - group.paidAmount, 0);
+  const paidThisMonth = billGroups
+    .filter((group) => isThisMonth(group.billingDate))
+    .reduce((sum, group) => sum + group.paidAmount, 0);
+  const overdueBills = billGroups.filter(isOverdue);
   const expiringLeases = activeLeases
     .map((lease) => ({ lease, remainingDays: daysUntil(lease.endDate) }))
     .filter((item) => item.remainingDays >= 0 && item.remainingDays <= 30)
@@ -155,7 +145,7 @@ export default function Index() {
       ? {
           key: 'overdue',
           title: '逾期账单',
-          detail: `${overdueBills.length} 张账单已过应收日，剩余待收 ¥${compactMoney(overdueBills.reduce((sum, bill) => sum + Number(bill.totalAmount) - Number(bill.paidAmount), 0))}`,
+          detail: `${overdueBills.length} 张账单已过应收日，剩余待收 ¥${compactMoney(overdueBills.reduce((sum, group) => sum + group.totalAmount - group.paidAmount, 0))}`,
           badge: '收款',
           tone: 'danger',
         }

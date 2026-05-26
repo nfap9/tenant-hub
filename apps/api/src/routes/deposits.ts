@@ -71,12 +71,7 @@ depositRouter.get(
             room: { include: { apartment: true } },
           },
         },
-        payments: {
-          include: {
-            user: { select: { id: true, username: true, phone: true } },
-          },
-          orderBy: { paidAt: 'desc' },
-        },
+        bill: { include: { payments: { include: { user: true } } } },
       },
     });
     if (!deposit) throw new HttpError(404, '押金记录不存在');
