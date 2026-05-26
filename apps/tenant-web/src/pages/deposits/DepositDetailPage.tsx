@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card,
   Button,
   Tag,
   Spin,
@@ -13,6 +12,7 @@ import {
   Radio,
   Descriptions,
   Timeline,
+  Divider,
 } from 'antd';
 import {
   PlusOutlined,
@@ -168,7 +168,7 @@ export default function DepositDetailPage() {
       <Spin spinning={loading}>
         {deposit && (
           <>
-            <Card className="mb-16">
+            <div className={styles.section}>
               <Descriptions title="押金信息" column={2}>
                 <Descriptions.Item label="租客">
                   {deposit.lease?.tenantName}
@@ -202,9 +202,12 @@ export default function DepositDetailPage() {
                   )}
                 </Descriptions.Item>
               </Descriptions>
-            </Card>
+            </div>
 
-            <Card title="收退流水">
+            <Divider />
+
+            <div className={styles.section}>
+              <div className={styles.sectionTitle}>收退流水</div>
               {payments.length > 0 ? (
                 <Timeline
                   items={payments.map((p: Payment) => ({
@@ -245,7 +248,7 @@ export default function DepositDetailPage() {
               ) : (
                 <EmptyState title="暂无流水" />
               )}
-            </Card>
+            </div>
           </>
         )}
       </Spin>

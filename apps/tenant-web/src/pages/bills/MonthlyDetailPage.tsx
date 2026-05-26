@@ -1,21 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Card,
-  Button,
-  Tag,
-  Input,
-  Select,
-  Space,
-  Spin,
-  message,
-  Modal,
-  Divider,
-} from 'antd';
+import { Button, Tag, Space, Spin, message, Modal, Divider } from 'antd';
 import {
   DeleteOutlined,
   EditOutlined,
-  SaveOutlined,
   ThunderboltOutlined,
   WalletOutlined,
   FileTextOutlined,
@@ -23,11 +11,12 @@ import {
   PhoneOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getBills, createPayment, deleteBill } from '@/api/bills';
+import { getBills, deleteBill } from '@/api/bills';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
-import { getPaymentAmountError, groupBills, type BillGroup } from './utils';
+import { groupBills, type BillGroup } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
+import PaymentDialog from '@/components/PaymentDialog';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Bill } from '@/types/domain';
 import styles from './MonthlyDetailPage.module.scss';
@@ -37,12 +26,7 @@ export default function MonthlyDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [allBills, setAllBills] = useState<Bill[]>([]);
-  const [paymentForm, setPaymentForm] = useState({
-    amount: '',
-    method: '线下收款',
-    note: '',
-  });
-  const [paying, setPaying] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -68,53 +52,10 @@ export default function MonthlyDetailPage() {
     return groups.find((g) => g.id === id);
   }, [allBills, id]);
 
-  const remaining = useMemo(
-    () => (group ? group.totalAmount - group.paidAmount : 0),
-    [group]
-  );
   const canPay = useMemo(
     () => group && group.status !== 'PAID' && group.status !== 'VOID',
     [group]
   );
-
-  const handlePayment = async () => {
-    if (!currentOrgId || !group) return;
-    const error = getPaymentAmountError(paymentForm.amount, remaining);
-    if (error) {
-      message.error(error);
-      return;
-    }
-    setPaying(true);
-    try {
-      // 按子账单顺序分摊收款金额
-      let unapplied = Number(paymentForm.amount);
-      const unpaidBills = group.bills.filter(
-        (b) => b.status !== 'PAID' && b.status !== 'VOID'
-      );
-      for (const bill of unpaidBills) {
-        if (unapplied <= 0) break;
-        const billRemaining =
-          Number(bill.totalAmount) - Number(bill.paidAmount);
-        if (billRemaining <= 0) continue;
-        const applyAmount = Math.min(unapplied, billRemaining);
-        await createPayment(currentOrgId, {
-          billId: bill.id,
-          amount: applyAmount,
-          method: paymentForm.method.trim() || '线下收款',
-          note: paymentForm.note.trim() || undefined,
-          paidAt: new Date().toISOString(),
-        });
-        unapplied -= applyAmount;
-      }
-      message.success('收款已登记');
-      setPaymentForm({ amount: '', method: '线下收款', note: '' });
-      await loadData();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '收款失败');
-    } finally {
-      setPaying(false);
-    }
-  };
 
   const handleDeleteChild = async (childId: string) => {
     if (!currentOrgId) return;
@@ -142,7 +83,7 @@ export default function MonthlyDetailPage() {
           back={true}
           breadcrumb={[
             { label: '财务管理', path: '/bills' },
-            { label: '月账单详情' },
+            { label: '账单详情' },
           ]}
         />
         <EmptyState
@@ -159,13 +100,24 @@ export default function MonthlyDetailPage() {
         back={true}
         breadcrumb={[
           { label: '财务管理', path: '/bills' },
-          { label: '月账单详情' },
+          { label: '账单详情' },
         ]}
+        actions={
+          canPay ? (
+            <Button
+              type="primary"
+              icon={<WalletOutlined />}
+              onClick={() => setPaymentOpen(true)}
+            >
+              登记收款
+            </Button>
+          ) : undefined
+        }
       />
 
       <Spin spinning={loading}>
         {/* 账单概览 */}
-        <Card className={styles.mdpMb24}>
+        <div className={styles.mdpSection}>
           <div className="flex-start">
             <div>
               <div className={styles.mdpTitle}>
@@ -186,73 +138,16 @@ export default function MonthlyDetailPage() {
               {statusLabels[group.status]}
             </Tag>
           </div>
-        </Card>
+        </div>
 
-        {/* 收款登记 */}
-        {canPay && (
-          <Card
-            title={
-              <span className={styles.mdpCardTitle}>
-                <WalletOutlined />
-                登记收款
-              </span>
-            }
-            className={styles.mdpMb24}
-          >
-            <Space direction="vertical" className="w-full" size="middle">
-              <Input
-                placeholder="收款金额"
-                prefix="¥"
-                value={paymentForm.amount}
-                onChange={(e) =>
-                  setPaymentForm((old) => ({ ...old, amount: e.target.value }))
-                }
-              />
-              <Select
-                placeholder="收款方式"
-                value={paymentForm.method}
-                onChange={(value) =>
-                  setPaymentForm((old) => ({ ...old, method: value }))
-                }
-                className="w-full"
-                options={[
-                  { label: '线下收款', value: '线下收款' },
-                  { label: '现金', value: '现金' },
-                  { label: '微信', value: '微信' },
-                  { label: '支付宝', value: '支付宝' },
-                  { label: '银行转账', value: '银行转账' },
-                ]}
-              />
-              <Input.TextArea
-                placeholder="备注（可选）"
-                value={paymentForm.note}
-                onChange={(e) =>
-                  setPaymentForm((old) => ({ ...old, note: e.target.value }))
-                }
-                rows={2}
-              />
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                loading={paying}
-                onClick={handlePayment}
-              >
-                确认收款
-              </Button>
-            </Space>
-          </Card>
-        )}
+        <Divider />
 
-        {/* 子账单明细 */}
-        <Card
-          title={
-            <span className={styles.mdpCardTitle}>
-              <FileTextOutlined />
-              账单明细
-            </span>
-          }
-          className={styles.mdpMb24}
-        >
+        {/* 账单明细 */}
+        <div className={styles.mdpSection}>
+          <div className={styles.mdpSectionTitle}>
+            <FileTextOutlined />
+            账单明细
+          </div>
           {(group.bills ?? []).length === 0 ? (
             <EmptyState
               title="暂无账单明细"
@@ -260,7 +155,7 @@ export default function MonthlyDetailPage() {
             />
           ) : (
             <Space direction="vertical" className="w-full">
-              {(group.bills ?? []).map((child) => (
+              {(group.bills ?? []).map((child, index) => (
                 <div key={child.id} className="w-full">
                   <div className="flex-between">
                     <div>
@@ -331,22 +226,23 @@ export default function MonthlyDetailPage() {
                       录入本期水电
                     </Button>
                   )}
-                  <Divider className={styles.mdpDivider} />
+                  {index < (group.bills ?? []).length - 1 && (
+                    <Divider className={styles.mdpDivider} />
+                  )}
                 </div>
               ))}
             </Space>
           )}
-        </Card>
+        </div>
+
+        <Divider />
 
         {/* 收款记录 */}
-        <Card
-          title={
-            <span className={styles.mdpCardTitle}>
-              <WalletOutlined />
-              收款记录
-            </span>
-          }
-        >
+        <div className={styles.mdpSection}>
+          <div className={styles.mdpSectionTitle}>
+            <WalletOutlined />
+            收款记录
+          </div>
           {(group.payments ?? []).length === 0 ? (
             <EmptyState title="暂无收款记录" description="当前暂无收款记录" />
           ) : (
@@ -364,8 +260,15 @@ export default function MonthlyDetailPage() {
               ))}
             </Space>
           )}
-        </Card>
+        </div>
       </Spin>
+
+      <PaymentDialog
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onSuccess={loadData}
+        defaultLeaseId={group?.lease?.id}
+      />
     </div>
   );
 }

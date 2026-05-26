@@ -1,3 +1,14 @@
+.section {
+  padding: 8px 0;
+}
+
+.section-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--th-foreground);
+  margin-bottom: 16px;
+}
+
 .paymentHeader {
   display: flex;
   align-items: center;

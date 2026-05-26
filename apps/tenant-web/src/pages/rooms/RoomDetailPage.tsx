@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card,
   Button,
   Tag,
   Spin,
   message,
   Popconfirm,
   Descriptions,
+  Divider,
 } from 'antd';
 import {
   EditOutlined,
@@ -166,7 +166,7 @@ export default function RoomDetailPage() {
       <Spin spinning={loading}>
         {room && (
           <>
-            <Card className="mb-16">
+            <div className={styles.section}>
               <Descriptions title="房间信息" column={2}>
                 <Descriptions.Item label="房间号">
                   {room.roomNo}
@@ -189,10 +189,12 @@ export default function RoomDetailPage() {
                   {room.facilities?.join('、') || '无设施'}
                 </Descriptions.Item>
               </Descriptions>
-            </Card>
+            </div>
+
+            <Divider />
 
             {activeLease && (
-              <Card>
+              <div className={styles.section}>
                 <Descriptions title="租约信息" column={2}>
                   <Descriptions.Item label="租客姓名">
                     {activeLease.tenantName}
@@ -235,7 +237,7 @@ export default function RoomDetailPage() {
                     </div>
                   </div>
                 )}
-              </Card>
+              </div>
             )}
           </>
         )}
