@@ -72,6 +72,7 @@ B 端用户关注效率，不是审美体验。不必要的装饰会分散注意
 |------|------|
 | 列表页 Table 要不要包 Card？ | **不要**，Table 直接展示 |
 | 详情视图要不要包 Card？ | **不要**，用 `DetailSection` |
+| 表单录入/编辑页要不要包 Card？ | **要**，Card 提供编辑边界 |
 | 状态用什么组件展示？ | **`<Tag>`**，禁止自定义 StatusTag |
 | 删除确认用什么？ | **`<Popconfirm>`**，不用 `Modal.confirm` |
 | 表单弹窗 footer 怎么放？ | **`footer={null}`**，提交按钮放 Form 内 |
@@ -91,3 +92,33 @@ B 端用户关注效率，不是审美体验。不必要的装饰会分散注意
 - `EmptyState`（`components/ui/EmptyState.tsx`）— 空态（含图标 + 标题 + 描述 + 可选操作按钮）
 - `DetailSection`（`components/ui/DetailSection.tsx`）— 详情区块容器（标题 + actions）
 - `DetailItem`（`components/ui/DetailItem.tsx`）— 单个信息项（label + value）
+
+## 完整检查清单
+
+开发或修改 UI 相关代码后，对照以下清单检查：
+
+- [ ] 配色是否遵循主色调，无渐变
+- [ ] 每组按钮是否仅有一个主色按钮；删除是否使用 `danger`
+- [ ] 默认按钮是否使用 `type="default"` 带边框样式
+- [ ] 卡片操作按钮是否使用图标按钮 + Tooltip
+- [ ] 输入框是否默认大小；Search 是否用 `<Input.Search />`
+- [ ] 数字输入框是否使用 `InputNumber` 带拨轮
+- [ ] 表格高度是否自适应视口，仅表体滚动
+- [ ] 表格操作列是否 `fixed: 'right'`
+- [ ] 表格顶部操作按钮是否靠右
+- [ ] 表格分页是否使用 `pageSize: 10`
+- [ ] 表格单元格内 Select 是否用 `size="small"`
+- [ ] 表单弹窗是否 `footer={null}`
+- [ ] 表单是否使用 `layout="vertical"`，容器宽度 600-720px
+- [ ] Form 内的 Switch 是否设置 `valuePropName="checked"`
+- [ ] 动态字段是否使用 `Form.List`
+- [ ] 空态是否使用 `<EmptyState>` 组件
+- [ ] 页面加载是否用 `<Spin>`，表格加载用 `loading` prop
+- [ ] 表单提交是否使用独立的 saving 状态控制按钮 loading
+- [ ] 路由加载是否使用 `lazy()`
+- [ ] message 是否仅用 `.success`/`.error`/`.warning`
+- [ ] 状态展示是否使用 `<Tag>` 且颜色映射正确
+- [ ] 列表页 Table 是否直接展示（无外层 Card）
+- [ ] 详情视图是否未使用 Card，是否使用 `DetailSection + DetailItem`
+- [ ] 筛选是否使用 Tabs（不用 Radio.Group）
+- [ ] 是否存在与首页或其他页面重复的统计信息
