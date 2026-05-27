@@ -29,3 +29,36 @@
 .cancelBtn {
   margin-left: 12px;
 }
+
+.confirmModal {
+  padding: 8px 0;
+}
+
+.confirmDetailList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirmDetailItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.amountReceivable {
+  color: var(--th-danger);
+  font-weight: 500;
+}
+
+.amountRefundable {
+  color: var(--th-success);
+  font-weight: 500;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
