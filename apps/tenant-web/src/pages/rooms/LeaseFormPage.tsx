@@ -162,14 +162,20 @@ export default function LeaseFormPage() {
               name="tenantName"
               rules={[{ required: true, message: '请输入租客姓名' }]}
             >
-              <Input placeholder="请输入姓名" prefix={<UserOutlined />} />
+              <Input
+                placeholder="请输入姓名"
+                prefix={<UserOutlined className="text-subtle" />}
+              />
             </Form.Item>
             <Form.Item
               label="租客电话"
               name="tenantPhone"
               rules={[{ required: true, message: '请输入租客电话' }]}
             >
-              <Input placeholder="请输入手机号" prefix={<PhoneOutlined />} />
+              <Input
+                placeholder="请输入手机号"
+                prefix={<PhoneOutlined className="text-subtle" />}
+              />
             </Form.Item>
             <div className={styles.formGrid2}>
               <Form.Item
@@ -177,14 +183,20 @@ export default function LeaseFormPage() {
                 name="startDate"
                 rules={[{ required: true, message: '请选择开始日期' }]}
               >
-                <DatePicker className="w-full" prefix={<CalendarOutlined />} />
+                <DatePicker
+                  className="w-full"
+                  prefix={<CalendarOutlined className="text-subtle" />}
+                />
               </Form.Item>
               <Form.Item
                 label="结束日期"
                 name="endDate"
                 rules={[{ required: true, message: '请选择结束日期' }]}
               >
-                <DatePicker className="w-full" prefix={<CalendarOutlined />} />
+                <DatePicker
+                  className="w-full"
+                  prefix={<CalendarOutlined className="text-subtle" />}
+                />
               </Form.Item>
             </div>
             <div className={styles.formGrid2}>

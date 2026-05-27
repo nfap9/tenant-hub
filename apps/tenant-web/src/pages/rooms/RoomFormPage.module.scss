@@ -1,11 +1,18 @@
-.room-form-container {
-  max-width: 640px;
+.roomFormContainer {
+  max-width: 720px;
+  margin: 0 auto;
 }
 
-.form-actions {
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.formActions {
   margin-top: 24px;
 }
 
-.cancel-btn {
+.cancelBtn {
   margin-left: 12px;
 }

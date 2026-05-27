@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
+  Card,
   Form,
   InputNumber,
   Button,
@@ -162,103 +163,107 @@ export default function LeaseEditPage() {
       <Spin spinning={loading}>
         <div className={styles.leaseEditContainer}>
           {lease ? (
-            <Form form={form} layout="vertical" onFinish={handleSubmit}>
-              <div className={styles.formGrid2}>
-                <Form.Item label="租金" name="rentAmount">
-                  <InputNumber
-                    min={0}
-                    className="w-full"
-                    prefix="¥"
-                    placeholder="每期金额"
-                  />
-                </Form.Item>
-                <Form.Item label="押金" name="depositAmount">
-                  <InputNumber
-                    min={0}
-                    className="w-full"
-                    prefix="¥"
-                    placeholder="请输入押金"
-                  />
-                </Form.Item>
-              </div>
-              <div className={styles.formGrid2}>
-                <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
-                  <InputNumber min={0} className="w-full" />
-                </Form.Item>
-                <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
-                  <InputNumber min={0} className="w-full" />
-                </Form.Item>
-              </div>
-
-              <Divider orientation="left" className={styles.sectionDivider}>
-                费用项目
-              </Divider>
-              <div className={clsx(styles.feeList, 'mb-16')}>
-                {fees.map((item) => (
-                  <Space
-                    key={item.id}
-                    className={styles.feeItem}
-                    align="baseline"
-                  >
-                    <Select
-                      value={item.type}
-                      onChange={(value) => updateFeeType(item.id, value)}
-                      options={selectableFeeTypes
-                        .filter(
-                          (t) =>
-                            t.type === item.type ||
-                            !fees.some((f) => f.type === t.type)
-                        )
-                        .map((t) => ({ label: t.label, value: t.type }))}
-                      style={{ width: 120 }}
-                    />
+            <Card>
+              <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                <div className={styles.formGrid2}>
+                  <Form.Item label="租金" name="rentAmount">
                     <InputNumber
                       min={0}
-                      placeholder="价格"
-                      value={item.amount ? Number(item.amount) : undefined}
-                      onChange={(v) => updateFeeAmount(item.id, String(v || 0))}
+                      className="w-full"
                       prefix="¥"
+                      placeholder="每期金额"
                     />
-                    <Button
-                      type="link"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => removeFee(item.id)}
-                    >
-                      删除
-                    </Button>
-                  </Space>
-                ))}
-              </div>
-              <div className="mb-16">
-                <Button
-                  type="dashed"
-                  icon={<PlusOutlined />}
-                  onClick={addFee}
-                  className="w-full"
-                >
-                  添加费用
-                </Button>
-              </div>
+                  </Form.Item>
+                  <Form.Item label="押金" name="depositAmount">
+                    <InputNumber
+                      min={0}
+                      className="w-full"
+                      prefix="¥"
+                      placeholder="请输入押金"
+                    />
+                  </Form.Item>
+                </div>
+                <div className={styles.formGrid2}>
+                  <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
+                    <InputNumber min={0} className="w-full" />
+                  </Form.Item>
+                  <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
+                    <InputNumber min={0} className="w-full" />
+                  </Form.Item>
+                </div>
 
-              <Form.Item className={styles.formActions}>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  icon={<SaveOutlined />}
-                  loading={saving}
-                  disabled={saving}
-                >
-                  保存修改
-                </Button>
-                <Button
-                  className={styles.cancelBtn}
-                  onClick={() => navigate('/rooms')}
-                >
-                  取消
-                </Button>
-              </Form.Item>
-            </Form>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  费用项目
+                </Divider>
+                <div className={clsx(styles.feeList, 'mb-16')}>
+                  {fees.map((item) => (
+                    <Space
+                      key={item.id}
+                      className={styles.feeItem}
+                      align="baseline"
+                    >
+                      <Select
+                        value={item.type}
+                        onChange={(value) => updateFeeType(item.id, value)}
+                        options={selectableFeeTypes
+                          .filter(
+                            (t) =>
+                              t.type === item.type ||
+                              !fees.some((f) => f.type === t.type)
+                          )
+                          .map((t) => ({ label: t.label, value: t.type }))}
+                        style={{ width: 120 }}
+                      />
+                      <InputNumber
+                        min={0}
+                        placeholder="价格"
+                        value={item.amount ? Number(item.amount) : undefined}
+                        onChange={(v) =>
+                          updateFeeAmount(item.id, String(v || 0))
+                        }
+                        prefix="¥"
+                      />
+                      <Button
+                        type="link"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => removeFee(item.id)}
+                      >
+                        删除
+                      </Button>
+                    </Space>
+                  ))}
+                </div>
+                <div className="mb-16">
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={addFee}
+                    className="w-full"
+                  >
+                    添加费用
+                  </Button>
+                </div>
+
+                <Form.Item className={styles.formActions}>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    icon={<SaveOutlined />}
+                    loading={saving}
+                    disabled={saving}
+                  >
+                    保存修改
+                  </Button>
+                  <Button
+                    className={styles.cancelBtn}
+                    onClick={() => navigate('/rooms')}
+                  >
+                    取消
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Card>
           ) : (
             <EmptyState
               title="租约不存在或已结束"

@@ -170,7 +170,7 @@ export default function RoomFormPage() {
                     label: a.name,
                     value: a.id,
                   }))}
-                  prefix={<HomeOutlined />}
+                  prefix={<HomeOutlined className="text-subtle" />}
                 />
               </Form.Item>
               <Form.Item
@@ -178,7 +178,10 @@ export default function RoomFormPage() {
                 name="roomNo"
                 rules={[{ required: true, message: '请输入房号' }]}
               >
-                <Input placeholder="例如 301" prefix={<NumberOutlined />} />
+                <Input
+                  placeholder="例如 301"
+                  prefix={<NumberOutlined className="text-subtle" />}
+                />
               </Form.Item>
               <Form.Item
                 label="户型"
@@ -191,36 +194,38 @@ export default function RoomFormPage() {
                     label: l,
                     value: l,
                   }))}
-                  prefix={<BuildOutlined />}
+                  prefix={<BuildOutlined className="text-subtle" />}
                 />
               </Form.Item>
-              <Form.Item label="面积（㎡）" name="area">
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  placeholder="请输入面积"
-                />
-              </Form.Item>
+              <div className={styles.formRow}>
+                <Form.Item label="面积（㎡）" name="area">
+                  <InputNumber
+                    min={0}
+                    className="w-full"
+                    placeholder="请输入面积"
+                  />
+                </Form.Item>
+                {isEdit && (
+                  <Form.Item
+                    label="状态"
+                    name="status"
+                    rules={[{ required: true }]}
+                  >
+                    <Select
+                      options={roomStatuses.map((s) => ({
+                        label: statusLabels[s],
+                        value: s,
+                      }))}
+                    />
+                  </Form.Item>
+                )}
+              </div>
               <Form.Item label="设施" name="facilities">
                 <Input
                   placeholder="多个设施用逗号分隔，如：空调,热水器,洗衣机"
-                  prefix={<AppstoreOutlined />}
+                  prefix={<AppstoreOutlined className="text-subtle" />}
                 />
               </Form.Item>
-              {isEdit && (
-                <Form.Item
-                  label="状态"
-                  name="status"
-                  rules={[{ required: true }]}
-                >
-                  <Select
-                    options={roomStatuses.map((s) => ({
-                      label: statusLabels[s],
-                      value: s,
-                    }))}
-                  />
-                </Form.Item>
-              )}
               <Form.Item className={styles.formActions}>
                 <Button
                   type="primary"

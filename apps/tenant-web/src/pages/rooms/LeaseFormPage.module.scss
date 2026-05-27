@@ -1,39 +1,33 @@
-.lease-form-container {
+.leaseFormContainer {
   max-width: 720px;
+  margin: 0 auto;
 }
 
-.form-grid-2 {
+.formGrid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.section-divider {
+.sectionDivider {
   color: var(--th-foreground-muted);
   font-weight: 600;
 }
 
-.fee-list {
+.feeList {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.fee-label {
-  width: 90px;
-  display: inline-block;
-  font-weight: 500;
-  color: var(--th-foreground);
-}
-
-.form-actions {
+.formActions {
   margin-top: 24px;
 }
 
-.fee-item {
+.feeItem {
   display: flex;
 }
 
-.cancel-btn {
+.cancelBtn {
   margin-left: 12px;
 }
