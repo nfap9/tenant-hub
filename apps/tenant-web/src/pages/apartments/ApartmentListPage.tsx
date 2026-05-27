@@ -109,7 +109,7 @@ export default function ApartmentListPage() {
                       <div
                         className={clsx(
                           styles.statValue,
-                          styles.statValueSuccess
+                          styles.statValuePrimary
                         )}
                       >
                         ¥{money(income)}

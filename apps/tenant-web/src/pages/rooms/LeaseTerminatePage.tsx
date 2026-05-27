@@ -173,7 +173,7 @@ export default function LeaseTerminatePage() {
 
   const netColor =
     preview.net > 0
-      ? 'var(--th-success)'
+      ? 'var(--th-primary)'
       : preview.net < 0
         ? 'var(--th-danger)'
         : 'var(--th-foreground-muted)';
@@ -500,14 +500,14 @@ export default function LeaseTerminatePage() {
                     <Row gutter={[24, 0]}>
                       <Col span={8}>
                         <DetailItem label="应收">
-                          <span style={{ color: 'var(--th-danger)' }}>
+                          <span style={{ color: 'var(--th-primary)' }}>
                             ¥{money(preview.receivable)}
                           </span>
                         </DetailItem>
                       </Col>
                       <Col span={8}>
                         <DetailItem label="应退">
-                          <span style={{ color: 'var(--th-success)' }}>
+                          <span style={{ color: 'var(--th-danger)' }}>
                             ¥{money(preview.refundable)}
                           </span>
                         </DetailItem>
