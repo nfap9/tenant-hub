@@ -30,6 +30,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import styles from './MonthlyDetailPage.module.scss';
+import clsx from 'clsx';
 
 export default function MonthlyDetailPage() {
   const { currentOrgId } = useAppSession();
@@ -150,8 +151,23 @@ export default function MonthlyDetailPage() {
               </DetailItem>
             </Col>
             <Col span={8}>
-              <DetailItem label="应收金额">
-                ¥{money(group.totalAmount)}
+              <DetailItem
+                label={
+                  group.bills.some((b) => b.status === 'REFUNDED')
+                    ? '应退金额'
+                    : '应收金额'
+                }
+              >
+                <span
+                  style={{
+                    color: group.bills.some((b) => b.status === 'REFUNDED')
+                      ? 'var(--th-danger)'
+                      : undefined,
+                    fontWeight: 600,
+                  }}
+                >
+                  ¥{money(group.totalAmount)}
+                </span>
               </DetailItem>
             </Col>
             <Col span={8}>
@@ -187,7 +203,13 @@ export default function MonthlyDetailPage() {
                       </span>
                     </div>
                     <Space>
-                      <span className={styles.mdpChildAmount}>
+                      <span
+                        className={clsx(
+                          styles.mdpChildAmount,
+                          child.status === 'REFUNDED' &&
+                            styles.mdpChildAmountRefund
+                        )}
+                      >
                         ¥{money(child.totalAmount)}
                       </span>
                       {child.status !== 'PAID' && (
@@ -211,7 +233,13 @@ export default function MonthlyDetailPage() {
                           {item.note ? ` · ${item.note}` : ''}
                         </span>
                         <Space>
-                          <span className="text-subtle">
+                          <span
+                            className={clsx(
+                              'text-subtle',
+                              item.name.includes('退款') &&
+                                styles.mdpItemAmountRefund
+                            )}
+                          >
                             ¥{money(item.amount)}
                           </span>
                         </Space>

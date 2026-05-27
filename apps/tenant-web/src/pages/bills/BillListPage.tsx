@@ -161,7 +161,12 @@ export default function BillListPage() {
           </Tag>
         </div>
         <div className={styles.billCardFooter}>
-          <div className={styles.billCardAmount}>
+          <div
+            className={clsx(
+              styles.billCardAmount,
+              group.status === 'REFUNDED' && styles.billCardAmountRefund
+            )}
+          >
             ¥{money(summary.totalAmount)}
           </div>
           <div className={styles.textRight}>
