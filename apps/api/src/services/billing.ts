@@ -7,6 +7,7 @@ import {
   getLeaseBillGenerationEnd,
   type LeaseCycle,
 } from './leaseLifecycle.js';
+import { refreshDepositStatus } from './deposit.js';
 import { HttpError } from '../utils/http.js';
 
 dayjs.extend(utc);
@@ -162,7 +163,7 @@ export const assertBillPaymentAllowed = ({
   paidAmount,
   amount,
 }: BillPaymentTarget) => {
-  if (status === 'PAID' || status === 'VOID')
+  if (status === 'PAID' || status === 'VOID' || status === 'REFUNDED')
     throw new HttpError(400, '该账单已结清或作废，不能继续收款');
   const paymentAmount = new Prisma.Decimal(amount);
   if (paymentAmount.lessThanOrEqualTo(0))
@@ -188,6 +189,9 @@ export const refreshBillTotals = async (billId: string) => {
     include: { items: true, payments: true },
   });
   if (!bill) return;
+
+  // 退租结算账单手动管理状态，跳过自动计算
+  if (bill.note === 'LEASE_SETTLEMENT') return;
 
   const totalAmount = bill.items.reduce(
     (sum, item) => sum.plus(item.amount),
@@ -563,6 +567,41 @@ export const recordBillPayment = async ({
   const payment = await prisma.payment.create({
     data: { billId, userId, amount, method, note, status: 'COMPLETED' },
   });
-  await refreshBillTotals(billId);
+
+  // 退租结算账单手动管理状态
+  if (bill.note === 'LEASE_SETTLEMENT') {
+    const updatedBill = await prisma.bill.findUnique({
+      where: { id: billId },
+    });
+    if (updatedBill) {
+      const newPaidAmount = updatedBill.paidAmount.plus(amount);
+      const isPaid = newPaidAmount.greaterThanOrEqualTo(
+        updatedBill.totalAmount
+      );
+      await prisma.bill.update({
+        where: { id: billId },
+        data: {
+          paidAmount: newPaidAmount,
+          status: isPaid ? 'PAID' : 'PARTIAL_PAID',
+        },
+      });
+    }
+  } else {
+    await refreshBillTotals(billId);
+  }
+
+  if (bill.mode === 'DEPOSIT') {
+    const deposit = await prisma.deposit.findUnique({
+      where: { billId: bill.id },
+    });
+    if (deposit) {
+      await prisma.deposit.update({
+        where: { id: deposit.id },
+        data: { paidAmount: deposit.paidAmount.plus(amount) },
+      });
+      await refreshDepositStatus(deposit.id);
+    }
+  }
+
   return payment;
 };

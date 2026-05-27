@@ -50,6 +50,17 @@ describe('billing payments', () => {
     ).toThrow(/已结清或作废/);
   });
 
+  it('should reject refunded bills', () => {
+    expect(() =>
+      assertBillPaymentAllowed({
+        status: 'REFUNDED',
+        totalAmount: new Prisma.Decimal(100),
+        paidAmount: new Prisma.Decimal(0),
+        amount: 1,
+      })
+    ).toThrow(/已结清或作废/);
+  });
+
   it('should allow monthly payment when no child bills were paid directly', () => {
     expect(() => {
       assertMonthlyBillPaymentAllowed({

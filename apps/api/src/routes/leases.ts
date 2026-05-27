@@ -102,26 +102,70 @@ leaseRouter.post(
     if (room.status !== 'VACANT')
       throw new HttpError(400, '仅空闲房间可以签约');
 
-    const lease = await prisma.lease.create({
-      data: {
-        ...leaseData,
-        organizationId: req.organizationId!,
-        roomId,
-        fees: { create: fees },
-        ...(leaseData.depositAmount > 0
-          ? {
-              deposit: {
-                create: {
-                  organizationId: req.organizationId!,
+    let lease;
+    if (leaseData.depositAmount > 0) {
+      lease = await prisma.$transaction(async (tx) => {
+        const created = await tx.lease.create({
+          data: {
+            ...leaseData,
+            organizationId: req.organizationId!,
+            roomId,
+            fees: { create: fees },
+          },
+          include: { room: { include: { apartment: true } }, fees: true },
+        });
+
+        const bill = await tx.bill.create({
+          data: {
+            organizationId: req.organizationId!,
+            leaseId: created.id,
+            mode: 'DEPOSIT',
+            billingDate: startOfLeaseDay(leaseData.startDate).toDate(),
+            periodStart: startOfLeaseDay(leaseData.startDate).toDate(),
+            periodEnd: startOfLeaseDay(leaseData.endDate).toDate(),
+            dueDate: startOfLeaseDay(leaseData.startDate).toDate(),
+            status: 'UNPAID',
+            totalAmount: leaseData.depositAmount,
+            paidAmount: 0,
+            items: {
+              create: [
+                {
+                  type: 'DEPOSIT',
+                  name: '押金',
                   amount: leaseData.depositAmount,
                   status: 'UNPAID',
                 },
-              },
-            }
-          : {}),
-      },
-      include: leaseInclude,
-    });
+              ],
+            },
+          },
+        });
+
+        await tx.deposit.create({
+          data: {
+            organizationId: req.organizationId!,
+            leaseId: created.id,
+            billId: bill.id,
+            amount: leaseData.depositAmount,
+            status: 'UNPAID',
+          },
+        });
+
+        return tx.lease.findUniqueOrThrow({
+          where: { id: created.id },
+          include: leaseInclude,
+        });
+      });
+    } else {
+      lease = await prisma.lease.create({
+        data: {
+          ...leaseData,
+          organizationId: req.organizationId!,
+          roomId,
+          fees: { create: fees },
+        },
+        include: leaseInclude,
+      });
+    }
     await prisma.room.update({
       where: { id: roomId },
       data: { status: 'OCCUPIED' },
@@ -206,13 +250,15 @@ leaseRouter.post(
         type: z.enum(['EXPIRED', 'NEGOTIATED', 'BREACH']),
         reason: z.string().optional(),
         terminatedAt: z.coerce.date().default(new Date()),
-        depositDeductionAmount: amountSchema.default(0),
-        depositDeductionReason: z.string().optional(),
         rentAdjustmentAmount: z.coerce.number().default(0),
         currentWater: amountSchema,
         currentPower: amountSchema,
         otherFeeAmount: amountSchema.default(0),
         otherFeeReason: z.string().optional(),
+        penaltyAmount: amountSchema.default(0),
+        penaltyReason: z.string().optional(),
+        compensationAmount: amountSchema.default(0),
+        compensationReason: z.string().optional(),
       })
       .parse(req.body);
     const current = await prisma.lease.findFirst({
@@ -232,13 +278,13 @@ leaseRouter.post(
         );
       }
     }
-    const settlement = await createLeaseSettlement({
+    const result = await createLeaseSettlement({
       leaseId: req.params.id,
       organizationId: req.organizationId!,
       userId: req.user!.id,
       input,
     });
-    ok(res, settlement);
+    ok(res, result);
   })
 );
 

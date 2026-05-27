@@ -242,6 +242,29 @@ describe('leases routes', () => {
       expect(res.status).toBe(200);
     });
 
+    it('should pass penalty and compensation to settlement', async () => {
+      (prisma.lease.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'lease-1',
+        endDate: new Date(),
+      });
+
+      const res = await request(app)
+        .post('/api/leases/lease-1/terminate')
+        .set('Authorization', `Bearer ${authToken}`)
+        .set('x-organization-id', 'org-1')
+        .send({
+          type: 'BREACH',
+          currentWater: 100,
+          currentPower: 200,
+          penaltyAmount: 300,
+          penaltyReason: '逾期违约金',
+          compensationAmount: 500,
+          compensationReason: '家具损坏',
+        });
+
+      expect(res.status).toBe(200);
+    });
+
     it('should return 404 for missing lease', async () => {
       (prisma.lease.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
         null

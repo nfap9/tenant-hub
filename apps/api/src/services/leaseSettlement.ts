@@ -2,12 +2,12 @@ import { Prisma, DepositStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import { calculateUtilityAmount } from './billing.js';
+import { startOfLeaseDay } from './leaseLifecycle.js';
 
 type DecimalValue = Prisma.Decimal.Value;
 
 type SettlementCalculationInput = {
   depositPaidAmount: DecimalValue;
-  depositDeductionAmount: DecimalValue;
   rentAdjustmentAmount: DecimalValue;
   previousWater: DecimalValue;
   currentWater: DecimalValue;
@@ -16,6 +16,8 @@ type SettlementCalculationInput = {
   currentPower: DecimalValue;
   powerUnitPrice: DecimalValue;
   otherFeeAmount: DecimalValue;
+  penaltyAmount: DecimalValue;
+  compensationAmount: DecimalValue;
 };
 
 export const validateMoveOutReadings = ({
@@ -39,16 +41,14 @@ export const calculateSettlementAmounts = (
   validateMoveOutReadings(input);
 
   const depositPaidAmount = new Prisma.Decimal(input.depositPaidAmount);
-  const depositDeductionAmount = new Prisma.Decimal(
-    input.depositDeductionAmount
-  );
-  if (depositDeductionAmount.greaterThan(depositPaidAmount))
-    throw new Error('押金扣款不能超过已收押金');
 
   const rentAdjustmentAmount = new Prisma.Decimal(input.rentAdjustmentAmount);
   const utilityAmount = calculateUtilityAmount(input);
-  const otherFeeAmount = new Prisma.Decimal(input.otherFeeAmount);
-  const depositRefundAmount = depositPaidAmount.minus(depositDeductionAmount);
+  const otherFeeAmount = new Prisma.Decimal(input.otherFeeAmount ?? 0);
+  const penaltyAmount = new Prisma.Decimal(input.penaltyAmount ?? 0);
+  const compensationAmount = new Prisma.Decimal(input.compensationAmount ?? 0);
+
+  const depositRefundAmount = depositPaidAmount;
   const rentReceivable = rentAdjustmentAmount.greaterThan(0)
     ? rentAdjustmentAmount
     : new Prisma.Decimal(0);
@@ -58,8 +58,9 @@ export const calculateSettlementAmounts = (
   const receivableAmount = rentReceivable
     .plus(utilityAmount)
     .plus(otherFeeAmount)
-    .plus(depositDeductionAmount);
-  const refundableAmount = depositRefundAmount.plus(rentRefund);
+    .plus(penaltyAmount)
+    .plus(compensationAmount);
+  const refundableAmount = depositPaidAmount.plus(rentRefund);
   const netAmount = receivableAmount.minus(refundableAmount);
 
   return {
@@ -130,13 +131,15 @@ export const createLeaseSettlement = async ({
     type: 'EXPIRED' | 'NEGOTIATED' | 'BREACH';
     reason?: string;
     terminatedAt: Date;
-    depositDeductionAmount: DecimalValue;
-    depositDeductionReason?: string;
     rentAdjustmentAmount: DecimalValue;
     currentWater: DecimalValue;
     currentPower: DecimalValue;
     otherFeeAmount: DecimalValue;
     otherFeeReason?: string;
+    penaltyAmount: DecimalValue;
+    penaltyReason?: string;
+    compensationAmount: DecimalValue;
+    compensationReason?: string;
   };
 }) => {
   const lease = await prisma.lease.findFirst({
@@ -173,7 +176,6 @@ export const createLeaseSettlement = async ({
   try {
     amounts = calculateSettlementAmounts({
       depositPaidAmount,
-      depositDeductionAmount: input.depositDeductionAmount,
       rentAdjustmentAmount: input.rentAdjustmentAmount,
       previousWater,
       currentWater: input.currentWater,
@@ -182,6 +184,8 @@ export const createLeaseSettlement = async ({
       currentPower: input.currentPower,
       powerUnitPrice: lease.powerUnitPrice,
       otherFeeAmount: input.otherFeeAmount,
+      penaltyAmount: input.penaltyAmount,
+      compensationAmount: input.compensationAmount,
     });
   } catch (error) {
     throw new HttpError(
@@ -191,19 +195,140 @@ export const createLeaseSettlement = async ({
   }
 
   const status = amounts.netAmount.equals(0) ? 'SETTLED' : 'PENDING';
+  const netAbs = amounts.netAmount.abs();
+  const billStatus = amounts.netAmount.greaterThan(0)
+    ? 'UNPAID'
+    : amounts.netAmount.lessThan(0)
+      ? 'REFUNDED'
+      : 'PAID';
 
   return prisma.$transaction(async (tx) => {
+    let settlementBill: Awaited<ReturnType<typeof tx.bill.create>> | null =
+      null;
+
+    // 生成完整退租结算账单
+    let billingDate = startOfLeaseDay(input.terminatedAt).toDate();
+    if (
+      startOfLeaseDay(lease.startDate).isSame(
+        startOfLeaseDay(input.terminatedAt),
+        'day'
+      )
+    ) {
+      billingDate = new Date(billingDate.getTime() + 1000);
+    }
+
+    const rentReceivable = new Prisma.Decimal(
+      input.rentAdjustmentAmount
+    ).greaterThan(0)
+      ? new Prisma.Decimal(input.rentAdjustmentAmount)
+      : new Prisma.Decimal(0);
+    const rentRefund = new Prisma.Decimal(input.rentAdjustmentAmount).lessThan(
+      0
+    )
+      ? new Prisma.Decimal(input.rentAdjustmentAmount).abs()
+      : new Prisma.Decimal(0);
+    const depositRefund = amounts.depositRefundAmount;
+    const utilityAmount = amounts.utilityAmount;
+    const otherFeeAmount = new Prisma.Decimal(input.otherFeeAmount);
+    const penaltyAmount = new Prisma.Decimal(input.penaltyAmount);
+    const compensationAmount = new Prisma.Decimal(input.compensationAmount);
+
+    const billItems: Array<{
+      type:
+        | 'UTILITY'
+        | 'RENT'
+        | 'DEPOSIT'
+        | 'PENALTY'
+        | 'COMPENSATION'
+        | 'OTHER';
+      name: string;
+      amount: Prisma.Decimal;
+    }> = [];
+
+    if (utilityAmount.greaterThan(0)) {
+      billItems.push({
+        type: 'UTILITY',
+        name: '退租水电费',
+        amount: utilityAmount,
+      });
+    }
+    if (rentReceivable.greaterThan(0)) {
+      billItems.push({
+        type: 'RENT',
+        name: '退租房租补收',
+        amount: rentReceivable,
+      });
+    }
+    if (rentRefund.greaterThan(0)) {
+      billItems.push({
+        type: 'RENT',
+        name: '退租房租退款',
+        amount: rentRefund,
+      });
+    }
+    if (depositRefund.greaterThan(0)) {
+      billItems.push({
+        type: 'DEPOSIT',
+        name: '退租押金退款',
+        amount: depositRefund,
+      });
+    }
+    if (penaltyAmount.greaterThan(0)) {
+      billItems.push({
+        type: 'PENALTY',
+        name: '违约金',
+        amount: penaltyAmount,
+      });
+    }
+    if (compensationAmount.greaterThan(0)) {
+      billItems.push({
+        type: 'COMPENSATION',
+        name: '赔偿金',
+        amount: compensationAmount,
+      });
+    }
+    if (otherFeeAmount.greaterThan(0)) {
+      billItems.push({
+        type: 'OTHER',
+        name: input.otherFeeReason || '退租其他费用',
+        amount: otherFeeAmount,
+      });
+    }
+
+    const itemTotal = billItems.reduce(
+      (sum, item) => sum.plus(item.amount),
+      new Prisma.Decimal(0)
+    );
+
+    settlementBill = await tx.bill.create({
+      data: {
+        organizationId,
+        leaseId: lease.id,
+        mode: 'DEPOSIT',
+        billingDate,
+        periodStart: billingDate,
+        periodEnd: billingDate,
+        dueDate: billingDate,
+        status: billStatus,
+        totalAmount: netAbs.greaterThan(0) ? netAbs : itemTotal,
+        paidAmount: 0,
+        note: 'LEASE_SETTLEMENT',
+        items: {
+          create: billItems,
+        },
+      },
+    });
+
     const settlement = await tx.leaseSettlement.create({
       data: {
         organizationId,
         leaseId: lease.id,
         roomId: lease.roomId,
+        billId: settlementBill.id,
         type: input.type,
         reason: input.reason,
         terminatedAt: input.terminatedAt,
         depositAmount: lease.depositAmount,
-        depositDeductionAmount: input.depositDeductionAmount,
-        depositDeductionReason: input.depositDeductionReason,
         depositRefundAmount: amounts.depositRefundAmount,
         rentAdjustmentAmount: input.rentAdjustmentAmount,
         previousWater,
@@ -215,6 +340,10 @@ export const createLeaseSettlement = async ({
         utilityAmount: amounts.utilityAmount,
         otherFeeAmount: input.otherFeeAmount,
         otherFeeReason: input.otherFeeReason,
+        penaltyAmount: input.penaltyAmount,
+        penaltyReason: input.penaltyReason,
+        compensationAmount: input.compensationAmount,
+        compensationReason: input.compensationReason,
         receivableAmount: amounts.receivableAmount,
         refundableAmount: amounts.refundableAmount,
         netAmount: amounts.netAmount,
@@ -222,11 +351,8 @@ export const createLeaseSettlement = async ({
       },
     });
 
-    // 更新押金记录：登记扣款与退款
+    // 更新押金记录
     if (lease.deposit) {
-      const newDeducted = new Prisma.Decimal(lease.deposit.deductedAmount).plus(
-        input.depositDeductionAmount
-      );
       const newRefunded = new Prisma.Decimal(lease.deposit.refundedAmount).plus(
         amounts.depositRefundAmount
       );
@@ -236,49 +362,13 @@ export const createLeaseSettlement = async ({
         newRefunded.lessThan(lease.deposit.paidAmount)
       ) {
         depositStatus = 'PARTIAL_REFUNDED';
-      } else if (
-        newRefunded.equals(lease.deposit.paidAmount) ||
-        newDeducted.plus(newRefunded).equals(lease.deposit.paidAmount)
-      ) {
-        depositStatus = newRefunded.greaterThan(0)
-          ? 'FULLY_REFUNDED'
-          : 'DEDUCTED';
+      } else if (newRefunded.greaterThanOrEqualTo(lease.deposit.paidAmount)) {
+        depositStatus = 'FULLY_REFUNDED';
       }
 
-      if (new Prisma.Decimal(input.depositDeductionAmount).greaterThan(0)) {
-        if (lease.deposit.billId) {
-          await tx.payment.create({
-            data: {
-              billId: lease.deposit.billId,
-              userId,
-              type: 'DEDUCT',
-              amount: input.depositDeductionAmount,
-              method: '退租结算扣款',
-              note: input.depositDeductionReason || '退租结算押金扣款',
-              status: 'COMPLETED',
-            },
-          });
-        }
-      }
-      if (amounts.depositRefundAmount.greaterThan(0)) {
-        if (lease.deposit.billId) {
-          await tx.payment.create({
-            data: {
-              billId: lease.deposit.billId,
-              userId,
-              type: 'REFUND',
-              amount: amounts.depositRefundAmount,
-              method: '退租结算退款',
-              note: '退租结算押金退款',
-              status: 'COMPLETED',
-            },
-          });
-        }
-      }
       await tx.deposit.update({
         where: { id: lease.deposit.id },
         data: {
-          deductedAmount: newDeducted,
           refundedAmount: newRefunded,
           status: depositStatus,
         },
@@ -356,7 +446,7 @@ export const createLeaseSettlement = async ({
       data: { status: 'VACANT' },
     });
 
-    return settlement;
+    return { settlement, settlementBill };
   });
 };
 
@@ -379,7 +469,7 @@ export const recordSettlementPayment = async ({
 }) => {
   const settlement = await prisma.leaseSettlement.findFirst({
     where: { id: settlementId, organizationId },
-    include: { payments: true },
+    include: { payments: true, bill: true },
   });
   if (!settlement) throw new HttpError(404, '退租结算单不存在');
   const expectedDirection = getSettlementDirection(settlement.netAmount);
@@ -399,9 +489,42 @@ export const recordSettlementPayment = async ({
   if (paymentAmount.greaterThan(targetAmount.minus(handledAmount)))
     throw new HttpError(400, '金额不能超过剩余待处理金额');
 
-  const payment = await prisma.settlementPayment.create({
+  // 创建 SettlementPayment（保留历史记录）
+  const settlementPayment = await prisma.settlementPayment.create({
     data: { settlementId, userId, direction, amount, method, note },
   });
+
+  // 同步到退租结算账单的 Payment
+  if (settlement.bill) {
+    const paymentType = direction === 'RECEIVE' ? 'RECEIVE' : 'REFUND';
+    await prisma.payment.create({
+      data: {
+        billId: settlement.bill.id,
+        userId,
+        type: paymentType,
+        amount: paymentAmount,
+        method,
+        note: note || `退租结算${direction === 'RECEIVE' ? '收款' : '退款'}`,
+        status: 'COMPLETED',
+      },
+    });
+
+    // 手动更新退租结算账单状态
+    const newPaidAmount = new Prisma.Decimal(settlement.bill.paidAmount).plus(
+      paymentAmount
+    );
+    const isPaid = newPaidAmount.greaterThanOrEqualTo(
+      settlement.bill.totalAmount
+    );
+    await prisma.bill.update({
+      where: { id: settlement.bill.id },
+      data: {
+        paidAmount: newPaidAmount,
+        status: isPaid ? 'PAID' : 'PARTIAL_PAID',
+      },
+    });
+  }
+
   const nextHandledAmount = handledAmount.plus(paymentAmount);
   if (nextHandledAmount.greaterThanOrEqualTo(targetAmount)) {
     await prisma.leaseSettlement.update({
@@ -409,5 +532,5 @@ export const recordSettlementPayment = async ({
       data: { status: 'SETTLED' },
     });
   }
-  return payment;
+  return settlementPayment;
 };

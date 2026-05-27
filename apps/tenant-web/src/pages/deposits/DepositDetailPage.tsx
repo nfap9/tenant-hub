@@ -1,27 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Button,
-  Tag,
-  Spin,
-  message,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Radio,
-  Timeline,
-  Divider,
-  Row,
-  Col,
-} from 'antd';
-import {
-  PlusOutlined,
-  ReloadOutlined,
-  WalletOutlined,
-} from '@ant-design/icons';
-import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
-import { getDepositDetail, recordDepositPayment } from '@/api/deposits';
+import { Button, Tag, Spin, message, Timeline, Divider, Row, Col } from 'antd';
+import { ReloadOutlined, WalletOutlined } from '@ant-design/icons';
+import { useAppSession } from '@/context/AppSessionContext';
+import { getDepositDetail } from '@/api/deposits';
 import { money } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -57,13 +39,10 @@ export default function DepositDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentOrgId } = useAppSession();
-  const canManageDeposit = useHasPermission('deposit:manage');
 
   const [deposit, setDeposit] = useState<Deposit | null>(null);
   const [loading, setLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [form] = Form.useForm();
 
   const loadData = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -82,38 +61,6 @@ export default function DepositDetailPage() {
     loadData();
   }, [loadData]);
 
-  const handlePayment = async (values: Record<string, unknown>) => {
-    if (!currentOrgId || !id) return;
-    try {
-      await recordDepositPayment(currentOrgId, id, {
-        type: String(values.type) as 'COLLECT' | 'REFUND' | 'DEDUCT',
-        amount: Number(values.amount),
-        method: String(values.method),
-        note: values.note ? String(values.note) : undefined,
-      });
-      message.success('操作成功');
-      setModalOpen(false);
-      form.resetFields();
-      loadData();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '操作失败');
-    }
-  };
-
-  const availableTypes = () => {
-    if (!deposit) return ['COLLECT'];
-    const paid = Number(deposit.paidAmount);
-    const refunded = Number(deposit.refundedAmount);
-    const deducted = Number(deposit.deductedAmount);
-    const types: ('COLLECT' | 'REFUND' | 'DEDUCT')[] = [];
-    if (paid < Number(deposit.amount)) types.push('COLLECT');
-    if (paid - refunded - deducted > 0) {
-      types.push('REFUND');
-      types.push('DEDUCT');
-    }
-    return types;
-  };
-
   if (!deposit && !loading) {
     return (
       <div className="page-content">
@@ -128,7 +75,18 @@ export default function DepositDetailPage() {
     );
   }
 
-  const payments = deposit?.bill?.payments ?? [];
+  const paymentMap = new Map<string, Payment>();
+  for (const bill of deposit?.lease?.bills ?? []) {
+    for (const payment of bill.payments ?? []) {
+      paymentMap.set(payment.id, payment);
+    }
+  }
+  for (const payment of deposit?.bill?.payments ?? []) {
+    paymentMap.set(payment.id, payment);
+  }
+  const allPayments = Array.from(paymentMap.values()).sort(
+    (a, b) => new Date(a.paidAt).getTime() - new Date(b.paidAt).getTime()
+  );
 
   return (
     <div className="page-content">
@@ -161,14 +119,6 @@ export default function DepositDetailPage() {
                       onClick={() => setPaymentOpen(true)}
                     >
                       登记收款
-                    </Button>
-                  )}
-                  {canManageDeposit && availableTypes().length > 0 && (
-                    <Button
-                      icon={<PlusOutlined />}
-                      onClick={() => setModalOpen(true)}
-                    >
-                      登记收退
                     </Button>
                   )}
                 </>
@@ -228,9 +178,9 @@ export default function DepositDetailPage() {
             <Divider />
 
             <DetailSection title="收退流水">
-              {payments.length > 0 ? (
+              {allPayments.length > 0 ? (
                 <Timeline
-                  items={payments.map((p: Payment) => ({
+                  items={allPayments.map((p: Payment) => ({
                     children: (
                       <div>
                         <div className={styles.paymentHeader}>
@@ -272,49 +222,6 @@ export default function DepositDetailPage() {
           </>
         )}
       </Spin>
-
-      <Modal
-        title="登记收退"
-        open={modalOpen}
-        onCancel={() => {
-          setModalOpen(false);
-          form.resetFields();
-        }}
-        onOk={() => form.submit()}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handlePayment}
-          initialValues={{ type: availableTypes()[0] || 'COLLECT' }}
-        >
-          <Form.Item label="类型" name="type" rules={[{ required: true }]}>
-            <Radio.Group
-              options={availableTypes().map((t) => ({
-                label: paymentTypeLabels[t],
-                value: t,
-              }))}
-            />
-          </Form.Item>
-          <Form.Item
-            label="金额"
-            name="amount"
-            rules={[{ required: true, message: '请输入金额' }]}
-          >
-            <InputNumber min={0.01} className="w-full" prefix="¥" />
-          </Form.Item>
-          <Form.Item
-            label="方式"
-            name="method"
-            rules={[{ required: true, message: '请输入收款/退款方式' }]}
-          >
-            <Input placeholder="如：微信、支付宝、现金、银行转账" />
-          </Form.Item>
-          <Form.Item label="备注" name="note">
-            <Input.TextArea rows={2} placeholder="可选" />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       <PaymentDialog
         open={paymentOpen}

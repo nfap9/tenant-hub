@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Bill, BillItem, Payment } from '@/types/domain';
+import type { Bill, Payment } from '@/types/domain';
 
 export async function getBills(organizationId: string) {
   return apiClient<Bill[]>('/bills', { organizationId });
@@ -36,22 +36,6 @@ export async function createPayment(
 ) {
   return apiClient<Payment>(`/bills/${payload.billId}/payments`, {
     method: 'POST',
-    body: payload,
-    organizationId,
-  });
-}
-
-export async function updateBillItem(
-  organizationId: string,
-  billId: string,
-  itemId: string,
-  payload: {
-    amount?: number;
-    note?: string;
-  }
-) {
-  return apiClient<BillItem>(`/bills/${billId}/items/${itemId}`, {
-    method: 'PUT',
     body: payload,
     organizationId,
   });

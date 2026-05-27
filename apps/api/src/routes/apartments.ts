@@ -122,6 +122,7 @@ apartmentRouter.get(
           where: { status: 'ACTIVE' },
           include: {
             fees: true,
+            deposit: true,
             bills: {
               where: {
                 billingDate: {
@@ -330,6 +331,7 @@ apartmentRouter.get(
           where: { status: 'ACTIVE' },
           include: {
             fees: true,
+            deposit: true,
             bills: {
               where: {
                 billingDate: {

@@ -454,49 +454,6 @@ billRouter.post(
   })
 );
 
-billRouter.put(
-  '/:id/items/:itemId',
-  requirePermission(PERMISSIONS.BILL_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        amount: z.coerce.number().nonnegative(),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
-    const billItem = await prisma.billItem.findFirst({
-      where: {
-        id: req.params.itemId,
-        billId: req.params.id,
-        bill: { organizationId: req.organizationId! },
-      },
-      include: { bill: true },
-    });
-    if (!billItem) throw new HttpError(404, '账单项目不存在');
-    if (billItem.bill.status === 'PAID')
-      throw new HttpError(400, '已结清账单不能修改');
-    await prisma.billItem.update({ where: { id: billItem.id }, data: input });
-    await refreshBillTotals(billItem.billId);
-    await prisma.auditLog.create({
-      data: {
-        organizationId: req.organizationId!,
-        tableName: 'BillItem',
-        recordId: billItem.id,
-        action: 'UPDATE',
-        fieldName: 'amount',
-        oldValue: JSON.stringify({
-          amount: billItem.amount.toString(),
-          note: billItem.note,
-        }),
-        newValue: JSON.stringify(input),
-        userId: req.user!.id,
-        ipAddress: req.ip ?? null,
-      },
-    });
-    ok(res, { updated: true });
-  })
-);
-
 billRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.BILL_MANAGE),

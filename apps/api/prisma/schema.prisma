@@ -77,6 +77,8 @@ enum BillItemType {
   ELEVATOR
   PROPERTY
   NETWORK
+  PENALTY
+  COMPENSATION
   OTHER
 }
 
@@ -319,6 +321,7 @@ model LeaseSettlement {
   organizationId          String
   leaseId                 String           @unique
   roomId                  String
+  billId                  String?          @unique
   type                    TerminationType
   reason                  String?
   terminatedAt            DateTime
@@ -336,6 +339,10 @@ model LeaseSettlement {
   utilityAmount           Decimal          @default(0) @db.Decimal(12, 2)
   otherFeeAmount          Decimal          @default(0) @db.Decimal(12, 2)
   otherFeeReason          String?
+  penaltyAmount           Decimal          @default(0) @db.Decimal(12, 2)
+  penaltyReason           String?
+  compensationAmount      Decimal          @default(0) @db.Decimal(12, 2)
+  compensationReason      String?
   receivableAmount        Decimal          @default(0) @db.Decimal(12, 2)
   refundableAmount        Decimal          @default(0) @db.Decimal(12, 2)
   netAmount               Decimal          @default(0) @db.Decimal(12, 2)
@@ -346,6 +353,7 @@ model LeaseSettlement {
   organization            Organization     @relation(fields: [organizationId], references: [id])
   lease                   Lease            @relation(fields: [leaseId], references: [id])
   room                    Room             @relation(fields: [roomId], references: [id])
+  bill                    Bill?            @relation(fields: [billId], references: [id])
   payments                SettlementPayment[]
 
   @@index([organizationId, status])
@@ -413,6 +421,7 @@ model Bill {
   status         BillStatus   @default(UNPAID)
   totalAmount    Decimal      @default(0) @db.Decimal(12, 2)
   paidAmount     Decimal      @default(0) @db.Decimal(12, 2)
+  note           String?
   failureReason  String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -422,6 +431,7 @@ model Bill {
   items          BillItem[]
   payments       Payment[]
   deposit        Deposit?     @relation("BillDeposit")
+  settlement     LeaseSettlement?
 
   @@unique([leaseId, billingDate, mode])
   @@index([organizationId, status])

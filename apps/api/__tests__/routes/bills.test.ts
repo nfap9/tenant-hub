@@ -396,49 +396,6 @@ describe('bills routes', () => {
     });
   });
 
-  describe('PUT /api/bills/:id/items/:itemId', () => {
-    it('should update bill item amount', async () => {
-      (prisma.billItem.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
-        {
-          id: 'item-1',
-          billId: 'bill-1',
-          amount: 100,
-          note: null,
-          bill: { status: 'UNPAID' },
-        }
-      );
-
-      const res = await request(app)
-        .put('/api/bills/bill-1/items/item-1')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('x-organization-id', 'org-1')
-        .send({ amount: 120 });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.updated).toBe(true);
-    });
-
-    it('should reject updating paid bill item', async () => {
-      (prisma.billItem.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
-        {
-          id: 'item-1',
-          billId: 'bill-1',
-          amount: 100,
-          note: null,
-          bill: { status: 'PAID' },
-        }
-      );
-
-      const res = await request(app)
-        .put('/api/bills/bill-1/items/item-1')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('x-organization-id', 'org-1')
-        .send({ amount: 120 });
-
-      expect(res.status).toBe(400);
-    });
-  });
-
   describe('DELETE /api/bills/monthly/:id', () => {
     it('should delete a monthly bill', async () => {
       (

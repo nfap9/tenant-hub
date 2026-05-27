@@ -13,7 +13,6 @@ import {
 } from 'antd';
 import {
   DeleteOutlined,
-  EditOutlined,
   ThunderboltOutlined,
   WalletOutlined,
   FileTextOutlined,
@@ -215,24 +214,6 @@ export default function MonthlyDetailPage() {
                           <span className="text-subtle">
                             ¥{money(item.amount)}
                           </span>
-                          {child.status !== 'PAID' && (
-                            <Button
-                              type="link"
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={() =>
-                                navigate(
-                                  `/bills/items/${item.id}/edit?billId=${child.id}&name=${encodeURIComponent(
-                                    item.name
-                                  )}&amount=${item.amount}&note=${encodeURIComponent(
-                                    item.note ?? ''
-                                  )}`
-                                )
-                              }
-                            >
-                              修改
-                            </Button>
-                          )}
                         </Space>
                       </div>
                     ))}

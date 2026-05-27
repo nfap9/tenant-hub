@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Lease, LeaseSettlement, SettlementPayment } from '@/types/domain';
+import type { Bill, Lease, LeaseSettlement } from '@/types/domain';
 
 export async function createLease(
   organizationId: string,
@@ -70,44 +70,23 @@ export async function terminateLease(
     type: string;
     reason?: string;
     terminatedAt: string;
-    depositDeductionAmount?: number;
-    depositDeductionReason?: string;
     rentAdjustmentAmount?: number;
     currentWater?: number;
     currentPower?: number;
     otherFeeAmount?: number;
     otherFeeReason?: string;
+    penaltyAmount?: number;
+    penaltyReason?: string;
+    compensationAmount?: number;
+    compensationReason?: string;
   }
 ) {
-  return apiClient<LeaseSettlement>(`/leases/${leaseId}/terminate`, {
+  return apiClient<{
+    settlement: LeaseSettlement;
+    settlementBill: Bill | null;
+  }>(`/leases/${leaseId}/terminate`, {
     method: 'POST',
     body: payload,
     organizationId,
   });
-}
-
-export async function getSettlements(organizationId: string) {
-  return apiClient<LeaseSettlement[]>('/leases/settlements', {
-    organizationId,
-  });
-}
-
-export async function recordSettlementPayment(
-  organizationId: string,
-  settlementId: string,
-  payload: {
-    direction: 'RECEIVE' | 'REFUND';
-    amount: number;
-    method: string;
-    note?: string;
-  }
-) {
-  return apiClient<SettlementPayment>(
-    `/leases/settlements/${settlementId}/payments`,
-    {
-      method: 'POST',
-      body: payload,
-      organizationId,
-    }
-  );
 }

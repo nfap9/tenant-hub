@@ -69,6 +69,11 @@ depositRouter.get(
         lease: {
           include: {
             room: { include: { apartment: true } },
+            bills: {
+              where: { mode: 'DEPOSIT' },
+              include: { payments: { include: { user: true } } },
+              orderBy: { billingDate: 'asc' },
+            },
           },
         },
         bill: { include: { payments: { include: { user: true } } } },

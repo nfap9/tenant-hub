@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
+  Card,
   Form,
   DatePicker,
   InputNumber,
@@ -26,14 +27,9 @@ import { getSettlementPreview, terminateLease } from '@/api/leases';
 import type { Room } from '@/types/domain';
 import { money, today, numberValue } from '@/utils/format';
 import { terminationLabels } from './constants';
-import {
-  computeSettlementPreview,
-  defaultTerminationType,
-  terminationResultText,
-} from './utils';
+import { computeSettlementPreview, defaultTerminationType } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import styles from './LeaseTerminatePage.module.scss';
 
@@ -74,13 +70,15 @@ export default function LeaseTerminatePage() {
         type: defaultType,
         terminatedAt: dayjs(today()),
         reason: '',
-        depositDeductionAmount: 0,
-        depositDeductionReason: '',
         rentAdjustmentAmount: 0,
         currentWater: 0,
         currentPower: 0,
         otherFeeAmount: 0,
         otherFeeReason: '',
+        penaltyAmount: 0,
+        penaltyReason: '',
+        compensationAmount: 0,
+        compensationReason: '',
       });
       getSettlementPreview(currentOrgId!, lease.id, today())
         .then((data) =>
@@ -95,7 +93,7 @@ export default function LeaseTerminatePage() {
     }
   }, [lease, currentOrgId, form]);
 
-  const formValues = form.getFieldsValue(true);
+  const formValues = Form.useWatch([], form);
 
   const preview = useMemo(() => {
     if (!lease)
@@ -109,11 +107,12 @@ export default function LeaseTerminatePage() {
     return computeSettlementPreview(
       lease,
       {
-        depositDeductionAmount: String(formValues.depositDeductionAmount ?? 0),
-        rentAdjustmentAmount: String(formValues.rentAdjustmentAmount ?? 0),
-        currentWater: String(formValues.currentWater ?? 0),
-        currentPower: String(formValues.currentPower ?? 0),
-        otherFeeAmount: String(formValues.otherFeeAmount ?? 0),
+        rentAdjustmentAmount: String(formValues?.rentAdjustmentAmount ?? 0),
+        currentWater: String(formValues?.currentWater ?? 0),
+        currentPower: String(formValues?.currentPower ?? 0),
+        otherFeeAmount: String(formValues?.otherFeeAmount ?? 0),
+        penaltyAmount: String(formValues?.penaltyAmount ?? 0),
+        compensationAmount: String(formValues?.compensationAmount ?? 0),
       },
       previousReadings
     );
@@ -128,7 +127,7 @@ export default function LeaseTerminatePage() {
 
     setSubmitting(true);
     try {
-      const settlement = await terminateLease(currentOrgId, lease.id, {
+      await terminateLease(currentOrgId, lease.id, {
         type: String(values.type),
         reason:
           String(values.reason || '').trim() ||
@@ -136,20 +135,19 @@ export default function LeaseTerminatePage() {
             String(values.type) as keyof typeof terminationLabels
           ],
         terminatedAt: dayjs(values.terminatedAt as string).format('YYYY-MM-DD'),
-        depositDeductionAmount: numberValue(values.depositDeductionAmount),
-        depositDeductionReason:
-          String(values.depositDeductionReason || '').trim() || undefined,
         rentAdjustmentAmount: numberValue(values.rentAdjustmentAmount),
         currentWater: numberValue(values.currentWater),
         currentPower: numberValue(values.currentPower),
         otherFeeAmount: numberValue(values.otherFeeAmount),
         otherFeeReason: String(values.otherFeeReason || '').trim() || undefined,
+        penaltyAmount: numberValue(values.penaltyAmount),
+        penaltyReason: String(values.penaltyReason || '').trim() || undefined,
+        compensationAmount: numberValue(values.compensationAmount),
+        compensationReason:
+          String(values.compensationReason || '').trim() || undefined,
       });
-      const net = Number(
-        (settlement as { netAmount: string | number }).netAmount
-      );
-      message.success(terminationResultText(net));
-      navigate('/rooms');
+      message.success('退租成功，已生成结算账单');
+      navigate('/bills');
     } catch (e) {
       message.error(e instanceof Error ? e.message : '退租失败');
     } finally {
@@ -177,61 +175,43 @@ export default function LeaseTerminatePage() {
       <Spin spinning={loading}>
         <div className={styles.leaseTerminateContainer}>
           {lease ? (
-            <Form form={form} layout="vertical" onFinish={handleSubmit}>
-              <Form.Item
-                label="退租类型"
-                name="type"
-                rules={[{ required: true }]}
-              >
-                <Radio.Group
-                  options={[
-                    { label: terminationLabels.EXPIRED, value: 'EXPIRED' },
-                    {
-                      label: terminationLabels.NEGOTIATED,
-                      value: 'NEGOTIATED',
-                    },
-                    { label: terminationLabels.BREACH, value: 'BREACH' },
-                  ]}
-                />
-              </Form.Item>
-              <Form.Item
-                label="退租日期"
-                name="terminatedAt"
-                rules={[{ required: true }]}
-              >
-                <DatePicker className="w-full" prefix={<CalendarOutlined />} />
-              </Form.Item>
+            <Card>
+              <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  退租信息
+                </Divider>
+                <div className={styles.formGrid2}>
+                  <Form.Item
+                    label="退租类型"
+                    name="type"
+                    rules={[{ required: true }]}
+                  >
+                    <Radio.Group
+                      options={[
+                        { label: terminationLabels.EXPIRED, value: 'EXPIRED' },
+                        {
+                          label: terminationLabels.NEGOTIATED,
+                          value: 'NEGOTIATED',
+                        },
+                        { label: terminationLabels.BREACH, value: 'BREACH' },
+                      ]}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    label="退租日期"
+                    name="terminatedAt"
+                    rules={[{ required: true }]}
+                  >
+                    <DatePicker
+                      className="w-full"
+                      prefix={<CalendarOutlined />}
+                    />
+                  </Form.Item>
+                </div>
 
-              <Divider orientation="left" className={styles.sectionDivider}>
-                押金与房租
-              </Divider>
-
-              <DetailSection>
-                <Row gutter={[24, 0]}>
-                  <Col span={8}>
-                    <DetailItem label="约定押金">
-                      ¥{money(lease.depositAmount)}
-                    </DetailItem>
-                  </Col>
-                  <Col span={8}>
-                    <DetailItem label="已收押金">
-                      ¥{money(lease.deposit?.paidAmount ?? 0)}
-                    </DetailItem>
-                  </Col>
-                  <Col span={8}>
-                    <DetailItem label="预计退押金">
-                      <span style={{ color: 'var(--th-success)' }}>
-                        ¥{money(preview.depositRefund)}
-                      </span>
-                    </DetailItem>
-                  </Col>
-                </Row>
-              </DetailSection>
-
-              <div className={styles.formGrid2}>
-                <Form.Item label="押金扣款" name="depositDeductionAmount">
-                  <InputNumber min={0} className="w-full" prefix="¥" />
-                </Form.Item>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  房租结算
+                </Divider>
                 <Form.Item label="房租退补" name="rentAdjustmentAmount">
                   <InputNumber
                     className="w-full"
@@ -239,32 +219,25 @@ export default function LeaseTerminatePage() {
                     placeholder="正数补收，负数退款"
                   />
                 </Form.Item>
-              </div>
-              <Form.Item label="押金扣款原因" name="depositDeductionReason">
-                <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
-              </Form.Item>
 
-              <Divider orientation="left" className={styles.sectionDivider}>
-                水电读数
-              </Divider>
-
-              <div className={styles.formGrid2}>
-                <Form.Item
-                  label={`退租水表读数（上次 ${money(previousReadings.previousWater)}）`}
-                  name="currentWater"
-                >
-                  <InputNumber min={0} className="w-full" />
-                </Form.Item>
-                <Form.Item
-                  label={`退租电表读数（上次 ${money(previousReadings.previousPower)}）`}
-                  name="currentPower"
-                >
-                  <InputNumber min={0} className="w-full" />
-                </Form.Item>
-              </div>
-
-              <DetailSection>
-                <Row gutter={[24, 0]}>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  水电结算
+                </Divider>
+                <div className={styles.formGrid2}>
+                  <Form.Item
+                    label={`退租水表读数（上次 ${money(previousReadings.previousWater)}）`}
+                    name="currentWater"
+                  >
+                    <InputNumber min={0} className="w-full" />
+                  </Form.Item>
+                  <Form.Item
+                    label={`退租电表读数（上次 ${money(previousReadings.previousPower)}）`}
+                    name="currentPower"
+                  >
+                    <InputNumber min={0} className="w-full" />
+                  </Form.Item>
+                </div>
+                <Row gutter={[24, 0]} className="mb-16">
                   <Col span={8}>
                     <DetailItem label="预估水电费">
                       <span style={{ color: 'var(--th-warning)' }}>
@@ -273,82 +246,130 @@ export default function LeaseTerminatePage() {
                     </DetailItem>
                   </Col>
                 </Row>
-              </DetailSection>
 
-              <Form.Item label="其他费用" name="otherFeeAmount">
-                <InputNumber min={0} className="w-full" prefix="¥" />
-              </Form.Item>
-              <Form.Item label="其他费用说明" name="otherFeeReason">
-                <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
-              </Form.Item>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  押金处理
+                </Divider>
+                {Number(lease.deposit?.paidAmount ?? 0) === 0 ? (
+                  <Alert
+                    message="押金未收取"
+                    type="warning"
+                    showIcon
+                    className="mb-16"
+                  />
+                ) : (
+                  <Row gutter={[24, 0]} className="mb-16">
+                    <Col span={12}>
+                      <DetailItem label="约定押金">
+                        ¥{money(lease.depositAmount)}
+                      </DetailItem>
+                    </Col>
+                    <Col span={12}>
+                      <DetailItem label="已收押金">
+                        ¥{money(lease.deposit?.paidAmount ?? 0)}
+                      </DetailItem>
+                    </Col>
+                  </Row>
+                )}
 
-              <Divider orientation="left" className={styles.sectionDivider}>
-                结算预览
-              </Divider>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  违约与赔偿
+                </Divider>
+                <div className={styles.formGrid2}>
+                  <Form.Item label="违约金" name="penaltyAmount">
+                    <InputNumber min={0} className="w-full" prefix="¥" />
+                  </Form.Item>
+                  <Form.Item label="违约金说明" name="penaltyReason">
+                    <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
+                  </Form.Item>
+                </div>
+                <div className={styles.formGrid2}>
+                  <Form.Item label="赔偿金" name="compensationAmount">
+                    <InputNumber min={0} className="w-full" prefix="¥" />
+                  </Form.Item>
+                  <Form.Item label="赔偿金说明" name="compensationReason">
+                    <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
+                  </Form.Item>
+                </div>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  其他费用
+                </Divider>
+                <div className={styles.formGrid2}>
+                  <Form.Item label="其他费用" name="otherFeeAmount">
+                    <InputNumber min={0} className="w-full" prefix="¥" />
+                  </Form.Item>
+                  <Form.Item label="其他费用说明" name="otherFeeReason">
+                    <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
+                  </Form.Item>
+                </div>
 
-              <DetailSection>
-                <Row gutter={[24, 0]}>
-                  <Col span={8}>
-                    <DetailItem label="应收">
-                      ¥{money(preview.receivable)}
-                    </DetailItem>
-                  </Col>
-                  <Col span={8}>
-                    <DetailItem label="应退">
-                      ¥{money(preview.refundable)}
-                    </DetailItem>
-                  </Col>
-                  <Col span={8}>
-                    <DetailItem label="结算结果">
-                      <span
-                        style={{
-                          color: netColor,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {preview.net > 0
-                          ? `租客补交 ¥${money(preview.net)}`
-                          : preview.net < 0
-                            ? `退租客 ¥${money(Math.abs(preview.net))}`
-                            : '结清'}
-                      </span>
-                    </DetailItem>
-                  </Col>
-                </Row>
-              </DetailSection>
+                <Divider orientation="left" className={styles.sectionDivider}>
+                  结算预览
+                </Divider>
+                <div className={styles.settlementPreview}>
+                  <Row gutter={[24, 0]}>
+                    <Col span={8}>
+                      <DetailItem label="应收">
+                        ¥{money(preview.receivable)}
+                      </DetailItem>
+                    </Col>
+                    <Col span={8}>
+                      <DetailItem label="应退">
+                        ¥{money(preview.refundable)}
+                      </DetailItem>
+                    </Col>
+                    <Col span={8}>
+                      <DetailItem label="结算结果">
+                        <span
+                          style={{
+                            color: netColor,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {preview.net > 0
+                            ? `租客补交 ¥${money(preview.net)}`
+                            : preview.net < 0
+                              ? `退租客 ¥${money(Math.abs(preview.net))}`
+                              : '结清'}
+                        </span>
+                      </DetailItem>
+                    </Col>
+                  </Row>
+                </div>
 
-              <Form.Item label="退租原因" name="reason">
-                <Input.TextArea rows={2} placeholder="可选" />
-              </Form.Item>
+                <Form.Item label="退租原因" name="reason">
+                  <Input.TextArea rows={2} placeholder="可选" />
+                </Form.Item>
 
-              {lease.isAutoRenewalPeriod && (
-                <Alert
-                  message="当前租约已进入自动续约期，到期后退房不默认视为违约。"
-                  type="info"
-                  showIcon
-                  className="mb-16"
-                />
-              )}
+                {lease.isAutoRenewalPeriod && (
+                  <Alert
+                    message="当前租约已进入自动续约期，到期后退房不默认视为违约。"
+                    type="info"
+                    showIcon
+                    className="mb-16"
+                  />
+                )}
 
-              <Form.Item className={styles.formActions}>
-                <Button
-                  type="primary"
-                  danger
-                  htmlType="submit"
-                  icon={<CheckOutlined />}
-                  loading={submitting}
-                  disabled={submitting}
-                >
-                  确认终止合约
-                </Button>
-                <Button
-                  className={styles.cancelBtn}
-                  onClick={() => navigate('/rooms')}
-                >
-                  取消
-                </Button>
-              </Form.Item>
-            </Form>
+                <Form.Item className={styles.formActions}>
+                  <Button
+                    type="primary"
+                    danger
+                    htmlType="submit"
+                    icon={<CheckOutlined />}
+                    loading={submitting}
+                    disabled={submitting}
+                  >
+                    确认终止合约
+                  </Button>
+                  <Button
+                    className={styles.cancelBtn}
+                    onClick={() => navigate('/rooms')}
+                  >
+                    取消
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Card>
           ) : (
             <EmptyState
               title="租约不存在或已结束"

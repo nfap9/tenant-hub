@@ -107,8 +107,6 @@ export const emptyTerminationForm = {
   type: 'NEGOTIATED' as TerminationType,
   terminatedAt: '',
   reason: '',
-  depositDeductionAmount: '0',
-  depositDeductionReason: '',
   rentAdjustmentAmount: '0',
   currentWater: '0',
   currentPower: '0',

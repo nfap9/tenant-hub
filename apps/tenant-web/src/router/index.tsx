@@ -37,9 +37,6 @@ const LeaseTerminatePage = lazy(
 
 // 租约
 const LeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
-const SettlementsPage = lazy(
-  () => import('@/pages/settlements/SettlementsPage')
-);
 
 // 押金
 const DepositsPage = lazy(() => import('@/pages/deposits/DepositsPage'));
@@ -55,7 +52,6 @@ const UtilityPage = lazy(() => import('@/pages/bills/UtilityPage'));
 const UtilityImportPage = lazy(() => import('@/pages/bills/UtilityImportPage'));
 const UtilityExportPage = lazy(() => import('@/pages/bills/UtilityExportPage'));
 const MonthlyDetailPage = lazy(() => import('@/pages/bills/MonthlyDetailPage'));
-const EditItemPage = lazy(() => import('@/pages/bills/EditItemPage'));
 
 // 设置
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
@@ -234,15 +230,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-          <Route
-            path="/settlements"
-            element={
-              <RequireOrg>
-                <SettlementsPage />
-              </RequireOrg>
-            }
-          />
-
           {/* 房间 */}
           <Route
             path="/rooms"
@@ -376,15 +363,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-          <Route
-            path="/bills/items/:id/edit"
-            element={
-              <RequireOrg>
-                <EditItemPage />
-              </RequireOrg>
-            }
-          />
-
           {/* 设置 */}
           <Route path="/settings" element={<SettingsPage />} />
           <Route

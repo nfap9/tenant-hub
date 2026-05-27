@@ -5,16 +5,16 @@ import type { LeaseFeeFormItem, TerminationType } from './constants';
 export const computeSettlementPreview = (
   lease: Lease,
   terminationForm: {
-    depositDeductionAmount: string;
     rentAdjustmentAmount: string;
     currentWater: string;
     currentPower: string;
     otherFeeAmount: string;
+    penaltyAmount: string;
+    compensationAmount: string;
   },
   previousReadings: { previousWater: number; previousPower: number }
 ) => {
-  const deposit = Number(lease.depositAmount ?? 0);
-  const depositDeduction = numberValue(terminationForm.depositDeductionAmount);
+  const depositPaid = Number(lease.deposit?.paidAmount ?? 0);
   const rentAdjustment = numberValue(terminationForm.rentAdjustmentAmount);
   const water =
     Math.max(
@@ -30,13 +30,16 @@ export const computeSettlementPreview = (
     ) * Number(lease.powerUnitPrice ?? 0);
   const utility = water + power;
   const otherFee = numberValue(terminationForm.otherFeeAmount);
-  const depositRefund = Math.max(deposit - depositDeduction, 0);
+  const penalty = numberValue(terminationForm.penaltyAmount);
+  const compensation = numberValue(terminationForm.compensationAmount);
+  const rentReceivable = Math.max(rentAdjustment, 0);
+  const rentRefund = Math.max(-rentAdjustment, 0);
   const receivable =
-    Math.max(rentAdjustment, 0) + utility + otherFee + depositDeduction;
-  const refundable = depositRefund + Math.max(-rentAdjustment, 0);
+    rentReceivable + utility + otherFee + penalty + compensation;
+  const refundable = depositPaid + rentRefund;
   return {
     utility,
-    depositRefund,
+    depositRefund: depositPaid,
     receivable,
     refundable,
     net: receivable - refundable,

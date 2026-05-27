@@ -235,7 +235,7 @@ export type Deposit = {
   note?: string;
   createdAt: string;
   updatedAt: string;
-  lease?: Lease & { room?: Room };
+  lease?: Lease & { room?: Room; bills?: Bill[] };
   bill?: Bill & { payments?: Payment[] };
 };
 
@@ -275,8 +275,6 @@ export type LeaseSettlement = {
   reason?: string;
   terminatedAt: string;
   depositAmount: string | number;
-  depositDeductionAmount: string | number;
-  depositDeductionReason?: string;
   depositRefundAmount: string | number;
   rentAdjustmentAmount: string | number;
   previousWater: string | number;
@@ -288,12 +286,18 @@ export type LeaseSettlement = {
   utilityAmount: string | number;
   otherFeeAmount: string | number;
   otherFeeReason?: string;
+  penaltyAmount: string | number;
+  penaltyReason?: string;
+  compensationAmount: string | number;
+  compensationReason?: string;
   receivableAmount: string | number;
   refundableAmount: string | number;
   netAmount: string | number;
   status: SettlementStatus;
   lease?: Lease & { room?: Room; fees?: LeaseFee[] };
   room?: Room;
+  billId?: string;
+  bill?: Bill;
   payments?: SettlementPayment[];
   createdAt?: string;
 };

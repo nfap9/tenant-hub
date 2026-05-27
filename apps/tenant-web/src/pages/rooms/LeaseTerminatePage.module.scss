@@ -1,41 +1,20 @@
-.lease-terminate-container {
+.leaseTerminateContainer {
   max-width: 720px;
+  margin: 0 auto;
 }
 
-.form-grid-2 {
+.formGrid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.section-divider {
+.sectionDivider {
   color: var(--th-foreground-muted);
   font-weight: 600;
 }
 
-.summary-row {
-  padding: 0 8px;
-}
-
-.summary-result {
-  padding-top: 8px;
-  border-top: 1px solid var(--th-border);
-}
-
-.summary-value {
-  font-weight: 500;
-  color: var(--th-foreground);
-}
-
-.summary-value.text-success {
-  color: var(--th-success);
-}
-
-.summary-value.text-warning {
-  color: var(--th-warning);
-}
-
-.settlement-preview {
+.settlementPreview {
   background: var(--th-surface-hover);
   padding: 16px;
   border-radius: var(--th-radius-sm);
@@ -43,14 +22,10 @@
   border: 1px solid var(--th-border-light);
 }
 
-.summary-net {
-  font-weight: 600;
-}
-
-.form-actions {
+.formActions {
   margin-top: 24px;
 }
 
-.cancel-btn {
+.cancelBtn {
   margin-left: 12px;
 }
