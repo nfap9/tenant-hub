@@ -1,4 +1,4 @@
-import { Card, List, Avatar, Button, Tag, Modal, Row, Col } from 'antd';
+import { Card, Avatar, Button, Tag, Modal, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   TeamOutlined,
@@ -95,24 +95,21 @@ export default function SettingsPage() {
 
         <div className={styles.divider} />
 
-        <List
-          itemLayout="horizontal"
-          dataSource={menuItems}
-          renderItem={(item) => (
-            <List.Item
+        <div>
+          {menuItems.map((item) => (
+            <div
+              key={item.path}
               className={styles.settingsMenuItem}
               onClick={() => navigate(item.path)}
-              actions={[<RightOutlined key="arrow" className="text-subtle" />]}
             >
-              <List.Item.Meta
-                avatar={
-                  <Avatar icon={item.icon} className={styles.menuAvatar} />
-                }
-                title={<span className={styles.menuTitle}>{item.title}</span>}
-              />
-            </List.Item>
-          )}
-        />
+              <div className={styles.menuItemContent}>
+                <Avatar icon={item.icon} className={styles.menuAvatar} />
+                <span className={styles.menuTitle}>{item.title}</span>
+              </div>
+              <RightOutlined className="text-subtle" />
+            </div>
+          ))}
+        </div>
 
         <div className={styles.divider} />
 

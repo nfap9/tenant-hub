@@ -38,6 +38,19 @@
   cursor: pointer;
   padding: $th-space-4 $th-space-6;
   transition: $th-transition;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &:hover {
+    background-color: $th-surface-hover;
+  }
+}
+
+.menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: $th-space-4;
 }
 
 .menu-avatar {
