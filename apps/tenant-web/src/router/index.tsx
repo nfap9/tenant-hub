@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
-import { Spin, Empty } from 'antd';
+import { Spin, Empty, Button, Space } from 'antd';
+import { BuildOutlined, UserAddOutlined } from '@ant-design/icons';
 import MainLayout from '@/layout/MainLayout';
 import { useAppSession } from '@/context/AppSessionContext';
 import styles from './router.module.scss';
@@ -120,6 +121,7 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
 
 function RequireOrg({ children }: { children: React.ReactNode }) {
   const { memberships, loading } = useAppSession();
+  const navigate = useNavigate();
 
   if (loading) {
     return <PageLoading />;
@@ -128,7 +130,23 @@ function RequireOrg({ children }: { children: React.ReactNode }) {
   if (memberships.length === 0) {
     return (
       <div className={styles.centerEmpty}>
-        <Empty description="请先创建或加入组织" />
+        <Empty description="请先创建或加入组织">
+          <Space className={styles.noOrgActions}>
+            <Button
+              icon={<UserAddOutlined />}
+              onClick={() => navigate('/settings/organization?action=join')}
+            >
+              加入组织
+            </Button>
+            <Button
+              type="primary"
+              icon={<BuildOutlined />}
+              onClick={() => navigate('/settings/organization?action=create')}
+            >
+              创建组织
+            </Button>
+          </Space>
+        </Empty>
       </div>
     );
   }

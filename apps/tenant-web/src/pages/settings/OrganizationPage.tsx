@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Card,
   Form,
@@ -6,16 +7,16 @@ import {
   Button,
   List,
   Tag,
-  Tabs,
   message,
   Table,
+  Modal,
+  Space,
 } from 'antd';
 import {
   PlusOutlined,
   CopyOutlined,
   HomeOutlined,
   UserAddOutlined,
-  TeamOutlined,
   BuildOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
@@ -33,15 +34,30 @@ import clsx from 'clsx';
 
 export default function OrganizationPage() {
   const { memberships, currentOrgId, reload } = useAppSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [createForm] = Form.useForm();
   const [joinForm] = Form.useForm();
   const [createLoading, setCreateLoading] = useState(false);
   const [joinLoading, setJoinLoading] = useState(false);
   const [invites, setInvites] = useState<OrgInvite[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('my-orgs');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
 
   const isInOrg = Boolean(currentOrgId);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create') {
+      setCreateModalOpen(true);
+    } else if (action === 'join') {
+      setJoinModalOpen(true);
+    }
+    // 清除 query param 避免刷新后重复触发
+    if (action) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (isInOrg && currentOrgId) {
@@ -72,7 +88,7 @@ export default function OrganizationPage() {
       message.success('组织创建成功');
       createForm.resetFields();
       await reload();
-      setActiveTab('my-orgs');
+      setCreateModalOpen(false);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '创建失败');
     } finally {
@@ -87,7 +103,7 @@ export default function OrganizationPage() {
       message.success('加入组织成功');
       joinForm.resetFields();
       await reload();
-      setActiveTab('my-orgs');
+      setJoinModalOpen(false);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加入失败');
     } finally {
@@ -142,202 +158,188 @@ export default function OrganizationPage() {
           { label: '设置', path: '/settings' },
           { label: '组织管理' },
         ]}
+        actions={
+          <Space>
+            <Button
+              icon={<UserAddOutlined />}
+              onClick={() => setJoinModalOpen(true)}
+            >
+              加入组织
+            </Button>
+            <Button
+              type="primary"
+              icon={<BuildOutlined />}
+              onClick={() => setCreateModalOpen(true)}
+            >
+              创建组织
+            </Button>
+          </Space>
+        }
       />
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={[
-          {
-            key: 'my-orgs',
-            label: (
-              <span className={styles.tabLabel}>
-                <TeamOutlined />
-                我的组织
-              </span>
-            ),
-            children: (
-              <div className="page-content">
-                {memberships.length > 0 ? (
-                  <Card
-                    className={clsx(
-                      styles.settingsCard,
-                      styles.settingsCardSpaced
-                    )}
-                  >
-                    <Table
-                      dataSource={memberships}
-                      columns={orgColumns}
-                      rowKey={(record: Membership) => record.organization.id}
-                      pagination={false}
-                      scroll={{ x: 'max-content' }}
-                    />
-                  </Card>
-                ) : (
-                  <Card
-                    className={clsx(
-                      styles.settingsCard,
-                      styles.settingsCardSpaced
-                    )}
-                  >
-                    <EmptyState
-                      title="暂无组织"
-                      description="您还没有加入任何组织，请先创建或加入一个组织"
-                    />
-                  </Card>
-                )}
-
-                {isInOrg && (
-                  <Card
-                    title={
-                      <span className={styles.settingsCardTitle}>
-                        <UserAddOutlined />
-                        邀请码管理
-                      </span>
-                    }
-                    className={styles.settingsCard}
-                  >
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={handleCreateInvite}
-                      loading={inviteLoading}
-                      className="mb-16"
-                    >
-                      创建邀请码
-                    </Button>
-                    {invites.length > 0 ? (
-                      <List
-                        size="small"
-                        dataSource={invites}
-                        renderItem={(invite) => (
-                          <List.Item
-                            actions={[
-                              <Button
-                                key="copy"
-                                type="link"
-                                icon={<CopyOutlined />}
-                                onClick={() => copyInviteCode(invite.code)}
-                              >
-                                复制
-                              </Button>,
-                            ]}
-                          >
-                            <div className="page-content">
-                              <div className={styles.inviteCode}>
-                                {invite.code}
-                              </div>
-                              <div className={styles.inviteMeta}>
-                                有效期至{' '}
-                                {invite.expiresAt
-                                  .slice(0, 16)
-                                  .replace('T', ' ')}{' '}
-                                · 已用 {invite.usedCount}/{invite.maxUses}
-                              </div>
-                            </div>
-                          </List.Item>
-                        )}
-                      />
-                    ) : (
-                      <EmptyState
-                        title="暂无邀请码"
-                        description="点击上方按钮创建邀请码"
-                        action={{
-                          label: '创建邀请码',
-                          onClick: handleCreateInvite,
-                        }}
-                      />
-                    )}
-                  </Card>
-                )}
-              </div>
-            ),
-          },
-          {
-            key: 'create',
-            label: (
-              <span className={styles.tabLabel}>
-                <BuildOutlined />
-                创建组织
-              </span>
-            ),
-            children: (
-              <Card className={styles.settingsCard}>
-                <Form
-                  form={createForm}
-                  layout="vertical"
-                  onFinish={handleCreate}
-                  className={styles.settingsForm}
-                >
-                  <Form.Item
-                    label="组织名称"
-                    name="name"
-                    rules={[{ required: true, message: '请输入组织名称' }]}
-                  >
-                    <Input
-                      prefix={<HomeOutlined className="text-subtle" />}
-                      placeholder="例如：阳光公寓"
-                    />
-                  </Form.Item>
-                  <Form.Item label="组织描述（可选）" name="description">
-                    <Input.TextArea
-                      placeholder="简要描述你的组织"
-                      rows={3}
-                      className="w-full"
-                    />
-                  </Form.Item>
-                  <Form.Item>
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={createLoading}
-                      icon={<PlusOutlined />}
-                    >
-                      创建组织
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </Card>
-            ),
-          },
-          {
-            key: 'join',
-            label: (
-              <span className={styles.tabLabel}>
-                <UserAddOutlined />
+      <Card className={clsx(styles.settingsCard, styles.settingsCardSpaced)}>
+        {memberships.length > 0 ? (
+          <Table
+            dataSource={memberships}
+            columns={orgColumns}
+            rowKey={(record: Membership) => record.organization.id}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+          />
+        ) : (
+          <div className={styles.emptyOrgState}>
+            <EmptyState
+              title="暂无组织"
+              description="您还没有加入任何组织，请先创建或加入一个组织"
+            />
+            <Space className={styles.emptyOrgActions}>
+              <Button
+                icon={<UserAddOutlined />}
+                onClick={() => setJoinModalOpen(true)}
+              >
                 加入组织
-              </span>
-            ),
-            children: (
-              <Card className={styles.settingsCard}>
-                <Form
-                  form={joinForm}
-                  layout="vertical"
-                  onFinish={handleJoin}
-                  className={styles.settingsForm}
-                >
-                  <Form.Item
-                    label="邀请码"
-                    name="inviteCode"
-                    rules={[{ required: true, message: '请输入邀请码' }]}
-                  >
-                    <Input placeholder="请输入邀请码" className="w-full" />
-                  </Form.Item>
-                  <Form.Item>
+              </Button>
+              <Button
+                type="primary"
+                icon={<BuildOutlined />}
+                onClick={() => setCreateModalOpen(true)}
+              >
+                创建组织
+              </Button>
+            </Space>
+          </div>
+        )}
+      </Card>
+
+      {isInOrg && (
+        <Card
+          title={
+            <span className={styles.settingsCardTitle}>
+              <UserAddOutlined />
+              邀请码管理
+            </span>
+          }
+          className={styles.settingsCard}
+        >
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreateInvite}
+            loading={inviteLoading}
+            className="mb-16"
+          >
+            创建邀请码
+          </Button>
+          {invites.length > 0 ? (
+            <List
+              size="small"
+              dataSource={invites}
+              renderItem={(invite) => (
+                <List.Item
+                  actions={[
                     <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={joinLoading}
+                      key="copy"
+                      type="link"
+                      icon={<CopyOutlined />}
+                      onClick={() => copyInviteCode(invite.code)}
                     >
-                      加入组织
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </Card>
-            ),
-          },
-        ]}
-      />
+                      复制
+                    </Button>,
+                  ]}
+                >
+                  <div className="page-content">
+                    <div className={styles.inviteCode}>{invite.code}</div>
+                    <div className={styles.inviteMeta}>
+                      有效期至 {invite.expiresAt.slice(0, 16).replace('T', ' ')}{' '}
+                      · 已用 {invite.usedCount}/{invite.maxUses}
+                    </div>
+                  </div>
+                </List.Item>
+              )}
+            />
+          ) : (
+            <EmptyState
+              title="暂无邀请码"
+              description="点击上方按钮创建邀请码"
+              action={{
+                label: '创建邀请码',
+                onClick: handleCreateInvite,
+              }}
+            />
+          )}
+        </Card>
+      )}
+
+      <Modal
+        title="创建组织"
+        open={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={createForm}
+          layout="vertical"
+          onFinish={handleCreate}
+          className={styles.settingsForm}
+        >
+          <Form.Item
+            label="组织名称"
+            name="name"
+            rules={[{ required: true, message: '请输入组织名称' }]}
+          >
+            <Input
+              prefix={<HomeOutlined className="text-subtle" />}
+              placeholder="例如：阳光公寓"
+            />
+          </Form.Item>
+          <Form.Item label="组织描述（可选）" name="description">
+            <Input.TextArea
+              placeholder="简要描述你的组织"
+              rows={3}
+              className="w-full"
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={createLoading}
+              icon={<PlusOutlined />}
+            >
+              创建组织
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="加入组织"
+        open={joinModalOpen}
+        onCancel={() => setJoinModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={joinForm}
+          layout="vertical"
+          onFinish={handleJoin}
+          className={styles.settingsForm}
+        >
+          <Form.Item
+            label="邀请码"
+            name="inviteCode"
+            rules={[{ required: true, message: '请输入邀请码' }]}
+          >
+            <Input placeholder="请输入邀请码" className="w-full" />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={joinLoading}>
+              加入组织
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

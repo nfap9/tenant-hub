@@ -1,79 +1,59 @@
-.apartment-detail-page {
-  .action-group {
-    display: flex;
-    gap: 8px;
-  }
+.action-group {
+  display: flex;
+  gap: 8px;
+}
 
-  .detail-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 24px;
-  }
+.expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-  .flex-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--th-radius-sm);
+  background: var(--th-surface-hover);
+}
 
-  .info-card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
+.expense-amount {
+  font-weight: 600;
+  color: var(--th-danger);
+}
 
-  .info-label {
-    min-width: 70px;
-    color: var(--th-foreground-muted);
-  }
+.rooms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
-  .info-value {
-    font-weight: 500;
-  }
+.rooms-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
-  .expense-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+.rooms-title-text {
+  font-family: var(--th-font-heading);
+  font-weight: 600;
+}
 
-  .expense-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    border-radius: var(--th-radius-sm);
-    background: var(--th-surface-hover);
-  }
+.rooms-stats {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--th-foreground-muted);
+}
 
-  .expense-amount {
-    font-weight: 600;
-    color: var(--th-danger);
-  }
-
-  .rooms-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .rooms-title-text {
-    font-family: var(--th-font-heading);
-    font-weight: 600;
-  }
-
-  .rooms-stats {
-    display: flex;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--th-foreground-muted);
-  }
-
-  .rooms-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 20px;
-  }
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
 }

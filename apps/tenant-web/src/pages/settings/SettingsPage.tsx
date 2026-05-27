@@ -1,4 +1,4 @@
-import { Card, List, Avatar, Button, Tag, Descriptions, Modal } from 'antd';
+import { Card, List, Avatar, Button, Tag, Modal, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   TeamOutlined,
@@ -10,6 +10,8 @@ import {
 import { useAppSession } from '@/context/AppSessionContext';
 import { message } from 'antd';
 import PageHeader from '@/components/ui/PageHeader';
+import DetailSection from '@/components/ui/DetailSection';
+import DetailItem from '@/components/ui/DetailItem';
 import styles from './SettingsPage.module.scss';
 
 export default function SettingsPage() {
@@ -69,15 +71,26 @@ export default function SettingsPage() {
             <div className={styles.profilePhone}>{session?.user?.phone}</div>
           </div>
         </div>
+
+        <div className={styles.divider} />
+
         {currentMembership && (
-          <Descriptions size="small" column={2}>
-            <Descriptions.Item label="当前组织">
-              <Tag color="success">{currentMembership.organization.name}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="角色">
-              <Tag>{currentMembership.role.name}</Tag>
-            </Descriptions.Item>
-          </Descriptions>
+          <DetailSection title="当前组织信息" className={styles.orgInfoSection}>
+            <Row gutter={[24, 0]}>
+              <Col span={12}>
+                <DetailItem label="当前组织">
+                  <Tag color="success">
+                    {currentMembership.organization.name}
+                  </Tag>
+                </DetailItem>
+              </Col>
+              <Col span={12}>
+                <DetailItem label="角色">
+                  <Tag>{currentMembership.role.name}</Tag>
+                </DetailItem>
+              </Col>
+            </Row>
+          </DetailSection>
         )}
 
         <div className={styles.divider} />

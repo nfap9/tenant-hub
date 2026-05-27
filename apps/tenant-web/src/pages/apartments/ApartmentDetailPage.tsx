@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Card, Button, Tabs, message, Popconfirm, Spin } from 'antd';
+import { Button, Tabs, message, Popconfirm, Spin, Row, Col } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   EditOutlined,
@@ -7,12 +7,7 @@ import {
   PlusOutlined,
   AppstoreAddOutlined,
   HomeOutlined,
-  EnvironmentOutlined,
-  BuildOutlined,
-  AreaChartOutlined,
   UserOutlined,
-  PhoneOutlined,
-  CalendarOutlined,
   DollarOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
@@ -23,8 +18,9 @@ import { contractText } from './utils';
 import RoomCard from '@/components/rooms/RoomCard';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import DetailSection from '@/components/ui/DetailSection';
+import DetailItem from '@/components/ui/DetailItem';
 import styles from './ApartmentDetailPage.module.scss';
-import clsx from 'clsx';
 
 export default function ApartmentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -95,48 +91,22 @@ export default function ApartmentDetailPage() {
             { label: '公寓详情' },
           ]}
         />
-        <Card>
-          <EmptyState
-            title="公寓不存在或已删除"
-            description="该公寓可能已被删除或您没有访问权限"
-          />
-        </Card>
+        <EmptyState
+          title="公寓不存在或已删除"
+          description="该公寓可能已被删除或您没有访问权限"
+        />
       </div>
     );
   }
 
   return (
-    <div className={clsx(styles.apartmentDetailPage, 'page-content')}>
+    <div className="page-content">
       <PageHeader
         back="/apartments"
         breadcrumb={[
           { label: '公寓管理', path: '/apartments' },
           { label: apartment.name },
         ]}
-        actions={
-          canManageApartment && (
-            <div className={styles.actionGroup}>
-              <Button
-                icon={<EditOutlined />}
-                onClick={() => navigate(`/apartments/${id}/edit`)}
-              >
-                编辑
-              </Button>
-              <Popconfirm
-                title="删除公寓"
-                description="删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。"
-                onConfirm={handleDeleteApartment}
-                okText="确认删除"
-                cancelText="取消"
-                okButtonProps={{ danger: true }}
-              >
-                <Button danger icon={<DeleteOutlined />}>
-                  删除
-                </Button>
-              </Popconfirm>
-            </div>
-          )
-        }
       />
 
       <Spin spinning={loading}>
@@ -146,99 +116,104 @@ export default function ApartmentDetailPage() {
               key: 'detail',
               label: '公寓详情',
               children: (
-                <div className={styles.detailGrid}>
-                  <Card
+                <>
+                  <DetailSection
                     title={
-                      <div className={styles.flexRow}>
-                        <HomeOutlined className="text-primary" />
-                        基本信息
-                      </div>
+                      <>
+                        <HomeOutlined className="text-primary" /> 基本信息
+                      </>
+                    }
+                    actions={
+                      canManageApartment && (
+                        <>
+                          <Button
+                            icon={<EditOutlined />}
+                            onClick={() => navigate(`/apartments/${id}/edit`)}
+                          >
+                            编辑
+                          </Button>
+                          <Popconfirm
+                            title="删除公寓"
+                            description="删除后公寓及下属所有房间资料不可恢复，请确认当前公寓没有有效租约。"
+                            onConfirm={handleDeleteApartment}
+                            okText="确认删除"
+                            cancelText="取消"
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button danger icon={<DeleteOutlined />}>
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        </>
+                      )
                     }
                   >
-                    <div className={styles.infoCardBody}>
-                      <div className={styles.flexRow}>
-                        <EnvironmentOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>地址</span>
-                        <span className={styles.infoValue}>
+                    <Row gutter={[24, 0]}>
+                      <Col span={8}>
+                        <DetailItem label="地址">
                           {apartment.location || '未填写'}
-                        </span>
-                      </div>
-                      <div className={styles.flexRow}>
-                        <BuildOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>楼层数</span>
-                        <span className={styles.infoValue}>
+                        </DetailItem>
+                      </Col>
+                      <Col span={8}>
+                        <DetailItem label="楼层数">
                           {apartment.floors} 层
-                        </span>
-                      </div>
-                      <div className={styles.flexRow}>
-                        <AreaChartOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>占地面积</span>
-                        <span className={styles.infoValue}>
+                        </DetailItem>
+                      </Col>
+                      <Col span={8}>
+                        <DetailItem label="占地面积">
                           {apartment.landArea
                             ? `${apartment.landArea} ㎡`
                             : '未填'}
-                        </span>
-                      </div>
-                      <div className={styles.flexRow}>
-                        <AreaChartOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>总面积</span>
-                        <span className={styles.infoValue}>
+                        </DetailItem>
+                      </Col>
+                      <Col span={8}>
+                        <DetailItem label="总面积">
                           {apartment.totalArea
                             ? `${apartment.totalArea} ㎡`
                             : '未填'}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
+                        </DetailItem>
+                      </Col>
+                    </Row>
+                  </DetailSection>
 
-                  <Card
+                  <DetailSection
                     title={
-                      <div className={styles.flexRow}>
-                        <UserOutlined className="text-primary" />
-                        上游信息
-                      </div>
+                      <>
+                        <UserOutlined className="text-primary" /> 上游信息
+                      </>
                     }
                   >
-                    <div className={styles.infoCardBody}>
-                      <div className={styles.flexRow}>
-                        <UserOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>房东姓名</span>
-                        <span className={styles.infoValue}>
+                    <Row gutter={[24, 0]}>
+                      <Col span={8}>
+                        <DetailItem label="房东姓名">
                           {apartment.landlordName || '未维护'}
-                        </span>
-                      </div>
-                      <div className={styles.flexRow}>
-                        <PhoneOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>联系方式</span>
-                        <span className={styles.infoValue}>
+                        </DetailItem>
+                      </Col>
+                      <Col span={8}>
+                        <DetailItem label="联系方式">
                           {apartment.landlordPhone || '未维护'}
-                        </span>
-                      </div>
-                      <div className={styles.flexRow}>
-                        <CalendarOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>合同期</span>
-                        <span className={styles.infoValue}>
+                        </DetailItem>
+                      </Col>
+                      <Col span={8}>
+                        <DetailItem label="合同期">
                           {contractText(apartment)}
-                        </span>
-                      </div>
-                      <div className={styles.flexRow}>
-                        <DollarOutlined className="text-subtle" />
-                        <span className={styles.infoLabel}>上游租金</span>
-                        <span className={styles.infoValue}>
+                        </DetailItem>
+                      </Col>
+                      <Col span={8}>
+                        <DetailItem label="上游租金">
                           ¥{money(apartment.rentAmount)}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
+                        </DetailItem>
+                      </Col>
+                    </Row>
+                  </DetailSection>
 
-                  <Card
+                  <DetailSection
                     title={
-                      <div className={styles.flexRow}>
-                        <DollarOutlined className="text-primary" />
-                        经营花费
-                      </div>
+                      <>
+                        <DollarOutlined className="text-primary" /> 经营花费
+                      </>
                     }
-                    extra={
+                    actions={
                       canManageApartment && (
                         <Button
                           type="primary"
@@ -279,16 +254,16 @@ export default function ApartmentDetailPage() {
                         ))}
                       </div>
                     )}
-                  </Card>
-                </div>
+                  </DetailSection>
+                </>
               ),
             },
             {
               key: 'rooms',
               label: `房间列表 (${apartmentRooms.length})`,
               children: (
-                <Card
-                  title={
+                <div>
+                  <div className={styles.roomsHeader}>
                     <div className={styles.roomsTitle}>
                       <span className={styles.roomsTitleText}>房间概览</span>
                       <div className={styles.roomsStats}>
@@ -303,9 +278,7 @@ export default function ApartmentDetailPage() {
                         </span>
                       </div>
                     </div>
-                  }
-                  extra={
-                    canManageRoom && (
+                    {canManageRoom && (
                       <div className={styles.actionGroup}>
                         <Button
                           icon={<PlusOutlined />}
@@ -324,9 +297,8 @@ export default function ApartmentDetailPage() {
                           批量添加
                         </Button>
                       </div>
-                    )
-                  }
-                >
+                    )}
+                  </div>
                   {apartmentRooms.length === 0 ? (
                     <EmptyState
                       title="暂无房间"
@@ -352,7 +324,7 @@ export default function ApartmentDetailPage() {
                       ))}
                     </div>
                   )}
-                </Card>
+                </div>
               ),
             },
           ]}

@@ -1,21 +1,27 @@
-import { useEffect } from 'react';
-import { Card, Form, Input, Button, message } from 'antd';
+import { useState, useEffect } from 'react';
+import { Form, Input, Button, message, Modal, Space, Row, Col } from 'antd';
 import {
   SaveOutlined,
   LockOutlined,
   UserOutlined,
   MobileOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { updatePassword } from '@/api/auth';
 import PageHeader from '@/components/ui/PageHeader';
+import DetailSection from '@/components/ui/DetailSection';
+import DetailItem from '@/components/ui/DetailItem';
 import styles from './AccountPage.module.scss';
-import clsx from 'clsx';
 
 export default function AccountPage() {
   const { session } = useAppSession();
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
     if (session?.user) {
@@ -27,11 +33,15 @@ export default function AccountPage() {
   }, [session, form]);
 
   const handleUpdateProfile = async (_values: { username: string }) => {
+    setProfileLoading(true);
     try {
       // 目前后端没有独立的更新用户名接口，预留此处
       message.success('保存成功');
+      setProfileModalOpen(false);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -40,6 +50,7 @@ export default function AccountPage() {
     newPassword: string;
     confirmPassword: string;
   }) => {
+    setPasswordLoading(true);
     try {
       await updatePassword({
         currentPassword: values.currentPassword,
@@ -48,8 +59,11 @@ export default function AccountPage() {
       });
       message.success('密码已更新');
       passwordForm.resetFields();
+      setPasswordModalOpen(false);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '密码更新失败');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -63,14 +77,51 @@ export default function AccountPage() {
         ]}
       />
 
-      <Card
-        className={clsx(styles.settingsCard, styles.settingsCardSpaced)}
+      <DetailSection
         title={
           <span className={styles.settingsCardTitle}>
             <UserOutlined />
-            基本信息
+            账号信息
           </span>
         }
+        actions={
+          <Space>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => setProfileModalOpen(true)}
+            >
+              修改信息
+            </Button>
+            <Button
+              type="primary"
+              icon={<LockOutlined />}
+              onClick={() => setPasswordModalOpen(true)}
+            >
+              修改密码
+            </Button>
+          </Space>
+        }
+      >
+        <Row gutter={[24, 0]}>
+          <Col span={12}>
+            <DetailItem label="用户名">
+              {session?.user?.username || '-'}
+            </DetailItem>
+          </Col>
+          <Col span={12}>
+            <DetailItem label="手机号">
+              {session?.user?.phone || '-'}
+            </DetailItem>
+          </Col>
+        </Row>
+      </DetailSection>
+
+      <Modal
+        title="修改信息"
+        open={profileModalOpen}
+        onCancel={() => setProfileModalOpen(false)}
+        footer={null}
+        destroyOnClose
       >
         <Form
           form={form}
@@ -88,21 +139,24 @@ export default function AccountPage() {
             />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={profileLoading}
+              icon={<SaveOutlined />}
+            >
               保存
             </Button>
           </Form.Item>
         </Form>
-      </Card>
+      </Modal>
 
-      <Card
-        className={styles.settingsCard}
-        title={
-          <span className={styles.settingsCardTitle}>
-            <LockOutlined />
-            修改密码
-          </span>
-        }
+      <Modal
+        title="修改密码"
+        open={passwordModalOpen}
+        onCancel={() => setPasswordModalOpen(false)}
+        footer={null}
+        destroyOnClose
       >
         <Form
           form={passwordForm}
@@ -154,12 +208,17 @@ export default function AccountPage() {
             />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={passwordLoading}
+              icon={<SaveOutlined />}
+            >
               更新密码
             </Button>
           </Form.Item>
         </Form>
-      </Card>
+      </Modal>
     </div>
   );
 }

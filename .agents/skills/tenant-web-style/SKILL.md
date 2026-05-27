@@ -36,7 +36,9 @@ description: 约束 Tenant Hub Web 管理后台（apps/tenant-web）的视觉样
 
 ## 卡片与阴影
 
-全局 `.ant-card` 统一应用阴影：
+**减少卡片堆砌：**如无明确要求不要使用卡片效果
+
+卡片效果使用 `.ant-card` 统一应用阴影：
 
 ```css
 box-shadow:
@@ -44,12 +46,6 @@ box-shadow:
   0 1px 3px -1px rgb(0 0 0 / 0.1);
 border: 1px solid var(--th-border-light);
 ```
-
-**减少卡片堆砌**：
-
-- **列表页**：Table 直接展示，**不要**外加 `<Card>` 包裹
-- **设置/配置页**：同类信息合并到一个 Card 内，用分割线分隔
-- **运营后台列表页**：组织列表、租户列表等直接展示 Table，去掉外层 Card
 
 ## 圆角与阴影层级
 

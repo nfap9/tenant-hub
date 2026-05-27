@@ -10,9 +10,10 @@ import {
   Input,
   InputNumber,
   Radio,
-  Descriptions,
   Timeline,
   Divider,
+  Row,
+  Col,
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,6 +26,8 @@ import { money } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import PaymentDialog from '@/components/PaymentDialog';
+import DetailSection from '@/components/ui/DetailSection';
+import DetailItem from '@/components/ui/DetailItem';
 import type { Deposit, DepositStatus, Payment } from '@/types/domain';
 import styles from './DepositDetailPage.module.scss';
 
@@ -135,79 +138,96 @@ export default function DepositDetailPage() {
           { label: '押金管理', path: '/deposits' },
           { label: '押金详情' },
         ]}
-        actions={
-          <>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={loadData}
-              loading={loading}
-            >
-              刷新
-            </Button>
-            {deposit?.leaseId && (
-              <Button
-                type="primary"
-                icon={<WalletOutlined />}
-                onClick={() => setPaymentOpen(true)}
-              >
-                登记收款
-              </Button>
-            )}
-            {canManageDeposit && availableTypes().length > 0 && (
-              <Button
-                icon={<PlusOutlined />}
-                onClick={() => setModalOpen(true)}
-              >
-                登记收退
-              </Button>
-            )}
-          </>
-        }
       />
 
       <Spin spinning={loading}>
         {deposit && (
           <>
-            <div className={styles.section}>
-              <Descriptions title="押金信息" column={2}>
-                <Descriptions.Item label="租客">
-                  {deposit.lease?.tenantName}
-                </Descriptions.Item>
-                <Descriptions.Item label="房间">
-                  {deposit.lease?.room?.roomNo}
-                </Descriptions.Item>
-                <Descriptions.Item label="约定押金">
-                  ¥{money(deposit.amount)}
-                </Descriptions.Item>
-                <Descriptions.Item label="状态">
-                  <Tag color={statusColors[deposit.status]}>
-                    {statusLabels[deposit.status]}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="已收">
-                  ¥{money(deposit.paidAmount)}
-                </Descriptions.Item>
-                <Descriptions.Item label="已退">
-                  ¥{money(deposit.refundedAmount)}
-                </Descriptions.Item>
-                <Descriptions.Item label="已扣">
-                  ¥{money(deposit.deductedAmount)}
-                </Descriptions.Item>
-                <Descriptions.Item label="可退余额">
-                  ¥
-                  {money(
-                    Number(deposit.paidAmount) -
-                      Number(deposit.refundedAmount) -
-                      Number(deposit.deductedAmount)
+            <DetailSection
+              title="押金信息"
+              actions={
+                <>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={loadData}
+                    loading={loading}
+                  >
+                    刷新
+                  </Button>
+                  {deposit?.leaseId && (
+                    <Button
+                      type="primary"
+                      icon={<WalletOutlined />}
+                      onClick={() => setPaymentOpen(true)}
+                    >
+                      登记收款
+                    </Button>
                   )}
-                </Descriptions.Item>
-              </Descriptions>
-            </div>
+                  {canManageDeposit && availableTypes().length > 0 && (
+                    <Button
+                      icon={<PlusOutlined />}
+                      onClick={() => setModalOpen(true)}
+                    >
+                      登记收退
+                    </Button>
+                  )}
+                </>
+              }
+            >
+              <Row gutter={[24, 0]}>
+                <Col span={8}>
+                  <DetailItem label="租客">
+                    {deposit.lease?.tenantName}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="房间">
+                    {deposit.lease?.room?.roomNo}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="约定押金">
+                    ¥{money(deposit.amount)}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="状态">
+                    <Tag color={statusColors[deposit.status]}>
+                      {statusLabels[deposit.status]}
+                    </Tag>
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="已收">
+                    ¥{money(deposit.paidAmount)}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="已退">
+                    ¥{money(deposit.refundedAmount)}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="已扣">
+                    ¥{money(deposit.deductedAmount)}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="可退余额">
+                    ¥
+                    {money(
+                      Number(deposit.paidAmount) -
+                        Number(deposit.refundedAmount) -
+                        Number(deposit.deductedAmount)
+                    )}
+                  </DetailItem>
+                </Col>
+              </Row>
+            </DetailSection>
 
             <Divider />
 
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}>收退流水</div>
+            <DetailSection title="收退流水">
               {payments.length > 0 ? (
                 <Timeline
                   items={payments.map((p: Payment) => ({
@@ -248,7 +268,7 @@ export default function DepositDetailPage() {
               ) : (
                 <EmptyState title="暂无流水" />
               )}
-            </div>
+            </DetailSection>
           </>
         )}
       </Spin>

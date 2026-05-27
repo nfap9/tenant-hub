@@ -1,6 +1,16 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Tag, Space, Spin, message, Modal, Divider } from 'antd';
+import {
+  Button,
+  Tag,
+  Space,
+  Spin,
+  message,
+  Modal,
+  Divider,
+  Row,
+  Col,
+} from 'antd';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -8,17 +18,18 @@ import {
   WalletOutlined,
   FileTextOutlined,
   HomeOutlined,
-  PhoneOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getBills, deleteBill } from '@/api/bills';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
 import { groupBills, type BillGroup } from './utils';
+import type { Bill } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import PaymentDialog from '@/components/PaymentDialog';
 import EmptyState from '@/components/ui/EmptyState';
-import type { Bill } from '@/types/domain';
+import DetailSection from '@/components/ui/DetailSection';
+import DetailItem from '@/components/ui/DetailItem';
 import styles from './MonthlyDetailPage.module.scss';
 
 export default function MonthlyDetailPage() {
@@ -117,28 +128,40 @@ export default function MonthlyDetailPage() {
 
       <Spin spinning={loading}>
         {/* 账单概览 */}
-        <div className={styles.mdpSection}>
-          <div className="flex-start">
-            <div>
-              <div className={styles.mdpTitle}>
-                <HomeOutlined className={styles.mdpIconPrimary} />
-                {group.lease?.room?.roomNo ?? '房间'} · 到期{' '}
-                {day(group.dueDate)}
-              </div>
-              <div className={styles.mdpMeta}>
-                应收 ¥{money(group.totalAmount)} · 已收 ¥
-                {money(group.paidAmount)}
-              </div>
-              <div className={styles.mdpPhoneRow}>
-                <PhoneOutlined className={styles.mdpIconSmall} />
-                租客 {group.tenantName} · {group.lease?.tenantPhone}
-              </div>
-            </div>
+        <DetailSection
+          title={
+            <span className={styles.mdpTitle}>
+              <HomeOutlined className={styles.mdpIconPrimary} />
+              {group.lease?.room?.roomNo ?? '房间'} · 到期 {day(group.dueDate)}
+            </span>
+          }
+          actions={
             <Tag color={toneForBillStatus(group.status)}>
               {statusLabels[group.status]}
             </Tag>
-          </div>
-        </div>
+          }
+        >
+          <Row gutter={[24, 0]}>
+            <Col span={8}>
+              <DetailItem label="租客">{group.tenantName}</DetailItem>
+            </Col>
+            <Col span={8}>
+              <DetailItem label="租客电话">
+                {group.lease?.tenantPhone || '-'}
+              </DetailItem>
+            </Col>
+            <Col span={8}>
+              <DetailItem label="应收金额">
+                ¥{money(group.totalAmount)}
+              </DetailItem>
+            </Col>
+            <Col span={8}>
+              <DetailItem label="已收金额">
+                ¥{money(group.paidAmount)}
+              </DetailItem>
+            </Col>
+          </Row>
+        </DetailSection>
 
         <Divider />
 

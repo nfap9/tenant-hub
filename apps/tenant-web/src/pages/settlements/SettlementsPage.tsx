@@ -11,7 +11,8 @@ import {
   Radio,
   message,
   Spin,
-  Descriptions,
+  Row,
+  Col,
 } from 'antd';
 import {
   EyeOutlined,
@@ -22,6 +23,8 @@ import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getSettlements, recordSettlementPayment } from '@/api/leases';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import DetailSection from '@/components/ui/DetailSection';
+import DetailItem from '@/components/ui/DetailItem';
 import type { LeaseSettlement, SettlementStatus } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import { terminationLabels } from '@/pages/rooms/constants';
@@ -268,58 +271,106 @@ export default function SettlementsPage() {
         width={600}
       >
         {selected && (
-          <Descriptions column={2} size="small">
-            <Descriptions.Item label="房间">
-              {selected.room?.roomNo ?? '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="租客">
-              {selected.lease?.tenantName ?? '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="退租类型">
-              {terminationLabels[selected.type]}
-            </Descriptions.Item>
-            <Descriptions.Item label="退租日期">
-              {day(selected.terminatedAt)}
-            </Descriptions.Item>
-            <Descriptions.Item label="押金">
-              ¥{money(selected.depositAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="押金扣款">
-              ¥{money(selected.depositDeductionAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="押金退款">
-              ¥{money(selected.depositRefundAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="房租调整">
-              ¥{money(selected.rentAdjustmentAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="水电费">
-              ¥{money(selected.utilityAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="其他费用">
-              ¥{money(selected.otherFeeAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="应收合计">
-              ¥{money(selected.receivableAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="应退合计">
-              ¥{money(selected.refundableAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="结算净额">
-              <span style={{ fontWeight: 600 }}>
-                {Number(selected.netAmount) > 0
-                  ? `应收 ¥${money(selected.netAmount)}`
-                  : Number(selected.netAmount) < 0
-                    ? `应退 ¥${money(Math.abs(Number(selected.netAmount)))}`
-                    : '结清'}
-              </span>
-            </Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Tag color={statusColors[selected.status]}>
-                {statusLabels[selected.status]}
-              </Tag>
-            </Descriptions.Item>
-          </Descriptions>
+          <DetailSection
+            actions={
+              canManageLease &&
+              selected.status === 'PENDING' &&
+              Number(selected.netAmount) !== 0 && (
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => {
+                    setDetailOpen(false);
+                    openPayment(selected);
+                  }}
+                >
+                  {Number(selected.netAmount) > 0 ? '收款' : '退款'}
+                </Button>
+              )
+            }
+          >
+            <Row gutter={[24, 0]}>
+              <Col span={8}>
+                <DetailItem label="房间">
+                  {selected.room?.roomNo ?? '-'}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="租客">
+                  {selected.lease?.tenantName ?? '-'}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="退租类型">
+                  {terminationLabels[selected.type]}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="退租日期">
+                  {day(selected.terminatedAt)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="押金">
+                  ¥{money(selected.depositAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="押金扣款">
+                  ¥{money(selected.depositDeductionAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="押金退款">
+                  ¥{money(selected.depositRefundAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="房租调整">
+                  ¥{money(selected.rentAdjustmentAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="水电费">
+                  ¥{money(selected.utilityAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="其他费用">
+                  ¥{money(selected.otherFeeAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="应收合计">
+                  ¥{money(selected.receivableAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="应退合计">
+                  ¥{money(selected.refundableAmount)}
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="结算净额">
+                  <span style={{ fontWeight: 600 }}>
+                    {Number(selected.netAmount) > 0
+                      ? `应收 ¥${money(selected.netAmount)}`
+                      : Number(selected.netAmount) < 0
+                        ? `应退 ¥${money(Math.abs(Number(selected.netAmount)))}`
+                        : '结清'}
+                  </span>
+                </DetailItem>
+              </Col>
+              <Col span={8}>
+                <DetailItem label="状态">
+                  <Tag color={statusColors[selected.status]}>
+                    {statusLabels[selected.status]}
+                  </Tag>
+                </DetailItem>
+              </Col>
+            </Row>
+          </DetailSection>
         )}
         {selected?.payments && selected.payments.length > 0 && (
           <div className={styles.paymentList}>
