@@ -17,6 +17,7 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma generate",
+    "db:push": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma push",
     "db:migrate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma migrate dev",
     "prepare": "husky && pnpm db:generate",
     "release": "node scripts/release.js",

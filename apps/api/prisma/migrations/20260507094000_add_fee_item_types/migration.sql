@@ -1,2 +1,0 @@
-ALTER TABLE "ApartmentFeeItem" ADD COLUMN "type" "BillItemType" NOT NULL DEFAULT 'OTHER';
-ALTER TABLE "LeaseFee" ADD COLUMN "type" "BillItemType" NOT NULL DEFAULT 'OTHER';
