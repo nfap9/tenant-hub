@@ -45,7 +45,7 @@ export default function MonthlyDetailPage() {
     setLoading(true);
     try {
       const data = await getBills(currentOrgId);
-      setAllBills(data);
+      setAllBills(data.filter((b) => b.type !== 'DEPOSIT'));
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载失败');
     } finally {

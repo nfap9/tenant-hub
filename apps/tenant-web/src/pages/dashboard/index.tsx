@@ -101,7 +101,7 @@ export default function DashboardPage() {
         ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
-      setBillGroups(groupBills(allBills));
+      setBillGroups(groupBills(allBills.filter((b) => b.type !== 'DEPOSIT')));
       setReviewBills(
         [...failedBills, ...billingBills].filter(
           (bill) => bill.mode === 'POSTPAID'

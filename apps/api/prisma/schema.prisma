@@ -66,6 +66,12 @@ enum BillMode {
   DEPOSIT
 }
 
+enum BillType {
+  MONTHLY
+  SETTLEMENT
+  DEPOSIT
+}
+
 enum BillItemType {
   RENT
   UTILITY
@@ -414,6 +420,7 @@ model Bill {
   organizationId String
   leaseId        String
   mode           BillMode     @default(PREPAID)
+  type           BillType     @default(MONTHLY)
   billingDate    DateTime
   periodStart    DateTime
   periodEnd      DateTime

@@ -1,8 +1,9 @@
 import { apiClient } from './client';
 import type { Bill, Payment } from '@/types/domain';
 
-export async function getBills(organizationId: string) {
-  return apiClient<Bill[]>('/bills', { organizationId });
+export async function getBills(organizationId: string, type?: string) {
+  const query = type ? `?type=${type}` : '';
+  return apiClient<Bill[]>(`/bills${query}`, { organizationId });
 }
 
 export async function getBillsByStatus(organizationId: string, status: string) {

@@ -117,9 +117,11 @@ export const sortBillGroupsForList = (groups: BillGroup[]) =>
 export const getBillGroupCardSummary = (group: BillGroup) => {
   const billCount = group.bills.length;
   const paymentCount = group.payments.length;
+  const type = group.bills[0]?.type;
   return {
     title: `${group.tenantName} · ${day(group.billingDate)}`,
     meta: `${group.lease?.room?.roomNo ?? '房间'} · 到期 ${day(group.dueDate)}`,
+    type,
     totalAmount: group.totalAmount,
     paidAmount: group.paidAmount,
     remainingAmount: group.totalAmount - group.paidAmount,

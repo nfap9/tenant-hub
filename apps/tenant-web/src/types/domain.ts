@@ -81,6 +81,7 @@ export type BillStatus =
   | 'VOID'
   | 'REFUNDED';
 export type BillMode = 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
+export type BillType = 'MONTHLY' | 'SETTLEMENT' | 'DEPOSIT';
 export type BillItemType =
   | 'RENT'
   | 'UTILITY'
@@ -191,6 +192,7 @@ export type Bill = {
   organizationId: string;
   leaseId: string;
   mode: BillMode;
+  type: BillType;
   billingDate: string;
   periodStart: string;
   periodEnd: string;

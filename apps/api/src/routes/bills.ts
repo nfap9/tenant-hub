@@ -39,12 +39,17 @@ billRouter.get(
       ])
       .optional()
       .parse(req.query.status);
+    const type = z
+      .enum(['MONTHLY', 'SETTLEMENT', 'DEPOSIT'])
+      .optional()
+      .parse(req.query.type);
     ok(
       res,
       await prisma.bill.findMany({
         where: {
           organizationId: req.organizationId!,
           ...(status ? { status } : {}),
+          ...(type ? { type } : {}),
         },
         include: {
           lease: { include: { room: true } },

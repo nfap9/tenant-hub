@@ -120,6 +120,7 @@ leaseRouter.post(
             organizationId: req.organizationId!,
             leaseId: created.id,
             mode: 'DEPOSIT',
+            type: 'DEPOSIT',
             billingDate: startOfLeaseDay(leaseData.startDate).toDate(),
             periodStart: startOfLeaseDay(leaseData.startDate).toDate(),
             periodEnd: startOfLeaseDay(leaseData.endDate).toDate(),

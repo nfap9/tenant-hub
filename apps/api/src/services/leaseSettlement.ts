@@ -305,6 +305,7 @@ export const createLeaseSettlement = async ({
         organizationId,
         leaseId: lease.id,
         mode: 'DEPOSIT',
+        type: 'SETTLEMENT',
         billingDate,
         periodStart: billingDate,
         periodEnd: billingDate,

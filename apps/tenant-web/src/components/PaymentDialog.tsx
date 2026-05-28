@@ -59,7 +59,7 @@ export default function PaymentDialog({
         getBills(currentOrgId),
       ]);
       setLeases(nextLeases);
-      setBills(nextBills);
+      setBills(nextBills.filter((b) => b.type !== 'DEPOSIT'));
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载失败');
     } finally {

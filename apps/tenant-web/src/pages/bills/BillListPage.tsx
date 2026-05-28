@@ -10,6 +10,7 @@ import {
   Spin,
   message,
   Modal,
+  Select,
 } from 'antd';
 import {
   PlusOutlined,
@@ -33,7 +34,12 @@ import {
 } from '@/api/bills';
 import { getRooms } from '@/api/rooms';
 import { money } from '@/utils/format';
-import { statusLabels, toneForBillStatus } from './constants';
+import {
+  statusLabels,
+  toneForBillStatus,
+  billTypeText,
+  billTypeTone,
+} from './constants';
 import {
   groupBills,
   sortBillGroupsForList,
@@ -58,18 +64,20 @@ export default function BillListPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BillStatus | ''>('');
+  const [typeFilter, setTypeFilter] = useState<string>('');
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [allBills, failedBills, billingBills, nextRooms] =
+      const [allBillsRaw, failedBills, billingBills, nextRooms] =
         await Promise.all([
-          getBills(currentOrgId),
+          getBills(currentOrgId, typeFilter || undefined),
           getBillsByStatus(currentOrgId, 'FAILED'),
           getBillsByStatus(currentOrgId, 'BILLING'),
           getRooms(currentOrgId),
         ]);
+      const allBills = allBillsRaw.filter((b) => b.type !== 'DEPOSIT');
       const postpaidReviewBills = [...failedBills, ...billingBills].filter(
         (bill) => bill.mode === 'POSTPAID'
       );
@@ -81,7 +89,7 @@ export default function BillListPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrgId]);
+  }, [currentOrgId, typeFilter]);
 
   useEffect(() => {
     loadData();
@@ -154,7 +162,17 @@ export default function BillListPage() {
         <div className="flex-start">
           <div>
             <div className={styles.billCardTitle}>{summary.title}</div>
-            <div className={styles.billCardMeta}>{summary.meta}</div>
+            <div className={styles.billCardMeta}>
+              {summary.meta}
+              {summary.type && (
+                <Tag
+                  color={billTypeTone(summary.type)}
+                  style={{ marginLeft: 8 }}
+                >
+                  {billTypeText(summary.type)}
+                </Tag>
+              )}
+            </div>
           </div>
           <Tag color={toneForBillStatus(group.status)}>
             {statusLabels[group.status]}
@@ -331,6 +349,7 @@ export default function BillListPage() {
             setTab(key as 'unpaid' | 'pending' | 'all');
             setSearchQuery('');
             setStatusFilter('');
+            setTypeFilter('');
           }}
           items={[
             {
@@ -381,25 +400,37 @@ export default function BillListPage() {
                     allowClear
                   />
                   <Space wrap className="mb-16">
-                    {(
-                      [
-                        '',
-                        'UNPAID',
-                        'PARTIAL_PAID',
-                        'PAID',
-                        'FAILED',
-                        'VOID',
-                      ] as const
-                    ).map((status) => (
-                      <Button
-                        key={status || 'all'}
-                        type={statusFilter === status ? 'primary' : 'default'}
-                        size="small"
-                        onClick={() => setStatusFilter(status)}
-                      >
-                        {status ? statusLabels[status] : '全部状态'}
-                      </Button>
-                    ))}
+                    <Select
+                      placeholder="筛选状态"
+                      allowClear
+                      style={{ width: 120 }}
+                      value={statusFilter || undefined}
+                      onChange={(value) => setStatusFilter(value || '')}
+                      options={[
+                        { value: 'UNPAID', label: statusLabels.UNPAID },
+                        {
+                          value: 'PARTIAL_PAID',
+                          label: statusLabels.PARTIAL_PAID,
+                        },
+                        { value: 'PAID', label: statusLabels.PAID },
+                        { value: 'FAILED', label: statusLabels.FAILED },
+                        { value: 'VOID', label: statusLabels.VOID },
+                      ]}
+                    />
+                    <Select
+                      placeholder="筛选类型"
+                      allowClear
+                      style={{ width: 120 }}
+                      value={typeFilter || undefined}
+                      onChange={(value) => setTypeFilter(value || '')}
+                      options={[
+                        { value: 'MONTHLY', label: billTypeText('MONTHLY') },
+                        {
+                          value: 'SETTLEMENT',
+                          label: billTypeText('SETTLEMENT'),
+                        },
+                      ]}
+                    />
                   </Space>
                   {filteredAllGroups.length === 0 ? (
                     <EmptyState

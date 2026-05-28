@@ -191,7 +191,7 @@ export const refreshBillTotals = async (billId: string) => {
   if (!bill) return;
 
   // 退租结算账单手动管理状态，跳过自动计算
-  if (bill.note === 'LEASE_SETTLEMENT') return;
+  if (bill.type === 'SETTLEMENT') return;
 
   const totalAmount = bill.items.reduce(
     (sum, item) => sum.plus(item.amount),
@@ -418,6 +418,7 @@ export const generateLeaseBills = async (
         organizationId: lease.organizationId,
         leaseId: lease.id,
         mode: 'PREPAID',
+        type: 'MONTHLY',
         billingDate: startOfDay(billingDate).toDate(),
         periodStart: periods.prepaid.start,
         periodEnd: periods.prepaid.end,
@@ -464,6 +465,7 @@ export const generateLeaseBills = async (
           organizationId: lease.organizationId,
           leaseId: lease.id,
           mode: 'POSTPAID',
+          type: 'MONTHLY',
           billingDate: startOfDay(billingDate).toDate(),
           periodStart: periods.postpaid.start,
           periodEnd: periods.postpaid.end,
@@ -569,7 +571,7 @@ export const recordBillPayment = async ({
   });
 
   // 退租结算账单手动管理状态
-  if (bill.note === 'LEASE_SETTLEMENT') {
+  if (bill.type === 'SETTLEMENT') {
     const updatedBill = await prisma.bill.findUnique({
       where: { id: billId },
     });

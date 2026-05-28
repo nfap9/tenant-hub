@@ -27,6 +27,22 @@ export const billModeText = (mode: string) => {
   return mode;
 };
 
+export const billTypeText = (type: string) => {
+  const map: Record<string, string> = {
+    MONTHLY: '月度账单',
+    SETTLEMENT: '退租账单',
+    DEPOSIT: '押金账单',
+  };
+  return map[type] || type;
+};
+
+export const billTypeTone = (type: string): string => {
+  if (type === 'MONTHLY') return 'blue';
+  if (type === 'SETTLEMENT') return 'orange';
+  if (type === 'DEPOSIT') return 'purple';
+  return 'default';
+};
+
 export const billItemTypeText = (type: string) => {
   const map: Record<string, string> = {
     RENT: '房租',
