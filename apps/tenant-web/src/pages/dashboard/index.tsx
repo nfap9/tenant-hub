@@ -25,7 +25,7 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import PaymentDialog from '@/components/PaymentDialog';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getApartments } from '@/api/apartments';
+import { getAllApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
 import { getBills, getBillsByStatus } from '@/api/bills';
 import {
@@ -93,7 +93,7 @@ export default function DashboardPage() {
     try {
       const [nextApartments, nextRooms, allBills, failedBills, billingBills] =
         await Promise.all([
-          getApartments(currentOrgId),
+          getAllApartments(currentOrgId),
           getRooms(currentOrgId),
           getBills(currentOrgId),
           getBillsByStatus(currentOrgId, 'FAILED'),

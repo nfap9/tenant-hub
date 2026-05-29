@@ -149,25 +149,69 @@ export type ApartmentExpense = {
   note?: string;
 };
 
+export type LandlordContract = {
+  id: string;
+  apartmentId: string;
+  contractNo?: string;
+  startDate: string;
+  endDate: string;
+  rentAmount: string | number;
+  depositAmount: string | number;
+  paymentMethod: string;
+  escalationType?: string;
+  escalationValue?: string | number;
+  escalationCycle?: number;
+  freeRentDays: number;
+  freeRentStart?: string;
+  freeRentEnd?: string;
+  signDate?: string;
+  attachmentUrl?: string;
+  note?: string;
+  isActive: boolean;
+  createdAt: string;
+  apartment?: { id: string; name: string };
+};
+
 export type Apartment = {
   id: string;
   organizationId: string;
   name: string;
   location: string;
+  status?: string;
+  statusReason?: string;
+  statusChangedAt?: string;
+  propertyType?: string;
   floors: number;
   landArea?: string | number;
   totalArea?: string | number;
+  publicAreaRatio?: string | number;
+  buildYear?: number;
+  elevatorCount?: number;
+  propertyRight?: string;
   landlordName?: string;
   landlordPhone?: string;
+  landlordContractNo?: string;
   contractStart?: string;
   contractEnd?: string;
   rentAmount?: string | number;
+  depositAmount?: string | number;
+  paymentMethod?: string;
+  rentEscalationType?: string;
+  rentEscalationValue?: string | number;
+  rentEscalationCycle?: number;
   costElectricityPrice?: string | number;
   costWaterPrice?: string | number;
+  costGasPrice?: string | number;
   reminderDay?: number;
+  fireRating?: string;
+  fireExtinguisherCount?: number;
+  escapeRouteCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
   rooms?: Room[];
   expenses?: ApartmentExpense[];
   meters?: Meter[];
+  landlordContracts?: LandlordContract[];
 };
 
 export type LeaseFee = {

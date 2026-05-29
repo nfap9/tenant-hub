@@ -18,7 +18,7 @@ import {
 } from '@ant-design/icons';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
-import { getApartments } from '@/api/apartments';
+import { getAllApartments } from '@/api/apartments';
 import { createRoom, updateRoom } from '@/api/rooms';
 import type { Apartment, Room } from '@/types/domain';
 import { optionalNumber, toFacilityArray } from '@/utils/format';
@@ -47,7 +47,7 @@ export default function RoomFormPage() {
   useEffect(() => {
     if (!currentOrgId) return;
     setLoading(true);
-    getApartments(currentOrgId)
+    getAllApartments(currentOrgId)
       .then((data) => {
         setApartments(data);
         const allRooms = data.flatMap((a) => a.rooms ?? []);

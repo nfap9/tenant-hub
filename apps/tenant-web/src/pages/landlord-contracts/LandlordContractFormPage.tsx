@@ -18,7 +18,7 @@ import {
   createLandlordContract,
   updateLandlordContract,
 } from '@/api/landlordContracts';
-import { getApartments } from '@/api/apartments';
+import { getAllApartments } from '@/api/apartments';
 import type { LandlordContract } from '@/api/landlordContracts';
 import type { Apartment } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
@@ -58,7 +58,7 @@ export default function LandlordContractFormPage() {
       isEdit && id
         ? getLandlordContract(currentOrgId, id)
         : Promise.resolve(null),
-      getApartments(currentOrgId),
+      getAllApartments(currentOrgId),
     ])
       .then(([cData, aData]) => {
         if (cData) setContract(cData);

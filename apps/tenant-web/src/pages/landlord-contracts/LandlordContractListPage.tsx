@@ -12,7 +12,7 @@ import {
   getLandlordContracts,
   deleteLandlordContract,
 } from '@/api/landlordContracts';
-import { getApartments } from '@/api/apartments';
+import { getAllApartments } from '@/api/apartments';
 import type { LandlordContract } from '@/api/landlordContracts';
 import type { Apartment } from '@/types/domain';
 import { money, day } from '@/utils/format';
@@ -39,7 +39,7 @@ export default function LandlordContractListPage() {
           currentOrgId,
           apartmentFilter === 'ALL' ? undefined : apartmentFilter
         ),
-        getApartments(currentOrgId),
+        getAllApartments(currentOrgId),
       ]);
       setContracts(cData);
       setApartments(aData);

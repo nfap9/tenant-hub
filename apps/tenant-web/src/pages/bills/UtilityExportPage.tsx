@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Select, DatePicker, Button, Space, message } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getApartments } from '@/api/apartments';
+import { getAllApartments } from '@/api/apartments';
 import { exportUtilityPendingCsv } from '@/api/bills';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './UtilityExportPage.module.scss';
@@ -18,7 +18,7 @@ export default function UtilityExportPage() {
   useEffect(() => {
     if (!currentOrgId) return;
     setLoading(true);
-    getApartments(currentOrgId)
+    getAllApartments(currentOrgId)
       .then(setApartments)
       .catch((e) => message.error(e instanceof Error ? e.message : '加载失败'))
       .finally(() => setLoading(false));

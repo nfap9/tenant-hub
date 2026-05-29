@@ -44,6 +44,7 @@ const apartmentInput = z.object({
   floors: z.coerce.number().int().min(1),
   landArea: z.coerce.number().optional(),
   totalArea: z.coerce.number().optional(),
+  publicAreaRatio: z.coerce.number().optional(),
   buildYear: z.coerce.number().int().optional(),
   elevatorCount: z.coerce.number().int().min(0).optional(),
   propertyRight: z.enum(['OWNED', 'LONG_TERM_LEASE', 'TRUSTEESHIP']).optional(),
@@ -62,6 +63,9 @@ const apartmentInput = z.object({
   costWaterPrice: z.coerce.number().optional(),
   costGasPrice: z.coerce.number().optional(),
   reminderDay: z.coerce.number().int().min(1).max(28).optional(),
+  fireRating: z.string().optional(),
+  fireExtinguisherCount: z.coerce.number().int().min(0).optional(),
+  escapeRouteCount: z.coerce.number().int().min(0).optional(),
 });
 
 const ensureApartmentInOrg = async (
@@ -69,7 +73,7 @@ const ensureApartmentInOrg = async (
   organizationId: string
 ) => {
   const apartment = await prisma.apartment.findFirst({
-    where: { id: apartmentId, organizationId },
+    where: { id: apartmentId, organizationId, deletedAt: null },
     select: { id: true },
   });
   if (!apartment) throw new HttpError(404, '公寓不存在');
@@ -87,40 +91,70 @@ apartmentRouter.get(
   '/',
   requirePermission(PERMISSIONS.APARTMENT_VIEW),
   asyncHandler(async (req, res) => {
+    const { page, pageSize, search, status, propertyType } = z
+      .object({
+        page: z.coerce.number().int().min(1).default(1),
+        pageSize: z.coerce.number().int().min(1).max(100).default(20),
+        search: z.string().optional(),
+        status: z.string().optional(),
+        propertyType: z.string().optional(),
+      })
+      .parse(req.query);
+
     const currentMonthBillWindow = getCurrentMonthBillWindow();
     const currentMonthBillLabel = getBillMonthLabel(
       currentMonthBillWindow.start
     );
-    const apartments = await prisma.apartment.findMany({
-      where: { organizationId: req.organizationId! },
-      include: {
-        rooms: {
-          include: {
-            leases: {
-              where: { status: 'ACTIVE' },
-              include: {
-                fees: true,
-                bills: {
-                  where: {
-                    billingDate: {
-                      gte: currentMonthBillWindow.start,
-                      lt: currentMonthBillWindow.end,
+
+    const where: Record<string, unknown> = {
+      organizationId: req.organizationId!,
+      deletedAt: null,
+    };
+
+    if (status) where.status = status;
+    if (propertyType) where.propertyType = propertyType;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [apartments, total] = await Promise.all([
+      prisma.apartment.findMany({
+        where,
+        include: {
+          rooms: {
+            include: {
+              leases: {
+                where: { status: 'ACTIVE' },
+                include: {
+                  fees: true,
+                  bills: {
+                    where: {
+                      billingDate: {
+                        gte: currentMonthBillWindow.start,
+                        lt: currentMonthBillWindow.end,
+                      },
                     },
+                    select: { id: true, status: true },
                   },
-                  select: { id: true, status: true },
                 },
+                orderBy: { createdAt: 'desc' },
               },
-              orderBy: { createdAt: 'desc' },
             },
           },
+          expenses: { orderBy: { spentAt: 'desc' } },
         },
-        expenses: { orderBy: { spentAt: 'desc' } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    ok(
-      res,
-      apartments.map((apartment) => ({
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.apartment.count({ where }),
+    ]);
+
+    ok(res, {
+      items: apartments.map((apartment) => ({
         ...apartment,
         rooms: apartment.rooms.map((room) => ({
           ...room,
@@ -133,8 +167,11 @@ apartmentRouter.get(
             currentMonthBillLabel,
           })),
         })),
-      }))
-    );
+      })),
+      total,
+      page,
+      pageSize,
+    });
   })
 );
 
@@ -228,6 +265,65 @@ apartmentRouter.put(
   })
 );
 
+apartmentRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    const currentMonthBillWindow = getCurrentMonthBillWindow();
+    const currentMonthBillLabel = getBillMonthLabel(
+      currentMonthBillWindow.start
+    );
+    const apartment = await prisma.apartment.findFirst({
+      where: {
+        id: req.params.id,
+        organizationId: req.organizationId!,
+        deletedAt: null,
+      },
+      include: {
+        rooms: {
+          include: {
+            leases: {
+              where: { status: 'ACTIVE' },
+              include: {
+                fees: true,
+                bills: {
+                  where: {
+                    billingDate: {
+                      gte: currentMonthBillWindow.start,
+                      lt: currentMonthBillWindow.end,
+                    },
+                  },
+                  select: { id: true, status: true },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+        expenses: { orderBy: { spentAt: 'desc' } },
+        landlordContracts: {
+          where: { deletedAt: null, isActive: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+    if (!apartment) throw new HttpError(404, '公寓不存在');
+    ok(res, {
+      ...apartment,
+      rooms: apartment.rooms.map((room) => ({
+        ...room,
+        leases: room.leases.map(({ bills, ...lease }) => ({
+          ...withLeaseLifecycle(lease),
+          currentMonthBillGenerated: bills.length > 0,
+          currentMonthBillSettled: bills.some((bill) => bill.status === 'PAID'),
+          currentMonthBillLabel,
+        })),
+      })),
+    });
+  })
+);
+
 apartmentRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
@@ -242,7 +338,11 @@ apartmentRouter.delete(
     });
     if (activeLeaseCount > 0)
       throw new HttpError(400, '公寓存在活跃租约，无法删除');
-    ok(res, await prisma.apartment.delete({ where: { id: req.params.id } }));
+    await prisma.apartment.update({
+      where: { id: req.params.id },
+      data: { deletedAt: new Date() },
+    });
+    ok(res, { deleted: true });
   })
 );
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Spin, message, Select } from 'antd';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getMeterReadings } from '@/api/bills';
-import { getApartments } from '@/api/apartments';
+import { getAllApartments } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -61,7 +61,7 @@ export default function MeterReadingListPage() {
     try {
       const [rData, aData] = await Promise.all([
         getMeterReadings(currentOrgId),
-        getApartments(currentOrgId),
+        getAllApartments(currentOrgId),
       ]);
       setReadings(rData);
       setApartments(aData);

@@ -4,7 +4,7 @@ import { Card, Form, Input, Button, message, Spin, Select } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getMeters, createMeter, updateMeter } from '@/api/meters';
-import { getApartments } from '@/api/apartments';
+import { getAllApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
 import type { Meter } from '@/types/domain';
 import type { Apartment, Room } from '@/types/domain';
@@ -35,7 +35,7 @@ export default function MeterFormPage() {
     if (!currentOrgId) return;
     setLoading(true);
     Promise.all([
-      getApartments(currentOrgId),
+      getAllApartments(currentOrgId),
       isEdit && id
         ? getMeters(currentOrgId).then(
             (ms) => ms.find((m) => m.id === id) || null
