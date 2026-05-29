@@ -18,6 +18,7 @@ import {
   SafetyCertificateOutlined,
   MailOutlined,
   ToolOutlined,
+  DollarOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo } from 'react';
@@ -30,9 +31,15 @@ function getMenuKeyFromPath(pathname: string): string {
   if (pathname.startsWith('/apartments')) return 'apartments';
   if (pathname.startsWith('/rooms')) return 'rooms';
   if (pathname.startsWith('/leases')) return 'leases';
+  if (pathname.startsWith('/maintenance')) return 'maintenance';
   if (pathname.startsWith('/deposits')) return 'deposits';
   if (pathname.startsWith('/bills')) return 'bills';
   if (pathname.startsWith('/settings')) return 'settings';
+  if (pathname.startsWith('/co-residents')) return 'co-residents';
+  if (pathname.startsWith('/cashier-journals')) return 'cashier-journals';
+  if (pathname.startsWith('/invoices')) return 'invoices';
+  if (pathname.startsWith('/reports')) return 'reports';
+  if (pathname.startsWith('/audit-logs')) return 'audit-logs';
   if (pathname === '/ops') return 'ops-dashboard';
   if (pathname.startsWith('/ops/users')) return 'ops-users';
   if (pathname.startsWith('/ops/plans')) return 'ops-plans';
@@ -91,8 +98,13 @@ export default function MainLayout() {
           { key: 'rooms', icon: <HomeFilled />, label: '房间' },
           { key: 'bills', icon: <FileTextOutlined />, label: '账单' },
           { key: 'leases', icon: <FileTextOutlined />, label: '租约' },
+          { key: 'maintenance', icon: <ToolOutlined />, label: '维修' },
           { key: 'deposits', icon: <FileTextOutlined />, label: '押金' },
           { key: 'apartments', icon: <ApartmentOutlined />, label: '公寓' },
+          { key: 'co-residents', icon: <TeamOutlined />, label: '同住人' },
+          { key: 'cashier-journals', icon: <DollarOutlined />, label: '出纳' },
+          { key: 'invoices', icon: <MailOutlined />, label: '发票' },
+          { key: 'reports', icon: <DashboardOutlined />, label: '报表' },
         ]),
     { key: 'settings', icon: <SettingOutlined />, label: '更多' },
     ...(platformRole === 'SUPER_ADMIN'

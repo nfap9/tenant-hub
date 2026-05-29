@@ -6,11 +6,13 @@ dayjs.extend(utc);
 export type LeaseCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type LifecycleLeaseStatus =
   | 'DRAFT'
+  | 'PENDING'
   | 'ACTIVE'
   | 'EXPIRING_SOON'
   | 'TERMINATING'
   | 'TERMINATED'
   | 'EXPIRED'
+  | 'RENEWED'
   | 'ENDED';
 
 export const cycleMonths: Record<LeaseCycle, number> = {

@@ -38,6 +38,11 @@ const LeaseTerminatePage = lazy(
 // 租约
 const LeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
 
+// 维修工单
+const MaintenancePage = lazy(
+  () => import('@/pages/maintenance/MaintenancePage')
+);
+
 // 押金
 const DepositsPage = lazy(() => import('@/pages/deposits/DepositsPage'));
 const DepositDetailPage = lazy(
@@ -61,6 +66,25 @@ const OrganizationPage = lazy(
 );
 const AccountPage = lazy(() => import('@/pages/settings/AccountPage'));
 const PlanPage = lazy(() => import('@/pages/settings/PlanPage'));
+
+// 同住人
+const CoResidentsPage = lazy(
+  () => import('@/pages/co-residents/CoResidentsPage')
+);
+
+// 出纳日记账
+const CashierJournalsPage = lazy(
+  () => import('@/pages/cashier-journals/CashierJournalsPage')
+);
+
+// 发票管理
+const InvoicesPage = lazy(() => import('@/pages/invoices/InvoicesPage'));
+
+// 财务报表
+const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
+
+// 审计日志
+const AuditLogsPage = lazy(() => import('@/pages/audit-logs/AuditLogsPage'));
 
 // 运营配置
 const OpsDashboardPage = lazy(() => import('@/pages/ops/OpsDashboardPage'));
@@ -230,6 +254,15 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
+          {/* 维修工单 */}
+          <Route
+            path="/maintenance"
+            element={
+              <RequireOrg>
+                <MaintenancePage />
+              </RequireOrg>
+            }
+          />
           {/* 房间 */}
           <Route
             path="/rooms"
@@ -380,6 +413,52 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <PlanPage />
+              </RequireOrg>
+            }
+          />
+
+          {/* 同住人 */}
+          <Route
+            path="/co-residents"
+            element={
+              <RequireOrg>
+                <CoResidentsPage />
+              </RequireOrg>
+            }
+          />
+          {/* 出纳日记账 */}
+          <Route
+            path="/cashier-journals"
+            element={
+              <RequireOrg>
+                <CashierJournalsPage />
+              </RequireOrg>
+            }
+          />
+          {/* 发票管理 */}
+          <Route
+            path="/invoices"
+            element={
+              <RequireOrg>
+                <InvoicesPage />
+              </RequireOrg>
+            }
+          />
+          {/* 财务报表 */}
+          <Route
+            path="/reports"
+            element={
+              <RequireOrg>
+                <ReportsPage />
+              </RequireOrg>
+            }
+          />
+          {/* 审计日志 */}
+          <Route
+            path="/audit-logs"
+            element={
+              <RequireOrg>
+                <AuditLogsPage />
               </RequireOrg>
             }
           />

@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==================== 枚举定义 ====================
+
 enum OtpPurpose {
   REGISTER
   LOGIN
@@ -24,21 +26,48 @@ enum MemberStatus {
   DISABLED
 }
 
+enum ApartmentStatus {
+  PLANNING
+  RENOVATING
+  PREPARING
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL_RENOVATED
+  URBAN_VILLAGE
+  OTHER
+}
+
+enum PropertyRight {
+  OWNED
+  LONG_TERM_LEASE
+  TRUSTEESHIP
+}
+
 enum RoomStatus {
+  TO_RENOVATE
+  TO_CONFIGURE
   VACANT
   RESERVED
   OCCUPIED
   MAINTENANCE
+  CHECKOUT_CLEANING
 }
 
 enum LeaseStatus {
   DRAFT
+  PENDING
   ACTIVE
   EXPIRING_SOON
   TERMINATING
   TERMINATED
   EXPIRED
-  ENDED
+  RENEWED
 }
 
 enum RentCycle {
@@ -51,6 +80,14 @@ enum TerminationType {
   EXPIRED
   NEGOTIATED
   BREACH
+  FORCED
+}
+
+enum CheckoutType {
+  NORMAL
+  EARLY
+  FORCED
+  ROOM_CHANGE
 }
 
 enum BillStatus {
@@ -99,6 +136,7 @@ enum BillItemType {
   CLEANING_FEE
   PREPAID_DEDUCTION
   DISCOUNT
+  REFUND
   OTHER
 }
 
@@ -157,13 +195,6 @@ enum SettlementItemType {
   OTHER
 }
 
-enum CheckoutType {
-  NORMAL
-  EARLY
-  FORCED
-  ROOM_CHANGE
-}
-
 enum DepositStatus {
   UNPAID
   PAID
@@ -176,6 +207,7 @@ enum DepositLedgerType {
   COLLECT
   DEDUCT
   REFUND
+  TRANSFER
 }
 
 enum PaymentType {
@@ -214,6 +246,88 @@ enum AccountReferenceType {
   SETTLEMENT
 }
 
+enum MaintenanceOrderStatus {
+  PENDING
+  DISPATCHED
+  IN_PROGRESS
+  AWAITING_ACCEPTANCE
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceOrderType {
+  WATER_ELECTRIC
+  DOOR_WINDOW
+  WALL
+  FURNITURE_APPLIANCE
+  NETWORK
+  PIPE
+  CLEANING
+  OTHER
+}
+
+enum MaintenancePriority {
+  URGENT
+  NORMAL
+  LOW
+}
+
+enum RoomCheckType {
+  CHECKIN
+  CHECKOUT
+}
+
+enum IncomeExpenseType {
+  INCOME
+  EXPENSE
+}
+
+enum CashierAccountType {
+  CASH
+  BANK
+  WECHAT
+  ALIPAY
+  POS
+  OTHER
+}
+
+enum InvoiceStatus {
+  PENDING
+  ISSUED
+  SENT
+  RECEIVED
+}
+
+enum TenantSource {
+  PLATFORM_58
+  DOUBAN
+  BEIKE
+  REFERRAL
+  AGENT
+  WALK_IN
+  OTHER
+}
+
+enum Orientation {
+  NORTH
+  SOUTH
+  EAST
+  WEST
+  NORTH_EAST
+  NORTH_WEST
+  SOUTH_EAST
+  SOUTH_WEST
+}
+
+enum DecorationStatus {
+  BARE
+  SIMPLE
+  DELUXE
+  LUXURY
+}
+
+// ==================== 用户与权限 ====================
+
 model User {
   id                 String              @id @default(cuid())
   phone              String              @unique
@@ -231,6 +345,9 @@ model User {
   settlementPayments SettlementPayment[]
   depositLedgers     DepositLedger[]
   auditLogs          AuditLog[]
+  maintenanceOrders  MaintenanceOrder[]
+  cashierJournals    CashierJournal[]
+  invoices           Invoice[]
 }
 
 model OtpCode {
@@ -246,27 +363,32 @@ model OtpCode {
 }
 
 model Organization {
-  id              String            @id @default(cuid())
-  name            String
-  code            String            @unique
-  description     String?
-  status          OrgStatus         @default(ACTIVE)
-  ownerId         String
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  members         OrgMember[]
-  apartments      Apartment[]
-  tenants         Tenant[]
-  leases          Lease[]
-  bills           Bill[]
-  meterReadings   MeterReading[]
-  meters          Meter[]
-  quotas          OrgQuotaPackage[]
-  subscriptions   Subscription[]
-  invites         OrgInvite[]
-  settlements     LeaseSettlement[]
-  deposits        Deposit[]
-  auditLogs       AuditLog[]
+  id                String                @id @default(cuid())
+  name              String
+  code              String                @unique
+  description       String?
+  status            OrgStatus             @default(ACTIVE)
+  ownerId           String
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  members           OrgMember[]
+  apartments        Apartment[]
+  tenants           Tenant[]
+  leases            Lease[]
+  bills             Bill[]
+  meterReadings     MeterReading[]
+  meters            Meter[]
+  quotas            OrgQuotaPackage[]
+  subscriptions     Subscription[]
+  invites           OrgInvite[]
+  settlements       LeaseSettlement[]
+  deposits          Deposit[]
+  auditLogs         AuditLog[]
+  maintenanceOrders MaintenanceOrder[]
+  roomChecklists    RoomChecklist[]
+  cashierJournals   CashierJournal[]
+  incomeCategories  IncomeExpenseCategory[]
+  invoices          Invoice[]
 }
 
 model Role {
@@ -314,22 +436,42 @@ model OrgInvite {
   @@index([code, expiresAt])
 }
 
+// ==================== 物业资产 ====================
+
 model Apartment {
   id                   String             @id @default(cuid())
   organizationId       String
   name                 String
   location             String
+  status               ApartmentStatus    @default(ACTIVE)
+  statusReason         String?
+  statusChangedAt      DateTime           @default(now())
+  propertyType         PropertyType       @default(RESIDENTIAL)
   floors               Int
   landArea             Decimal?           @db.Decimal(12, 2)
   totalArea            Decimal?           @db.Decimal(12, 2)
+  publicAreaRatio      Decimal?           @db.Decimal(5, 4) // 公摊比例
+  buildYear            Int?
+  elevatorCount        Int                @default(0)
+  propertyRight        PropertyRight      @default(LONG_TERM_LEASE)
   landlordName         String?
   landlordPhone        String?
+  landlordContractNo   String?
   contractStart        DateTime?
   contractEnd          DateTime?
   rentAmount           Decimal?           @db.Decimal(12, 2)
+  depositAmount        Decimal?           @db.Decimal(12, 2)
+  paymentMethod        String?            // 月付/季付/半年付/年付
+  rentEscalationType   String?            // FIXED_AMOUNT / PERCENTAGE
+  rentEscalationValue  Decimal?           @db.Decimal(10, 4)
+  rentEscalationCycle  Int?               // 几个月递增一次
   costElectricityPrice Decimal?           @db.Decimal(10, 4)
   costWaterPrice       Decimal?           @db.Decimal(10, 4)
-  reminderDay          Int?
+  costGasPrice         Decimal?           @db.Decimal(10, 4)
+  reminderDay          Int?               @default(3)
+  fireRating           String?            // 消防等级
+  fireExtinguisherCount Int?              // 灭火器数量
+  escapeRouteCount     Int?               // 逃生通道数量
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?
@@ -338,38 +480,86 @@ model Apartment {
   expenses             ApartmentExpense[]
   meterReadings        MeterReading[]
   meters               Meter[]
+  maintenanceOrders    MaintenanceOrder[]
+  landlordContracts    LandlordContract[]
+
+  @@index([organizationId, status])
+}
+
+model LandlordContract {
+  id            String    @id @default(cuid())
+  apartmentId   String
+  contractNo    String?
+  startDate     DateTime
+  endDate       DateTime
+  rentAmount    Decimal   @db.Decimal(12, 2)
+  depositAmount Decimal   @db.Decimal(12, 2)
+  paymentMethod String    // 月付/季付/半年付/年付
+  escalationType String?  // FIXED_AMOUNT / PERCENTAGE
+  escalationValue Decimal? @db.Decimal(10, 4)
+  escalationCycle Int?
+  freeRentDays  Int       @default(0)
+  freeRentStart DateTime?
+  freeRentEnd   DateTime?
+  signDate      DateTime?
+  attachmentUrl String?
+  note          String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@index([apartmentId, isActive])
 }
 
 model ApartmentExpense {
   id          String    @id @default(cuid())
   apartmentId String
+  categoryId  String?
   name        String
   amount      Decimal   @db.Decimal(12, 2)
   spentAt     DateTime
   note        String?
+  createdById String?
   deletedAt   DateTime?
   apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  category    IncomeExpenseCategory? @relation(fields: [categoryId], references: [id])
+
+  @@index([apartmentId, spentAt])
 }
 
 model Room {
-  id            String            @id @default(cuid())
-  apartmentId   String
-  roomNo        String
-  layout        String
-  area          Decimal?          @db.Decimal(10, 2)
-  facilities    String[]
-  status        RoomStatus        @default(VACANT)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  deletedAt     DateTime?
-  apartment     Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
-  leases        Lease[]
-  meterReadings MeterReading[]
-  meters        Meter[]
-  settlements   LeaseSettlement[]
+  id                 String            @id @default(cuid())
+  apartmentId        String
+  roomNo             String
+  floor              Int               @default(1)
+  layout             String
+  area               Decimal?          @db.Decimal(10, 2)
+  orientation        Orientation?
+  decorationStatus   DecorationStatus  @default(SIMPLE)
+  decorationDate     DateTime?
+  facilities         String[]
+  status             RoomStatus        @default(VACANT)
+  statusChangedAt    DateTime          @default(now())
+  statusReason       String?
+  currentRentPrice   Decimal?          @db.Decimal(12, 2)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  deletedAt          DateTime?
+  apartment          Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  leases             Lease[]
+  meterReadings      MeterReading[]
+  meters             Meter[]
+  settlements        LeaseSettlement[]
+  maintenanceOrders  MaintenanceOrder[]
+  roomChecklists     RoomChecklist[]
 
   @@unique([apartmentId, roomNo])
+  @@index([apartmentId, status])
 }
+
+// ==================== 租客 ====================
 
 model Tenant {
   id               String          @id @default(cuid())
@@ -377,8 +567,15 @@ model Tenant {
   name             String
   phone            String
   idCard           String?
+  idCardFrontUrl   String?
+  idCardBackUrl    String?
+  workUnit         String?
+  jobTitle         String?
   emergencyContact String?
   emergencyPhone   String?
+  sourceChannel    TenantSource    @default(OTHER)
+  creditScore      Int             @default(100)
+  remark           String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   deletedAt        DateTime?
@@ -386,51 +583,117 @@ model Tenant {
   leases           Lease[]
   account          TenantAccount?
   depositLedgers   DepositLedger[]
+  coResidents      CoResident[]
+  invoices         Invoice[]
 
   @@unique([organizationId, phone])
   @@index([organizationId, name])
 }
 
-model Lease {
-  id                String           @id @default(cuid())
-  organizationId    String
-  roomId            String
-  tenantId          String?
-  tenantName        String
-  tenantPhone       String
-  startDate         DateTime
-  endDate           DateTime
-  billDay           Int?
-  utilityBillDay    Int?
-  paymentDueDays    Int              @default(7)
-  graceDays         Int              @default(0)
-  cycle             RentCycle
-  rentAmount        Decimal          @db.Decimal(12, 2)
-  monthlyServiceFee Decimal          @default(0) @db.Decimal(12, 2)
-  depositMonths     Int              @default(1)
-  depositAmount     Decimal          @default(0) @db.Decimal(12, 2)
-  waterUnitPrice    Decimal          @db.Decimal(10, 2)
-  powerUnitPrice    Decimal          @db.Decimal(10, 2)
-  lateFeeRate       Decimal          @default(0.0005) @db.Decimal(10, 6)
-  autoRenew         Boolean          @default(false)
-  status            LeaseStatus      @default(ACTIVE)
-  terminationType   TerminationType?
-  terminationReason String?
-  terminatedAt      DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  deletedAt         DateTime?
-  organization      Organization     @relation(fields: [organizationId], references: [id])
-  room              Room             @relation(fields: [roomId], references: [id])
-  tenant            Tenant?          @relation(fields: [tenantId], references: [id])
-  fees              LeaseFee[]
-  bills             Bill[]
-  meterReadings     MeterReading[]
-  settlement        LeaseSettlement?
-  deposit           Deposit?
-  billQueue         BillQueue?
-  depositLedgers    DepositLedger[]
+model CoResident {
+  id          String   @id @default(cuid())
+  tenantId    String
+  leaseId     String
+  name        String
+  idCard      String?
+  phone       String?
+  relation    String   // 配偶/父母/子女/朋友/同事/其他
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lease       Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([leaseId])
 }
+
+// ==================== 租约 ====================
+
+model Lease {
+  id                    String             @id @default(cuid())
+  organizationId        String
+  roomId                String
+  tenantId              String?
+  tenantName            String
+  tenantPhone           String
+  contractDate          DateTime           @default(now())
+  startDate             DateTime
+  endDate               DateTime
+  billDay               Int?               @default(1)
+  utilityBillDay        Int?
+  paymentDueDays        Int                @default(7)
+  graceDays             Int                @default(0)
+  cycle                 RentCycle
+  rentAmount            Decimal            @db.Decimal(12, 2)
+  monthlyServiceFee     Decimal            @default(0) @db.Decimal(12, 2)
+  depositMonths         Int                @default(1)
+  depositAmount         Decimal            @default(0) @db.Decimal(12, 2)
+  waterUnitPrice        Decimal            @db.Decimal(10, 2)
+  powerUnitPrice        Decimal            @db.Decimal(10, 2)
+  gasUnitPrice          Decimal?           @db.Decimal(10, 2)
+  lateFeeRate           Decimal            @default(0.0005) @db.Decimal(10, 6)
+  freeRentDays          Int                @default(0)
+  freeRentStart         DateTime?
+  freeRentEnd           DateTime?
+  rentEscalationEnabled Boolean            @default(false)
+  nextEscalationDate    DateTime?
+  autoRenew             Boolean            @default(false)
+  signedBy              String?
+  remark                String?
+  status                LeaseStatus        @default(ACTIVE)
+  terminationType       TerminationType?
+  terminationReason     String?
+  terminatedAt          DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  deletedAt             DateTime?
+  organization          Organization       @relation(fields: [organizationId], references: [id])
+  room                  Room               @relation(fields: [roomId], references: [id])
+  tenant                Tenant?            @relation(fields: [tenantId], references: [id])
+  fees                  LeaseFee[]
+  bills                 Bill[]
+  meterReadings         MeterReading[]
+  settlement            LeaseSettlement?
+  deposit               Deposit?
+  billQueue             BillQueue?
+  depositLedgers        DepositLedger[]
+  changeLogs            LeaseChangeLog[]
+  coResidents           CoResident[]
+  roomChecklists        RoomChecklist[]
+  parentLease           Lease?             @relation("LeaseRenewal", fields: [parentLeaseId], references: [id])
+  parentLeaseId         String?
+  childLeases           Lease[]            @relation("LeaseRenewal")
+
+  @@index([roomId, status])
+  @@index([tenantId, status])
+  @@index([organizationId, status])
+}
+
+model LeaseFee {
+  id        String       @id @default(cuid())
+  leaseId   String
+  type      BillItemType @default(OTHER)
+  name      String
+  amount    Decimal      @db.Decimal(10, 2)
+  deletedAt DateTime?
+  lease     Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+}
+
+model LeaseChangeLog {
+  id            String   @id @default(cuid())
+  leaseId       String
+  fieldName     String
+  oldValue      String?
+  newValue      String?
+  reason        String?
+  changedById   String?
+  changedAt     DateTime @default(now())
+  lease         Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  @@index([leaseId, changedAt])
+}
+
+// ==================== 退租结算 ====================
 
 model LeaseSettlement {
   id                     String              @id @default(cuid())
@@ -451,8 +714,11 @@ model LeaseSettlement {
   currentWater           Decimal             @default(0) @db.Decimal(12, 2)
   previousPower          Decimal             @default(0) @db.Decimal(12, 2)
   currentPower           Decimal             @default(0) @db.Decimal(12, 2)
+  previousGas            Decimal             @default(0) @db.Decimal(12, 2)
+  currentGas             Decimal             @default(0) @db.Decimal(12, 2)
   waterUnitPrice         Decimal             @default(0) @db.Decimal(10, 2)
   powerUnitPrice         Decimal             @default(0) @db.Decimal(10, 2)
+  gasUnitPrice           Decimal             @default(0) @db.Decimal(10, 2)
   utilityAmount          Decimal             @default(0) @db.Decimal(12, 2)
   otherFeeAmount         Decimal             @default(0) @db.Decimal(12, 2)
   otherFeeReason         String?
@@ -509,6 +775,8 @@ model SettlementPayment {
   @@index([settlementId, paidAt])
 }
 
+// ==================== 押金 ====================
+
 model Deposit {
   id             String          @id @default(cuid())
   organizationId String
@@ -518,6 +786,7 @@ model Deposit {
   paidAmount     Decimal         @default(0) @db.Decimal(12, 2)
   refundedAmount Decimal         @default(0) @db.Decimal(12, 2)
   deductedAmount Decimal         @default(0) @db.Decimal(12, 2)
+  transferredAmount Decimal      @default(0) @db.Decimal(12, 2)
   status         DepositStatus   @default(UNPAID)
   note           String?
   createdAt      DateTime        @default(now())
@@ -554,15 +823,7 @@ model DepositLedger {
   @@index([tenantId, createdAt])
 }
 
-model LeaseFee {
-  id        String       @id @default(cuid())
-  leaseId   String
-  type      BillItemType @default(OTHER)
-  name      String
-  amount    Decimal      @db.Decimal(10, 2)
-  deletedAt DateTime?
-  lease     Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-}
+// ==================== 账单 ====================
 
 model Bill {
   id                 String              @id @default(cuid())
@@ -592,6 +853,8 @@ model Bill {
   settlement         LeaseSettlement?
   payments           Payment[]
   paymentAllocations PaymentAllocation[]
+  invoices           Invoice[]
+  overduePenalties   OverduePenalty[]
 
   @@unique([leaseId, billingDate, mode])
   @@index([organizationId, status])
@@ -612,34 +875,41 @@ model BillItem {
   currentWater   Decimal?          @db.Decimal(12, 2)
   previousPower  Decimal?          @db.Decimal(12, 2)
   currentPower   Decimal?          @db.Decimal(12, 2)
+  previousGas    Decimal?          @db.Decimal(12, 2)
+  currentGas     Decimal?          @db.Decimal(12, 2)
   waterUnitPrice Decimal?          @db.Decimal(10, 2)
   powerUnitPrice Decimal?          @db.Decimal(10, 2)
+  gasUnitPrice   Decimal?          @db.Decimal(10, 2)
   meterReadingId String?
   note           String?
   deletedAt      DateTime?
   bill           Bill              @relation(fields: [billId], references: [id], onDelete: Cascade)
   meterReading   MeterReading?     @relation(fields: [meterReadingId], references: [id])
   readings       BillItemReading[]
+
+  @@index([billId, type])
 }
 
 model BillItemReading {
-  id             String    @id @default(cuid())
+  id             String        @id @default(cuid())
   billItemId     String
   meterType      MeterType
-  previousValue  Decimal   @db.Decimal(12, 2)
-  currentValue   Decimal   @db.Decimal(12, 2)
-  unitPrice      Decimal   @db.Decimal(10, 2)
-  usage          Decimal   @db.Decimal(12, 2)
-  amount         Decimal   @db.Decimal(12, 2)
+  previousValue  Decimal       @db.Decimal(12, 2)
+  currentValue   Decimal       @db.Decimal(12, 2)
+  unitPrice      Decimal       @db.Decimal(10, 2)
+  usage          Decimal       @db.Decimal(12, 2)
+  amount         Decimal       @db.Decimal(12, 2)
   meterId        String?
   meterReadingId String?
-  createdAt      DateTime  @default(now())
-  billItem       BillItem  @relation(fields: [billItemId], references: [id], onDelete: Cascade)
-  meter          Meter?    @relation(fields: [meterId], references: [id])
+  createdAt      DateTime      @default(now())
+  billItem       BillItem      @relation(fields: [billItemId], references: [id], onDelete: Cascade)
+  meter          Meter?        @relation(fields: [meterId], references: [id])
   meterReading   MeterReading? @relation(fields: [meterReadingId], references: [id])
 
   @@index([billItemId])
 }
+
+// ==================== 收款与支付 ====================
 
 model Payment {
   id             String              @id @default(cuid())
@@ -675,27 +945,81 @@ model PaymentAllocation {
   @@index([billId])
 }
 
-model Meter {
-  id             String       @id @default(cuid())
+// ==================== 滞纳金 ====================
+
+model OverduePenalty {
+  id           String   @id @default(cuid())
+  billId       String
+  leaseId      String
+  amount       Decimal  @db.Decimal(12, 2)
+  baseAmount   Decimal  @db.Decimal(12, 2)
+  daysOverdue  Int
+  rate         Decimal  @db.Decimal(10, 6)
+  isWaived     Boolean  @default(false)
+  waiveReason  String?
+  waivedById   String?
+  waivedAt     DateTime?
+  calculatedAt DateTime @default(now())
+  bill         Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@index([leaseId])
+}
+
+// ==================== 发票 ====================
+
+model Invoice {
+  id             String        @id @default(cuid())
   organizationId String
-  apartmentId    String
-  roomId         String?
-  name           String
-  meterType      MeterType
-  meterNo        String?
-  installDate    DateTime     @default(now())
-  removeDate     DateTime?
-  status         MeterStatus  @default(ACTIVE)
-  parentId       String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  apartment      Apartment    @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
-  room           Room?        @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  parent         Meter?       @relation("MeterHierarchy", fields: [parentId], references: [id])
-  subMeters      Meter[]      @relation("MeterHierarchy")
-  readings       MeterReading[]
+  tenantId       String?
+  billId         String?
+  title          String
+  taxNo          String?
+  amount         Decimal       @db.Decimal(12, 2)
+  content        String?
+  email          String?
+  address        String?
+  status         InvoiceStatus @default(PENDING)
+  issuedAt       DateTime?
+  sentAt         DateTime?
+  receivedAt     DateTime?
+  note           String?
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id])
+  bill           Bill?         @relation(fields: [billId], references: [id])
+  createdBy      User          @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId, status])
+  @@index([tenantId])
+}
+
+// ==================== 表具 ====================
+
+model Meter {
+  id               String            @id @default(cuid())
+  organizationId   String
+  apartmentId      String
+  roomId           String?
+  name             String
+  meterType        MeterType
+  meterNo          String?
+  installDate      DateTime          @default(now())
+  removeDate       DateTime?
+  initialValue     Decimal           @default(0) @db.Decimal(12, 2)
+  status           MeterStatus       @default(ACTIVE)
+  parentId         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  apartment        Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  room             Room?             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  parent           Meter?            @relation("MeterHierarchy", fields: [parentId], references: [id])
+  subMeters        Meter[]           @relation("MeterHierarchy")
+  readings         MeterReading[]
   billItemReadings BillItemReading[]
 
   @@index([organizationId, apartmentId])
@@ -735,30 +1059,158 @@ model MeterReading {
   @@index([meterId, readingDate])
 }
 
-model BillQueue {
-  id           String          @id @default(cuid())
-  leaseId      String          @unique
-  nextBillDate DateTime
-  lastBillDate DateTime?
-  lastBillId   String?
-  status       BillQueueStatus @default(PENDING)
-  errorMsg     String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  lease        Lease           @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+// ==================== 维修工单 ====================
 
-  @@index([nextBillDate, status])
+model MaintenanceOrder {
+  id             String                  @id @default(cuid())
+  organizationId String
+  apartmentId    String?
+  roomId         String?
+  type           MaintenanceOrderType
+  priority       MaintenancePriority     @default(NORMAL)
+  title          String
+  description    String?
+  reporterName   String?
+  reporterPhone  String?
+  scheduledDate  DateTime?
+  completedDate  DateTime?
+  materialCost   Decimal                 @default(0) @db.Decimal(12, 2)
+  laborCost      Decimal                 @default(0) @db.Decimal(12, 2)
+  totalCost      Decimal                 @default(0) @db.Decimal(12, 2)
+  status         MaintenanceOrderStatus  @default(PENDING)
+  assignedTo     String?
+  acceptanceNote String?
+  beforePhotoUrl String?
+  afterPhotoUrl  String?
+  isTenantFault  Boolean                 @default(false)
+  billItemId     String?
+  createdById    String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  deletedAt      DateTime?
+  organization   Organization            @relation(fields: [organizationId], references: [id])
+  apartment      Apartment?              @relation(fields: [apartmentId], references: [id])
+  room           Room?                   @relation(fields: [roomId], references: [id])
+  createdBy      User?                   @relation(fields: [createdById], references: [id])
+  items          MaintenanceOrderItem[]
+
+  @@index([organizationId, status])
+  @@index([roomId, status])
+  @@index([priority, status])
 }
 
+model MaintenanceOrderItem {
+  id                 String           @id @default(cuid())
+  maintenanceOrderId String
+  name               String
+  quantity           Int              @default(1)
+  unitPrice          Decimal          @default(0) @db.Decimal(12, 2)
+  amount             Decimal          @default(0) @db.Decimal(12, 2)
+  isLabor            Boolean          @default(false)
+  maintenanceOrder   MaintenanceOrder @relation(fields: [maintenanceOrderId], references: [id], onDelete: Cascade)
+
+  @@index([maintenanceOrderId])
+}
+
+// ==================== 房间检查清单 ====================
+
+model RoomChecklist {
+  id             String            @id @default(cuid())
+  organizationId String
+  leaseId        String
+  roomId         String
+  checkType      RoomCheckType
+  checkDate      DateTime
+  checkedById    String?
+  tenantSignUrl  String?
+  operatorSignUrl String?
+  note           String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  lease          Lease             @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  room           Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  items          RoomChecklistItem[]
+
+  @@index([leaseId, checkType])
+  @@index([roomId, checkType])
+}
+
+model RoomChecklistItem {
+  id              String        @id @default(cuid())
+  checklistId     String
+  category        String        // 水电/门窗/墙面/家具/家电/卫生/钥匙/其他
+  itemName        String
+  status          String        // 完好/损坏/缺失/脏污
+  description     String?
+  photoUrl        String?
+  deductionAmount Decimal?      @db.Decimal(12, 2)
+  note            String?
+  roomChecklist   RoomChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
+}
+
+// ==================== 出纳与财务 ====================
+
+model IncomeExpenseCategory {
+  id             String           @id @default(cuid())
+  organizationId String
+  type           IncomeExpenseType
+  code           String
+  name           String
+  parentId       String?
+  sortOrder      Int              @default(0)
+  isSystem       Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent         IncomeExpenseCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children       IncomeExpenseCategory[] @relation("CategoryHierarchy")
+  expenses       ApartmentExpense[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, type])
+}
+
+model CashierJournal {
+  id              String           @id @default(cuid())
+  organizationId  String
+  date            DateTime
+  type            IncomeExpenseType
+  categoryId      String?
+  amount          Decimal          @db.Decimal(12, 2)
+  paymentMethod   String
+  accountType     CashierAccountType @default(CASH)
+  counterparty    String?          // 对方名称
+  counterpartyId  String?          // 租客ID/房东ID等
+  relatedDocType  String?          // BILL / DEPOSIT / SETTLEMENT / CONTRACT / MAINTENANCE / OTHER
+  relatedDocId    String?          // 关联单据ID
+  relatedPaymentId String?         // 关联Payment ID
+  summary         String
+  operatorId      String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  operator        User             @relation(fields: [operatorId], references: [id])
+
+  @@index([organizationId, date])
+  @@index([organizationId, type, date])
+  @@index([counterpartyId, date])
+  @@index([relatedDocType, relatedDocId])
+}
+
+// ==================== 租客账户 ====================
+
 model TenantAccount {
-  id             String   @id @default(cuid())
-  tenantId       String   @unique
-  prepaidBalance Decimal  @default(0) @db.Decimal(12, 2)
-  depositBalance Decimal  @default(0) @db.Decimal(12, 2)
-  totalUnpaid    Decimal  @default(0) @db.Decimal(12, 2)
-  netBalance     Decimal  @default(0) @db.Decimal(12, 2)
-  updatedAt      DateTime @updatedAt
-  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id             String               @id @default(cuid())
+  tenantId       String               @unique
+  prepaidBalance Decimal              @default(0) @db.Decimal(12, 2)
+  depositBalance Decimal              @default(0) @db.Decimal(12, 2)
+  totalUnpaid    Decimal              @default(0) @db.Decimal(12, 2)
+  netBalance     Decimal              @default(0) @db.Decimal(12, 2)
+  updatedAt      DateTime             @updatedAt
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactions   AccountTransaction[]
 }
 
@@ -777,6 +1229,25 @@ model AccountTransaction {
 
   @@index([tenantAccountId, createdAt])
 }
+
+// ==================== 账单队列 ====================
+
+model BillQueue {
+  id           String          @id @default(cuid())
+  leaseId      String          @unique
+  nextBillDate DateTime
+  lastBillDate DateTime?
+  lastBillId   String?
+  status       BillQueueStatus @default(PENDING)
+  errorMsg     String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  lease        Lease           @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  @@index([nextBillDate, status])
+}
+
+// ==================== SaaS 运营 ====================
 
 model Plan {
   id             String         @id @default(cuid())
@@ -813,22 +1284,26 @@ model OrgQuotaPackage {
   organization   Organization @relation(fields: [organizationId], references: [id])
 }
 
+// ==================== 审计与系统 ====================
+
 model AuditLog {
   id             String       @id @default(cuid())
-  organizationId String
+  organizationId String?
   tableName      String
   recordId       String
-  action         String
+  action         String       // CREATE / UPDATE / DELETE / SOFT_DELETE / RESTORE
   fieldName      String?
   oldValue       String?
   newValue       String?
   userId         String
   ipAddress      String?
+  userAgent      String?
   createdAt      DateTime     @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   user           User         @relation(fields: [userId], references: [id])
 
   @@index([organizationId, tableName, recordId])
+  @@index([userId, createdAt])
   @@index([createdAt])
 }
 

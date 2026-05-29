@@ -6,9 +6,7 @@ import {
   requireOrg,
   requirePermission,
 } from '../middleware/auth.js';
-import {
-  syncTenantDisplayFields,
-} from '../services/tenant.js';
+import { syncTenantDisplayFields } from '../services/tenant.js';
 import { getAccountBalance, adjustAccount } from '../services/tenantAccount.js';
 import { PERMISSIONS } from '../services/roles.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -104,9 +102,25 @@ tenantRouter.put(
         name: z.string().min(1).optional(),
         phone: z.string().min(6).optional(),
         idCard: z.string().optional(),
+        idCardFrontUrl: z.string().optional(),
+        idCardBackUrl: z.string().optional(),
+        workUnit: z.string().optional(),
+        jobTitle: z.string().optional(),
         emergencyContact: z.string().optional(),
         emergencyPhone: z.string().optional(),
-        note: z.string().optional(),
+        sourceChannel: z
+          .enum([
+            'PLATFORM_58',
+            'DOUBAN',
+            'BEIKE',
+            'REFERRAL',
+            'AGENT',
+            'WALK_IN',
+            'OTHER',
+          ])
+          .optional(),
+        creditScore: z.coerce.number().int().min(0).max(1000).optional(),
+        remark: z.string().optional(),
       })
       .parse(req.body);
 
@@ -121,6 +135,7 @@ tenantRouter.put(
     const updated = await prisma.tenant.update({
       where: { id: tenant.id },
       data: input,
+      include: { coResidents: true, account: true },
     });
 
     await syncTenantDisplayFields(tenant.id);

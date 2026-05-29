@@ -9,6 +9,12 @@ import {
   Divider,
   Row,
   Col,
+  Table,
+  Modal,
+  Form,
+  Input,
+  Select,
+  DatePicker,
 } from 'antd';
 import {
   EditOutlined,
@@ -16,9 +22,16 @@ import {
   UserAddOutlined,
   EditOutlined as EditLeaseIcon,
   LogoutOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getRoomDetail, deleteRoom } from '@/api/rooms';
+import {
+  getRoomChecklists,
+  createRoomChecklist,
+  deleteRoomChecklist,
+  type RoomChecklist,
+} from '@/api/roomChecklists';
 import type { Room } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForStatus, cycleLabels } from './constants';
@@ -44,6 +57,10 @@ export default function RoomDetailPage() {
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checklists, setChecklists] = useState<RoomChecklist[]>([]);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [checklistModalOpen, setChecklistModalOpen] = useState(false);
+  const [checklistForm] = Form.useForm();
 
   const loadData = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -58,9 +75,23 @@ export default function RoomDetailPage() {
     }
   }, [currentOrgId, id]);
 
+  const loadChecklists = useCallback(async () => {
+    if (!currentOrgId || !id) return;
+    setChecklistLoading(true);
+    try {
+      const data = await getRoomChecklists(currentOrgId, { roomId: id });
+      setChecklists(data);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加载检查清单失败');
+    } finally {
+      setChecklistLoading(false);
+    }
+  }, [currentOrgId, id]);
+
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    loadChecklists();
+  }, [loadData, loadChecklists]);
 
   const handleDelete = async () => {
     if (!currentOrgId || !room) return;
@@ -289,9 +320,135 @@ export default function RoomDetailPage() {
                 </DetailSection>
               </>
             )}
+
+            <Divider />
+            <DetailSection
+              title="检查清单"
+              actions={
+                canManageRoom && (
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      checklistForm.resetFields();
+                      setChecklistModalOpen(true);
+                    }}
+                  >
+                    新建检查
+                  </Button>
+                )
+              }
+            >
+              <Spin spinning={checklistLoading}>
+                {checklists.length === 0 ? (
+                  <EmptyState
+                    title="暂无检查清单"
+                    description="入住或退租时可创建检查清单"
+                  />
+                ) : (
+                  <Table
+                    rowKey="id"
+                    dataSource={checklists}
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      {
+                        title: '类型',
+                        dataIndex: 'checkType',
+                        render: (v: string) =>
+                          v === 'CHECKIN' ? '入住检查' : '退租检查',
+                      },
+                      { title: '检查日期', dataIndex: 'checkDate' },
+                      {
+                        title: '检查项数',
+                        render: (_: unknown, r: RoomChecklist) =>
+                          r.items?.length ?? 0,
+                      },
+                      {
+                        title: '操作',
+                        render: (_: unknown, r: RoomChecklist) => (
+                          <Popconfirm
+                            title="删除检查清单"
+                            onConfirm={async () => {
+                              if (!currentOrgId) return;
+                              await deleteRoomChecklist(currentOrgId, r.id);
+                              message.success('已删除');
+                              loadChecklists();
+                            }}
+                          >
+                            <Button size="small" danger>
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        ),
+                      },
+                    ]}
+                  />
+                )}
+              </Spin>
+            </DetailSection>
           </>
         )}
       </Spin>
+
+      <Modal
+        title="新建检查清单"
+        open={checklistModalOpen}
+        onCancel={() => setChecklistModalOpen(false)}
+        onOk={() => checklistForm.submit()}
+      >
+        <Form
+          form={checklistForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            if (!currentOrgId || !id || !room) return;
+            const active = room.leases?.find((l) => l.status === 'ACTIVE');
+            await createRoomChecklist(currentOrgId, {
+              leaseId: active?.id ?? id,
+              roomId: id,
+              checkType: values.checkType,
+              checkDate: values.checkDate.toISOString(),
+              note: values.note,
+              items: values.items?.map((item: Record<string, unknown>) => ({
+                category: item.category,
+                itemName: item.itemName,
+                status: item.status,
+                description: item.description,
+                deductionAmount: item.deductionAmount,
+                note: item.note,
+              })),
+            });
+            message.success('检查清单已创建');
+            setChecklistModalOpen(false);
+            checklistForm.resetFields();
+            loadChecklists();
+          }}
+        >
+          <Form.Item
+            name="checkType"
+            label="检查类型"
+            rules={[{ required: true }]}
+          >
+            <Select
+              options={[
+                { value: 'CHECKIN', label: '入住检查' },
+                { value: 'CHECKOUT', label: '退租检查' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            name="checkDate"
+            label="检查日期"
+            rules={[{ required: true }]}
+          >
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="note" label="备注">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

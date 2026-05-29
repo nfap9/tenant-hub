@@ -73,13 +73,23 @@ leaseRouter.post(
         startDate: z.coerce.date(),
         endDate: z.coerce.date(),
         billDay: z.number().int().min(1).max(28).optional(),
+        utilityBillDay: z.number().int().min(1).max(28).optional(),
+        paymentDueDays: z.coerce.number().int().min(0).default(7),
         graceDays: z.coerce.number().int().min(0).default(0),
         cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']),
         rentAmount: amountSchema,
+        depositMonths: z.coerce.number().int().min(0).default(1),
         depositAmount: amountSchema.default(0),
         waterUnitPrice: amountSchema,
         powerUnitPrice: amountSchema,
+        gasUnitPrice: amountSchema.optional(),
+        lateFeeRate: z.coerce.number().min(0).default(0.0005),
+        freeRentDays: z.coerce.number().int().min(0).default(0),
+        freeRentStart: z.coerce.date().optional(),
+        freeRentEnd: z.coerce.date().optional(),
         autoRenew: z.boolean().default(false),
+        signedBy: z.string().optional(),
+        remark: z.string().optional(),
         fees: z
           .array(
             z.object({
@@ -216,7 +226,18 @@ leaseRouter.put(
         depositAmount: amountSchema.optional(),
         waterUnitPrice: amountSchema.optional(),
         powerUnitPrice: amountSchema.optional(),
+        gasUnitPrice: amountSchema.optional(),
         billDay: z.number().int().min(1).max(28).optional(),
+        utilityBillDay: z.number().int().min(1).max(28).optional(),
+        paymentDueDays: z.coerce.number().int().min(0).optional(),
+        graceDays: z.coerce.number().int().min(0).optional(),
+        lateFeeRate: z.coerce.number().min(0).optional(),
+        freeRentDays: z.coerce.number().int().min(0).optional(),
+        freeRentStart: z.coerce.date().optional(),
+        freeRentEnd: z.coerce.date().optional(),
+        autoRenew: z.boolean().optional(),
+        signedBy: z.string().optional(),
+        remark: z.string().optional(),
         fees: z
           .array(
             z.object({
@@ -256,6 +277,27 @@ leaseRouter.put(
           });
         }
       }
+
+      // 记录变更日志
+      const changeFields = Object.keys(leaseData) as Array<
+        keyof typeof leaseData
+      >;
+      for (const field of changeFields) {
+        const oldValue = String(lease[field as keyof typeof lease] ?? '');
+        const newValue = String(leaseData[field] ?? '');
+        if (oldValue !== newValue) {
+          await tx.leaseChangeLog.create({
+            data: {
+              leaseId: lease.id,
+              fieldName: field,
+              oldValue,
+              newValue,
+              changedById: req.user!.id,
+            },
+          });
+        }
+      }
+
       return tx.lease.update({
         where: { id: lease.id },
         data: leaseData,
@@ -377,5 +419,230 @@ leaseRouter.post(
         ...input,
       })
     );
+  })
+);
+
+// US-504: 续租
+leaseRouter.post(
+  '/:id/renew',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        startDate: z.coerce.date(),
+        endDate: z.coerce.date(),
+        rentAmount: amountSchema.optional(),
+        remark: z.string().optional(),
+      })
+      .refine((data) => data.endDate >= data.startDate, {
+        path: ['endDate'],
+        message: '租约结束日期不能早于开始日期',
+      })
+      .parse(req.body);
+
+    const oldLease = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { ...leaseInclude, tenant: true },
+    });
+    if (!oldLease) throw new HttpError(404, '租约不存在');
+    if (oldLease.status !== 'ACTIVE')
+      throw new HttpError(400, '仅有效租约可以续租');
+
+    const newLease = await prisma.$transaction(async (tx) => {
+      await tx.lease.update({
+        where: { id: oldLease.id },
+        data: { status: 'RENEWED' },
+      });
+
+      await tx.leaseChangeLog.create({
+        data: {
+          leaseId: oldLease.id,
+          fieldName: 'status',
+          oldValue: oldLease.status,
+          newValue: 'RENEWED',
+          reason: '续租',
+          changedById: req.user!.id,
+        },
+      });
+
+      const created = await tx.lease.create({
+        data: {
+          organizationId: req.organizationId!,
+          roomId: oldLease.roomId,
+          tenantId: oldLease.tenantId,
+          tenantName: oldLease.tenantName,
+          tenantPhone: oldLease.tenantPhone,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          billDay: oldLease.billDay,
+          utilityBillDay: oldLease.utilityBillDay,
+          paymentDueDays: oldLease.paymentDueDays,
+          graceDays: oldLease.graceDays,
+          cycle: oldLease.cycle,
+          rentAmount: input.rentAmount ?? oldLease.rentAmount,
+          depositAmount: oldLease.depositAmount,
+          waterUnitPrice: oldLease.waterUnitPrice,
+          powerUnitPrice: oldLease.powerUnitPrice,
+          gasUnitPrice: oldLease.gasUnitPrice,
+          lateFeeRate: oldLease.lateFeeRate,
+          autoRenew: oldLease.autoRenew,
+          signedBy: oldLease.signedBy,
+          remark: input.remark,
+          parentLeaseId: oldLease.id,
+          status: 'ACTIVE',
+          fees: {
+            create: oldLease.fees.map((fee) => ({
+              type: fee.type,
+              name: fee.name,
+              amount: fee.amount,
+            })),
+          },
+        },
+        include: leaseInclude,
+      });
+
+      if (oldLease.deposit) {
+        await tx.deposit.create({
+          data: {
+            organizationId: req.organizationId!,
+            leaseId: created.id,
+            amount: oldLease.deposit.amount,
+            paidAmount: oldLease.deposit.paidAmount,
+            status: oldLease.deposit.status,
+          },
+        });
+      }
+
+      return created;
+    });
+
+    await generateLeaseBills(newLease.id, new Date());
+    await populateBillQueue(newLease.id).catch(() => {});
+    ok(res, withLeaseLifecycle(newLease));
+  })
+);
+
+// US-505: 换房
+leaseRouter.post(
+  '/:id/room-change',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        newRoomId: z.string(),
+        startDate: z.coerce.date(),
+        endDate: z.coerce.date(),
+        rentAmount: amountSchema.optional(),
+        remark: z.string().optional(),
+      })
+      .refine((data) => data.endDate >= data.startDate, {
+        path: ['endDate'],
+        message: '租约结束日期不能早于开始日期',
+      })
+      .parse(req.body);
+
+    const oldLease = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { ...leaseInclude, tenant: true, deposit: true },
+    });
+    if (!oldLease) throw new HttpError(404, '租约不存在');
+    if (oldLease.status !== 'ACTIVE')
+      throw new HttpError(400, '仅有效租约可以换房');
+
+    const newRoom = await prisma.room.findFirst({
+      where: {
+        id: input.newRoomId,
+        apartment: { organizationId: req.organizationId! },
+      },
+    });
+    if (!newRoom) throw new HttpError(404, '目标房间不存在');
+    if (newRoom.status !== 'VACANT')
+      throw new HttpError(400, '目标房间不是空闲状态');
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 终止旧租约
+      await tx.lease.update({
+        where: { id: oldLease.id },
+        data: {
+          status: 'TERMINATED',
+          terminationType: 'NEGOTIATED',
+          terminationReason: '换房',
+          terminatedAt: new Date(),
+        },
+      });
+
+      await tx.room.update({
+        where: { id: oldLease.roomId },
+        data: { status: 'CHECKOUT_CLEANING' },
+      });
+
+      // 创建新租约
+      const newLease = await tx.lease.create({
+        data: {
+          organizationId: req.organizationId!,
+          roomId: input.newRoomId,
+          tenantId: oldLease.tenantId,
+          tenantName: oldLease.tenantName,
+          tenantPhone: oldLease.tenantPhone,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          billDay: oldLease.billDay,
+          utilityBillDay: oldLease.utilityBillDay,
+          paymentDueDays: oldLease.paymentDueDays,
+          graceDays: oldLease.graceDays,
+          cycle: oldLease.cycle,
+          rentAmount: input.rentAmount ?? oldLease.rentAmount,
+          depositAmount: oldLease.depositAmount,
+          waterUnitPrice: oldLease.waterUnitPrice,
+          powerUnitPrice: oldLease.powerUnitPrice,
+          gasUnitPrice: oldLease.gasUnitPrice,
+          lateFeeRate: oldLease.lateFeeRate,
+          autoRenew: oldLease.autoRenew,
+          signedBy: oldLease.signedBy,
+          remark: input.remark,
+          parentLeaseId: oldLease.id,
+          status: 'ACTIVE',
+          fees: {
+            create: oldLease.fees.map((fee) => ({
+              type: fee.type,
+              name: fee.name,
+              amount: fee.amount,
+            })),
+          },
+        },
+        include: leaseInclude,
+      });
+
+      await tx.room.update({
+        where: { id: input.newRoomId },
+        data: { status: 'OCCUPIED' },
+      });
+
+      // 押金转结
+      if (oldLease.deposit) {
+        await tx.deposit.update({
+          where: { id: oldLease.deposit.id },
+          data: {
+            transferredAmount: oldLease.deposit.paidAmount,
+            status: 'FULLY_REFUNDED',
+          },
+        });
+        await tx.deposit.create({
+          data: {
+            organizationId: req.organizationId!,
+            leaseId: newLease.id,
+            amount: oldLease.deposit.amount,
+            paidAmount: oldLease.deposit.paidAmount,
+            status: oldLease.deposit.status,
+          },
+        });
+      }
+
+      return newLease;
+    });
+
+    await generateLeaseBills(result.id, new Date());
+    await populateBillQueue(result.id).catch(() => {});
+    ok(res, withLeaseLifecycle(result));
   })
 );

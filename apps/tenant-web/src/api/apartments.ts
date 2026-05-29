@@ -10,14 +10,33 @@ export async function createApartment(
   payload: {
     name: string;
     location: string;
+    status?: string;
+    propertyType?: string;
     floors?: number;
     landArea?: number;
     totalArea?: number;
+    publicAreaRatio?: number;
+    buildYear?: number;
+    elevatorCount?: number;
+    propertyRight?: string;
     landlordName?: string;
     landlordPhone?: string;
+    landlordContractNo?: string;
     contractStart?: string;
     contractEnd?: string;
     rentAmount?: number;
+    depositAmount?: number;
+    paymentMethod?: string;
+    rentEscalationType?: string;
+    rentEscalationValue?: number;
+    rentEscalationCycle?: number;
+    costElectricityPrice?: number;
+    costWaterPrice?: number;
+    costGasPrice?: number;
+    reminderDay?: number;
+    fireRating?: string;
+    fireExtinguisherCount?: number;
+    escapeRouteCount?: number;
   }
 ) {
   return apiClient<Apartment>('/apartments', {
@@ -33,14 +52,33 @@ export async function updateApartment(
   payload: {
     name?: string;
     location?: string;
+    status?: string;
+    propertyType?: string;
     floors?: number;
     landArea?: number;
     totalArea?: number;
+    publicAreaRatio?: number;
+    buildYear?: number;
+    elevatorCount?: number;
+    propertyRight?: string;
     landlordName?: string;
     landlordPhone?: string;
+    landlordContractNo?: string;
     contractStart?: string;
     contractEnd?: string;
     rentAmount?: number;
+    depositAmount?: number;
+    paymentMethod?: string;
+    rentEscalationType?: string;
+    rentEscalationValue?: number;
+    rentEscalationCycle?: number;
+    costElectricityPrice?: number;
+    costWaterPrice?: number;
+    costGasPrice?: number;
+    reminderDay?: number;
+    fireRating?: string;
+    fireExtinguisherCount?: number;
+    escapeRouteCount?: number;
   }
 ) {
   return apiClient<Apartment>(`/apartments/${id}`, {

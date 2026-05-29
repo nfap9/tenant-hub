@@ -22,14 +22,46 @@ apartmentRouter.use(requireAuth, requireOrg);
 const apartmentInput = z.object({
   name: z.string().min(1),
   location: z.string().min(1),
+  status: z
+    .enum([
+      'PLANNING',
+      'RENOVATING',
+      'PREPARING',
+      'ACTIVE',
+      'SUSPENDED',
+      'CLOSED',
+    ])
+    .optional(),
+  propertyType: z
+    .enum([
+      'RESIDENTIAL',
+      'COMMERCIAL',
+      'INDUSTRIAL_RENOVATED',
+      'URBAN_VILLAGE',
+      'OTHER',
+    ])
+    .optional(),
   floors: z.coerce.number().int().min(1),
   landArea: z.coerce.number().optional(),
   totalArea: z.coerce.number().optional(),
+  buildYear: z.coerce.number().int().optional(),
+  elevatorCount: z.coerce.number().int().min(0).optional(),
+  propertyRight: z.enum(['OWNED', 'LONG_TERM_LEASE', 'TRUSTEESHIP']).optional(),
   landlordName: z.string().optional(),
   landlordPhone: z.string().optional(),
+  landlordContractNo: z.string().optional(),
   contractStart: z.coerce.date().optional(),
   contractEnd: z.coerce.date().optional(),
   rentAmount: z.coerce.number().optional(),
+  depositAmount: z.coerce.number().optional(),
+  paymentMethod: z.string().optional(),
+  rentEscalationType: z.string().optional(),
+  rentEscalationValue: z.coerce.number().optional(),
+  rentEscalationCycle: z.coerce.number().int().optional(),
+  costElectricityPrice: z.coerce.number().optional(),
+  costWaterPrice: z.coerce.number().optional(),
+  costGasPrice: z.coerce.number().optional(),
+  reminderDay: z.coerce.number().int().min(1).max(28).optional(),
 });
 
 const ensureApartmentInOrg = async (
@@ -293,12 +325,38 @@ apartmentRouter.put(
     const input = z
       .object({
         roomNo: z.string().min(1).optional(),
+        floor: z.coerce.number().int().min(1).optional(),
         layout: z.string().min(1).optional(),
         area: z.coerce.number().optional(),
+        orientation: z
+          .enum([
+            'NORTH',
+            'SOUTH',
+            'EAST',
+            'WEST',
+            'NORTH_EAST',
+            'NORTH_WEST',
+            'SOUTH_EAST',
+            'SOUTH_WEST',
+          ])
+          .optional(),
+        decorationStatus: z
+          .enum(['BARE', 'SIMPLE', 'DELUXE', 'LUXURY'])
+          .optional(),
         facilities: z.array(z.string()).optional(),
         status: z
-          .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE'])
+          .enum([
+            'TO_RENOVATE',
+            'TO_CONFIGURE',
+            'VACANT',
+            'RESERVED',
+            'OCCUPIED',
+            'MAINTENANCE',
+            'CHECKOUT_CLEANING',
+          ])
           .optional(),
+        statusReason: z.string().optional(),
+        currentRentPrice: z.coerce.number().optional(),
       })
       .parse(req.body);
     await ensureRoomInOrg(req.params.roomId, req.organizationId!);
@@ -374,5 +432,154 @@ apartmentRouter.delete(
     if (activeLeaseCount > 0)
       throw new HttpError(400, '房间存在活跃租约，无法删除');
     ok(res, await prisma.room.delete({ where: { id: req.params.roomId } }));
+  })
+);
+
+// US-102: 公寓状态变更
+apartmentRouter.patch(
+  '/:id/status',
+  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        status: z.enum([
+          'PLANNING',
+          'RENOVATING',
+          'PREPARING',
+          'ACTIVE',
+          'SUSPENDED',
+          'CLOSED',
+        ]),
+        reason: z.string().optional(),
+      })
+      .parse(req.body);
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    ok(
+      res,
+      await prisma.apartment.update({
+        where: { id: req.params.id },
+        data: {
+          status: input.status,
+          statusReason: input.reason,
+          statusChangedAt: new Date(),
+        },
+      })
+    );
+  })
+);
+
+// US-103: 运营支出分类统计
+apartmentRouter.get(
+  '/:id/expense-summary',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const { year, month } = z
+      .object({
+        year: z.coerce.number().int(),
+        month: z.coerce.number().int().min(1).max(12).optional(),
+      })
+      .parse(req.query);
+
+    const startDate = month
+      ? new Date(year, month - 1, 1)
+      : new Date(year, 0, 1);
+    const endDate = month ? new Date(year, month, 1) : new Date(year + 1, 0, 1);
+
+    const expenses = await prisma.apartmentExpense.findMany({
+      where: {
+        apartmentId: req.params.id,
+        spentAt: { gte: startDate, lt: endDate },
+        deletedAt: null,
+      },
+      include: { category: true },
+      orderBy: { spentAt: 'desc' },
+    });
+
+    const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const byCategory: Record<string, number> = {};
+    for (const e of expenses) {
+      const key = e.category?.name ?? e.name;
+      byCategory[key] = (byCategory[key] ?? 0) + Number(e.amount);
+    }
+
+    ok(res, { expenses, total, byCategory });
+  })
+);
+
+// US-104: 公寓可视化看板
+apartmentRouter.get(
+  '/:id/dashboard',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const apartment = await prisma.apartment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        rooms: {
+          include: {
+            leases: {
+              where: { status: { in: ['ACTIVE', 'PENDING'] } },
+              include: { bills: true },
+            },
+          },
+        },
+        expenses: true,
+      },
+    });
+    if (!apartment) throw new HttpError(404, '公寓不存在');
+
+    const totalRooms = apartment.rooms.length;
+    const occupiedRooms = apartment.rooms.filter((r) =>
+      r.leases.some((l) => l.status === 'ACTIVE')
+    ).length;
+    const vacantRooms = totalRooms - occupiedRooms;
+    const maintenanceRooms = apartment.rooms.filter(
+      (r) => r.status === 'MAINTENANCE'
+    ).length;
+
+    const currentMonth = new Date();
+    const monthStart = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      1
+    );
+    const monthEnd = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() + 1,
+      1
+    );
+
+    let receivable = 0;
+    let received = 0;
+    let overdue = 0;
+    for (const room of apartment.rooms) {
+      for (const lease of room.leases) {
+        for (const bill of lease.bills) {
+          if (bill.billingDate >= monthStart && bill.billingDate < monthEnd) {
+            receivable += Number(bill.totalAmount);
+            received += Number(bill.paidAmount);
+            if (bill.status === 'OVERDUE')
+              overdue += Number(bill.totalAmount) - Number(bill.paidAmount);
+          }
+        }
+      }
+    }
+
+    ok(res, {
+      totalRooms,
+      occupiedRooms,
+      vacantRooms,
+      maintenanceRooms,
+      occupancyRate:
+        totalRooms > 0
+          ? ((occupiedRooms / totalRooms) * 100).toFixed(2)
+          : '0.00',
+      currentMonth: {
+        receivable,
+        received,
+        overdue,
+      },
+    });
   })
 );
