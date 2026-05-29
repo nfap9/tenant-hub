@@ -478,3 +478,31 @@ billRouter.delete(
     ok(res, { deleted: true });
   })
 );
+
+// US-702: 账单作废
+billRouter.patch(
+  '/:id/status',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const { status, reason } = z
+      .object({
+        status: z.enum(['VOID']),
+        reason: z.string().min(1, '作废原因不能为空'),
+      })
+      .parse(req.body);
+
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不能作废');
+    if (bill.status === 'VOID') throw new HttpError(400, '账单已作废');
+
+    const updated = await prisma.bill.update({
+      where: { id: bill.id },
+      data: { status, note: reason },
+    });
+
+    ok(res, updated);
+  })
+);

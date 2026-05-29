@@ -73,6 +73,24 @@ export type LeaseFeeFormItem = {
   amount: string;
 };
 
+export const orientationOptions = [
+  { label: '北', value: 'NORTH' },
+  { label: '南', value: 'SOUTH' },
+  { label: '东', value: 'EAST' },
+  { label: '西', value: 'WEST' },
+  { label: '东北', value: 'NORTH_EAST' },
+  { label: '西北', value: 'NORTH_WEST' },
+  { label: '东南', value: 'SOUTH_EAST' },
+  { label: '西南', value: 'SOUTH_WEST' },
+];
+
+export const decorationStatusOptions = [
+  { label: '毛坯', value: 'BARE' },
+  { label: '简装', value: 'SIMPLE' },
+  { label: '精装', value: 'DELUXE' },
+  { label: '豪华装', value: 'LUXURY' },
+];
+
 export const emptyRoomForm = {
   roomNo: '',
   layout: '',

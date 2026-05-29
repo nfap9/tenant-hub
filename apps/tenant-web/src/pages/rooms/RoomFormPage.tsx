@@ -8,6 +8,7 @@ import {
   Button,
   message,
   Spin,
+  DatePicker,
 } from 'antd';
 import {
   SaveOutlined,
@@ -15,14 +16,23 @@ import {
   BuildOutlined,
   NumberOutlined,
   AppstoreOutlined,
+  CompassOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getAllApartments } from '@/api/apartments';
 import { createRoom, updateRoom } from '@/api/rooms';
 import type { Apartment, Room } from '@/types/domain';
-import { optionalNumber, toFacilityArray } from '@/utils/format';
-import { emptyRoomForm, roomStatuses, statusLabels } from './constants';
+import { optionalNumber, toFacilityArray, optionalText } from '@/utils/format';
+import {
+  emptyRoomForm,
+  roomStatuses,
+  statusLabels,
+  orientationOptions,
+  decorationStatusOptions,
+} from './constants';
 import { roomLayoutOptions } from '@/pages/apartments/constants';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './RoomFormPage.module.scss';
@@ -67,8 +77,14 @@ export default function RoomFormPage() {
       form.setFieldsValue({
         apartmentId: editingRoom.apartmentId,
         roomNo: editingRoom.roomNo,
+        floor: editingRoom.floor,
         layout: editingRoom.layout,
         area: editingRoom.area ? Number(editingRoom.area) : undefined,
+        orientation: editingRoom.orientation,
+        decorationStatus: editingRoom.decorationStatus,
+        decorationDate: editingRoom.decorationDate
+          ? dayjs(editingRoom.decorationDate)
+          : undefined,
         facilities: editingRoom.facilities?.join(',') ?? '',
         status: editingRoom.status,
       });
@@ -99,8 +115,14 @@ export default function RoomFormPage() {
       if (isEdit) {
         await updateRoom(currentOrgId, id!, {
           roomNo: String(values.roomNo).trim(),
+          floor: optionalNumber(values.floor),
           layout: String(values.layout).trim(),
           area: optionalNumber(values.area),
+          orientation: optionalText(values.orientation),
+          decorationStatus: optionalText(values.decorationStatus),
+          decorationDate: values.decorationDate
+            ? dayjs(values.decorationDate as string).format('YYYY-MM-DD')
+            : undefined,
           facilities: toFacilityArray(String(values.facilities)),
           status: String(values.status),
         });
@@ -114,8 +136,14 @@ export default function RoomFormPage() {
         }
         await createRoom(currentOrgId, apartmentId, {
           roomNo: String(values.roomNo).trim(),
+          floor: optionalNumber(values.floor),
           layout: String(values.layout).trim(),
           area: optionalNumber(values.area),
+          orientation: optionalText(values.orientation),
+          decorationStatus: optionalText(values.decorationStatus),
+          decorationDate: values.decorationDate
+            ? dayjs(values.decorationDate as string).format('YYYY-MM-DD')
+            : undefined,
           facilities: toFacilityArray(String(values.facilities)),
         });
         message.success('房间已添加');
@@ -198,6 +226,13 @@ export default function RoomFormPage() {
                 />
               </Form.Item>
               <div className={styles.formRow}>
+                <Form.Item label="楼层" name="floor">
+                  <InputNumber
+                    min={1}
+                    className="w-full"
+                    placeholder="例如 3"
+                  />
+                </Form.Item>
                 <Form.Item label="面积（㎡）" name="area">
                   <InputNumber
                     min={0}
@@ -205,21 +240,45 @@ export default function RoomFormPage() {
                     placeholder="请输入面积"
                   />
                 </Form.Item>
-                {isEdit && (
-                  <Form.Item
-                    label="状态"
-                    name="status"
-                    rules={[{ required: true }]}
-                  >
-                    <Select
-                      options={roomStatuses.map((s) => ({
-                        label: statusLabels[s],
-                        value: s,
-                      }))}
-                    />
-                  </Form.Item>
-                )}
               </div>
+              <div className={styles.formRow}>
+                <Form.Item label="朝向" name="orientation">
+                  <Select
+                    placeholder="请选择朝向"
+                    options={orientationOptions}
+                    allowClear
+                    prefix={<CompassOutlined className="text-subtle" />}
+                  />
+                </Form.Item>
+                <Form.Item label="装修标准" name="decorationStatus">
+                  <Select
+                    placeholder="请选择装修标准"
+                    options={decorationStatusOptions}
+                    allowClear
+                  />
+                </Form.Item>
+              </div>
+              <Form.Item label="装修日期" name="decorationDate">
+                <DatePicker
+                  className="w-full"
+                  placeholder="请选择装修日期"
+                  prefix={<CalendarOutlined className="text-subtle" />}
+                />
+              </Form.Item>
+              {isEdit && (
+                <Form.Item
+                  label="状态"
+                  name="status"
+                  rules={[{ required: true }]}
+                >
+                  <Select
+                    options={roomStatuses.map((s) => ({
+                      label: statusLabels[s],
+                      value: s,
+                    }))}
+                  />
+                </Form.Item>
+              )}
               <Form.Item label="设施" name="facilities">
                 <Input
                   placeholder="多个设施用逗号分隔，如：空调,热水器,洗衣机"

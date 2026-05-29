@@ -46,3 +46,21 @@ export async function getOccupancyReport(organizationId: string) {
     byApartment: unknown[];
   }>('/reports/occupancy', { organizationId });
 }
+
+export async function getOccupancyTrend(organizationId: string) {
+  return apiClient<{
+    months: { month: string; occupancyRate: number }[];
+  }>('/reports/occupancy-trend', { organizationId });
+}
+
+export async function getIncomeExpenseTrend(organizationId: string) {
+  return apiClient<{
+    months: { month: string; income: number; expense: number }[];
+  }>('/reports/income-expense-trend', { organizationId });
+}
+
+export async function getCollectionRateTrend(organizationId: string) {
+  return apiClient<{
+    months: { month: string; collectionRate: number }[];
+  }>('/reports/collection-rate-trend', { organizationId });
+}

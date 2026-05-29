@@ -33,6 +33,11 @@ const orderInput = z.object({
   reporterPhone: z.string().optional(),
   scheduledDate: z.coerce.date().optional(),
   assignedTo: z.string().optional(),
+  materialCost: z.coerce.number().optional(),
+  laborCost: z.coerce.number().optional(),
+  beforePhotoUrl: z.string().optional(),
+  afterPhotoUrl: z.string().optional(),
+  acceptanceNote: z.string().optional(),
 });
 
 maintenanceRouter.get(

@@ -186,11 +186,47 @@ export default function RoomDetailPage() {
                   </DetailItem>
                 </Col>
                 <Col span={8}>
+                  <DetailItem label="楼层">{room.floor ?? '-'}</DetailItem>
+                </Col>
+                <Col span={8}>
                   <DetailItem label="户型">{room.layout}</DetailItem>
                 </Col>
                 <Col span={8}>
                   <DetailItem label="面积">
                     {room.area ? `${room.area} ㎡` : '-'}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="朝向">
+                    {room.orientation
+                      ? {
+                          NORTH: '北',
+                          SOUTH: '南',
+                          EAST: '东',
+                          WEST: '西',
+                          NORTH_EAST: '东北',
+                          NORTH_WEST: '西北',
+                          SOUTH_EAST: '东南',
+                          SOUTH_WEST: '西南',
+                        }[room.orientation] || room.orientation
+                      : '-'}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="装修标准">
+                    {room.decorationStatus
+                      ? {
+                          BARE: '毛坯',
+                          SIMPLE: '简装',
+                          DELUXE: '精装',
+                          LUXURY: '豪华装',
+                        }[room.decorationStatus] || room.decorationStatus
+                      : '-'}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="装修日期">
+                    {room.decorationDate ? day(room.decorationDate) : '-'}
                   </DetailItem>
                 </Col>
                 <Col span={8}>

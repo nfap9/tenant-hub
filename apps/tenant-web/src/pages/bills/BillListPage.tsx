@@ -15,7 +15,7 @@ import {
 import {
   PlusOutlined,
   ReloadOutlined,
-  DeleteOutlined,
+  StopOutlined,
   EyeOutlined,
   SearchOutlined,
   DownloadOutlined,
@@ -28,7 +28,7 @@ import { useAppSession } from '@/context/AppSessionContext';
 import {
   getBills,
   getBillsByStatus,
-  deleteBill,
+  voidBill,
   retryBillBilling,
   generateBills,
 } from '@/api/bills';
@@ -117,22 +117,40 @@ export default function BillListPage() {
     return sortBillGroupsForList(result);
   }, [billGroups, searchQuery, statusFilter]);
 
-  const handleDeleteGroup = async (group: BillGroup) => {
+  const handleVoidGroup = async (group: BillGroup) => {
     if (!currentOrgId) return;
     Modal.confirm({
-      title: '删除账单组',
-      content: `将删除该组 ${group.bills.length} 笔账单，删除后不可恢复，是否确认？`,
-      okText: '确认删除',
+      title: '作废账单组',
+      content: (
+        <div>
+          <p>
+            将作废该组 {group.bills.length} 笔账单，作废后不可恢复，是否确认？
+          </p>
+          <Input.TextArea
+            id="void-reason"
+            placeholder="请输入作废原因"
+            rows={3}
+          />
+        </div>
+      ),
+      okText: '确认作废',
       okButtonProps: { danger: true },
       onOk: async () => {
+        const reason = (
+          document.getElementById('void-reason') as HTMLTextAreaElement
+        )?.value;
+        if (!reason) {
+          message.error('请输入作废原因');
+          throw new Error('作废原因不能为空');
+        }
         try {
           await Promise.all(
-            group.bills.map((b) => deleteBill(currentOrgId, b.id))
+            group.bills.map((b) => voidBill(currentOrgId, b.id, reason))
           );
-          message.success('账单组已删除');
+          message.success('账单组已作废');
           await loadData();
         } catch (e) {
-          message.error(e instanceof Error ? e.message : '删除失败');
+          message.error(e instanceof Error ? e.message : '作废失败');
         }
       },
     });
@@ -201,20 +219,22 @@ export default function BillListPage() {
             {summary.detailCountText}
           </span>
           <Space>
-            {showDelete && group.status !== 'PAID' && (
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteGroup(group);
-                }}
-              >
-                删除
-              </Button>
-            )}
+            {showDelete &&
+              group.status !== 'PAID' &&
+              group.status !== 'VOID' && (
+                <Button
+                  type="text"
+                  danger
+                  size="small"
+                  icon={<StopOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVoidGroup(group);
+                  }}
+                >
+                  作废
+                </Button>
+              )}
             <Button type="link" size="small" icon={<EyeOutlined />}>
               查看详情
             </Button>

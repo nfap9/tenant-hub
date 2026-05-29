@@ -377,8 +377,25 @@ apartmentRouter.post(
         rooms: z.array(
           z.object({
             roomNo: z.string().min(1),
+            floor: z.coerce.number().int().min(1).optional(),
             layout: z.string().min(1),
             area: z.coerce.number().optional(),
+            orientation: z
+              .enum([
+                'NORTH',
+                'SOUTH',
+                'EAST',
+                'WEST',
+                'NORTH_EAST',
+                'NORTH_WEST',
+                'SOUTH_EAST',
+                'SOUTH_WEST',
+              ])
+              .optional(),
+            decorationStatus: z
+              .enum(['BARE', 'SIMPLE', 'DELUXE', 'LUXURY'])
+              .optional(),
+            decorationDate: z.coerce.date().optional(),
             facilities: z.array(z.string()).default([]),
           })
         ),
@@ -455,6 +472,7 @@ apartmentRouter.put(
             'CHECKOUT_CLEANING',
           ])
           .optional(),
+        decorationDate: z.coerce.date().optional(),
         statusReason: z.string().optional(),
         currentRentPrice: z.coerce.number().optional(),
       })

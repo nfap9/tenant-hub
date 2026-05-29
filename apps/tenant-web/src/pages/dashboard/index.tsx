@@ -28,6 +28,7 @@ import { useAppSession } from '@/context/AppSessionContext';
 import { getAllApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
 import { getBills, getBillsByStatus } from '@/api/bills';
+import { getOccupancyTrend, getIncomeExpenseTrend } from '@/api/reports';
 import {
   compactMoney,
   isThisMonth,
@@ -36,6 +37,7 @@ import {
 } from '@/utils/format';
 import type { Apartment, Room, Lease, Bill } from '@/types/domain';
 import Overview from './OverviewCard';
+import DashboardCharts from './DashboardCharts';
 import styles from './index.module.scss';
 import clsx from 'clsx';
 
@@ -85,20 +87,35 @@ export default function DashboardPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
+  const [occupancyTrend, setOccupancyTrend] = useState<
+    { month: string; occupancyRate: number }[]
+  >([]);
+  const [incomeExpenseTrend, setIncomeExpenseTrend] = useState<
+    { month: string; income: number; expense: number }[]
+  >([]);
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [nextApartments, nextRooms, allBills, failedBills, billingBills] =
-        await Promise.all([
-          getAllApartments(currentOrgId),
-          getRooms(currentOrgId),
-          getBills(currentOrgId),
-          getBillsByStatus(currentOrgId, 'FAILED'),
-          getBillsByStatus(currentOrgId, 'BILLING'),
-        ]);
+      const [
+        nextApartments,
+        nextRooms,
+        allBills,
+        failedBills,
+        billingBills,
+        occupancyTrendData,
+        incomeExpenseTrendData,
+      ] = await Promise.all([
+        getAllApartments(currentOrgId),
+        getRooms(currentOrgId),
+        getBills(currentOrgId),
+        getBillsByStatus(currentOrgId, 'FAILED'),
+        getBillsByStatus(currentOrgId, 'BILLING'),
+        getOccupancyTrend(currentOrgId).catch(() => ({ months: [] })),
+        getIncomeExpenseTrend(currentOrgId).catch(() => ({ months: [] })),
+      ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
       setBillGroups(groupBills(allBills.filter((b) => b.type !== 'DEPOSIT')));
@@ -107,6 +124,8 @@ export default function DashboardPage() {
           (bill) => bill.mode === 'POSTPAID'
         )
       );
+      setOccupancyTrend(occupancyTrendData.months);
+      setIncomeExpenseTrend(incomeExpenseTrendData.months);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '首页数据加载失败');
     } finally {
@@ -387,6 +406,13 @@ export default function DashboardPage() {
             </Card>
           </Col>
         </Row>
+
+        {/* 图表 */}
+        <DashboardCharts
+          occupancyTrend={occupancyTrend}
+          incomeExpenseTrend={incomeExpenseTrend}
+          rooms={rooms}
+        />
       </Spin>
 
       <PaymentDialog

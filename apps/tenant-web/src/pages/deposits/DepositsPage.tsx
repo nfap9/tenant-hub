@@ -54,7 +54,9 @@ export default function DepositsPage() {
   const [summary, setSummary] = useState<{
     totalAmount: string | number;
     paidAmount: string | number;
+    refundedAmount: string | number;
     heldAmount: string | number;
+    pendingRefundAmount: string | number;
     count: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -100,36 +102,34 @@ export default function DepositsPage() {
 
       {summary && (
         <Row gutter={16} className="mb-16">
-          <Col span={6}>
+          <Col xs={24} sm={8}>
             <Card>
               <Statistic
-                title="应收押金总额"
-                value={money(summary.totalAmount)}
-                prefix="¥"
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="实收押金总额"
-                value={money(summary.paidAmount)}
-                prefix="¥"
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="在押金额"
+                title="在押总额"
                 value={money(summary.heldAmount)}
                 prefix="¥"
+                valueStyle={{ fontWeight: 700, fontSize: 28 }}
               />
             </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={8}>
             <Card>
-              <Statistic title="押金笔数" value={summary.count} />
+              <Statistic
+                title="待退总额"
+                value={money(summary.pendingRefundAmount)}
+                prefix="¥"
+                valueStyle={{ fontWeight: 700, fontSize: 28, color: '#EA580C' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card>
+              <Statistic
+                title="累计已退"
+                value={money(summary.refundedAmount)}
+                prefix="¥"
+                valueStyle={{ fontWeight: 700, fontSize: 28, color: '#22C55E' }}
+              />
             </Card>
           </Col>
         </Row>

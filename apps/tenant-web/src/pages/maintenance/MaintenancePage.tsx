@@ -7,6 +7,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Select,
   DatePicker,
   message,
@@ -85,6 +86,10 @@ export default function MaintenancePage() {
     try {
       const payload = {
         ...values,
+        materialCost: values.materialCost
+          ? Number(values.materialCost)
+          : undefined,
+        laborCost: values.laborCost ? Number(values.laborCost) : undefined,
         scheduledDate: values.scheduledDate
           ? (values.scheduledDate as dayjs.Dayjs).toISOString()
           : undefined,
@@ -172,6 +177,12 @@ export default function MaintenancePage() {
                   setEditing(record);
                   form.setFieldsValue({
                     ...record,
+                    materialCost: record.materialCost
+                      ? Number(record.materialCost)
+                      : undefined,
+                    laborCost: record.laborCost
+                      ? Number(record.laborCost)
+                      : undefined,
                     scheduledDate: record.scheduledDate
                       ? dayjs(record.scheduledDate)
                       : undefined,
@@ -298,6 +309,25 @@ export default function MaintenancePage() {
           </Form.Item>
           <Form.Item name="scheduledDate" label="预约上门时间">
             <DatePicker showTime style={{ width: '100%' }} />
+          </Form.Item>
+          <div
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}
+          >
+            <Form.Item name="materialCost" label="材料费用">
+              <InputNumber min={0} className="w-full" prefix="¥" />
+            </Form.Item>
+            <Form.Item name="laborCost" label="人工费用">
+              <InputNumber min={0} className="w-full" prefix="¥" />
+            </Form.Item>
+          </div>
+          <Form.Item name="beforePhotoUrl" label="维修前照片URL">
+            <Input placeholder="请输入照片链接" />
+          </Form.Item>
+          <Form.Item name="afterPhotoUrl" label="维修后照片URL">
+            <Input placeholder="请输入照片链接" />
+          </Form.Item>
+          <Form.Item name="acceptanceNote" label="验收备注">
+            <Input.TextArea rows={2} placeholder="验收意见" />
           </Form.Item>
         </Form>
       </Modal>

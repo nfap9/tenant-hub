@@ -10,16 +10,17 @@ import {
   Divider,
   Row,
   Col,
+  Input,
 } from 'antd';
 import {
-  DeleteOutlined,
+  StopOutlined,
   ThunderboltOutlined,
   WalletOutlined,
   FileTextOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getBills, deleteBill } from '@/api/bills';
+import { getBills, voidBill } from '@/api/bills';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
 import { groupBills, type BillGroup } from './utils';
@@ -68,20 +69,37 @@ export default function MonthlyDetailPage() {
     [group]
   );
 
-  const handleDeleteChild = async (childId: string) => {
+  const handleVoidChild = async (childId: string) => {
     if (!currentOrgId) return;
+    const reasonInputId = `void-reason-${childId}`;
     Modal.confirm({
-      title: '删除账单',
-      content: '删除后不可恢复，是否确认？',
-      okText: '确认删除',
+      title: '作废账单',
+      content: (
+        <div>
+          <p>作废后不可恢复，是否确认？</p>
+          <Input.TextArea
+            id={reasonInputId}
+            placeholder="请输入作废原因"
+            rows={3}
+          />
+        </div>
+      ),
+      okText: '确认作废',
       okButtonProps: { danger: true },
       onOk: async () => {
+        const reason = (
+          document.getElementById(reasonInputId) as HTMLTextAreaElement
+        )?.value;
+        if (!reason) {
+          message.error('请输入作废原因');
+          throw new Error('作废原因不能为空');
+        }
         try {
-          await deleteBill(currentOrgId, childId);
-          message.success('账单已删除');
+          await voidBill(currentOrgId, childId, reason);
+          message.success('账单已作废');
           await loadData();
         } catch (e) {
-          message.error(e instanceof Error ? e.message : '删除失败');
+          message.error(e instanceof Error ? e.message : '作废失败');
         }
       },
     });
@@ -212,15 +230,15 @@ export default function MonthlyDetailPage() {
                       >
                         ¥{money(child.totalAmount)}
                       </span>
-                      {child.status !== 'PAID' && (
+                      {child.status !== 'PAID' && child.status !== 'VOID' && (
                         <Button
                           type="text"
                           danger
                           size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => handleDeleteChild(child.id)}
+                          icon={<StopOutlined />}
+                          onClick={() => handleVoidChild(child.id)}
                         >
-                          删除
+                          作废
                         </Button>
                       )}
                     </Space>

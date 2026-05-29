@@ -253,3 +253,137 @@ reportRouter.get(
     });
   })
 );
+
+// US-104/1104: 入住率趋势（最近12个月）
+reportRouter.get(
+  '/occupancy-trend',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    const organizationId = req.organizationId!;
+    const now = new Date();
+    const months: { month: string; occupancyRate: number }[] = [];
+
+    const allRooms = await prisma.room.findMany({
+      where: { apartment: { organizationId } },
+      select: { id: true },
+    });
+    const totalRoomCount = allRooms.length;
+
+    for (let i = 11; i >= 0; i--) {
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      const monthLabel = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}`;
+
+      const activeLeases = await prisma.lease.findMany({
+        where: {
+          organizationId,
+          status: 'ACTIVE',
+          startDate: { lte: monthEnd },
+          endDate: { gte: monthEnd },
+        },
+        select: { roomId: true },
+      });
+      const occupiedRoomIds = new Set(activeLeases.map((l) => l.roomId));
+      const occupancyRate =
+        totalRoomCount > 0
+          ? Number(((occupiedRoomIds.size / totalRoomCount) * 100).toFixed(2))
+          : 0;
+
+      months.push({ month: monthLabel, occupancyRate });
+    }
+
+    ok(res, { months });
+  })
+);
+
+// US-104/1102: 收支趋势（最近6个月）
+reportRouter.get(
+  '/income-expense-trend',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const organizationId = req.organizationId!;
+    const now = new Date();
+    const months: {
+      month: string;
+      income: number;
+      expense: number;
+    }[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const year = now.getFullYear();
+      const month = now.getMonth() - i;
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 1);
+      const monthLabel = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+
+      const incomeBills = await prisma.bill.findMany({
+        where: {
+          organizationId,
+          status: { in: ['PAID', 'PARTIAL_PAID'] },
+          billingDate: { gte: startDate, lt: endDate },
+        },
+        select: { paidAmount: true },
+      });
+      const income = incomeBills.reduce(
+        (sum, b) => sum + Number(b.paidAmount),
+        0
+      );
+
+      const expenses = await prisma.apartmentExpense.findMany({
+        where: {
+          apartment: { organizationId },
+          spentAt: { gte: startDate, lt: endDate },
+          deletedAt: null,
+        },
+        select: { amount: true },
+      });
+      const expense = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+      months.push({ month: monthLabel, income, expense });
+    }
+
+    ok(res, { months });
+  })
+);
+
+// US-1103: 收缴率趋势（最近12个月）
+reportRouter.get(
+  '/collection-rate-trend',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const organizationId = req.organizationId!;
+    const now = new Date();
+    const months: { month: string; collectionRate: number }[] = [];
+
+    for (let i = 11; i >= 0; i--) {
+      const year = now.getFullYear();
+      const month = now.getMonth() - i;
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 1);
+      const monthLabel = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+
+      const bills = await prisma.bill.findMany({
+        where: {
+          organizationId,
+          billingDate: { gte: startDate, lt: endDate },
+        },
+        select: { totalAmount: true, paidAmount: true },
+      });
+      const totalReceivable = bills.reduce(
+        (sum, b) => sum + Number(b.totalAmount),
+        0
+      );
+      const totalReceived = bills.reduce(
+        (sum, b) => sum + Number(b.paidAmount),
+        0
+      );
+      const collectionRate =
+        totalReceivable > 0
+          ? Number(((totalReceived / totalReceivable) * 100).toFixed(2))
+          : 0;
+
+      months.push({ month: monthLabel, collectionRate });
+    }
+
+    ok(res, { months });
+  })
+);

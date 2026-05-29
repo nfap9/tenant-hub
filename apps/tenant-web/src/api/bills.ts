@@ -18,6 +18,18 @@ export async function deleteBill(organizationId: string, id: string) {
   return apiClient<void>(`/bills/${id}`, { method: 'DELETE', organizationId });
 }
 
+export async function voidBill(
+  organizationId: string,
+  id: string,
+  reason: string
+) {
+  return apiClient<Bill>(`/bills/${id}/status`, {
+    method: 'PATCH',
+    body: { status: 'VOID', reason },
+    organizationId,
+  });
+}
+
 export async function retryBillBilling(organizationId: string, billId: string) {
   return apiClient<void>(`/bills/${billId}/retry-billing`, {
     method: 'POST',

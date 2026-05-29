@@ -1,13 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Tag, Spin, message, Timeline, Divider, Row, Col } from 'antd';
-import { ReloadOutlined, WalletOutlined } from '@ant-design/icons';
+import {
+  Button,
+  Tag,
+  Spin,
+  message,
+  Timeline,
+  Divider,
+  Row,
+  Col,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+} from 'antd';
+import {
+  ReloadOutlined,
+  WalletOutlined,
+  MinusOutlined,
+  DollarOutlined,
+} from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getDepositDetail } from '@/api/deposits';
+import { getDepositDetail, recordDepositPayment } from '@/api/deposits';
 import { money } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import PaymentDialog from '@/components/PaymentDialog';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import type { Deposit, DepositStatus, Payment } from '@/types/domain';
@@ -43,6 +61,11 @@ export default function DepositDetailPage() {
   const [deposit, setDeposit] = useState<Deposit | null>(null);
   const [loading, setLoading] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentType, setPaymentType] = useState<
+    'COLLECT' | 'REFUND' | 'DEDUCT'
+  >('COLLECT');
+  const [paymentForm] = Form.useForm();
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -116,9 +139,35 @@ export default function DepositDetailPage() {
                     <Button
                       type="primary"
                       icon={<WalletOutlined />}
-                      onClick={() => setPaymentOpen(true)}
+                      onClick={() => {
+                        setPaymentType('COLLECT');
+                        setPaymentOpen(true);
+                      }}
                     >
                       登记收款
+                    </Button>
+                  )}
+                  {deposit?.leaseId && (
+                    <Button
+                      icon={<MinusOutlined />}
+                      onClick={() => {
+                        setPaymentType('REFUND');
+                        setPaymentOpen(true);
+                      }}
+                    >
+                      退款
+                    </Button>
+                  )}
+                  {deposit?.leaseId && (
+                    <Button
+                      danger
+                      icon={<DollarOutlined />}
+                      onClick={() => {
+                        setPaymentType('DEDUCT');
+                        setPaymentOpen(true);
+                      }}
+                    >
+                      抵扣
                     </Button>
                   )}
                 </>
@@ -223,12 +272,82 @@ export default function DepositDetailPage() {
         )}
       </Spin>
 
-      <PaymentDialog
+      <Modal
         open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        onSuccess={loadData}
-        defaultLeaseId={deposit?.leaseId}
-      />
+        title={
+          paymentType === 'COLLECT'
+            ? '登记押金收款'
+            : paymentType === 'REFUND'
+              ? '登记押金退款'
+              : '登记押金抵扣'
+        }
+        onCancel={() => {
+          setPaymentOpen(false);
+          paymentForm.resetFields();
+        }}
+        onOk={async () => {
+          const values = await paymentForm.validateFields();
+          if (!currentOrgId || !deposit) return;
+          setPaymentSubmitting(true);
+          try {
+            await recordDepositPayment(currentOrgId, deposit.id, {
+              type: paymentType,
+              amount: Number(values.amount),
+              method: values.method,
+              note: values.note,
+            });
+            message.success(
+              paymentType === 'COLLECT'
+                ? '收款登记成功'
+                : paymentType === 'REFUND'
+                  ? '退款登记成功'
+                  : '抵扣登记成功'
+            );
+            setPaymentOpen(false);
+            paymentForm.resetFields();
+            loadData();
+          } catch (e) {
+            message.error(e instanceof Error ? e.message : '操作失败');
+          } finally {
+            setPaymentSubmitting(false);
+          }
+        }}
+        confirmLoading={paymentSubmitting}
+      >
+        <Form form={paymentForm} layout="vertical">
+          <Form.Item
+            label="金额"
+            name="amount"
+            rules={[{ required: true, message: '请输入金额' }]}
+          >
+            <InputNumber
+              min={0}
+              className="w-full"
+              prefix="¥"
+              placeholder="请输入金额"
+            />
+          </Form.Item>
+          <Form.Item
+            label="支付方式"
+            name="method"
+            rules={[{ required: true, message: '请选择支付方式' }]}
+          >
+            <Select
+              placeholder="请选择支付方式"
+              options={[
+                { label: '现金', value: 'CASH' },
+                { label: '银行转账', value: 'BANK_TRANSFER' },
+                { label: '微信支付', value: 'WECHAT' },
+                { label: '支付宝', value: 'ALIPAY' },
+                { label: 'POS机', value: 'POS' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item label="备注" name="note">
+            <Input.TextArea placeholder="可选：填写备注信息" rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

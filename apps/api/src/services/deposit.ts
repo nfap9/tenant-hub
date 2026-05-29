@@ -114,6 +114,7 @@ export const recordDepositPayment = async ({
 export const getDepositSummary = async (organizationId: string) => {
   const deposits = await prisma.deposit.findMany({
     where: { organizationId },
+    include: { lease: true },
   });
 
   const totalAmount = deposits.reduce(
@@ -134,12 +135,27 @@ export const getDepositSummary = async (organizationId: string) => {
   );
   const heldAmount = paidAmount.minus(refundedAmount).minus(deductedAmount);
 
+  // 待退总额：已退租（TERMINATED）但押金未全额退还
+  const pendingRefundAmount = deposits
+    .filter(
+      (d) =>
+        d.lease?.status === 'TERMINATED' &&
+        d.status !== 'FULLY_REFUNDED' &&
+        d.status !== 'DEDUCTED'
+    )
+    .reduce(
+      (sum, d) =>
+        sum.plus(d.paidAmount).minus(d.refundedAmount).minus(d.deductedAmount),
+      new Prisma.Decimal(0)
+    );
+
   return {
     totalAmount,
     paidAmount,
     refundedAmount,
     deductedAmount,
     heldAmount,
+    pendingRefundAmount,
     count: deposits.length,
   };
 };

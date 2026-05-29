@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Form,
@@ -24,6 +24,8 @@ import {
 import dayjs from 'dayjs';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { createLease } from '@/api/leases';
+import { getTenants } from '@/api/tenants';
+import type { Tenant } from '@/types/domain';
 import { today, nextYear } from '@/utils/format';
 import {
   cycleLabels,
@@ -45,6 +47,14 @@ export default function LeaseFormPage() {
 
   const [fees, setFees] = useState<LeaseFeeFormItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+
+  useEffect(() => {
+    if (!currentOrgId) return;
+    getTenants(currentOrgId)
+      .then(setTenants)
+      .catch(() => undefined);
+  }, [currentOrgId]);
 
   const addFee = () => {
     const availableTypes = selectableFeeTypes.filter(
@@ -103,16 +113,27 @@ export default function LeaseFormPage() {
     try {
       await createLease(currentOrgId, {
         roomId: id,
+        tenantId: values.tenantId ? String(values.tenantId) : undefined,
         tenantName: String(values.tenantName).trim(),
         tenantPhone: String(values.tenantPhone).trim(),
         startDate: dayjs(values.startDate as string).format('YYYY-MM-DD'),
         endDate: dayjs(values.endDate as string).format('YYYY-MM-DD'),
+        billDay: Number(values.billDay || 1),
         graceDays: Number(values.graceDays || 0),
         cycle: String(values.cycle),
         rentAmount: Number(values.rentAmount),
+        depositMonths: Number(values.depositMonths || 1),
         depositAmount: Number(values.depositAmount || 0),
         waterUnitPrice: Number(values.waterUnitPrice || 0),
         powerUnitPrice: Number(values.powerUnitPrice || 0),
+        lateFeeRate: Number(values.lateFeeRate || 0.0005),
+        freeRentDays: Number(values.freeRentDays || 0),
+        freeRentStart: values.freeRentStart
+          ? dayjs(values.freeRentStart as string).format('YYYY-MM-DD')
+          : undefined,
+        freeRentEnd: values.freeRentEnd
+          ? dayjs(values.freeRentEnd as string).format('YYYY-MM-DD')
+          : undefined,
         autoRenew: Boolean(values.autoRenew),
         generateHistoricalBills: Boolean(values.generateHistoricalBills),
         fees: buildLeaseFeesPayload(fees),
@@ -150,13 +171,37 @@ export default function LeaseFormPage() {
               startDate: dayjs(today()),
               endDate: dayjs(nextYear()),
               cycle: 'MONTHLY',
+              billDay: 1,
               graceDays: 0,
+              depositMonths: 1,
+              lateFeeRate: 0.0005,
               autoRenew: true,
               generateHistoricalBills: false,
               waterUnitPrice: 0,
               powerUnitPrice: 0,
             }}
           >
+            <Form.Item label="选择已有租客" name="tenantId">
+              <Select
+                placeholder="可选：从已有租客中选择，将自动填充姓名和电话"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                options={tenants.map((t) => ({
+                  label: `${t.name} ${t.phone}`,
+                  value: t.id,
+                }))}
+                onChange={(value) => {
+                  const tenant = tenants.find((t) => t.id === value);
+                  if (tenant) {
+                    form.setFieldsValue({
+                      tenantName: tenant.name,
+                      tenantPhone: tenant.phone,
+                    });
+                  }
+                }}
+              />
+            </Form.Item>
             <Form.Item
               label="租客姓名"
               name="tenantName"
@@ -221,6 +266,19 @@ export default function LeaseFormPage() {
                 />
               </Form.Item>
             </div>
+            <div className={styles.formGrid2}>
+              <Form.Item label="押金月数" name="depositMonths">
+                <InputNumber min={0} className="w-full" placeholder="例如 1" />
+              </Form.Item>
+              <Form.Item label="账单日" name="billDay">
+                <InputNumber
+                  min={1}
+                  max={28}
+                  className="w-full"
+                  placeholder="每月几号出账"
+                />
+              </Form.Item>
+            </div>
             <Form.Item label="宽限天数" name="graceDays">
               <InputNumber
                 min={0}
@@ -245,6 +303,31 @@ export default function LeaseFormPage() {
               </Form.Item>
               <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
                 <InputNumber min={0} className="w-full" />
+              </Form.Item>
+            </div>
+            <Form.Item label="滞纳金日费率" name="lateFeeRate">
+              <InputNumber
+                min={0}
+                step={0.0001}
+                className="w-full"
+                placeholder="默认万分之五（0.0005）"
+              />
+            </Form.Item>
+            <div className={styles.formGrid2}>
+              <Form.Item label="免租期天数" name="freeRentDays">
+                <InputNumber
+                  min={0}
+                  className="w-full"
+                  placeholder="免租天数"
+                />
+              </Form.Item>
+            </div>
+            <div className={styles.formGrid2}>
+              <Form.Item label="免租开始" name="freeRentStart">
+                <DatePicker className="w-full" />
+              </Form.Item>
+              <Form.Item label="免租结束" name="freeRentEnd">
+                <DatePicker className="w-full" />
               </Form.Item>
             </div>
             <Form.Item

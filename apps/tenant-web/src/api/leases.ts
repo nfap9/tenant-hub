@@ -14,9 +14,14 @@ export async function createLease(
     graceDays?: number;
     cycle: string;
     rentAmount: number;
+    depositMonths?: number;
     depositAmount?: number;
     waterUnitPrice?: number;
     powerUnitPrice?: number;
+    lateFeeRate?: number;
+    freeRentDays?: number;
+    freeRentStart?: string;
+    freeRentEnd?: string;
     autoRenew?: boolean;
     generateHistoricalBills?: boolean;
     fees?: Array<{ type: string; name: string; amount: number }>;

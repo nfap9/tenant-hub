@@ -285,8 +285,12 @@ export type Room = {
   id: string;
   apartmentId: string;
   roomNo: string;
+  floor?: number;
   layout: string;
   area?: string | number;
+  orientation?: string;
+  decorationStatus?: string;
+  decorationDate?: string;
   facilities: string[];
   status: RoomStatus;
   apartment?: Apartment;

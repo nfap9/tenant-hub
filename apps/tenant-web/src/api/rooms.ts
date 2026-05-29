@@ -14,8 +14,12 @@ export async function createRoom(
   apartmentId: string,
   payload: {
     roomNo: string;
+    floor?: number;
     layout: string;
     area?: number;
+    orientation?: string;
+    decorationStatus?: string;
+    decorationDate?: string;
     facilities?: string[];
   }
 ) {
@@ -34,8 +38,12 @@ export async function createRoomsBatch(
   apartmentId: string,
   rooms: {
     roomNo: string;
+    floor?: number;
     layout: string;
     area?: number;
+    orientation?: string;
+    decorationStatus?: string;
+    decorationDate?: string;
     facilities?: string[];
   }[]
 ) {
@@ -54,8 +62,12 @@ export async function updateRoom(
   roomId: string,
   payload: {
     roomNo?: string;
+    floor?: number;
     layout?: string;
     area?: number;
+    orientation?: string;
+    decorationStatus?: string;
+    decorationDate?: string;
     facilities?: string[];
     status?: string;
   }

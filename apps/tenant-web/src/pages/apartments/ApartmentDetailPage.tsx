@@ -1,5 +1,18 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Button, Tabs, message, Popconfirm, Spin, Row, Col, Tag } from 'antd';
+import {
+  Button,
+  Tabs,
+  message,
+  Popconfirm,
+  Spin,
+  Row,
+  Col,
+  Tag,
+  Modal,
+  Form,
+  Input,
+  Select,
+} from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   EditOutlined,
@@ -12,7 +25,11 @@ import {
   SafetyOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
-import { getApartment, deleteApartment } from '@/api/apartments';
+import {
+  getApartment,
+  updateApartment,
+  deleteApartment,
+} from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
 import { money } from '@/utils/format';
 import { contractText } from './utils';
@@ -71,6 +88,9 @@ export default function ApartmentDetailPage() {
 
   const [apartment, setApartment] = useState<Apartment | null>(null);
   const [loading, setLoading] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusForm] = Form.useForm();
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   const loadApartment = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -114,6 +134,27 @@ export default function ApartmentDetailPage() {
       navigate('/apartments');
     } catch (e) {
       message.error(e instanceof Error ? e.message : '删除公寓失败');
+    }
+  };
+
+  const handleStatusChange = async (values: {
+    status: string;
+    reason?: string;
+  }) => {
+    if (!apartment || !currentOrgId) return;
+    setStatusSubmitting(true);
+    try {
+      await updateApartment(currentOrgId, apartment.id, {
+        status: values.status,
+      });
+      message.success('状态已更新');
+      setStatusModalOpen(false);
+      statusForm.resetFields();
+      loadApartment();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '状态更新失败');
+    } finally {
+      setStatusSubmitting(false);
     }
   };
 
@@ -519,6 +560,39 @@ export default function ApartmentDetailPage() {
           },
         ]}
       />
+
+      <Modal
+        title="变更公寓状态"
+        open={statusModalOpen}
+        onCancel={() => {
+          setStatusModalOpen(false);
+          statusForm.resetFields();
+        }}
+        onOk={() => statusForm.submit()}
+        confirmLoading={statusSubmitting}
+      >
+        <Form form={statusForm} layout="vertical" onFinish={handleStatusChange}>
+          <Form.Item
+            label="新状态"
+            name="status"
+            rules={[{ required: true, message: '请选择新状态' }]}
+          >
+            <Select
+              options={[
+                { label: '规划中', value: 'PLANNING' },
+                { label: '装修中', value: 'RENOVATING' },
+                { label: '筹备中', value: 'PREPARING' },
+                { label: '运营中', value: 'ACTIVE' },
+                { label: '暂停中', value: 'SUSPENDED' },
+                { label: '已关闭', value: 'CLOSED' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item label="变更原因" name="reason">
+            <Input.TextArea rows={3} placeholder="可选：填写状态变更原因" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

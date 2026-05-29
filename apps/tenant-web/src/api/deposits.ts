@@ -13,6 +13,7 @@ export async function getDepositSummary(organizationId: string) {
     refundedAmount: string | number;
     deductedAmount: string | number;
     heldAmount: string | number;
+    pendingRefundAmount: string | number;
     count: number;
   }>('/deposits/summary', { organizationId });
 }
