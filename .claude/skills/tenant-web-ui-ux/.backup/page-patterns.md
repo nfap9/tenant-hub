@@ -12,6 +12,7 @@ PageHeader（面包屑 + 标题 + 页面级操作按钮如"新增"）
 
 - **不要放统计卡片**：Tab 标签已显示数量，避免信息重复
 - 操作按钮统一放在 `PageHeader` 的 `actions` 中
+- 筛选用 `Tabs`，不要用 `Radio.Group`
 - Table 直接展示，不加 `<Card>` 包裹
 
 **为什么**：列表页的核心任务是让用户快速浏览和定位数据。
@@ -41,7 +42,6 @@ PageHeader（面包屑 + 标题，**不要**在这里放操作按钮）
 3. 操作按钮下放到对应区块的 `actions` 中，不再堆在 `PageHeader`
 4. 每行 2~3 个信息项，用 `Row gutter={[24, 0]}` + `Col span={12}` 或 `span={8}` 排列
 5. 多个区块用 `<Divider />` 分隔
-6. `DetailSection` 的 `title` 可以加入图标增强信息识别（如 `<><HomeOutlined /> 房间信息</>`）
 
 **注意**：这是**只读信息展示**，不是表单录入页。表单录入/编辑页面见下文"表单页"模式。
 
@@ -54,7 +54,7 @@ PageHeader（面包屑 + 标题，**不要**在这里放操作按钮）
 
 ```tsx
 <DetailSection
-  title={<><HomeOutlined /> 房间信息</>}
+  title="房间信息"
   actions={
     <>
       <Button icon={<EditOutlined />} onClick={...}>编辑</Button>
@@ -88,6 +88,19 @@ PageHeader（面包屑 + 标题）
 - 只有多组 key:value 形式的 Tab 使用 DetailSection
 - 其他 Tab（如房间列表）不用 DetailSection，保持其原有布局
 - 每个 Tab 内独立处理操作按钮位置
+
+## 设置页
+
+```
+PageHeader（面包屑 + 标题）
+  → 账号信息卡片区（可选）
+  → DetailSection（当前组织信息）
+    → Row/Col + DetailItem
+  → 导航菜单列表
+  → 退出登录按钮
+```
+
+设置页的信息展示区也使用 `DetailSection + DetailItem`，不使用 Card 包裹。
 
 ## 卡片列表
 
@@ -163,19 +176,6 @@ PageHeader（面包屑 + 标题）
 }
 ```
 
-### 表单内行删除
-
-表单内的动态字段列表（如租约的附加费用）中，行删除按钮使用 `type="link" danger`：
-
-```tsx
-<Button type="link" danger icon={<DeleteOutlined />} onClick={...}>
-  删除
-</Button>
-```
-
-**为什么用 link 而不是 primary danger**：表单内行删除是局部小操作，
-不需要高对比度的主色按钮来吸引注意力，link 样式足够表达"可删除"的语义。
-
 ### 编辑回填
 
 ```tsx
@@ -187,6 +187,19 @@ useEffect(() => {
 }, [isEdit, data, form]);
 ```
 
+## Tab 组件
+
+- 所有筛选切换统一用 `Tabs`
+- 不要用 `Radio.Group` + `Radio.Button` 做页面级筛选
+- Tabs 增加底部边框区分内容区：
+
+```scss
+.ant-tabs-nav {
+  border-bottom: 1px solid var(--th-border);
+  margin-bottom: 20px;
+}
+```
+
 ## 内容去重
 
 - **首页 Dashboard** 已有经营概览，其他列表页不要重复统计卡片
@@ -195,17 +208,3 @@ useEffect(() => {
 
 **为什么**：信息重复不会让用户更清楚，反而会增加扫读负担。
 Tab 标签的计数是最精简的信息表达，不需要再用其他形式重复。
-
-## Card 的合理使用
-
-虽然规范强调"不要堆砌卡片"，但以下场景**允许**使用 Card：
-
-| 场景               | 是否使用 Card | 原因                       |
-| ------------------ | ------------- | -------------------------- |
-| 表单页             | ✅            | 提供编辑边界               |
-| 设置页导航区块     | ✅            | 低频页面，区块分组需要边界 |
-| 卡片列表的单个卡片 | ✅            | 卡片列表本身就是 Card      |
-| Dashboard 统计卡片 | ✅            | 概览需要视觉分组           |
-| 列表页 Table       | ❌            | 增加不必要的边框           |
-| 详情页信息展示     | ❌            | DetailSection 已足够       |
-| 空态页面           | ❌            | EmptyState 直接展示        |

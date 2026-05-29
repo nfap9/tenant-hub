@@ -69,7 +69,14 @@ export type SubscriptionOverview = {
 
 export type RoomStatus = 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
 export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
-export type LeaseStatus = 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
+export type LeaseStatus =
+  | 'DRAFT'
+  | 'ACTIVE'
+  | 'EXPIRING_SOON'
+  | 'TERMINATING'
+  | 'TERMINATED'
+  | 'EXPIRED'
+  | 'ENDED';
 export type TerminationType = 'EXPIRED' | 'NEGOTIATED' | 'BREACH';
 export type BillStatus =
   | 'DRAFT'
@@ -77,25 +84,61 @@ export type BillStatus =
   | 'UNPAID'
   | 'PARTIAL_PAID'
   | 'PAID'
+  | 'OVERDUE'
+  | 'WRITTEN_OFF'
+  | 'REFUNDED'
   | 'FAILED'
-  | 'VOID'
-  | 'REFUNDED';
+  | 'VOID';
 export type BillMode = 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
 export type BillType = 'MONTHLY' | 'SETTLEMENT' | 'DEPOSIT';
 export type BillItemType =
   | 'RENT'
+  | 'SERVICE_FEE'
   | 'UTILITY'
+  | 'ELECTRICITY'
   | 'WATER'
   | 'POWER'
+  | 'GAS'
+  | 'CARRY_OVER'
+  | 'LATE_FEE'
   | 'DEPOSIT'
   | 'MANAGEMENT'
   | 'SANITATION'
   | 'ELEVATOR'
   | 'PROPERTY'
   | 'NETWORK'
+  | 'PENALTY'
+  | 'COMPENSATION'
+  | 'CLEANING_FEE'
+  | 'PREPAID_DEDUCTION'
+  | 'DISCOUNT'
   | 'OTHER';
-export type MeterType = 'WATER' | 'POWER';
+export type MeterType = 'WATER' | 'POWER' | 'GAS';
+export type MeterStatus = 'ACTIVE' | 'REMOVED';
 export type MeterReadingStatus = 'NORMAL' | 'SUSPECTED' | 'CONFIRMED' | 'VOID';
+export type SettlementItemType =
+  | 'RENT_ADJUSTMENT'
+  | 'UTILITY'
+  | 'DEPOSIT_REFUND'
+  | 'DEPOSIT_DEDUCTION'
+  | 'PENALTY'
+  | 'COMPENSATION'
+  | 'OTHER';
+export type CheckoutType = 'NORMAL' | 'EARLY' | 'FORCED' | 'ROOM_CHANGE';
+export type DepositLedgerType = 'COLLECT' | 'DEDUCT' | 'REFUND';
+export type AccountTransactionType =
+  | 'PAYMENT'
+  | 'CHARGE'
+  | 'REFUND'
+  | 'ADJUSTMENT';
+export type AccountReferenceType = 'BILL' | 'DEPOSIT' | 'SETTLEMENT';
+export type BillQueueStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'DONE'
+  | 'FAILED'
+  | 'SKIPPED'
+  | 'PAUSED';
 
 export type ApartmentExpense = {
   id: string;
@@ -119,8 +162,12 @@ export type Apartment = {
   contractStart?: string;
   contractEnd?: string;
   rentAmount?: string | number;
+  costElectricityPrice?: string | number;
+  costWaterPrice?: string | number;
+  reminderDay?: number;
   rooms?: Room[];
   expenses?: ApartmentExpense[];
+  meters?: Meter[];
 };
 
 export type LeaseFee = {
@@ -131,20 +178,42 @@ export type LeaseFee = {
   amount: string | number;
 };
 
+export type Tenant = {
+  id: string;
+  organizationId: string;
+  name: string;
+  phone: string;
+  idCard?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  createdAt: string;
+  updatedAt: string;
+  account?: TenantAccount;
+  leases?: Lease[];
+  _count?: { leases: number };
+};
+
 export type Lease = {
   id: string;
   organizationId: string;
   roomId: string;
+  tenantId?: string;
   tenantName: string;
   tenantPhone: string;
   startDate: string;
   endDate: string;
+  billDay?: number;
+  utilityBillDay?: number;
+  paymentDueDays?: number;
   graceDays: number;
   cycle: RentCycle;
   rentAmount: string | number;
+  monthlyServiceFee?: string | number;
+  depositMonths?: number;
   depositAmount: string | number;
   waterUnitPrice: string | number;
   powerUnitPrice: string | number;
+  lateFeeRate?: string | number;
   autoRenew: boolean;
   isAutoRenewalPeriod?: boolean;
   currentMonthBillGenerated?: boolean;
@@ -157,6 +226,8 @@ export type Lease = {
   fees?: LeaseFee[];
   room?: Room;
   deposit?: Deposit;
+  tenant?: Tenant;
+  billQueue?: BillQueue;
 };
 
 export type Room = {
@@ -169,6 +240,20 @@ export type Room = {
   status: RoomStatus;
   apartment?: Apartment;
   leases?: Lease[];
+  meters?: Meter[];
+};
+
+export type BillItemReading = {
+  id: string;
+  billItemId: string;
+  meterType: MeterType;
+  previousValue: string | number;
+  currentValue: string | number;
+  unitPrice: string | number;
+  usage: string | number;
+  amount: string | number;
+  meterId?: string;
+  meterReadingId?: string;
 };
 
 export type BillItem = {
@@ -176,6 +261,9 @@ export type BillItem = {
   billId: string;
   type: BillItemType;
   name: string;
+  description?: string;
+  quantity?: string | number;
+  unitPrice?: string | number;
   amount: string | number;
   status: BillStatus;
   previousWater?: string | number;
@@ -184,7 +272,9 @@ export type BillItem = {
   currentPower?: string | number;
   waterUnitPrice?: string | number;
   powerUnitPrice?: string | number;
+  meterReadingId?: string;
   note?: string;
+  readings?: BillItemReading[];
 };
 
 export type Bill = {
@@ -199,22 +289,37 @@ export type Bill = {
   dueDate: string;
   status: BillStatus;
   totalAmount: string | number;
+  discountAmount?: string | number;
+  netAmount?: string | number;
   paidAmount: string | number;
   failureReason?: string;
   lease?: Lease;
   items?: BillItem[];
   payments?: Payment[];
+  paymentAllocations?: PaymentAllocation[];
 };
 
 export type Payment = {
   id: string;
-  billId: string;
+  billId?: string;
+  tenantId?: string;
+  userId: string;
   type: 'RECEIVE' | 'REFUND' | 'DEDUCT';
   amount: string | number;
   paidAt: string;
   method: string;
+  transactionNo?: string;
   note?: string;
+  status: string;
   user?: { id: string; username: string; phone: string };
+  allocations?: PaymentAllocation[];
+};
+
+export type PaymentAllocation = {
+  id: string;
+  paymentId: string;
+  billId: string;
+  allocatedAmount: string | number;
 };
 
 export type DepositStatus =
@@ -239,6 +344,22 @@ export type Deposit = {
   updatedAt: string;
   lease?: Lease & { room?: Room; bills?: Bill[] };
   bill?: Bill & { payments?: Payment[] };
+  depositLedgers?: DepositLedger[];
+};
+
+export type DepositLedger = {
+  id: string;
+  depositId: string;
+  leaseId: string;
+  tenantId: string;
+  amount: string | number;
+  type: DepositLedgerType;
+  relatedBillId?: string;
+  balanceAfter: string | number;
+  remark?: string;
+  operatorId: string;
+  createdAt: string;
+  operator?: { id: string; username: string; phone: string };
 };
 
 export type DepositPayment = {
@@ -268,11 +389,21 @@ export type SettlementPayment = {
   user?: { id: string; username: string; phone: string };
 };
 
+export type SettlementItem = {
+  id: string;
+  settlementId: string;
+  type: SettlementItemType;
+  name: string;
+  amount: string | number;
+  note?: string;
+};
+
 export type LeaseSettlement = {
   id: string;
   organizationId: string;
   leaseId: string;
   roomId: string;
+  checkoutType?: CheckoutType;
   type: TerminationType;
   reason?: string;
   terminatedAt: string;
@@ -301,6 +432,7 @@ export type LeaseSettlement = {
   billId?: string;
   bill?: Bill;
   payments?: SettlementPayment[];
+  items?: SettlementItem[];
   createdAt?: string;
 };
 
@@ -320,17 +452,74 @@ export type MonthlyBill = {
   payments?: Payment[];
 };
 
+export type Meter = {
+  id: string;
+  organizationId: string;
+  apartmentId: string;
+  roomId?: string;
+  name: string;
+  meterType: MeterType;
+  meterNo?: string;
+  installDate: string;
+  removeDate?: string;
+  status: MeterStatus;
+  parentId?: string;
+  room?: { id: string; roomNo: string };
+  apartment?: { id: string; name: string };
+  parent?: { id: string; name: string };
+  subMeters?: { id: string; name: string }[];
+  _count?: { readings: number };
+};
+
 export type MeterReading = {
   id: string;
   organizationId: string;
   apartmentId: string;
   roomId: string;
   leaseId?: string;
+  meterId?: string;
   meterType: MeterType;
   readingDate: string;
   value: string | number;
+  usage?: string | number;
+  source: string;
+  readType?: string;
   status: MeterReadingStatus;
+  photoUrl?: string;
   note?: string;
   room?: Room;
   lease?: Lease;
+  meter?: Meter;
+};
+
+export type BillQueue = {
+  id: string;
+  leaseId: string;
+  nextBillDate: string;
+  lastBillDate?: string;
+  lastBillId?: string;
+  status: BillQueueStatus;
+  errorMsg?: string;
+};
+
+export type TenantAccount = {
+  id: string;
+  tenantId: string;
+  prepaidBalance: string | number;
+  depositBalance: string | number;
+  totalUnpaid: string | number;
+  netBalance: string | number;
+};
+
+export type AccountTransaction = {
+  id: string;
+  tenantAccountId: string;
+  type: AccountTransactionType;
+  amount: string | number;
+  balanceAfter: string | number;
+  referenceType?: AccountReferenceType;
+  referenceId?: string;
+  note?: string;
+  createdById?: string;
+  createdAt: string;
 };

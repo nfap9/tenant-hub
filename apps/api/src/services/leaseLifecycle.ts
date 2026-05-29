@@ -4,7 +4,14 @@ import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
 
 export type LeaseCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
-export type LifecycleLeaseStatus = 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
+export type LifecycleLeaseStatus =
+  | 'DRAFT'
+  | 'ACTIVE'
+  | 'EXPIRING_SOON'
+  | 'TERMINATING'
+  | 'TERMINATED'
+  | 'EXPIRED'
+  | 'ENDED';
 
 export const cycleMonths: Record<LeaseCycle, number> = {
   MONTHLY: 1,

@@ -7,6 +7,7 @@ import {
   requirePermission,
 } from '../middleware/auth.js';
 import { generateLeaseBills } from '../services/billing.js';
+import { populateBillQueue } from '../services/billQueue.js';
 import {
   assertExpiredTerminationAllowed,
   startOfLeaseDay,
@@ -17,6 +18,7 @@ import {
   getLeaseSettlementPreview,
   recordSettlementPayment,
 } from '../services/leaseSettlement.js';
+import { findOrCreateTenant } from '../services/tenant.js';
 import { PERMISSIONS } from '../services/roles.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
@@ -65,10 +67,12 @@ leaseRouter.post(
     const input = z
       .object({
         roomId: z.string(),
+        tenantId: z.string().optional(),
         tenantName: z.string().min(1),
         tenantPhone: z.string().min(6),
         startDate: z.coerce.date(),
         endDate: z.coerce.date(),
+        billDay: z.number().int().min(1).max(28).optional(),
         graceDays: z.coerce.number().int().min(0).default(0),
         cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']),
         rentAmount: amountSchema,
@@ -93,7 +97,24 @@ leaseRouter.post(
       })
       .parse(req.body);
 
-    const { fees, roomId, generateHistoricalBills, ...leaseData } = input;
+    const {
+      fees,
+      roomId,
+      generateHistoricalBills,
+      tenantId: inputTenantId,
+      ...leaseData
+    } = input;
+
+    // Auto-associate or create tenant
+    let resolvedTenantId = inputTenantId;
+    if (!resolvedTenantId && leaseData.tenantPhone) {
+      const tenant = await findOrCreateTenant(
+        req.organizationId!,
+        leaseData.tenantName,
+        leaseData.tenantPhone
+      );
+      resolvedTenantId = tenant.id;
+    }
     const room = await prisma.room.findFirst({
       where: { id: roomId, apartment: { organizationId: req.organizationId! } },
       select: { id: true, status: true },
@@ -108,6 +129,7 @@ leaseRouter.post(
         const created = await tx.lease.create({
           data: {
             ...leaseData,
+            tenantId: resolvedTenantId,
             organizationId: req.organizationId!,
             roomId,
             fees: { create: fees },
@@ -160,6 +182,7 @@ leaseRouter.post(
       lease = await prisma.lease.create({
         data: {
           ...leaseData,
+          tenantId: resolvedTenantId,
           organizationId: req.organizationId!,
           roomId,
           fees: { create: fees },
@@ -178,6 +201,7 @@ leaseRouter.post(
     await generateLeaseBills(lease.id, new Date(), {
       onlyCurrentPeriod: isHistorical && !generateHistoricalBills,
     });
+    await populateBillQueue(lease.id).catch(() => {});
     ok(res, withLeaseLifecycle(lease));
   })
 );
@@ -192,6 +216,7 @@ leaseRouter.put(
         depositAmount: amountSchema.optional(),
         waterUnitPrice: amountSchema.optional(),
         powerUnitPrice: amountSchema.optional(),
+        billDay: z.number().int().min(1).max(28).optional(),
         fees: z
           .array(
             z.object({

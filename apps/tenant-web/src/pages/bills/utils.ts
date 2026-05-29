@@ -30,10 +30,12 @@ export const roomKeyForBill = (bill: Bill) =>
 const statusPriority: Record<BillStatus, number> = {
   UNPAID: 0,
   PARTIAL_PAID: 0,
+  OVERDUE: 0,
   BILLING: 1,
   FAILED: 2,
   DRAFT: 2,
   PAID: 3,
+  WRITTEN_OFF: 4,
   VOID: 4,
   REFUNDED: 5,
 };

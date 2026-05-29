@@ -12,15 +12,23 @@ import { cycleLabels } from '@/pages/rooms/constants';
 import styles from './LeasesPage.module.scss';
 
 const statusLabels: Record<LeaseStatus, string> = {
+  DRAFT: '草稿',
   ACTIVE: '生效中',
+  EXPIRING_SOON: '即将到期',
+  TERMINATING: '退租中',
   TERMINATED: '已终止',
   EXPIRED: '已到期',
+  ENDED: '已结束',
 };
 
 const statusColors: Record<LeaseStatus, string> = {
+  DRAFT: 'default',
   ACTIVE: 'success',
+  EXPIRING_SOON: 'warning',
+  TERMINATING: 'warning',
   TERMINATED: 'warning',
   EXPIRED: 'default',
+  ENDED: 'default',
 };
 
 type LeaseFilter =

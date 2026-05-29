@@ -5,10 +5,12 @@ export async function createLease(
   organizationId: string,
   payload: {
     roomId: string;
+    tenantId?: string;
     tenantName: string;
     tenantPhone: string;
     startDate: string;
     endDate: string;
+    billDay?: number;
     graceDays?: number;
     cycle: string;
     rentAmount: number;
@@ -35,6 +37,7 @@ export async function updateLease(
     depositAmount?: number;
     waterUnitPrice?: number;
     powerUnitPrice?: number;
+    billDay?: number;
     fees?: Array<{ type: string; name: string; amount: number }>;
   }
 ) {
