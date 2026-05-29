@@ -37,6 +37,10 @@ const LeaseTerminatePage = lazy(
 
 // 租约
 const LeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
+const LeaseRenewPage = lazy(() => import('@/pages/leases/LeaseRenewPage'));
+const LeaseRoomChangePage = lazy(
+  () => import('@/pages/leases/LeaseRoomChangePage')
+);
 
 // 维修工单
 const MaintenancePage = lazy(
@@ -57,6 +61,9 @@ const UtilityPage = lazy(() => import('@/pages/bills/UtilityPage'));
 const UtilityImportPage = lazy(() => import('@/pages/bills/UtilityImportPage'));
 const UtilityExportPage = lazy(() => import('@/pages/bills/UtilityExportPage'));
 const MonthlyDetailPage = lazy(() => import('@/pages/bills/MonthlyDetailPage'));
+const MeterReadingListPage = lazy(
+  () => import('@/pages/bills/MeterReadingListPage')
+);
 
 // 设置
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
@@ -66,6 +73,11 @@ const OrganizationPage = lazy(
 );
 const AccountPage = lazy(() => import('@/pages/settings/AccountPage'));
 const PlanPage = lazy(() => import('@/pages/settings/PlanPage'));
+
+// 租客
+const TenantListPage = lazy(() => import('@/pages/tenants/TenantListPage'));
+const TenantDetailPage = lazy(() => import('@/pages/tenants/TenantDetailPage'));
+const TenantFormPage = lazy(() => import('@/pages/tenants/TenantFormPage'));
 
 // 同住人
 const CoResidentsPage = lazy(
@@ -85,6 +97,22 @@ const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
 
 // 审计日志
 const AuditLogsPage = lazy(() => import('@/pages/audit-logs/AuditLogsPage'));
+
+// 房东合同
+const LandlordContractListPage = lazy(
+  () => import('@/pages/landlord-contracts/LandlordContractListPage')
+);
+const LandlordContractFormPage = lazy(
+  () => import('@/pages/landlord-contracts/LandlordContractFormPage')
+);
+const LandlordContractDetailPage = lazy(
+  () => import('@/pages/landlord-contracts/LandlordContractDetailPage')
+);
+
+// 表具
+const MeterListPage = lazy(() => import('@/pages/meters/MeterListPage'));
+const MeterFormPage = lazy(() => import('@/pages/meters/MeterFormPage'));
+const MeterDetailPage = lazy(() => import('@/pages/meters/MeterDetailPage'));
 
 // 运营配置
 const OpsDashboardPage = lazy(() => import('@/pages/ops/OpsDashboardPage'));
@@ -254,6 +282,22 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
+          <Route
+            path="/leases/:id/renew"
+            element={
+              <RequireOrg>
+                <LeaseRenewPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/leases/:id/room-change"
+            element={
+              <RequireOrg>
+                <LeaseRoomChangePage />
+              </RequireOrg>
+            }
+          />
           {/* 维修工单 */}
           <Route
             path="/maintenance"
@@ -396,6 +440,14 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
+          <Route
+            path="/bills/meter-readings"
+            element={
+              <RequireOrg>
+                <MeterReadingListPage />
+              </RequireOrg>
+            }
+          />
           {/* 设置 */}
           <Route path="/settings" element={<SettingsPage />} />
           <Route
@@ -413,6 +465,32 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <PlanPage />
+              </RequireOrg>
+            }
+          />
+
+          {/* 租客 */}
+          <Route
+            path="/tenants"
+            element={
+              <RequireOrg>
+                <TenantListPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/tenants/:id"
+            element={
+              <RequireOrg>
+                <TenantDetailPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/tenants/:id/edit"
+            element={
+              <RequireOrg>
+                <TenantFormPage />
               </RequireOrg>
             }
           />
@@ -453,12 +531,80 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
+          {/* 房东合同 */}
+          <Route
+            path="/landlord-contracts"
+            element={
+              <RequireOrg>
+                <LandlordContractListPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/landlord-contracts/new"
+            element={
+              <RequireOrg>
+                <LandlordContractFormPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/landlord-contracts/:id"
+            element={
+              <RequireOrg>
+                <LandlordContractDetailPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/landlord-contracts/:id/edit"
+            element={
+              <RequireOrg>
+                <LandlordContractFormPage />
+              </RequireOrg>
+            }
+          />
+
           {/* 审计日志 */}
           <Route
             path="/audit-logs"
             element={
               <RequireOrg>
                 <AuditLogsPage />
+              </RequireOrg>
+            }
+          />
+
+          {/* 表具 */}
+          <Route
+            path="/meters"
+            element={
+              <RequireOrg>
+                <MeterListPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/meters/new"
+            element={
+              <RequireOrg>
+                <MeterFormPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/meters/:id"
+            element={
+              <RequireOrg>
+                <MeterDetailPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/meters/:id/edit"
+            element={
+              <RequireOrg>
+                <MeterFormPage />
               </RequireOrg>
             }
           />

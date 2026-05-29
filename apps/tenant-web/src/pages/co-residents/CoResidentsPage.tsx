@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Table,
   Button,
@@ -9,11 +9,12 @@ import {
   message,
   Popconfirm,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   getCoResidents,
   createCoResident,
+  updateCoResident,
   deleteCoResident,
   type CoResident,
 } from '@/api/coResidents';
@@ -26,7 +27,9 @@ export default function CoResidentsPage() {
   const [residents, setResidents] = useState<CoResident[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
+  const initializedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!currentOrgId) return;
@@ -45,11 +48,45 @@ export default function CoResidentsPage() {
     load();
   }, [load]);
 
+  const openCreate = () => {
+    setEditingId(null);
+    form.resetFields();
+    initializedRef.current = false;
+    setModalOpen(true);
+  };
+
+  const openEdit = (record: CoResident) => {
+    setEditingId(record.id);
+    form.resetFields();
+    initializedRef.current = false;
+    form.setFieldsValue({
+      tenantId: record.tenantId,
+      leaseId: record.leaseId,
+      name: record.name,
+      idCard: record.idCard,
+      phone: record.phone,
+      relation: record.relation,
+    });
+    setModalOpen(true);
+  };
+
   const handleSubmit = async (values: Record<string, unknown>) => {
     if (!currentOrgId) return;
     try {
-      await createCoResident(currentOrgId, values as CoResident);
-      message.success('同住人已添加');
+      if (editingId) {
+        await updateCoResident(
+          currentOrgId,
+          editingId,
+          values as Parameters<typeof updateCoResident>[2]
+        );
+        message.success('同住人已更新');
+      } else {
+        await createCoResident(
+          currentOrgId,
+          values as Omit<CoResident, 'id' | 'tenant' | 'lease'>
+        );
+        message.success('同住人已添加');
+      }
       setModalOpen(false);
       form.resetFields();
       load();
@@ -91,6 +128,15 @@ export default function CoResidentsPage() {
       render: (_: unknown, record: CoResident) => (
         <Space>
           {canManage && (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openEdit(record)}
+            >
+              编辑
+            </Button>
+          )}
+          {canManage && (
             <Popconfirm
               title="删除同住人"
               onConfirm={() => handleDelete(record.id)}
@@ -111,14 +157,7 @@ export default function CoResidentsPage() {
         breadcrumb={[{ label: '同住人管理' }]}
         actions={
           canManage && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                form.resetFields();
-                setModalOpen(true);
-              }}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
               添加同住人
             </Button>
           )
@@ -136,7 +175,7 @@ export default function CoResidentsPage() {
         />
       )}
       <Modal
-        title="添加同住人"
+        title={editingId ? '编辑同住人' : '添加同住人'}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={() => form.submit()}
@@ -147,10 +186,10 @@ export default function CoResidentsPage() {
             label="主租客ID"
             rules={[{ required: true }]}
           >
-            <Input placeholder="租客ID" />
+            <Input placeholder="租客ID" disabled={!!editingId} />
           </Form.Item>
           <Form.Item name="leaseId" label="租约ID" rules={[{ required: true }]}>
-            <Input placeholder="租约ID" />
+            <Input placeholder="租约ID" disabled={!!editingId} />
           </Form.Item>
           <Form.Item name="name" label="姓名" rules={[{ required: true }]}>
             <Input />

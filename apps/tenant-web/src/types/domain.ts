@@ -184,8 +184,15 @@ export type Tenant = {
   name: string;
   phone: string;
   idCard?: string;
+  idCardFrontUrl?: string;
+  idCardBackUrl?: string;
   emergencyContact?: string;
   emergencyPhone?: string;
+  workUnit?: string;
+  jobTitle?: string;
+  sourceChannel?: string;
+  creditScore?: number;
+  remark?: string;
   createdAt: string;
   updatedAt: string;
   account?: TenantAccount;

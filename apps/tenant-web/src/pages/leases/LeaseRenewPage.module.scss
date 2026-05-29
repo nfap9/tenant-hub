@@ -1,0 +1,25 @@
+.infoCard {
+  margin-bottom: 16px;
+}
+
+.formCard {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.form {
+  padding: 8px 0;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}

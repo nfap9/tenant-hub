@@ -29,13 +29,17 @@ const { Header, Sider, Content } = Layout;
 function getMenuKeyFromPath(pathname: string): string {
   if (pathname === '/') return 'dashboard';
   if (pathname.startsWith('/apartments')) return 'apartments';
+  if (pathname.startsWith('/landlord-contracts')) return 'landlord-contracts';
   if (pathname.startsWith('/rooms')) return 'rooms';
   if (pathname.startsWith('/leases')) return 'leases';
+  if (pathname.startsWith('/tenants')) return 'tenants';
   if (pathname.startsWith('/maintenance')) return 'maintenance';
   if (pathname.startsWith('/deposits')) return 'deposits';
   if (pathname.startsWith('/bills')) return 'bills';
+  if (pathname.startsWith('/meter-readings')) return 'meter-readings';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/co-residents')) return 'co-residents';
+  if (pathname.startsWith('/meters')) return 'meters';
   if (pathname.startsWith('/cashier-journals')) return 'cashier-journals';
   if (pathname.startsWith('/invoices')) return 'invoices';
   if (pathname.startsWith('/reports')) return 'reports';
@@ -97,11 +101,19 @@ export default function MainLayout() {
           { key: 'dashboard', icon: <HomeOutlined />, label: '首页' },
           { key: 'rooms', icon: <HomeFilled />, label: '房间' },
           { key: 'bills', icon: <FileTextOutlined />, label: '账单' },
+          { key: 'meter-readings', icon: <ToolOutlined />, label: '抄表记录' },
           { key: 'leases', icon: <FileTextOutlined />, label: '租约' },
+          { key: 'tenants', icon: <UserOutlined />, label: '租客' },
           { key: 'maintenance', icon: <ToolOutlined />, label: '维修' },
           { key: 'deposits', icon: <FileTextOutlined />, label: '押金' },
           { key: 'apartments', icon: <ApartmentOutlined />, label: '公寓' },
+          {
+            key: 'landlord-contracts',
+            icon: <FileTextOutlined />,
+            label: '房东合同',
+          },
           { key: 'co-residents', icon: <TeamOutlined />, label: '同住人' },
+          { key: 'meters', icon: <ToolOutlined />, label: '表具' },
           { key: 'cashier-journals', icon: <DollarOutlined />, label: '出纳' },
           { key: 'invoices', icon: <MailOutlined />, label: '发票' },
           { key: 'reports', icon: <DashboardOutlined />, label: '报表' },
@@ -166,6 +178,9 @@ export default function MainLayout() {
         break;
       case 'apartments':
         navigate('/apartments');
+        break;
+      case 'landlord-contracts':
+        navigate('/landlord-contracts');
         break;
       case 'settings':
         navigate('/settings');

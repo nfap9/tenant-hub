@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Tabs, Tag, Input, Button, message, Spin } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { EyeOutlined, ReloadOutlined, SwapOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getLeases } from '@/api/leases';
 import PageHeader from '@/components/ui/PageHeader';
@@ -230,14 +230,38 @@ export default function LeasesPage() {
                 title: '操作',
                 fixed: 'right',
                 render: (_: unknown, row: Lease) => (
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<EyeOutlined />}
-                    onClick={() => navigate(`/rooms/${row.roomId}`)}
-                  >
-                    查看房间
-                  </Button>
+                  <div className={styles.actions}>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EyeOutlined />}
+                      onClick={() => navigate(`/rooms/${row.roomId}`)}
+                    >
+                      查看房间
+                    </Button>
+                    {row.status === 'ACTIVE' && (
+                      <>
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<ReloadOutlined />}
+                          onClick={() => navigate(`/leases/${row.id}/renew`)}
+                        >
+                          续租
+                        </Button>
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<SwapOutlined />}
+                          onClick={() =>
+                            navigate(`/leases/${row.id}/room-change`)
+                          }
+                        >
+                          换房
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 ),
               },
             ]}

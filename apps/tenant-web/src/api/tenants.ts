@@ -28,8 +28,15 @@ export async function updateTenant(
     name?: string;
     phone?: string;
     idCard?: string;
+    idCardFrontUrl?: string;
+    idCardBackUrl?: string;
+    workUnit?: string;
+    jobTitle?: string;
     emergencyContact?: string;
     emergencyPhone?: string;
+    sourceChannel?: string;
+    creditScore?: number;
+    remark?: string;
   }
 ) {
   return apiClient<Tenant>(`/tenants/${tenantId}`, {

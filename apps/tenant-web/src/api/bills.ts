@@ -74,6 +74,23 @@ export async function importUtilityCsv(
   });
 }
 
+export async function getMeterReadings(organizationId: string) {
+  return apiClient<
+    Array<{
+      id: string;
+      roomId: string;
+      room?: { roomNo: string; apartment?: { name: string } };
+      meterType: string;
+      value: number | string;
+      usage?: number | string;
+      readingDate: string;
+      source: string;
+      status: string;
+      note?: string;
+    }>
+  >('/bills/meter-readings', { organizationId });
+}
+
 export async function createMeterReading(
   organizationId: string,
   payload: {

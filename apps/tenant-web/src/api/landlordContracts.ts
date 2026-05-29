@@ -33,6 +33,12 @@ export async function getLandlordContracts(
   });
 }
 
+export async function getLandlordContract(organizationId: string, id: string) {
+  return apiClient<LandlordContract>(`/landlord-contracts/${id}`, {
+    organizationId,
+  });
+}
+
 export async function createLandlordContract(
   organizationId: string,
   payload: Omit<LandlordContract, 'id' | 'createdAt' | 'apartment'>

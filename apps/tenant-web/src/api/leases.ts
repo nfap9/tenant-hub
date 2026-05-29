@@ -66,6 +66,41 @@ export async function getLeases(organizationId: string) {
   return apiClient<Lease[]>('/leases', { organizationId });
 }
 
+export async function renewLease(
+  organizationId: string,
+  leaseId: string,
+  payload: {
+    startDate: string;
+    endDate: string;
+    rentAmount?: number;
+    remark?: string;
+  }
+) {
+  return apiClient<Lease>(`/leases/${leaseId}/renew`, {
+    method: 'POST',
+    body: payload,
+    organizationId,
+  });
+}
+
+export async function roomChange(
+  organizationId: string,
+  leaseId: string,
+  payload: {
+    newRoomId: string;
+    startDate: string;
+    endDate: string;
+    rentAmount?: number;
+    remark?: string;
+  }
+) {
+  return apiClient<Lease>(`/leases/${leaseId}/room-change`, {
+    method: 'POST',
+    body: payload,
+    organizationId,
+  });
+}
+
 export async function terminateLease(
   organizationId: string,
   leaseId: string,
