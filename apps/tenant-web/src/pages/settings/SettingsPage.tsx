@@ -1,3 +1,5 @@
+// PAGE-004: 个人中心页面
+// PAGE-601: 设置首页
 import { Card, Avatar, Button, Tag, Modal, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -6,6 +8,9 @@ import {
   CrownOutlined,
   LogoutOutlined,
   RightOutlined,
+  BellOutlined,
+  WalletOutlined,
+  RollbackOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { message } from 'antd';
@@ -32,6 +37,20 @@ export default function SettingsPage() {
   };
 
   const menuItems = [
+    ...(memberships.length === 0
+      ? []
+      : [
+          {
+            title: '成员管理',
+            icon: <TeamOutlined />,
+            path: '/settings/members',
+          },
+          {
+            title: '套餐订阅',
+            icon: <CrownOutlined />,
+            path: '/settings/plan',
+          },
+        ]),
     {
       title: '组织管理',
       icon: <TeamOutlined />,
@@ -42,15 +61,21 @@ export default function SettingsPage() {
       icon: <UserOutlined />,
       path: '/settings/account',
     },
-    ...(memberships.length === 0
-      ? []
-      : [
-          {
-            title: '套餐订阅',
-            icon: <CrownOutlined />,
-            path: '/settings/plan',
-          },
-        ]),
+    {
+      title: '通知中心',
+      icon: <BellOutlined />,
+      path: '/notifications',
+    },
+    {
+      title: '资金账户',
+      icon: <WalletOutlined />,
+      path: '/accounts',
+    },
+    {
+      title: '退款管理',
+      icon: <RollbackOutlined />,
+      path: '/refunds',
+    },
   ];
 
   return (

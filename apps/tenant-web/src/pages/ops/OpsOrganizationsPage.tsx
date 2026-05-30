@@ -1,3 +1,4 @@
+// PAGE-505: 组织管理
 import { useEffect, useState } from 'react';
 import { Select, Table, Tag, message } from 'antd';
 import { getAdminOrganizations } from '@/api/admin';

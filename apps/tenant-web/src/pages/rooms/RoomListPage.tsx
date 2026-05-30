@@ -1,3 +1,4 @@
+// PAGE-107: 房间列表页面
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Button, message, Spin, Tabs } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';

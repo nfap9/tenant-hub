@@ -1,3 +1,4 @@
+// PAGE-602: 套餐订阅
 import { Card } from 'antd';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';

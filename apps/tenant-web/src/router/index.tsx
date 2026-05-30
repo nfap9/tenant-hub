@@ -1,13 +1,23 @@
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
-import { Spin, Empty, Button, Space } from 'antd';
-import { BuildOutlined, UserAddOutlined } from '@ant-design/icons';
 import MainLayout from '@/layout/MainLayout';
-import { useAppSession } from '@/context/AppSessionContext';
-import styles from './router.module.scss';
+import {
+  PageLoading,
+  RequireAuth,
+  RequireOrg,
+  RequireSuperAdmin,
+} from './guards';
 
-// 懒加载页面
-const LoginPage = lazy(() => import('@/pages/LoginPage'));
+/* ---------- 页面懒加载 ---------- */
+
+// 认证
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(
+  () => import('@/pages/auth/ForgotPasswordPage')
+);
+
+// 首页
 const DashboardPage = lazy(() => import('@/pages/dashboard/index.tsx'));
 
 // 公寓
@@ -42,7 +52,7 @@ const LeaseRoomChangePage = lazy(
   () => import('@/pages/leases/LeaseRoomChangePage')
 );
 
-// 维修工单
+// 维修
 const MaintenancePage = lazy(
   () => import('@/pages/maintenance/MaintenancePage')
 );
@@ -68,15 +78,6 @@ const MeterReadingListPage = lazy(
   () => import('@/pages/bills/MeterReadingListPage')
 );
 
-// 设置
-const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
-const MyLeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
-const OrganizationPage = lazy(
-  () => import('@/pages/settings/OrganizationPage')
-);
-const AccountPage = lazy(() => import('@/pages/settings/AccountPage'));
-const PlanPage = lazy(() => import('@/pages/settings/PlanPage'));
-
 // 租客
 const TenantListPage = lazy(() => import('@/pages/tenants/TenantListPage'));
 const TenantDetailPage = lazy(() => import('@/pages/tenants/TenantDetailPage'));
@@ -87,15 +88,15 @@ const CoResidentsPage = lazy(
   () => import('@/pages/co-residents/CoResidentsPage')
 );
 
-// 出纳日记账
+// 出纳
 const CashierJournalsPage = lazy(
   () => import('@/pages/cashier-journals/CashierJournalsPage')
 );
 
-// 发票管理
+// 发票
 const InvoicesPage = lazy(() => import('@/pages/invoices/InvoicesPage'));
 
-// 财务报表
+// 报表
 const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
 
 // 审计日志
@@ -120,7 +121,30 @@ const MeterListPage = lazy(() => import('@/pages/meters/MeterListPage'));
 const MeterFormPage = lazy(() => import('@/pages/meters/MeterFormPage'));
 const MeterDetailPage = lazy(() => import('@/pages/meters/MeterDetailPage'));
 
-// 运营配置
+// 设置
+const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
+const OrganizationPage = lazy(
+  () => import('@/pages/settings/OrganizationPage')
+);
+const AccountPage = lazy(() => import('@/pages/settings/AccountPage'));
+const PlanPage = lazy(() => import('@/pages/settings/PlanPage'));
+const MembersPage = lazy(() => import('@/pages/settings/MembersPage'));
+
+// 通知中心
+const NotificationsPage = lazy(
+  () => import('@/pages/notifications/NotificationsPage')
+);
+
+// 退款管理
+const RefundsPage = lazy(() => import('@/pages/refunds/RefundsPage'));
+const RefundApprovalPage = lazy(
+  () => import('@/pages/refunds/RefundApprovalPage')
+);
+
+// 资金账户
+const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage'));
+
+// 运营后台
 const OpsDashboardPage = lazy(() => import('@/pages/ops/OpsDashboardPage'));
 const OpsUsersPage = lazy(() => import('@/pages/ops/OpsUsersPage'));
 const OpsPlansPage = lazy(() => import('@/pages/ops/OpsPlansPage'));
@@ -133,79 +157,221 @@ const OpsSystemSettingsPage = lazy(
   () => import('@/pages/ops/OpsSystemSettingsPage')
 );
 
-function PageLoading() {
-  return (
-    <div className={styles.pageLoading}>
-      <Spin size="large" />
-    </div>
-  );
-}
+/* ---------- 路由配置 ---------- */
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAppSession();
+type RouteConfig = {
+  path: string;
+  element: React.ReactNode;
+  requireOrg?: boolean;
+  requireSuperAdmin?: boolean;
+};
 
-  if (loading) {
-    return <PageLoading />;
+const routes: RouteConfig[] = [
+  // 首页
+  { path: '/', element: <DashboardPage />, requireOrg: true },
+
+  // 公寓
+  { path: '/apartments', element: <ApartmentListPage />, requireOrg: true },
+  {
+    path: '/apartments/:id',
+    element: <ApartmentDetailPage />,
+    requireOrg: true,
+  },
+  { path: '/apartments/new', element: <ApartmentFormPage />, requireOrg: true },
+  {
+    path: '/apartments/:id/edit',
+    element: <ApartmentFormPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/apartments/:id/expenses',
+    element: <ApartmentExpensePage />,
+    requireOrg: true,
+  },
+  {
+    path: '/apartments/:id/rooms/batch',
+    element: <RoomBatchPage />,
+    requireOrg: true,
+  },
+
+  // 房间
+  { path: '/rooms', element: <RoomListPage />, requireOrg: true },
+  { path: '/rooms/:id', element: <RoomDetailPage />, requireOrg: true },
+  { path: '/rooms/new', element: <RoomFormPage />, requireOrg: true },
+  { path: '/rooms/:id/edit', element: <RoomFormPage />, requireOrg: true },
+  {
+    path: '/rooms/:id/lease/new',
+    element: <LeaseFormPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/rooms/:id/lease/edit',
+    element: <LeaseEditPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/rooms/:id/lease/terminate',
+    element: <LeaseTerminatePage />,
+    requireOrg: true,
+  },
+
+  // 租约
+  { path: '/leases', element: <LeasesPage />, requireOrg: true },
+  { path: '/leases/:id/renew', element: <LeaseRenewPage />, requireOrg: true },
+  {
+    path: '/leases/:id/room-change',
+    element: <LeaseRoomChangePage />,
+    requireOrg: true,
+  },
+
+  // 维修
+  { path: '/maintenance', element: <MaintenancePage />, requireOrg: true },
+  {
+    path: '/maintenance/:id',
+    element: <MaintenanceDetailPage />,
+    requireOrg: true,
+  },
+
+  // 押金
+  { path: '/deposits', element: <DepositsPage />, requireOrg: true },
+  { path: '/deposits/:id', element: <DepositDetailPage />, requireOrg: true },
+
+  // 账单
+  { path: '/bills', element: <BillListPage />, requireOrg: true },
+  { path: '/bills/payment', element: <PaymentPage />, requireOrg: true },
+  { path: '/bills/reading', element: <ReadingPage />, requireOrg: true },
+  { path: '/bills/utility', element: <UtilityPage />, requireOrg: true },
+  {
+    path: '/bills/utility-import',
+    element: <UtilityImportPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/bills/utility-export',
+    element: <UtilityExportPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/bills/monthly/:id',
+    element: <MonthlyDetailPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/bills/meter-readings',
+    element: <MeterReadingListPage />,
+    requireOrg: true,
+  },
+
+  // 租客
+  { path: '/tenants', element: <TenantListPage />, requireOrg: true },
+  { path: '/tenants/:id', element: <TenantDetailPage />, requireOrg: true },
+  { path: '/tenants/new', element: <TenantFormPage />, requireOrg: true },
+  { path: '/tenants/:id/edit', element: <TenantFormPage />, requireOrg: true },
+
+  // 同住人
+  { path: '/co-residents', element: <CoResidentsPage />, requireOrg: true },
+
+  // 出纳
+  {
+    path: '/cashier-journals',
+    element: <CashierJournalsPage />,
+    requireOrg: true,
+  },
+
+  // 发票
+  { path: '/invoices', element: <InvoicesPage />, requireOrg: true },
+
+  // 报表
+  { path: '/reports', element: <ReportsPage />, requireOrg: true },
+
+  // 房东合同
+  {
+    path: '/landlord-contracts',
+    element: <LandlordContractListPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/landlord-contracts/new',
+    element: <LandlordContractFormPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/landlord-contracts/:id',
+    element: <LandlordContractDetailPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/landlord-contracts/:id/edit',
+    element: <LandlordContractFormPage />,
+    requireOrg: true,
+  },
+  {
+    path: '/landlord-payments',
+    element: <LandlordPaymentListPage />,
+    requireOrg: true,
+  },
+
+  // 审计日志
+  { path: '/audit-logs', element: <AuditLogsPage />, requireOrg: true },
+
+  // 表具
+  { path: '/meters', element: <MeterListPage />, requireOrg: true },
+  { path: '/meters/new', element: <MeterFormPage />, requireOrg: true },
+  { path: '/meters/:id', element: <MeterDetailPage />, requireOrg: true },
+  { path: '/meters/:id/edit', element: <MeterFormPage />, requireOrg: true },
+
+  // 设置（部分无需组织）
+  { path: '/settings', element: <SettingsPage /> },
+  { path: '/settings/leases', element: <LeasesPage />, requireOrg: true },
+  { path: '/settings/organization', element: <OrganizationPage /> },
+  { path: '/settings/account', element: <AccountPage /> },
+  { path: '/settings/plan', element: <PlanPage />, requireOrg: true },
+  { path: '/settings/members', element: <MembersPage />, requireOrg: true },
+
+  // 通知中心
+  { path: '/notifications', element: <NotificationsPage />, requireOrg: true },
+
+  // 退款管理
+  { path: '/refunds', element: <RefundsPage />, requireOrg: true },
+  {
+    path: '/refunds/approval',
+    element: <RefundApprovalPage />,
+    requireOrg: true,
+  },
+
+  // 资金账户
+  { path: '/accounts', element: <AccountsPage />, requireOrg: true },
+
+  // 运营后台
+  { path: '/ops', element: <OpsDashboardPage />, requireSuperAdmin: true },
+  { path: '/ops/users', element: <OpsUsersPage />, requireSuperAdmin: true },
+  { path: '/ops/plans', element: <OpsPlansPage />, requireSuperAdmin: true },
+  {
+    path: '/ops/organizations',
+    element: <OpsOrganizationsPage />,
+    requireSuperAdmin: true,
+  },
+  { path: '/ops/roles', element: <OpsRolesPage />, requireSuperAdmin: true },
+  { path: '/ops/sms', element: <OpsSmsConfigPage />, requireSuperAdmin: true },
+  {
+    path: '/ops/settings',
+    element: <OpsSystemSettingsPage />,
+    requireSuperAdmin: true,
+  },
+];
+
+function wrapRoute(route: RouteConfig): React.ReactNode {
+  let element = route.element;
+
+  if (route.requireOrg) {
+    element = <RequireOrg>{element}</RequireOrg>;
   }
 
-  if (!session?.token) {
-    return <Navigate to="/login" replace />;
+  if (route.requireSuperAdmin) {
+    element = <RequireSuperAdmin>{element}</RequireSuperAdmin>;
   }
 
-  return <>{children}</>;
-}
-
-function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
-  const { platformRole, loading } = useAppSession();
-
-  if (loading) {
-    return <PageLoading />;
-  }
-
-  if (platformRole !== 'SUPER_ADMIN') {
-    return (
-      <div className={styles.centerEmpty}>
-        <Empty description="当前账号没有运营平台权限，请联系平台管理员开通" />
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-}
-
-function RequireOrg({ children }: { children: React.ReactNode }) {
-  const { memberships, loading } = useAppSession();
-  const navigate = useNavigate();
-
-  if (loading) {
-    return <PageLoading />;
-  }
-
-  if (memberships.length === 0) {
-    return (
-      <div className={styles.centerEmpty}>
-        <Empty description="请先创建或加入组织">
-          <Space className={styles.noOrgActions}>
-            <Button
-              icon={<UserAddOutlined />}
-              onClick={() => navigate('/settings/organization?action=join')}
-            >
-              加入组织
-            </Button>
-            <Button
-              type="primary"
-              icon={<BuildOutlined />}
-              onClick={() => navigate('/settings/organization?action=create')}
-            >
-              创建组织
-            </Button>
-          </Space>
-        </Empty>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
+  return <Route key={route.path} path={route.path} element={element} />;
 }
 
 export default function AppRouter() {
@@ -213,6 +379,8 @@ export default function AppRouter() {
     <Suspense fallback={<PageLoading />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route
           element={
             <RequireAuth>
@@ -220,482 +388,7 @@ export default function AppRouter() {
             </RequireAuth>
           }
         >
-          <Route
-            path="/"
-            element={
-              <RequireOrg>
-                <DashboardPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 公寓 */}
-          <Route
-            path="/apartments"
-            element={
-              <RequireOrg>
-                <ApartmentListPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/:id"
-            element={
-              <RequireOrg>
-                <ApartmentDetailPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/new"
-            element={
-              <RequireOrg>
-                <ApartmentFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/:id/edit"
-            element={
-              <RequireOrg>
-                <ApartmentFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/:id/expenses"
-            element={
-              <RequireOrg>
-                <ApartmentExpensePage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/:id/rooms/batch"
-            element={
-              <RequireOrg>
-                <RoomBatchPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 租约 */}
-          <Route
-            path="/leases"
-            element={
-              <RequireOrg>
-                <LeasesPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/leases/:id/renew"
-            element={
-              <RequireOrg>
-                <LeaseRenewPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/leases/:id/room-change"
-            element={
-              <RequireOrg>
-                <LeaseRoomChangePage />
-              </RequireOrg>
-            }
-          />
-          {/* 维修工单 */}
-          <Route
-            path="/maintenance"
-            element={
-              <RequireOrg>
-                <MaintenancePage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/maintenance/:id"
-            element={
-              <RequireOrg>
-                <MaintenanceDetailPage />
-              </RequireOrg>
-            }
-          />
-          {/* 房间 */}
-          <Route
-            path="/rooms"
-            element={
-              <RequireOrg>
-                <RoomListPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id"
-            element={
-              <RequireOrg>
-                <RoomDetailPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/new"
-            element={
-              <RequireOrg>
-                <RoomFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/edit"
-            element={
-              <RequireOrg>
-                <RoomFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/lease/new"
-            element={
-              <RequireOrg>
-                <LeaseFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/lease/edit"
-            element={
-              <RequireOrg>
-                <LeaseEditPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/lease/terminate"
-            element={
-              <RequireOrg>
-                <LeaseTerminatePage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 押金 */}
-          <Route
-            path="/deposits"
-            element={
-              <RequireOrg>
-                <DepositsPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/deposits/:id"
-            element={
-              <RequireOrg>
-                <DepositDetailPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 账单 */}
-          <Route
-            path="/bills"
-            element={
-              <RequireOrg>
-                <BillListPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/payment"
-            element={
-              <RequireOrg>
-                <PaymentPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/reading"
-            element={
-              <RequireOrg>
-                <ReadingPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/utility"
-            element={
-              <RequireOrg>
-                <UtilityPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/utility-import"
-            element={
-              <RequireOrg>
-                <UtilityImportPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/utility-export"
-            element={
-              <RequireOrg>
-                <UtilityExportPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/monthly/:id"
-            element={
-              <RequireOrg>
-                <MonthlyDetailPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/meter-readings"
-            element={
-              <RequireOrg>
-                <MeterReadingListPage />
-              </RequireOrg>
-            }
-          />
-          {/* 设置 */}
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route
-            path="/settings/leases"
-            element={
-              <RequireOrg>
-                <MyLeasesPage />
-              </RequireOrg>
-            }
-          />
-          <Route path="/settings/organization" element={<OrganizationPage />} />
-          <Route path="/settings/account" element={<AccountPage />} />
-          <Route
-            path="/settings/plan"
-            element={
-              <RequireOrg>
-                <PlanPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 租客 */}
-          <Route
-            path="/tenants"
-            element={
-              <RequireOrg>
-                <TenantListPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/tenants/:id"
-            element={
-              <RequireOrg>
-                <TenantDetailPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/tenants/new"
-            element={
-              <RequireOrg>
-                <TenantFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/tenants/:id/edit"
-            element={
-              <RequireOrg>
-                <TenantFormPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 同住人 */}
-          <Route
-            path="/co-residents"
-            element={
-              <RequireOrg>
-                <CoResidentsPage />
-              </RequireOrg>
-            }
-          />
-          {/* 出纳日记账 */}
-          <Route
-            path="/cashier-journals"
-            element={
-              <RequireOrg>
-                <CashierJournalsPage />
-              </RequireOrg>
-            }
-          />
-          {/* 发票管理 */}
-          <Route
-            path="/invoices"
-            element={
-              <RequireOrg>
-                <InvoicesPage />
-              </RequireOrg>
-            }
-          />
-          {/* 财务报表 */}
-          <Route
-            path="/reports"
-            element={
-              <RequireOrg>
-                <ReportsPage />
-              </RequireOrg>
-            }
-          />
-          {/* 房东合同 */}
-          <Route
-            path="/landlord-contracts"
-            element={
-              <RequireOrg>
-                <LandlordContractListPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/landlord-payments"
-            element={
-              <RequireOrg>
-                <LandlordPaymentListPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/landlord-contracts/new"
-            element={
-              <RequireOrg>
-                <LandlordContractFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/landlord-contracts/:id"
-            element={
-              <RequireOrg>
-                <LandlordContractDetailPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/landlord-contracts/:id/edit"
-            element={
-              <RequireOrg>
-                <LandlordContractFormPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 审计日志 */}
-          <Route
-            path="/audit-logs"
-            element={
-              <RequireOrg>
-                <AuditLogsPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 表具 */}
-          <Route
-            path="/meters"
-            element={
-              <RequireOrg>
-                <MeterListPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/meters/new"
-            element={
-              <RequireOrg>
-                <MeterFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/meters/:id"
-            element={
-              <RequireOrg>
-                <MeterDetailPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/meters/:id/edit"
-            element={
-              <RequireOrg>
-                <MeterFormPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 运营配置 */}
-          <Route
-            path="/ops"
-            element={
-              <RequireSuperAdmin>
-                <OpsDashboardPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/users"
-            element={
-              <RequireSuperAdmin>
-                <OpsUsersPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/plans"
-            element={
-              <RequireSuperAdmin>
-                <OpsPlansPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/organizations"
-            element={
-              <RequireSuperAdmin>
-                <OpsOrganizationsPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/roles"
-            element={
-              <RequireSuperAdmin>
-                <OpsRolesPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/sms"
-            element={
-              <RequireSuperAdmin>
-                <OpsSmsConfigPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/settings"
-            element={
-              <RequireSuperAdmin>
-                <OpsSystemSettingsPage />
-              </RequireSuperAdmin>
-            }
-          />
+          {routes.map(wrapRoute)}
         </Route>
       </Routes>
     </Suspense>

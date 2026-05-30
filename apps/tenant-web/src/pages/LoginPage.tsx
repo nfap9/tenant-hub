@@ -1,3 +1,6 @@
+// PAGE-001: 登录页面
+// PAGE-002: 注册页面
+// PAGE-003: 忘记密码页面
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

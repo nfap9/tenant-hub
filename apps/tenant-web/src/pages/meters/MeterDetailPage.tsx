@@ -1,3 +1,5 @@
+// PAGE-216: 表具详情页面
+// PAGE-217: 表具更换页面/弹窗
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {

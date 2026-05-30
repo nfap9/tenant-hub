@@ -8,38 +8,19 @@ export type ApiOptions = {
   organizationId?: string;
 };
 
+import { getSession, getOrgId, clearSession } from '@/utils/storage';
+
 export type Session = {
   token?: string;
   user?: { id: string; phone: string; username: string };
 };
 
-const SESSION_KEY = 'tenantHubSession';
-const ORG_KEY = 'tenantHubCurrentOrgId';
-
 export function readSession(): Session {
-  try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}') as Session;
-  } catch {
-    return {};
-  }
-}
-
-export function writeSession(patch: Partial<Session>) {
-  const next = { ...readSession(), ...patch };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(next));
-}
-
-export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(ORG_KEY);
+  return (getSession() ?? {}) as Session;
 }
 
 export function readOrgId(): string | undefined {
-  return localStorage.getItem(ORG_KEY) || undefined;
-}
-
-export function writeOrgId(id: string) {
-  localStorage.setItem(ORG_KEY, id);
+  return getOrgId();
 }
 
 let isRedirecting = false;

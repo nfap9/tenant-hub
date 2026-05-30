@@ -178,8 +178,8 @@ function getMenuKeyFromPath(pathname: string): string {
   if (pathname.startsWith('/tenants')) return 'tenants';
   if (pathname.startsWith('/maintenance')) return 'maintenance';
   if (pathname.startsWith('/deposits')) return 'deposits';
+  if (pathname.startsWith('/bills/meter-readings')) return 'meter-readings';
   if (pathname.startsWith('/bills')) return 'bills';
-  if (pathname.startsWith('/meter-readings')) return 'meter-readings';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/co-residents')) return 'co-residents';
   if (pathname.startsWith('/meters')) return 'meters';
@@ -324,11 +324,41 @@ export default function MainLayout() {
       case 'bills':
         navigate('/bills');
         break;
+      case 'meter-readings':
+        navigate('/bills/meter-readings');
+        break;
       case 'apartments':
         navigate('/apartments');
         break;
       case 'landlord-contracts':
         navigate('/landlord-contracts');
+        break;
+      case 'landlord-payments':
+        navigate('/landlord-payments');
+        break;
+      case 'tenants':
+        navigate('/tenants');
+        break;
+      case 'maintenance':
+        navigate('/maintenance');
+        break;
+      case 'co-residents':
+        navigate('/co-residents');
+        break;
+      case 'meters':
+        navigate('/meters');
+        break;
+      case 'cashier-journals':
+        navigate('/cashier-journals');
+        break;
+      case 'invoices':
+        navigate('/invoices');
+        break;
+      case 'reports':
+        navigate('/reports');
+        break;
+      case 'audit-logs':
+        navigate('/audit-logs');
         break;
       case 'settings':
         navigate('/settings');

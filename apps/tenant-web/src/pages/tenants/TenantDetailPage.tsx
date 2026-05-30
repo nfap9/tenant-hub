@@ -1,3 +1,6 @@
+// PAGE-203: 租客详情页面
+// PAGE-205: 租客交易流水页面
+// PAGE-206: 账户调账页面/弹窗
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -25,14 +28,14 @@ import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   getTenant,
   getTenantAccount,
-  getTenantAccountTransactions,
   adjustTenantAccount,
 } from '@/api/tenants';
-import type { Tenant, AccountTransaction, Lease } from '@/types/domain';
+import type { Tenant, Lease } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
+import TenantTransactionSection from '@/components/tenants/TenantTransactionSection';
 import styles from './TenantDetailPage.module.scss';
 
 const sourceChannelLabels: Record<string, string> = {
@@ -43,20 +46,6 @@ const sourceChannelLabels: Record<string, string> = {
   AGENT: '中介',
   WALK_IN: '上门',
   OTHER: '其他',
-};
-
-const transactionTypeLabels: Record<string, string> = {
-  PAYMENT: '收款',
-  CHARGE: '扣款',
-  REFUND: '退款',
-  ADJUSTMENT: '调账',
-};
-
-const transactionTypeColors: Record<string, string> = {
-  PAYMENT: 'success',
-  CHARGE: 'error',
-  REFUND: 'warning',
-  ADJUSTMENT: 'processing',
 };
 
 export default function TenantDetailPage() {
@@ -72,26 +61,21 @@ export default function TenantDetailPage() {
     totalUnpaid: string | number;
     netBalance: string | number;
   } | null>(null);
-  const [transactions, setTransactions] = useState<AccountTransaction[]>([]);
-  const [transactionTotal, setTransactionTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [adjustForm] = Form.useForm();
-  const [transactionPage, setTransactionPage] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId || !id) return;
     setLoading(true);
     try {
-      const [t, acc, txns] = await Promise.all([
+      const [t, acc] = await Promise.all([
         getTenant(currentOrgId, id),
         getTenantAccount(currentOrgId, id),
-        getTenantAccountTransactions(currentOrgId, id, 1, 10),
       ]);
       setTenant(t);
       setAccount(acc);
-      setTransactions(txns.items);
-      setTransactionTotal(txns.total);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载租客详情失败');
     } finally {
@@ -110,26 +94,10 @@ export default function TenantDetailPage() {
       message.success('调账成功');
       setAdjustModalOpen(false);
       adjustForm.resetFields();
+      setReloadKey((k) => k + 1);
       loadData();
     } catch (e) {
       message.error(e instanceof Error ? e.message : '调账失败');
-    }
-  };
-
-  const loadTransactions = async (page: number) => {
-    if (!currentOrgId || !id) return;
-    try {
-      const data = await getTenantAccountTransactions(
-        currentOrgId,
-        id,
-        page,
-        10
-      );
-      setTransactions(data.items);
-      setTransactionTotal(data.total);
-      setTransactionPage(page);
-    } catch {
-      message.error('加载交易流水失败');
     }
   };
 
@@ -178,43 +146,6 @@ export default function TenantDetailPage() {
           {v === 'ACTIVE' ? '生效中' : v === 'TERMINATED' ? '已终止' : v}
         </Tag>
       ),
-    },
-  ];
-
-  const transactionColumns = [
-    {
-      title: '类型',
-      dataIndex: 'type',
-      key: 'type',
-      render: (v: string) => (
-        <Tag color={transactionTypeColors[v] || 'default'}>
-          {transactionTypeLabels[v] || v}
-        </Tag>
-      ),
-    },
-    {
-      title: '金额',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (v: string | number) => money(v),
-    },
-    {
-      title: '变动后余额',
-      dataIndex: 'balanceAfter',
-      key: 'balanceAfter',
-      render: (v: string | number) => money(v),
-    },
-    {
-      title: '备注',
-      dataIndex: 'note',
-      key: 'note',
-      render: (v?: string) => v || '-',
-    },
-    {
-      title: '时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (v: string) => day(v),
     },
   ];
 
@@ -376,17 +307,13 @@ export default function TenantDetailPage() {
                 </>
               }
             >
-              <Table
-                dataSource={transactions}
-                columns={transactionColumns}
-                rowKey="id"
-                pagination={{
-                  current: transactionPage,
-                  pageSize: 10,
-                  total: transactionTotal,
-                  onChange: loadTransactions,
-                }}
-              />
+              {id && currentOrgId && (
+                <TenantTransactionSection
+                  tenantId={id}
+                  currentOrgId={currentOrgId}
+                  reloadKey={reloadKey}
+                />
+              )}
             </DetailSection>
 
             <Divider />

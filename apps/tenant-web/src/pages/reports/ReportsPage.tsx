@@ -1,3 +1,7 @@
+// PAGE-311: 应收应付报表页面
+// PAGE-312: 收支报表页面
+// PAGE-313: 收缴率分析页面
+// PAGE-314: 入住率分析页面
 import { useState } from 'react';
 import {
   Card,

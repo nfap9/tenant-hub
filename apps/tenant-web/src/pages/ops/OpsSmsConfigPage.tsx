@@ -1,3 +1,4 @@
+// PAGE-506: 短信配置
 import { useEffect, useState } from 'react';
 import {
   Button,

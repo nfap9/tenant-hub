@@ -1,3 +1,6 @@
+// PAGE-103: 公寓详情页面
+// PAGE-104: 公寓状态变更
+// PAGE-106: 公寓可视化看板
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Button,
@@ -12,8 +15,6 @@ import {
   Form,
   Input,
   Select,
-  Statistic,
-  Card,
   Divider,
 } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -26,32 +27,18 @@ import {
   UserOutlined,
   DollarOutlined,
   SafetyOutlined,
-  BarChartOutlined,
 } from '@ant-design/icons';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from 'recharts';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   getApartment,
   updateApartmentStatus,
   deleteApartment,
-  getApartmentDashboard,
-  getApartmentOccupancyTrend,
-  getApartmentRentDistribution,
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import { contractText } from './utils';
 import RoomCard from '@/components/rooms/RoomCard';
+import ApartmentDashboard from '@/components/apartments/ApartmentDashboard';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
@@ -109,24 +96,6 @@ export default function ApartmentDetailPage() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusForm] = Form.useForm();
   const [statusSubmitting, setStatusSubmitting] = useState(false);
-  const [dashboard, setDashboard] = useState<{
-    totalRooms: number;
-    occupiedRooms: number;
-    vacantRooms: number;
-    maintenanceRooms: number;
-    occupancyRate: string;
-    currentMonth: {
-      receivable: number;
-      received: number;
-      overdue: number;
-    };
-  } | null>(null);
-  const [occupancyTrend, setOccupancyTrend] = useState<
-    { month: string; occupancyRate: number }[]
-  >([]);
-  const [rentDistribution, setRentDistribution] = useState<
-    { range: string; count: number }[]
-  >([]);
 
   const loadApartment = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -141,26 +110,9 @@ export default function ApartmentDetailPage() {
     }
   }, [currentOrgId, id]);
 
-  const loadDashboard = useCallback(async () => {
-    if (!currentOrgId || !id) return;
-    try {
-      const [dash, trend, dist] = await Promise.all([
-        getApartmentDashboard(currentOrgId, id),
-        getApartmentOccupancyTrend(currentOrgId, id),
-        getApartmentRentDistribution(currentOrgId, id),
-      ]);
-      setDashboard(dash);
-      setOccupancyTrend(trend);
-      setRentDistribution(dist);
-    } catch (e) {
-      console.error('看板数据加载失败', e);
-    }
-  }, [currentOrgId, id]);
-
   useEffect(() => {
     loadApartment();
-    loadDashboard();
-  }, [loadApartment, loadDashboard]);
+  }, [loadApartment]);
 
   const apartmentRooms = useMemo(
     () =>
@@ -634,151 +586,14 @@ export default function ApartmentDetailPage() {
           },
           {
             key: 'dashboard',
-            label: (
-              <span>
-                <BarChartOutlined /> 经营看板
-              </span>
-            ),
-            children: (
-              <div>
-                {dashboard && (
-                  <>
-                    <Row gutter={16} className="mb-16">
-                      <Col xs={12} sm={6}>
-                        <Card size="small">
-                          <Statistic
-                            title="总房间"
-                            value={dashboard.totalRooms}
-                            suffix="间"
-                          />
-                        </Card>
-                      </Col>
-                      <Col xs={12} sm={6}>
-                        <Card size="small">
-                          <Statistic
-                            title="已租"
-                            value={dashboard.occupiedRooms}
-                            suffix="间"
-                            valueStyle={{ color: '#52c41a' }}
-                          />
-                        </Card>
-                      </Col>
-                      <Col xs={12} sm={6}>
-                        <Card size="small">
-                          <Statistic
-                            title="空置"
-                            value={dashboard.vacantRooms}
-                            suffix="间"
-                            valueStyle={{ color: '#fa8c16' }}
-                          />
-                        </Card>
-                      </Col>
-                      <Col xs={12} sm={6}>
-                        <Card size="small">
-                          <Statistic
-                            title="维修中"
-                            value={dashboard.maintenanceRooms}
-                            suffix="间"
-                            valueStyle={{ color: '#ff4d4f' }}
-                          />
-                        </Card>
-                      </Col>
-                    </Row>
-                    <Row gutter={16} className="mb-16">
-                      <Col xs={12} sm={8}>
-                        <Card size="small">
-                          <Statistic
-                            title="本月应收"
-                            value={money(dashboard.currentMonth.receivable)}
-                            prefix="¥"
-                          />
-                        </Card>
-                      </Col>
-                      <Col xs={12} sm={8}>
-                        <Card size="small">
-                          <Statistic
-                            title="本月已收"
-                            value={money(dashboard.currentMonth.received)}
-                            prefix="¥"
-                            valueStyle={{ color: '#52c41a' }}
-                          />
-                        </Card>
-                      </Col>
-                      <Col xs={12} sm={8}>
-                        <Card size="small">
-                          <Statistic
-                            title="本月逾期"
-                            value={money(dashboard.currentMonth.overdue)}
-                            prefix="¥"
-                            valueStyle={{ color: '#ff4d4f' }}
-                          />
-                        </Card>
-                      </Col>
-                    </Row>
-                  </>
-                )}
-                <Row gutter={16}>
-                  <Col xs={24} lg={12}>
-                    <Card
-                      size="small"
-                      title="入住率趋势（最近12个月）"
-                      className="mb-16"
-                    >
-                      <div style={{ height: 280 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={occupancyTrend}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                            <YAxis
-                              tick={{ fontSize: 12 }}
-                              domain={[0, 100]}
-                              unit="%"
-                            />
-                            <Tooltip
-                              formatter={(value) => [
-                                `${value ?? 0}%`,
-                                '入住率',
-                              ]}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="occupancyRate"
-                              stroke="#1890ff"
-                              strokeWidth={2}
-                              dot={{ r: 3 }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </Card>
-                  </Col>
-                  <Col xs={24} lg={12}>
-                    <Card size="small" title="租金单价分布" className="mb-16">
-                      <div style={{ height: 280 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={rentDistribution}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="range" tick={{ fontSize: 11 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip
-                              formatter={(value) => [
-                                `${value ?? 0} 间`,
-                                '房间数',
-                              ]}
-                            />
-                            <Bar
-                              dataKey="count"
-                              fill="#52c41a"
-                              radius={[4, 4, 0, 0]}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </Card>
-                  </Col>
-                </Row>
-              </div>
-            ),
+            label: '经营看板',
+            children:
+              id && currentOrgId ? (
+                <ApartmentDashboard
+                  apartmentId={id}
+                  currentOrgId={currentOrgId}
+                />
+              ) : null,
           },
           {
             key: 'rooms',

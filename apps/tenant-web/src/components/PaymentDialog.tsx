@@ -1,3 +1,4 @@
+// PAGE-303: 收款登记页面
 import { useState, useMemo, useEffect } from 'react';
 import {
   Button,

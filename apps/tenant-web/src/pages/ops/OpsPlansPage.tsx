@@ -1,3 +1,4 @@
+// PAGE-504: 套餐配置
 import { useEffect, useState } from 'react';
 import {
   Button,

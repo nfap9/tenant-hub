@@ -1,3 +1,4 @@
+// PAGE-101: 公寓列表页面
 import { useState, useEffect, useCallback } from 'react';
 import {
   Button,
