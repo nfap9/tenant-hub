@@ -31,6 +31,7 @@ pnpm-debug.log*
 
 # Playwright local artifacts
 .playwright-cli/
+.playwright-mcp/
 
 # Local brainstorming companion
 .superpowers/

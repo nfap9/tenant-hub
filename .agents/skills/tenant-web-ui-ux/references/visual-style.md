@@ -1,61 +1,145 @@
-# 视觉样式规范
+# 视觉风格规范
 
-## 颜色令牌
+## 设计令牌（Design Tokens）
 
-全站颜色通过 SCSS 变量（`$th-*`）和 CSS 自定义属性（`--th-*`）管理，
-定义在 `src/styles/variables` 和 `src/styles/global.scss` 中。
-Ant Design `ConfigProvider` 的 `theme.token` 与之同步。
+所有视觉值必须通过设计令牌引用，**禁止硬编码颜色或间距**。
 
-| 用途       | SCSS 变量              | CSS 变量                | 色值      |
-| ---------- | ---------------------- | ----------------------- | --------- |
-| 主色       | `$th-primary`          | `--th-primary`          | `#0d9488` |
-| 主色浅     | `$th-primary-light`    | `--th-primary-light`    | `#14b8a6` |
-| 主色深     | `$th-primary-dark`     | `--th-primary-dark`     | `#0f766e` |
-| 成功色     | `$th-success`          | `--th-success`          | `#22c55e` |
-| 警告色     | `$th-warning`          | `--th-warning`          | `#f59e0b` |
-| 危险色     | `$th-danger`           | `--th-danger`           | `#ef4444` |
-| 背景       | `$th-background`       | `--th-background`       | `#f8fafc` |
-| 表面       | `$th-surface`          | `--th-surface`          | `#ffffff` |
-| 前景色     | `$th-foreground`       | `--th-foreground`       | `#0f172a` |
-| 前景色弱化 | `$th-foreground-muted` | `--th-foreground-muted` | `#64748b` |
-| 边框       | `$th-border`           | `--th-border`           | `#e2e8f0` |
-| 边框浅     | `$th-border-light`     | `--th-border-light`     | `#f1f5f9` |
+### CSS 自定义属性（`:root`）
 
-**禁止**：任何位置不得使用渐变色（logo、头像、概览卡片等）。
-B 端后台的严肃性要求纯色块，渐变会产生廉价感。
+在全局样式或工具类中使用：
 
-## 布局
+```css
+:root {
+  /* 主色 */
+  --th-primary: #2563eb;
+  --th-primary-light: #3b82f6;
+  --th-primary-dark: #1d4ed8;
+  --th-accent: #2563eb;
+  --th-accent-light: #60a5fa;
 
-| 元素         | 尺寸 / 样式                             |
-| ------------ | --------------------------------------- |
-| 侧边栏       | 固定 220px，白色背景                    |
-| 顶部 Header  | Sticky 定位，白色背景，底部细边框       |
-| 主内容区     | 背景色 `$th-background`，padding `24px` |
-| 页面最大宽度 | 无限制，内容区自适应                    |
+  /* 背景 */
+  --th-bg: #f3f4f6;
+  --th-bg-elevated: #ffffff;
+  --th-surface: #ffffff;
+  --th-surface-hover: #f3f4f6;
 
-## 圆角与阴影
+  /* 文字 */
+  --th-foreground: #1f2937;
+  --th-foreground-muted: #6b7280;
+  --th-foreground-subtle: #9ca3af;
 
-圆角统一使用 SCSS 变量：
+  /* 边框 */
+  --th-border: #e5e7eb;
+  --th-border-light: #f3f4f6;
 
-- `$th-radius-sm`: `6px`
-- `$th-radius`: `8px`
-- `$th-radius-lg`: `12px`
-- `$th-radius-xl`: `16px`
+  /* 状态色 */
+  --th-danger: #dc2626;
+  --th-danger-bg: #fef2f2;
+  --th-success: #22c55e;
+  --th-success-bg: #f0fdf4;
+  --th-warning: #ea580c;
+  --th-warning-bg: #fff7ed;
 
-阴影使用 `card-elevated` mixin（定义在 `src/styles/mixins`）：
+  /* 阴影 */
+  --th-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --th-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --th-shadow-md:
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --th-shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
-```scss
-@include card-elevated;
-// 等价于:
-// box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  /* 圆角 */
+  --th-radius-sm: 6px;
+  --th-radius: 8px;
+  --th-radius-lg: 12px;
+  --th-radius-xl: 16px;
+
+  /* 字体 */
+  --th-font-heading: 'Poppins', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --th-font-body: 'Open Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* 间距 */
+  --th-space-4: 4px;
+  --th-space-5: 8px;
+  --th-space-6: 12px;
+  --th-space-7: 16px;
+  --th-space-8: 20px;
+  --th-space-9: 24px;
+  --th-space-10: 32px;
+}
 ```
 
-**为什么**：B 端界面阴影要克制。过强的阴影会让页面显得轻浮，
-过弱的阴影又无法区分层级。`card-elevated` 是一个经过校准的中间值。
+### SCSS 变量
 
-## 样式文件规范
+在模块样式文件中使用：
 
-- 组件级样式使用 `.module.scss`
-- 通过 `@use '@/styles/variables' as *` 和 `@use '@/styles/mixins' as *` 引用全局定义
-- 公共工具类写在 `global.scss` 中：`.flex-between`、`.text-muted`、`.text-subtle`、`.w-full`、`.mb-16` 等
-- 不要在组件样式中写死颜色值，统一使用变量
+```scss
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.my-component {
+  color: $th-primary;
+  background: $th-surface;
+}
+```
+
+## Ant Design 全局覆盖
+
+项目的 Ant Design 风格通过 `global.scss` 统一覆盖，**不要**在单个组件中覆盖 Ant Design 的默认样式。
+
+关键覆盖项：
+
+- `ant-card`：统一阴影和边框
+- `ant-tabs-nav`：底部边框分隔
+- `ant-btn-primary`：品牌主色
+- `ant-tag`：圆角调整
+
+## 颜色使用规范
+
+| 场景              | 颜色值    | 使用方式                        |
+| ----------------- | --------- | ------------------------------- |
+| 主操作按钮        | `#2563eb` | `type="primary"`                |
+| 成功状态/正向数据 | `#22c55e` | `color="success"` / Tag         |
+| 警告状态          | `#ea580c` | `color="warning"` / Tag         |
+| 危险/删除操作     | `#dc2626` | `danger` prop / `color="error"` |
+| 页面背景          | `#f3f4f6` | 由 `global.scss` 自动设置       |
+| 卡片背景          | `#ffffff` | Ant Card 默认                   |
+| 主文字            | `#1f2937` | 默认                            |
+| 次要文字          | `#6b7280` | `.text-muted`                   |
+| 占位/提示文字     | `#9ca3af` | `.text-subtle`                  |
+| 边框              | `#e5e7eb` | `var(--th-border)`              |
+
+## 间距规范
+
+| Token           | 值   | 典型使用场景                 |
+| --------------- | ---- | ---------------------------- |
+| `--th-space-5`  | 8px  | 卡片内小间距、图标与文字间距 |
+| `--th-space-6`  | 12px | 卡片内边距（small card）     |
+| `--th-space-7`  | 16px | 常规内边距、栅格 gutter      |
+| `--th-space-8`  | 20px | 区块间距                     |
+| `--th-space-9`  | 24px | 卡片外间距、section 间距     |
+| `--th-space-10` | 32px | 大模块间距                   |
+
+**常用 utility class 间距：**
+
+- `.mb-16` = `margin-bottom: 16px`
+- `.mb-28` = `margin-bottom: 28px`
+- `.mt-16` = `margin-top: 16px`
+- `.mt-20` = `margin-top: 20px`
+- `.p-64` = `padding: 64px`
+
+## SCSS Module 规范
+
+1. **文件名**：`PageName.module.scss`
+2. **导入令牌**：
+   ```scss
+   @use '@/styles/variables' as *;
+   @use '@/styles/mixins' as *;
+   ```
+3. **类名命名**：使用 camelCase 或 kebab-case，与组件内 `styles.xxx` 对应：
+   ```scss
+   .filter-bar { ... }
+   .card-title { ... }
+   .expense-amount { ... }
+   ```
+4. **禁止**：不要在模块中写死颜色值，始终使用 `$th-*` 变量或 `var(--th-*)`。

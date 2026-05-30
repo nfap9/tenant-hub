@@ -10,96 +10,96 @@ description: >
   就应该先查阅本 skill 确保输出符合全站统一风格。
 ---
 
-# Tenant Web UI/UX 设计规范
+# Tenant Hub Web UI/UX 规范
 
-## 为什么需要这套规范
+## 概述
 
-Tenant Hub 是一个 B 端管理后台，用户（公寓运营方）每天长时间使用。
-不一致的 UI 会增加认知负担，降低操作效率。
-这套规范的目标是**让任何页面的修改都不需要重新做设计决策**——
-看到类似场景，直接复用已有模式。
+Tenant Hub Web（`apps/tenant-web`）采用 **React 18 + Vite + Ant Design 5 + SCSS Modules** 技术栈。本规范从代码实践中提炼，确保所有页面在视觉、交互和代码结构上保持一致。
 
-## 通用原则
+## 何时查阅本规范
 
-### 1. 一致性优先于个性化
+| 场景                 | 查阅内容                                                  |
+| -------------------- | --------------------------------------------------------- |
+| 新建任何页面         | `references/page-patterns.md`                             |
+| 修改/新增组件样式    | `references/visual-style.md` + `references/components.md` |
+| 调整布局、间距、卡片 | `references/visual-style.md`                              |
+| 添加表单             | `references/page-patterns.md` → 表单页模式                |
+| 添加图表             | `references/components.md` → Chart 规范                   |
+| 添加列表/表格        | `references/page-patterns.md` → 列表页模式                |
+| 调整按钮、操作区     | `references/interaction.md`                               |
+| 处理加载/空状态      | `references/interaction.md`                               |
 
-同类元素在全站必须一致。不要为单个页面"优化"而破坏全局统一。
+## 核心原则
 
-- 同类页面用相同结构（列表页、详情页、表单页）
-- 同类组件用相同尺寸、颜色、间距
-- 同类交互用相同反馈方式
+1. **一致性优先**：复用现有模式和组件，不发明新轮子。
+2. **Ant Design 为基**：所有 UI 基于 Ant Design 5，通过 CSS 变量和全局覆盖统一风格。
+3. **SCSS Modules 隔离**：页面级样式使用 `.module.scss`，共享样式使用 `@use '@/styles/variables'`。
+4. **移动优先响应式**：使用 Ant Design 的 `xs/sm/md/lg` 断点（`Col xs={24} lg={12}`）。
+5. **无魔术数字**：颜色、间距、字体全部来自设计令牌（CSS 变量 / SCSS 变量）。
 
-### 2. 减少视觉噪音
+## 设计令牌速查
 
-B 端用户关注效率，不是审美体验。不必要的装饰会分散注意力。
+```scss
+// 颜色
+--th-primary: #2563eb;
+--th-danger: #dc2626;
+--th-success: #22c55e;
+--th-warning: #ea580c;
+--th-foreground: #1f2937;
+--th-foreground-muted: #6b7280;
+--th-foreground-subtle: #9ca3af;
+--th-bg: #f3f4f6;
+--th-surface: #ffffff;
+--th-border: #e5e7eb;
 
-- **不要堆砌卡片**：列表、表格、详情视图直接展示，不用 Card 包裹
-- **不要重复信息**：Tab 已显示数量时，顶部不要放统计卡片
-- **不要渐变**：全站禁止渐变色
+// 间距（常用）
+--th-space-4: 4px;
+--th-space-5: 8px;
+--th-space-6: 12px;
+--th-space-7: 16px;
+--th-space-8: 20px;
+--th-space-9: 24px;
+--th-space-10: 32px;
 
-### 3. 操作就近原则
+// 圆角
+--th-radius: 8px;
+--th-radius-lg: 12px;
 
-用户在哪里看到信息，就应该在哪里找到相关操作。
+// 字体
+--th-font-heading: 'Poppins', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+```
 
-- 与区块强相关的操作按钮，放在该区块标题右侧（`DetailSection` 的 `actions`）
-- 不再把所有操作都堆在 `PageHeader`
-- 每个区块的操作不超过 3 个
+## 必用工具类
 
-### 4. 信息层级自上而下
+全局可用的 utility classes（定义在 `global.scss`）：
 
-页面信息按重要性自然排列，用户扫一眼就能抓住重点：
+```
+.flex-center / .flex-between / .flex-start / .flex-col-center
+.text-center / .text-muted / .text-subtle / .text-primary / .text-success / .text-warning / .text-danger
+.cursor-pointer / .w-full / .shrink-0
+.mt-16 / .mb-16 / .mb-28 / .p-64
+```
 
-1. 面包屑 + 标题（我在哪）
-2. 筛选/切换（我能看什么）
-3. 主要内容（关键信息）
-4. 空态/加载（无数据时的引导）
+## 页面根结构
 
-## Reference 导航
+**所有页面必须以 `<div className="page-content">` 包裹**，以获得进入动画。
 
-本 skill 采用分层披露。主文件只保留通用原则和快速参考，
-具体领域规范在 `references/` 下。根据你当前处理的任务，阅读对应文件：
+```tsx
+export default function SomePage() {
+  return (
+    <div className="page-content">
+      <PageHeader ... />
+      {/* page body */}
+    </div>
+  );
+}
+```
 
-| 如果你在做...                                     | 阅读                                                         |
-| ------------------------------------------------- | ------------------------------------------------------------ |
-| 调整颜色、间距、圆角、阴影、字体                  | [`references/visual-style.md`](references/visual-style.md)   |
-| 使用按钮、输入框、表格、弹窗、标签、时间线等组件  | [`references/components.md`](references/components.md)       |
-| 处理加载、空态、消息反馈、删除/确认交互           | [`references/interaction.md`](references/interaction.md)     |
-| 新建/修改列表页、详情页、表单页、设置页、卡片列表 | [`references/page-patterns.md`](references/page-patterns.md) |
-| 代码写完后对照检查                                | [`references/checklist.md`](references/checklist.md)         |
+## 文件引用
 
-**规则**：如果任务涉及多个领域，先读完所有相关 references 再动手写代码。
-不要边写边查——这会遗漏跨领域的一致性约束。
-
-## 快速决策表
-
-遇到以下场景时，不需要翻 reference，直接按表执行：
-
-| 场景                           | 决策                                                          |
-| ------------------------------ | ------------------------------------------------------------- |
-| 列表页 Table 要不要包 Card？   | **不要**，Table 直接展示                                      |
-| 详情视图要不要包 Card？        | **不要**，用 `DetailSection`                                  |
-| 表单录入/编辑页要不要包 Card？ | **要**，Card 提供编辑边界                                     |
-| 状态用什么组件展示？           | **`<Tag>`**，禁止自定义 StatusTag                             |
-| 内联删除确认用什么？           | **`<Popconfirm>`**                                            |
-| 非删除类二次确认用什么？       | **`Modal.confirm`**                                           |
-| 表单弹窗 footer 怎么放？       | **`footer={null}`**，提交按钮放 Form 内                       |
-| 空态用什么？                   | **`<EmptyState>`**，不用 antd `<Empty>`                       |
-| 页面加载用什么？               | **`<Spin spinning={loading}>`**（默认大小）                   |
-| 表格加载用什么？               | **Table `loading` prop**                                      |
-| 消息反馈用什么？               | **`message.success/error/warning`**                           |
-| 页面级筛选切换用什么？         | **`Tabs`**                                                    |
-| 表单内单选用什么？             | **`Radio.Group`**                                             |
-| 状态颜色怎么选？               | success=绿 warning=橙 error=红 default=灰                     |
-| 一组按钮几个 primary？         | **只能有 1 个**                                               |
-| 删除按钮用什么样式？           | 页面级 `primary` + `danger`；表单内行删除用 `link` + `danger` |
-
-## 核心组件速查
-
-以下组件已实现，直接复用，不要重新实现：
-
-| 组件            | 路径                              | 用途                                                                |
-| --------------- | --------------------------------- | ------------------------------------------------------------------- |
-| `PageHeader`    | `components/ui/PageHeader.tsx`    | 面包屑 + 标题 + 页面级操作按钮                                      |
-| `EmptyState`    | `components/ui/EmptyState.tsx`    | 空态（图标 + 标题 + 描述 + 可选操作按钮）                           |
-| `DetailSection` | `components/ui/DetailSection.tsx` | 详情区块容器（标题 + actions）。标题支持传入 React 节点，可加入图标 |
-| `DetailItem`    | `components/ui/DetailItem.tsx`    | 单个信息项（label + value）                                         |
+| 文件                          | 内容                                                                                     | 何时阅读         |
+| ----------------------------- | ---------------------------------------------------------------------------------------- | ---------------- |
+| `references/visual-style.md`  | 颜色、字体、间距、阴影、圆角、SCSS 使用规范                                              | 任何样式调整     |
+| `references/components.md`    | PageHeader、DetailSection、DetailItem、EmptyState、StatCard、Card、Table、Chart 使用规范 | 使用或修改组件时 |
+| `references/page-patterns.md` | 列表页、详情页、表单页、图表/报表页、Dashboard 页布局模式                                | 新建页面时       |
+| `references/interaction.md`   | 加载状态、空状态、按钮层级、权限控制、Toast/Modal 规范                                   | 调整交互时       |
