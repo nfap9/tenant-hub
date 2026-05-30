@@ -38,6 +38,12 @@ export type MaintenanceOrderItem = {
   isLabor: boolean;
 };
 
+export async function getMaintenanceOrder(organizationId: string, id: string) {
+  return apiClient<MaintenanceOrder>(`/maintenance/${id}`, {
+    organizationId,
+  });
+}
+
 export async function getMaintenanceOrders(
   organizationId: string,
   status?: string

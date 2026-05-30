@@ -1,10 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Tag, Spin, message, Row, Col, Popconfirm } from 'antd';
+import {
+  Button,
+  Tag,
+  Spin,
+  message,
+  Row,
+  Col,
+  Popconfirm,
+  Table,
+  Divider,
+} from 'antd';
 import {
   EditOutlined,
   DeleteOutlined,
   FileTextOutlined,
+  DollarOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
@@ -12,6 +24,11 @@ import {
   deleteLandlordContract,
 } from '@/api/landlordContracts';
 import type { LandlordContract } from '@/api/landlordContracts';
+import {
+  getLandlordPayments,
+  generateLandlordPayments,
+  type LandlordPayment,
+} from '@/api/landlordPayments';
 import { money, day } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
@@ -30,6 +47,12 @@ const escalationTypeLabels: Record<string, string> = {
   PERCENTAGE: '百分比',
 };
 
+const statusMap: Record<string, { label: string; color: string }> = {
+  PENDING: { label: '待付款', color: 'orange' },
+  PAID: { label: '已付款', color: 'green' },
+  OVERDUE: { label: '已逾期', color: 'red' },
+};
+
 export default function LandlordContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -37,6 +60,8 @@ export default function LandlordContractDetailPage() {
   const canManage = useHasPermission('apartment:manage');
 
   const [contract, setContract] = useState<LandlordContract | null>(null);
+  const [payments, setPayments] = useState<LandlordPayment[]>([]);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -52,9 +77,25 @@ export default function LandlordContractDetailPage() {
     }
   }, [currentOrgId, id]);
 
+  const loadPayments = useCallback(async () => {
+    if (!currentOrgId || !id) return;
+    setPaymentLoading(true);
+    try {
+      const data = await getLandlordPayments(currentOrgId, {
+        contractId: id,
+      });
+      setPayments(data);
+    } catch (e) {
+      console.error('加载付款计划失败', e);
+    } finally {
+      setPaymentLoading(false);
+    }
+  }, [currentOrgId, id]);
+
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    loadPayments();
+  }, [loadData, loadPayments]);
 
   const handleDelete = async () => {
     if (!currentOrgId || !id) return;
@@ -64,6 +105,17 @@ export default function LandlordContractDetailPage() {
       navigate('/landlord-contracts');
     } catch (e) {
       message.error(e instanceof Error ? e.message : '删除失败');
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!currentOrgId || !id) return;
+    try {
+      const result = await generateLandlordPayments(currentOrgId, id);
+      message.success(`已生成 ${result.generated} 笔付款计划`);
+      loadPayments();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '生成失败');
     }
   };
 
@@ -226,6 +278,85 @@ export default function LandlordContractDetailPage() {
                   <DetailItem label="备注">{contract.note || '-'}</DetailItem>
                 </Col>
               </Row>
+            </DetailSection>
+
+            <Divider />
+            <DetailSection
+              title={
+                <>
+                  <DollarOutlined /> 付款计划
+                </>
+              }
+              actions={
+                canManage && (
+                  <>
+                    <Button icon={<SyncOutlined />} onClick={handleGenerate}>
+                      生成付款计划
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        navigate(`/landlord-payments?contractId=${contract.id}`)
+                      }
+                    >
+                      查看全部
+                    </Button>
+                  </>
+                )
+              }
+            >
+              <Spin spinning={paymentLoading}>
+                {payments.length === 0 ? (
+                  <div style={{ color: '#999', padding: '8px 0' }}>
+                    暂无付款计划，点击上方按钮生成
+                  </div>
+                ) : (
+                  <Table
+                    rowKey="id"
+                    dataSource={payments}
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      {
+                        title: '周期',
+                        render: (_: unknown, r: LandlordPayment) =>
+                          `${r.periodStart} ~ ${r.periodEnd}`,
+                      },
+                      {
+                        title: '应付日期',
+                        dataIndex: 'dueDate',
+                      },
+                      {
+                        title: '应付金额',
+                        render: (_: unknown, r: LandlordPayment) => (
+                          <span style={{ fontWeight: 500 }}>
+                            ¥{money(r.plannedAmount)}
+                          </span>
+                        ),
+                      },
+                      {
+                        title: '实付金额',
+                        render: (_: unknown, r: LandlordPayment) =>
+                          r.paidAmount ? `¥${money(r.paidAmount)}` : '-',
+                      },
+                      {
+                        title: '状态',
+                        dataIndex: 'status',
+                        render: (v: string, r: LandlordPayment) => {
+                          const isOverdue =
+                            v === 'PENDING' && new Date(r.dueDate) < new Date();
+                          return (
+                            <Tag
+                              color={isOverdue ? 'red' : statusMap[v]?.color}
+                            >
+                              {isOverdue ? '已逾期' : statusMap[v]?.label}
+                            </Tag>
+                          );
+                        },
+                      },
+                    ]}
+                  />
+                )}
+              </Spin>
             </DetailSection>
           </>
         )}

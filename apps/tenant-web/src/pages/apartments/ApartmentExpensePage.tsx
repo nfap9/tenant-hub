@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Form,
@@ -7,12 +7,14 @@ import {
   DatePicker,
   Button,
   message,
+  Select,
 } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SaveOutlined, FormOutlined, DollarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { createApartmentExpense } from '@/api/apartments';
+import { getExpenseCategories } from '@/api/cashierJournals';
 import { optionalText } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './ApartmentExpensePage.module.scss';
@@ -24,6 +26,16 @@ export default function ApartmentExpensePage() {
   const canManageApartment = useHasPermission('apartment:manage');
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState<
+    Array<{ id: string; name: string; code: string }>
+  >([]);
+
+  useEffect(() => {
+    if (!currentOrgId) return;
+    getExpenseCategories(currentOrgId, 'EXPENSE')
+      .then((res) => setCategories(res.categories))
+      .catch(() => setCategories([]));
+  }, [currentOrgId]);
 
   const handleSubmit = async (values: Record<string, unknown>) => {
     if (!currentOrgId || !id) return;
@@ -43,6 +55,7 @@ export default function ApartmentExpensePage() {
         amount: Number(values.amount),
         spentAt: dayjs(values.spentAt as string).format('YYYY-MM-DD'),
         note: optionalText(values.note),
+        categoryId: (values.categoryId as string) || undefined,
       });
       message.success('经营花费已记录');
       navigate(`/apartments/${id}`);
@@ -95,6 +108,16 @@ export default function ApartmentExpensePage() {
             initialValue={dayjs()}
           >
             <DatePicker className="w-full" />
+          </Form.Item>
+          <Form.Item label="支出分类" name="categoryId">
+            <Select
+              placeholder="选择支出分类"
+              allowClear
+              options={categories.map((c) => ({
+                label: c.name,
+                value: c.id,
+              }))}
+            />
           </Form.Item>
           <Form.Item label="备注" name="note">
             <Input.TextArea rows={3} placeholder="可选" />

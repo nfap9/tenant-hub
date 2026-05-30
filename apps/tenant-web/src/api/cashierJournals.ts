@@ -48,3 +48,18 @@ export async function createCashierJournal(
     organizationId,
   });
 }
+
+export async function getExpenseCategories(
+  organizationId: string,
+  type?: 'INCOME' | 'EXPENSE'
+) {
+  const query = type ? `?type=${type}` : '';
+  return apiClient<{
+    categories: Array<{
+      id: string;
+      name: string;
+      code: string;
+      type: 'INCOME' | 'EXPENSE';
+    }>;
+  }>(`/cashier-journals/categories${query}`, { organizationId });
+}

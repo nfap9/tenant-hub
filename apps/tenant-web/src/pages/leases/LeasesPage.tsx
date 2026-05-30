@@ -1,7 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Tabs, Tag, Input, Button, message, Spin } from 'antd';
-import { EyeOutlined, ReloadOutlined, SwapOutlined } from '@ant-design/icons';
+import { Table, Tabs, Tag, Input, Button, message, Spin, Tooltip } from 'antd';
+import {
+  EyeOutlined,
+  ReloadOutlined,
+  SwapOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getLeases } from '@/api/leases';
 import PageHeader from '@/components/ui/PageHeader';
@@ -194,17 +199,48 @@ export default function LeasesPage() {
               },
               {
                 title: '租期',
-                render: (_: unknown, row: Lease) => (
-                  <div>
+                render: (_: unknown, row: Lease) => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const end = new Date(row.endDate);
+                  end.setHours(0, 0, 0, 0);
+                  const daysLeft = Math.ceil(
+                    (end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                  );
+                  const isExpiringSoon =
+                    row.status === 'ACTIVE' && daysLeft <= 30 && daysLeft >= 0;
+                  const isExpired = daysLeft < 0;
+                  return (
                     <div>
-                      {day(row.startDate)} ~ {day(row.endDate)}
+                      <div>
+                        {day(row.startDate)} ~ {day(row.endDate)}
+                      </div>
+                      <div className="text-muted">
+                        {cycleLabels[row.cycle]}
+                        {row.autoRenew ? ' · 自动续约' : ''}
+                        {isExpiringSoon && (
+                          <Tooltip title={`剩余 ${daysLeft} 天到期`}>
+                            <Tag
+                              color="warning"
+                              style={{ marginLeft: 8, fontSize: 12 }}
+                              icon={<WarningOutlined />}
+                            >
+                              剩 {daysLeft} 天
+                            </Tag>
+                          </Tooltip>
+                        )}
+                        {isExpired && row.status === 'ACTIVE' && (
+                          <Tag
+                            color="error"
+                            style={{ marginLeft: 8, fontSize: 12 }}
+                          >
+                            已超期 {-daysLeft} 天
+                          </Tag>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-muted">
-                      {cycleLabels[row.cycle]}
-                      {row.autoRenew ? ' · 自动续约' : ''}
-                    </div>
-                  </div>
-                ),
+                  );
+                },
               },
               {
                 title: '租金',

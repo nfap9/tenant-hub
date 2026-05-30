@@ -128,6 +128,18 @@ export async function deleteApartment(organizationId: string, id: string) {
   });
 }
 
+export async function updateApartmentStatus(
+  organizationId: string,
+  id: string,
+  payload: { status: string; reason?: string }
+) {
+  return apiClient<Apartment>(`/apartments/${id}/status`, {
+    method: 'PATCH',
+    body: payload,
+    organizationId,
+  });
+}
+
 export async function createApartmentExpense(
   organizationId: string,
   apartmentId: string,
@@ -136,6 +148,7 @@ export async function createApartmentExpense(
     amount: number;
     spentAt: string;
     note?: string;
+    categoryId?: string;
   }
 ) {
   return apiClient<ApartmentExpense>(`/apartments/${apartmentId}/expenses`, {
@@ -143,4 +156,42 @@ export async function createApartmentExpense(
     body: payload,
     organizationId,
   });
+}
+
+export async function getApartmentDashboard(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<{
+    totalRooms: number;
+    occupiedRooms: number;
+    vacantRooms: number;
+    maintenanceRooms: number;
+    occupancyRate: string;
+    currentMonth: {
+      receivable: number;
+      received: number;
+      overdue: number;
+    };
+  }>(`/apartments/${apartmentId}/dashboard`, { organizationId });
+}
+
+export async function getApartmentOccupancyTrend(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<{ month: string; occupancyRate: number }[]>(
+    `/apartments/${apartmentId}/occupancy-trend`,
+    { organizationId }
+  );
+}
+
+export async function getApartmentRentDistribution(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<{ range: string; count: number }[]>(
+    `/apartments/${apartmentId}/rent-distribution`,
+    { organizationId }
+  );
 }

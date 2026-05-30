@@ -11,6 +11,9 @@ import {
   message,
   Modal,
   Select,
+  Statistic,
+  Row,
+  Col,
 } from 'antd';
 import {
   PlusOutlined,
@@ -23,6 +26,10 @@ import {
   ThunderboltOutlined,
   ExclamationCircleOutlined,
   ThunderboltFilled,
+  WarningOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
@@ -117,6 +124,25 @@ export default function BillListPage() {
     return sortBillGroupsForList(result);
   }, [billGroups, searchQuery, statusFilter]);
 
+  const stats = useMemo(() => {
+    const unpaid = billGroups.filter((g) => g.status === 'UNPAID');
+    const partial = billGroups.filter((g) => g.status === 'PARTIAL_PAID');
+    const overdue = billGroups.filter((g) => g.status === 'OVERDUE');
+    const paid = billGroups.filter((g) => g.status === 'PAID');
+    const sum = (groups: BillGroup[]) =>
+      groups.reduce((s, g) => s + g.totalAmount - g.paidAmount, 0);
+    return {
+      unpaidCount: unpaid.length,
+      unpaidAmount: sum(unpaid),
+      partialCount: partial.length,
+      partialAmount: sum(partial),
+      overdueCount: overdue.length,
+      overdueAmount: sum(overdue),
+      paidCount: paid.length,
+      paidAmount: paid.reduce((s, g) => s + g.paidAmount, 0),
+    };
+  }, [billGroups]);
+
   const handleVoidGroup = async (group: BillGroup) => {
     if (!currentOrgId) return;
     Modal.confirm({
@@ -169,11 +195,16 @@ export default function BillListPage() {
 
   const renderBillCard = (group: BillGroup, showDelete = false) => {
     const summary = getBillGroupCardSummary(group);
+    const isOverdue = group.status === 'OVERDUE';
     return (
       <Card
         key={group.id}
         size="small"
-        className={clsx(styles.billCard, 'cursor-pointer')}
+        className={clsx(
+          styles.billCard,
+          'cursor-pointer',
+          isOverdue && styles.billCardOverdue
+        )}
         onClick={() => navigate(`/bills/monthly/${group.id}`)}
         bodyStyle={{ padding: 'var(--th-space-5)' }}
       >
@@ -188,6 +219,15 @@ export default function BillListPage() {
                   style={{ marginLeft: 8 }}
                 >
                   {billTypeText(summary.type)}
+                </Tag>
+              )}
+              {isOverdue && (
+                <Tag
+                  color="error"
+                  icon={<WarningOutlined />}
+                  style={{ marginLeft: 8 }}
+                >
+                  已逾期
                 </Tag>
               )}
             </div>
@@ -361,6 +401,53 @@ export default function BillListPage() {
           </Space>
         }
       />
+
+      <Row gutter={16} className={styles.statsRow}>
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="待支付"
+              value={stats.unpaidCount}
+              suffix={`笔 · ¥${money(stats.unpaidAmount)}`}
+              valueStyle={{ fontWeight: 700, fontSize: 22, color: '#fa8c16' }}
+              prefix={<ClockCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="部分支付"
+              value={stats.partialCount}
+              suffix={`笔 · ¥${money(stats.partialAmount)}`}
+              valueStyle={{ fontWeight: 700, fontSize: 22, color: '#1890ff' }}
+              prefix={<WarningOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="已逾期"
+              value={stats.overdueCount}
+              suffix={`笔 · ¥${money(stats.overdueAmount)}`}
+              valueStyle={{ fontWeight: 700, fontSize: 22, color: '#ff4d4f' }}
+              prefix={<CloseCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="已收款"
+              value={stats.paidCount}
+              suffix="笔"
+              valueStyle={{ fontWeight: 700, fontSize: 22, color: '#52c41a' }}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
 
       <Spin spinning={loading}>
         <Tabs

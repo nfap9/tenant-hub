@@ -8,6 +8,7 @@ import {
 } from '../middleware/auth.js';
 import {
   calculateUtilityLineAmounts,
+  detectAbnormalUsage,
   generateCurrentLeaseBills,
   generateLeaseBills,
   recordBillPayment,
@@ -154,6 +155,23 @@ billRouter.post(
       orderBy: { startDate: 'desc' },
     });
 
+    // 计算用量并异常检测
+    const lastReading = await prisma.meterReading.findFirst({
+      where: {
+        roomId: room.id,
+        meterType: input.meterType,
+        status: { not: 'VOID' },
+      },
+      orderBy: { readingDate: 'desc' },
+    });
+    const usage = lastReading
+      ? Number(input.value) - Number(lastReading.value)
+      : 0;
+    const isAbnormal =
+      input.status === 'NORMAL' && usage > 0
+        ? await detectAbnormalUsage(room.id, input.meterType, usage)
+        : false;
+
     const reading = await prisma.meterReading.create({
       data: {
         organizationId: req.organizationId!,
@@ -163,9 +181,12 @@ billRouter.post(
         meterType: input.meterType,
         readingDate: input.readingDate,
         value: input.value,
+        usage,
         source: input.source,
-        status: input.status,
-        note: input.note,
+        status: isAbnormal ? 'SUSPECTED' : input.status,
+        note: isAbnormal
+          ? [input.note, '系统标记：用量异常'].filter(Boolean).join('；')
+          : input.note,
         createdById: req.user!.id,
       },
     });
@@ -231,6 +252,14 @@ const applyUtilityReadingToBill = async ({
     powerUnitPrice: powerItem.powerUnitPrice ?? 0,
   });
 
+  // 异常检测
+  const waterUsage = currentWater - previousWater;
+  const powerUsage = currentPower - previousPower;
+  const [waterAbnormal, powerAbnormal] = await Promise.all([
+    detectAbnormalUsage(bill.lease.roomId, 'WATER', waterUsage),
+    detectAbnormalUsage(bill.lease.roomId, 'POWER', powerUsage),
+  ]);
+
   await prisma.$transaction([
     prisma.billItem.update({
       where: { id: waterItem.id },
@@ -264,6 +293,7 @@ const applyUtilityReadingToBill = async ({
           meterType: 'WATER',
           readingDate: bill.periodStart,
           value: previousWater,
+          usage: 0,
           source: 'MANUAL',
           status: 'NORMAL',
           createdById: userId,
@@ -276,8 +306,9 @@ const applyUtilityReadingToBill = async ({
           meterType: 'WATER',
           readingDate: bill.periodEnd,
           value: currentWater,
+          usage: waterUsage,
           source: 'MANUAL',
-          status: 'NORMAL',
+          status: waterAbnormal ? 'SUSPECTED' : 'NORMAL',
           createdById: userId,
         },
         {
@@ -288,6 +319,7 @@ const applyUtilityReadingToBill = async ({
           meterType: 'POWER',
           readingDate: bill.periodStart,
           value: previousPower,
+          usage: 0,
           source: 'MANUAL',
           status: 'NORMAL',
           createdById: userId,
@@ -300,8 +332,9 @@ const applyUtilityReadingToBill = async ({
           meterType: 'POWER',
           readingDate: bill.periodEnd,
           value: currentPower,
+          usage: powerUsage,
           source: 'MANUAL',
-          status: 'NORMAL',
+          status: powerAbnormal ? 'SUSPECTED' : 'NORMAL',
           createdById: userId,
         },
       ],

@@ -83,6 +83,12 @@ leaseRouter.post(
         waterUnitPrice: amountSchema,
         powerUnitPrice: amountSchema,
         gasUnitPrice: amountSchema.optional(),
+        waterPricingTiers: z
+          .array(z.object({ limit: z.number(), price: z.number() }))
+          .optional(),
+        powerPricingTiers: z
+          .array(z.object({ limit: z.number(), price: z.number() }))
+          .optional(),
         lateFeeRate: z.coerce.number().min(0).default(0.0005),
         freeRentDays: z.coerce.number().int().min(0).default(0),
         freeRentStart: z.coerce.date().optional(),

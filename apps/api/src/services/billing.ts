@@ -128,14 +128,47 @@ export const calculateUtilityAmount = ({
   return waterUsage.mul(waterUnitPrice).plus(powerUsage.mul(powerUnitPrice));
 };
 
+export type PricingTier = { limit: number; price: number };
+
+export const calculateTieredAmount = (
+  usage: number,
+  tiers: PricingTier[]
+): number => {
+  if (!tiers || tiers.length === 0) return usage;
+
+  let amount = 0;
+  let remaining = usage;
+
+  for (let i = 0; i < tiers.length; i++) {
+    const tier = tiers[i];
+    const prevLimit = i > 0 ? tiers[i - 1].limit : 0;
+    const tierCap = tier.limit > 0 ? tier.limit - prevLimit : remaining;
+    const tierUsage = Math.min(remaining, tierCap);
+    if (tierUsage <= 0) break;
+    amount += tierUsage * tier.price;
+    remaining -= tierUsage;
+  }
+
+  if (remaining > 0 && tiers.length > 0) {
+    amount += remaining * tiers[tiers.length - 1].price;
+  }
+
+  return amount;
+};
+
 export const calculateUtilityLineAmounts = ({
   previousWater,
   currentWater,
   waterUnitPrice,
+  waterPricingTiers,
   previousPower,
   currentPower,
   powerUnitPrice,
-}: UtilityAmountInput) => {
+  powerPricingTiers,
+}: UtilityAmountInput & {
+  waterPricingTiers?: PricingTier[];
+  powerPricingTiers?: PricingTier[];
+}) => {
   calculateUtilityAmount({
     previousWater,
     currentWater,
@@ -144,14 +177,49 @@ export const calculateUtilityLineAmounts = ({
     currentPower,
     powerUnitPrice,
   });
+  const waterUsage = new Prisma.Decimal(currentWater).minus(previousWater);
+  const powerUsage = new Prisma.Decimal(currentPower).minus(previousPower);
+
+  const waterAmount = waterPricingTiers
+    ? calculateTieredAmount(waterUsage.toNumber(), waterPricingTiers)
+    : waterUsage.mul(waterUnitPrice).toNumber();
+
+  const powerAmount = powerPricingTiers
+    ? calculateTieredAmount(powerUsage.toNumber(), powerPricingTiers)
+    : powerUsage.mul(powerUnitPrice).toNumber();
+
   return {
-    waterAmount: new Prisma.Decimal(currentWater)
-      .minus(previousWater)
-      .mul(waterUnitPrice),
-    powerAmount: new Prisma.Decimal(currentPower)
-      .minus(previousPower)
-      .mul(powerUnitPrice),
+    waterAmount: new Prisma.Decimal(waterAmount),
+    powerAmount: new Prisma.Decimal(powerAmount),
+    waterUsage: waterUsage.toNumber(),
+    powerUsage: powerUsage.toNumber(),
   };
+};
+
+export const detectAbnormalUsage = async (
+  roomId: string,
+  meterType: string,
+  currentUsage: number
+): Promise<boolean> => {
+  if (currentUsage <= 0) return false;
+
+  const readings = await prisma.meterReading.findMany({
+    where: {
+      roomId,
+      meterType: meterType as 'WATER' | 'POWER',
+      status: { not: 'VOID' },
+      usage: { not: null },
+    },
+    orderBy: { readingDate: 'desc' },
+    take: 6,
+  });
+
+  const usages = readings.map((r) => Number(r.usage || 0)).filter((u) => u > 0);
+
+  if (usages.length < 2) return false;
+
+  const avg = usages.reduce((a, b) => a + b, 0) / usages.length;
+  return currentUsage > avg * 2;
 };
 
 const remainingAmountFor = ({ totalAmount, paidAmount }: PaymentTarget) =>
@@ -233,6 +301,22 @@ const findReadingAtOrBefore = async ({
       organizationId,
       roomId,
       meterType,
+      readingDate: { lte: startOfDay(date).endOf('day').toDate() },
+      status: { not: 'VOID' },
+    },
+    orderBy: { readingDate: 'desc' },
+  });
+
+const findMeterReadingByIdAtOrBefore = async ({
+  meterId,
+  date,
+}: {
+  meterId: string;
+  date: Date;
+}) =>
+  prisma.meterReading.findFirst({
+    where: {
+      meterId,
       readingDate: { lte: startOfDay(date).endOf('day').toDate() },
       status: { not: 'VOID' },
     },
@@ -325,14 +409,280 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
     });
   }
 
-  const { waterAmount, powerAmount } = calculateUtilityLineAmounts({
+  const waterTiers =
+    (bill.lease.waterPricingTiers as PricingTier[]) ?? undefined;
+  const powerTiers =
+    (bill.lease.powerPricingTiers as PricingTier[]) ?? undefined;
+
+  const {
+    waterAmount: baseWaterAmount,
+    powerAmount: basePowerAmount,
+    waterUsage,
+    powerUsage,
+  } = calculateUtilityLineAmounts({
     previousWater: previousWater.value,
     currentWater: currentWater.value,
     waterUnitPrice: bill.lease.waterUnitPrice,
+    waterPricingTiers: waterTiers,
     previousPower: previousPower.value,
     currentPower: currentPower.value,
     powerUnitPrice: bill.lease.powerUnitPrice,
+    powerPricingTiers: powerTiers,
   });
+
+  // 公摊与公共分摊计算
+  let waterAmount = baseWaterAmount;
+  let powerAmount = basePowerAmount;
+  let sharedWaterUsage = 0;
+  let sharedPowerUsage = 0;
+  let publicWaterUsage = 0;
+  let publicPowerUsage = 0;
+
+  const roomMeterWater = await prisma.meter.findFirst({
+    where: {
+      roomId: bill.lease.roomId,
+      meterType: 'WATER',
+      status: 'ACTIVE',
+      deletedAt: null,
+    },
+  });
+  const roomMeterPower = await prisma.meter.findFirst({
+    where: {
+      roomId: bill.lease.roomId,
+      meterType: 'POWER',
+      status: 'ACTIVE',
+      deletedAt: null,
+    },
+  });
+
+  // 总分表公摊（水）
+  if (roomMeterWater?.parentId) {
+    const [parentStart, parentEnd] = await Promise.all([
+      findMeterReadingByIdAtOrBefore({
+        meterId: roomMeterWater.parentId,
+        date: bill.periodStart,
+      }),
+      findMeterReadingByIdAtOrBefore({
+        meterId: roomMeterWater.parentId,
+        date: bill.periodEnd,
+      }),
+    ]);
+    if (parentStart && parentEnd) {
+      const parentUsage = Number(parentEnd.value) - Number(parentStart.value);
+      const siblings = await prisma.meter.findMany({
+        where: {
+          parentId: roomMeterWater.parentId,
+          status: 'ACTIVE',
+          deletedAt: null,
+        },
+      });
+      let siblingUsages = 0;
+      for (const sib of siblings) {
+        const [sStart, sEnd] = await Promise.all([
+          findMeterReadingByIdAtOrBefore({
+            meterId: sib.id,
+            date: bill.periodStart,
+          }),
+          findMeterReadingByIdAtOrBefore({
+            meterId: sib.id,
+            date: bill.periodEnd,
+          }),
+        ]);
+        if (sStart && sEnd) {
+          siblingUsages += Number(sEnd.value) - Number(sStart.value);
+        }
+      }
+      const diff = Math.max(0, parentUsage - siblingUsages);
+      if (siblingUsages > 0 && diff > 0) {
+        const ratio = waterUsage / siblingUsages;
+        sharedWaterUsage = diff * ratio;
+        const unitPrice = waterTiers
+          ? (waterTiers[waterTiers.length - 1]?.price ??
+            Number(bill.lease.waterUnitPrice))
+          : Number(bill.lease.waterUnitPrice);
+        waterAmount = waterAmount.plus(sharedWaterUsage * unitPrice);
+      }
+    }
+  }
+
+  // 总分表公摊（电）
+  if (roomMeterPower?.parentId) {
+    const [parentStart, parentEnd] = await Promise.all([
+      findMeterReadingByIdAtOrBefore({
+        meterId: roomMeterPower.parentId,
+        date: bill.periodStart,
+      }),
+      findMeterReadingByIdAtOrBefore({
+        meterId: roomMeterPower.parentId,
+        date: bill.periodEnd,
+      }),
+    ]);
+    if (parentStart && parentEnd) {
+      const parentUsage = Number(parentEnd.value) - Number(parentStart.value);
+      const siblings = await prisma.meter.findMany({
+        where: {
+          parentId: roomMeterPower.parentId,
+          status: 'ACTIVE',
+          deletedAt: null,
+        },
+      });
+      let siblingUsages = 0;
+      for (const sib of siblings) {
+        const [sStart, sEnd] = await Promise.all([
+          findMeterReadingByIdAtOrBefore({
+            meterId: sib.id,
+            date: bill.periodStart,
+          }),
+          findMeterReadingByIdAtOrBefore({
+            meterId: sib.id,
+            date: bill.periodEnd,
+          }),
+        ]);
+        if (sStart && sEnd) {
+          siblingUsages += Number(sEnd.value) - Number(sStart.value);
+        }
+      }
+      const diff = Math.max(0, parentUsage - siblingUsages);
+      if (siblingUsages > 0 && diff > 0) {
+        const ratio = powerUsage / siblingUsages;
+        sharedPowerUsage = diff * ratio;
+        const unitPrice = powerTiers
+          ? (powerTiers[powerTiers.length - 1]?.price ??
+            Number(bill.lease.powerUnitPrice))
+          : Number(bill.lease.powerUnitPrice);
+        powerAmount = powerAmount.plus(sharedPowerUsage * unitPrice);
+      }
+    }
+  }
+
+  // 公共区域分摊（水）
+  const publicWaterMeter = await prisma.meter.findFirst({
+    where: {
+      apartmentId: bill.lease.room.apartmentId,
+      meterType: 'WATER',
+      roomId: null,
+      status: 'ACTIVE',
+      deletedAt: null,
+    },
+  });
+  if (publicWaterMeter) {
+    const [pubStart, pubEnd] = await Promise.all([
+      findMeterReadingByIdAtOrBefore({
+        meterId: publicWaterMeter.id,
+        date: bill.periodStart,
+      }),
+      findMeterReadingByIdAtOrBefore({
+        meterId: publicWaterMeter.id,
+        date: bill.periodEnd,
+      }),
+    ]);
+    if (pubStart && pubEnd) {
+      const pubUsage = Number(pubEnd.value) - Number(pubStart.value);
+      // 获取公寓所有房间的水表同期总用量
+      const roomMeters = await prisma.meter.findMany({
+        where: {
+          apartmentId: bill.lease.room.apartmentId,
+          meterType: 'WATER',
+          roomId: { not: null },
+          status: 'ACTIVE',
+          deletedAt: null,
+        },
+      });
+      let totalRoomUsage = 0;
+      const roomUsages: Record<string, number> = {};
+      for (const rm of roomMeters) {
+        const [rStart, rEnd] = await Promise.all([
+          findMeterReadingByIdAtOrBefore({
+            meterId: rm.id,
+            date: bill.periodStart,
+          }),
+          findMeterReadingByIdAtOrBefore({
+            meterId: rm.id,
+            date: bill.periodEnd,
+          }),
+        ]);
+        if (rStart && rEnd) {
+          const u = Number(rEnd.value) - Number(rStart.value);
+          totalRoomUsage += u;
+          if (rm.roomId) roomUsages[rm.roomId] = u;
+        }
+      }
+      if (totalRoomUsage > 0 && pubUsage > 0) {
+        const roomOwnUsage = roomUsages[bill.lease.roomId] ?? 0;
+        const ratio = roomOwnUsage / totalRoomUsage;
+        publicWaterUsage = pubUsage * ratio;
+        const unitPrice = waterTiers
+          ? (waterTiers[waterTiers.length - 1]?.price ??
+            Number(bill.lease.waterUnitPrice))
+          : Number(bill.lease.waterUnitPrice);
+        waterAmount = waterAmount.plus(publicWaterUsage * unitPrice);
+      }
+    }
+  }
+
+  // 公共区域分摊（电）
+  const publicPowerMeter = await prisma.meter.findFirst({
+    where: {
+      apartmentId: bill.lease.room.apartmentId,
+      meterType: 'POWER',
+      roomId: null,
+      status: 'ACTIVE',
+      deletedAt: null,
+    },
+  });
+  if (publicPowerMeter) {
+    const [pubStart, pubEnd] = await Promise.all([
+      findMeterReadingByIdAtOrBefore({
+        meterId: publicPowerMeter.id,
+        date: bill.periodStart,
+      }),
+      findMeterReadingByIdAtOrBefore({
+        meterId: publicPowerMeter.id,
+        date: bill.periodEnd,
+      }),
+    ]);
+    if (pubStart && pubEnd) {
+      const pubUsage = Number(pubEnd.value) - Number(pubStart.value);
+      const roomMeters = await prisma.meter.findMany({
+        where: {
+          apartmentId: bill.lease.room.apartmentId,
+          meterType: 'POWER',
+          roomId: { not: null },
+          status: 'ACTIVE',
+          deletedAt: null,
+        },
+      });
+      let totalRoomUsage = 0;
+      const roomUsages: Record<string, number> = {};
+      for (const rm of roomMeters) {
+        const [rStart, rEnd] = await Promise.all([
+          findMeterReadingByIdAtOrBefore({
+            meterId: rm.id,
+            date: bill.periodStart,
+          }),
+          findMeterReadingByIdAtOrBefore({
+            meterId: rm.id,
+            date: bill.periodEnd,
+          }),
+        ]);
+        if (rStart && rEnd) {
+          const u = Number(rEnd.value) - Number(rStart.value);
+          totalRoomUsage += u;
+          if (rm.roomId) roomUsages[rm.roomId] = u;
+        }
+      }
+      if (totalRoomUsage > 0 && pubUsage > 0) {
+        const roomOwnUsage = roomUsages[bill.lease.roomId] ?? 0;
+        const ratio = roomOwnUsage / totalRoomUsage;
+        publicPowerUsage = pubUsage * ratio;
+        const unitPrice = powerTiers
+          ? (powerTiers[powerTiers.length - 1]?.price ??
+            Number(bill.lease.powerUnitPrice))
+          : Number(bill.lease.powerUnitPrice);
+        powerAmount = powerAmount.plus(publicPowerUsage * unitPrice);
+      }
+    }
+  }
 
   await prisma.$transaction([
     prisma.billItem.updateMany({

@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Bill, Lease, LeaseSettlement } from '@/types/domain';
+import type { Bill, Lease, LeaseSettlement, Payment } from '@/types/domain';
 
 export async function createLease(
   organizationId: string,
@@ -18,6 +18,7 @@ export async function createLease(
     depositAmount?: number;
     waterUnitPrice?: number;
     powerUnitPrice?: number;
+    utilityBillDay?: number;
     lateFeeRate?: number;
     freeRentDays?: number;
     freeRentStart?: string;
@@ -25,6 +26,8 @@ export async function createLease(
     autoRenew?: boolean;
     generateHistoricalBills?: boolean;
     fees?: Array<{ type: string; name: string; amount: number }>;
+    waterPricingTiers?: Array<{ limit: number; price: number }>;
+    powerPricingTiers?: Array<{ limit: number; price: number }>;
   }
 ) {
   return apiClient<Lease>('/leases', {
@@ -128,6 +131,23 @@ export async function terminateLease(
     settlement: LeaseSettlement;
     settlementBill: Bill | null;
   }>(`/leases/${leaseId}/terminate`, {
+    method: 'POST',
+    body: payload,
+    organizationId,
+  });
+}
+
+export async function recordSettlementPayment(
+  organizationId: string,
+  settlementId: string,
+  payload: {
+    direction: 'RECEIVE' | 'REFUND';
+    amount: number;
+    method: string;
+    note?: string;
+  }
+) {
+  return apiClient<Payment>(`/leases/settlements/${settlementId}/payments`, {
     method: 'POST',
     body: payload,
     organizationId,

@@ -300,7 +300,7 @@ apartmentRouter.get(
             },
           },
         },
-        expenses: { orderBy: { spentAt: 'desc' } },
+        expenses: { orderBy: { spentAt: 'desc' }, include: { category: true } },
         landlordContracts: {
           where: { deletedAt: null, isActive: true },
           orderBy: { createdAt: 'desc' },
@@ -356,6 +356,7 @@ apartmentRouter.post(
         amount: z.coerce.number(),
         spentAt: z.coerce.date(),
         note: z.string().optional(),
+        categoryId: z.string().optional(),
       })
       .parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
@@ -622,6 +623,83 @@ apartmentRouter.get(
     }
 
     ok(res, { expenses, total, byCategory });
+  })
+);
+
+// US-104-3: 公寓入住率趋势（最近12个月）
+apartmentRouter.get(
+  '/:id/occupancy-trend',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const apartment = await prisma.apartment.findUnique({
+      where: { id: req.params.id },
+      include: { rooms: true },
+    });
+    if (!apartment) throw new HttpError(404, '公寓不存在');
+
+    const totalRooms = apartment.rooms.length;
+    const now = new Date();
+    const trends: { month: string; occupancyRate: number }[] = [];
+
+    for (let i = 11; i >= 0; i--) {
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthLabel = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
+
+      const occupiedCount = await prisma.lease.count({
+        where: {
+          room: { apartmentId: req.params.id },
+          status: 'ACTIVE',
+          startDate: { lte: monthEnd },
+          endDate: { gte: monthStart },
+        },
+      });
+
+      trends.push({
+        month: monthLabel,
+        occupancyRate:
+          totalRooms > 0
+            ? Number(((occupiedCount / totalRooms) * 100).toFixed(2))
+            : 0,
+      });
+    }
+
+    ok(res, trends);
+  })
+);
+
+// US-104-4: 公寓租金单价分布
+apartmentRouter.get(
+  '/:id/rent-distribution',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const leases = await prisma.lease.findMany({
+      where: {
+        room: { apartmentId: req.params.id },
+        status: 'ACTIVE',
+      },
+      select: { rentAmount: true },
+    });
+
+    const buckets = [
+      { min: 0, max: 1000, label: '0-1000元' },
+      { min: 1000, max: 2000, label: '1000-2000元' },
+      { min: 2000, max: 3000, label: '2000-3000元' },
+      { min: 3000, max: 5000, label: '3000-5000元' },
+      { min: 5000, max: Infinity, label: '5000元以上' },
+    ];
+
+    const result = buckets.map((b) => ({
+      range: b.label,
+      count: leases.filter((l) => {
+        const rent = Number(l.rentAmount);
+        return rent >= b.min && (b.max === Infinity || rent < b.max);
+      }).length,
+    }));
+
+    ok(res, result);
   })
 );
 

@@ -46,6 +46,9 @@ const LeaseRoomChangePage = lazy(
 const MaintenancePage = lazy(
   () => import('@/pages/maintenance/MaintenancePage')
 );
+const MaintenanceDetailPage = lazy(
+  () => import('@/pages/maintenance/MaintenanceDetailPage')
+);
 
 // 押金
 const DepositsPage = lazy(() => import('@/pages/deposits/DepositsPage'));
@@ -101,6 +104,9 @@ const AuditLogsPage = lazy(() => import('@/pages/audit-logs/AuditLogsPage'));
 // 房东合同
 const LandlordContractListPage = lazy(
   () => import('@/pages/landlord-contracts/LandlordContractListPage')
+);
+const LandlordPaymentListPage = lazy(
+  () => import('@/pages/landlord-payments/LandlordPaymentListPage')
 );
 const LandlordContractFormPage = lazy(
   () => import('@/pages/landlord-contracts/LandlordContractFormPage')
@@ -307,6 +313,14 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
+          <Route
+            path="/maintenance/:id"
+            element={
+              <RequireOrg>
+                <MaintenanceDetailPage />
+              </RequireOrg>
+            }
+          />
           {/* 房间 */}
           <Route
             path="/rooms"
@@ -487,6 +501,14 @@ export default function AppRouter() {
             }
           />
           <Route
+            path="/tenants/new"
+            element={
+              <RequireOrg>
+                <TenantFormPage />
+              </RequireOrg>
+            }
+          />
+          <Route
             path="/tenants/:id/edit"
             element={
               <RequireOrg>
@@ -537,6 +559,14 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <LandlordContractListPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/landlord-payments"
+            element={
+              <RequireOrg>
+                <LandlordPaymentListPage />
               </RequireOrg>
             }
           />

@@ -5,6 +5,7 @@ import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
@@ -150,7 +151,20 @@ export default function TenantListPage() {
 
   return (
     <div className="page-content">
-      <PageHeader breadcrumb={[{ label: '租客管理' }]} actions={undefined} />
+      <PageHeader
+        breadcrumb={[{ label: '租客管理' }]}
+        actions={
+          canManageTenant && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate('/tenants/new')}
+            >
+              新增租客
+            </Button>
+          )
+        }
+      />
 
       <div className={styles.searchBar}>
         <Input

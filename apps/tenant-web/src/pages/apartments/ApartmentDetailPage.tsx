@@ -12,6 +12,9 @@ import {
   Form,
   Input,
   Select,
+  Statistic,
+  Card,
+  Divider,
 } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -23,15 +26,30 @@ import {
   UserOutlined,
   DollarOutlined,
   SafetyOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from 'recharts';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   getApartment,
-  updateApartment,
+  updateApartmentStatus,
   deleteApartment,
+  getApartmentDashboard,
+  getApartmentOccupancyTrend,
+  getApartmentRentDistribution,
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
-import { money } from '@/utils/format';
+import { money, day } from '@/utils/format';
 import { contractText } from './utils';
 import RoomCard from '@/components/rooms/RoomCard';
 import PageHeader from '@/components/ui/PageHeader';
@@ -91,6 +109,24 @@ export default function ApartmentDetailPage() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusForm] = Form.useForm();
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [dashboard, setDashboard] = useState<{
+    totalRooms: number;
+    occupiedRooms: number;
+    vacantRooms: number;
+    maintenanceRooms: number;
+    occupancyRate: string;
+    currentMonth: {
+      receivable: number;
+      received: number;
+      overdue: number;
+    };
+  } | null>(null);
+  const [occupancyTrend, setOccupancyTrend] = useState<
+    { month: string; occupancyRate: number }[]
+  >([]);
+  const [rentDistribution, setRentDistribution] = useState<
+    { range: string; count: number }[]
+  >([]);
 
   const loadApartment = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -105,9 +141,26 @@ export default function ApartmentDetailPage() {
     }
   }, [currentOrgId, id]);
 
+  const loadDashboard = useCallback(async () => {
+    if (!currentOrgId || !id) return;
+    try {
+      const [dash, trend, dist] = await Promise.all([
+        getApartmentDashboard(currentOrgId, id),
+        getApartmentOccupancyTrend(currentOrgId, id),
+        getApartmentRentDistribution(currentOrgId, id),
+      ]);
+      setDashboard(dash);
+      setOccupancyTrend(trend);
+      setRentDistribution(dist);
+    } catch (e) {
+      console.error('看板数据加载失败', e);
+    }
+  }, [currentOrgId, id]);
+
   useEffect(() => {
     loadApartment();
-  }, [loadApartment]);
+    loadDashboard();
+  }, [loadApartment, loadDashboard]);
 
   const apartmentRooms = useMemo(
     () =>
@@ -144,8 +197,9 @@ export default function ApartmentDetailPage() {
     if (!apartment || !currentOrgId) return;
     setStatusSubmitting(true);
     try {
-      await updateApartment(currentOrgId, apartment.id, {
+      await updateApartmentStatus(currentOrgId, apartment.id, {
         status: values.status,
+        reason: values.reason,
       });
       message.success('状态已更新');
       setStatusModalOpen(false);
@@ -312,6 +366,20 @@ export default function ApartmentDetailPage() {
                           : '-'}
                       </DetailItem>
                     </Col>
+                    {apartment.statusReason && (
+                      <Col span={8}>
+                        <DetailItem label="状态变更原因">
+                          {apartment.statusReason}
+                        </DetailItem>
+                      </Col>
+                    )}
+                    {apartment.statusChangedAt && (
+                      <Col span={8}>
+                        <DetailItem label="状态变更时间">
+                          {day(apartment.statusChangedAt)}
+                        </DetailItem>
+                      </Col>
+                    )}
                   </Row>
                 </DetailSection>
 
@@ -371,6 +439,73 @@ export default function ApartmentDetailPage() {
                     </Col>
                   </Row>
                 </DetailSection>
+
+                {apartment.landlordContracts &&
+                  apartment.landlordContracts.length > 0 && (
+                    <>
+                      <Divider />
+                      <DetailSection
+                        title={
+                          <>
+                            <UserOutlined className="text-primary" />{' '}
+                            房东合同列表
+                          </>
+                        }
+                      >
+                        <div style={{ overflowX: 'auto' }}>
+                          <table className={styles.simpleTable}>
+                            <thead>
+                              <tr>
+                                <th>合同编号</th>
+                                <th>合同期</th>
+                                <th>租金</th>
+                                <th>押金</th>
+                                <th>付款方式</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {apartment.landlordContracts.map((lc) => (
+                                <tr key={lc.id}>
+                                  <td>{lc.contractNo || '-'}</td>
+                                  <td>
+                                    {day(lc.startDate)} ~ {day(lc.endDate)}
+                                  </td>
+                                  <td>¥{money(lc.rentAmount)}</td>
+                                  <td>¥{money(lc.depositAmount)}</td>
+                                  <td>
+                                    {paymentMethodLabels[lc.paymentMethod] ||
+                                      lc.paymentMethod}
+                                  </td>
+                                  <td>
+                                    <Tag
+                                      color={
+                                        lc.isActive ? 'success' : 'default'
+                                      }
+                                    >
+                                      {lc.isActive ? '有效' : '已失效'}
+                                    </Tag>
+                                  </td>
+                                  <td>
+                                    <Button
+                                      type="link"
+                                      size="small"
+                                      onClick={() =>
+                                        navigate(`/landlord-contracts/${lc.id}`)
+                                      }
+                                    >
+                                      查看
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </DetailSection>
+                    </>
+                  )}
 
                 {/* 运营配置 */}
                 <DetailSection
@@ -478,7 +613,13 @@ export default function ApartmentDetailPage() {
                       {(apartment.expenses ?? []).map((item) => (
                         <div key={item.id} className={styles.expenseItem}>
                           <span>
-                            {item.name} · {item.spentAt.slice(0, 10)}
+                            {item.name}
+                            {item.category?.name && (
+                              <Tag style={{ marginLeft: 8, fontSize: 12 }}>
+                                {item.category.name}
+                              </Tag>
+                            )}
+                            · {item.spentAt.slice(0, 10)}
                           </span>
                           <span className={styles.expenseAmount}>
                             ¥{money(item.amount)}
@@ -489,6 +630,154 @@ export default function ApartmentDetailPage() {
                   )}
                 </DetailSection>
               </>
+            ),
+          },
+          {
+            key: 'dashboard',
+            label: (
+              <span>
+                <BarChartOutlined /> 经营看板
+              </span>
+            ),
+            children: (
+              <div>
+                {dashboard && (
+                  <>
+                    <Row gutter={16} className="mb-16">
+                      <Col xs={12} sm={6}>
+                        <Card size="small">
+                          <Statistic
+                            title="总房间"
+                            value={dashboard.totalRooms}
+                            suffix="间"
+                          />
+                        </Card>
+                      </Col>
+                      <Col xs={12} sm={6}>
+                        <Card size="small">
+                          <Statistic
+                            title="已租"
+                            value={dashboard.occupiedRooms}
+                            suffix="间"
+                            valueStyle={{ color: '#52c41a' }}
+                          />
+                        </Card>
+                      </Col>
+                      <Col xs={12} sm={6}>
+                        <Card size="small">
+                          <Statistic
+                            title="空置"
+                            value={dashboard.vacantRooms}
+                            suffix="间"
+                            valueStyle={{ color: '#fa8c16' }}
+                          />
+                        </Card>
+                      </Col>
+                      <Col xs={12} sm={6}>
+                        <Card size="small">
+                          <Statistic
+                            title="维修中"
+                            value={dashboard.maintenanceRooms}
+                            suffix="间"
+                            valueStyle={{ color: '#ff4d4f' }}
+                          />
+                        </Card>
+                      </Col>
+                    </Row>
+                    <Row gutter={16} className="mb-16">
+                      <Col xs={12} sm={8}>
+                        <Card size="small">
+                          <Statistic
+                            title="本月应收"
+                            value={money(dashboard.currentMonth.receivable)}
+                            prefix="¥"
+                          />
+                        </Card>
+                      </Col>
+                      <Col xs={12} sm={8}>
+                        <Card size="small">
+                          <Statistic
+                            title="本月已收"
+                            value={money(dashboard.currentMonth.received)}
+                            prefix="¥"
+                            valueStyle={{ color: '#52c41a' }}
+                          />
+                        </Card>
+                      </Col>
+                      <Col xs={12} sm={8}>
+                        <Card size="small">
+                          <Statistic
+                            title="本月逾期"
+                            value={money(dashboard.currentMonth.overdue)}
+                            prefix="¥"
+                            valueStyle={{ color: '#ff4d4f' }}
+                          />
+                        </Card>
+                      </Col>
+                    </Row>
+                  </>
+                )}
+                <Row gutter={16}>
+                  <Col xs={24} lg={12}>
+                    <Card
+                      size="small"
+                      title="入住率趋势（最近12个月）"
+                      className="mb-16"
+                    >
+                      <div style={{ height: 280 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={occupancyTrend}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                            <YAxis
+                              tick={{ fontSize: 12 }}
+                              domain={[0, 100]}
+                              unit="%"
+                            />
+                            <Tooltip
+                              formatter={(value) => [
+                                `${value ?? 0}%`,
+                                '入住率',
+                              ]}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="occupancyRate"
+                              stroke="#1890ff"
+                              strokeWidth={2}
+                              dot={{ r: 3 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </Col>
+                  <Col xs={24} lg={12}>
+                    <Card size="small" title="租金单价分布" className="mb-16">
+                      <div style={{ height: 280 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={rentDistribution}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="range" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 12 }} />
+                            <Tooltip
+                              formatter={(value) => [
+                                `${value ?? 0} 间`,
+                                '房间数',
+                              ]}
+                            />
+                            <Bar
+                              dataKey="count"
+                              fill="#52c41a"
+                              radius={[4, 4, 0, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </Col>
+                </Row>
+              </div>
             ),
           },
           {

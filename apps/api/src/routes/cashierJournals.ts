@@ -122,6 +122,28 @@ cashierJournalRouter.post(
 );
 
 cashierJournalRouter.get(
+  '/categories',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const { type } = z
+      .object({
+        type: z.enum(['INCOME', 'EXPENSE']).optional(),
+      })
+      .parse(req.query);
+
+    const categories = await prisma.incomeExpenseCategory.findMany({
+      where: {
+        organizationId: req.organizationId!,
+        ...(type ? { type } : {}),
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    ok(res, { categories });
+  })
+);
+
+cashierJournalRouter.get(
   '/daily-report',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {

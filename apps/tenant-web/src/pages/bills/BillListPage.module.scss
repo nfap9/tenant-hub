@@ -64,6 +64,11 @@
   font-size: 14px;
 }
 
+.bill-card-overdue {
+  border-left: 4px solid $th-danger !important;
+  background: rgba($th-danger, 0.03);
+}
+
 .pending-actions {
   margin-top: 12px;
 }

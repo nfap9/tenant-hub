@@ -143,10 +143,12 @@ export type BillQueueStatus =
 export type ApartmentExpense = {
   id: string;
   apartmentId: string;
+  categoryId?: string;
   name: string;
   amount: string | number;
   spentAt: string;
   note?: string;
+  category?: { id: string; name: string; code: string };
 };
 
 export type LandlordContract = {

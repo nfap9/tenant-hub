@@ -348,6 +348,7 @@ model User {
   maintenanceOrders  MaintenanceOrder[]
   cashierJournals    CashierJournal[]
   invoices           Invoice[]
+  notifications      Notification[]
 }
 
 model OtpCode {
@@ -389,6 +390,7 @@ model Organization {
   cashierJournals   CashierJournal[]
   incomeCategories  IncomeExpenseCategory[]
   invoices          Invoice[]
+  notifications     Notification[]
 }
 
 model Role {
@@ -482,6 +484,7 @@ model Apartment {
   meters               Meter[]
   maintenanceOrders    MaintenanceOrder[]
   landlordContracts    LandlordContract[]
+  landlordPayments     LandlordPayment[]
 
   @@index([organizationId, status])
 }
@@ -509,8 +512,37 @@ model LandlordContract {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
   apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  payments      LandlordPayment[]
 
   @@index([apartmentId, isActive])
+}
+
+model LandlordPayment {
+  id                 String    @id @default(cuid())
+  organizationId     String
+  landlordContractId String
+  apartmentId        String
+  periodStart        DateTime
+  periodEnd          DateTime
+  dueDate            DateTime
+  plannedAmount      Decimal   @db.Decimal(12, 2)
+  paidAmount         Decimal?  @db.Decimal(12, 2)
+  paidAt             DateTime?
+  voucherNo          String?
+  paymentMethod      String?   // CASH / BANK_TRANSFER / WECHAT / ALIPAY
+  status             String    @default("PENDING") // PENDING / PAID / OVERDUE
+  expenseId          String? @unique
+  note               String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  landlordContract   LandlordContract  @relation(fields: [landlordContractId], references: [id], onDelete: Cascade)
+  apartment          Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  expense            ApartmentExpense? @relation(fields: [expenseId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([landlordContractId, dueDate])
+  @@index([apartmentId, status])
 }
 
 model ApartmentExpense {
@@ -525,6 +557,7 @@ model ApartmentExpense {
   deletedAt   DateTime?
   apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   category    IncomeExpenseCategory? @relation(fields: [categoryId], references: [id])
+  landlordPayment LandlordPayment?
 
   @@index([apartmentId, spentAt])
 }
@@ -631,6 +664,8 @@ model Lease {
   waterUnitPrice        Decimal            @db.Decimal(10, 2)
   powerUnitPrice        Decimal            @db.Decimal(10, 2)
   gasUnitPrice          Decimal?           @db.Decimal(10, 2)
+  waterPricingTiers     Json?
+  powerPricingTiers     Json?
   lateFeeRate           Decimal            @default(0.0005) @db.Decimal(10, 6)
   freeRentDays          Int                @default(0)
   freeRentStart         DateTime?
@@ -1313,4 +1348,22 @@ model SystemSetting {
   value       Json
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  type           String
+  title          String
+  content        String
+  link           String?
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, readAt])
+  @@index([createdAt])
 }

@@ -11,6 +11,7 @@ import {
   message,
   Space,
   Divider,
+  Checkbox,
 } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -119,6 +120,7 @@ export default function LeaseFormPage() {
         startDate: dayjs(values.startDate as string).format('YYYY-MM-DD'),
         endDate: dayjs(values.endDate as string).format('YYYY-MM-DD'),
         billDay: Number(values.billDay || 1),
+        utilityBillDay: Number(values.utilityBillDay || values.billDay || 1),
         graceDays: Number(values.graceDays || 0),
         cycle: String(values.cycle),
         rentAmount: Number(values.rentAmount),
@@ -126,6 +128,18 @@ export default function LeaseFormPage() {
         depositAmount: Number(values.depositAmount || 0),
         waterUnitPrice: Number(values.waterUnitPrice || 0),
         powerUnitPrice: Number(values.powerUnitPrice || 0),
+        waterPricingTiers: values.enableWaterTiers
+          ? (values.waterPricingTiers as Array<{
+              limit: number;
+              price: number;
+            }>)
+          : undefined,
+        powerPricingTiers: values.enablePowerTiers
+          ? (values.powerPricingTiers as Array<{
+              limit: number;
+              price: number;
+            }>)
+          : undefined,
         lateFeeRate: Number(values.lateFeeRate || 0.0005),
         freeRentDays: Number(values.freeRentDays || 0),
         freeRentStart: values.freeRentStart
@@ -278,6 +292,14 @@ export default function LeaseFormPage() {
                   placeholder="每月几号出账"
                 />
               </Form.Item>
+              <Form.Item label="水电账单日" name="utilityBillDay">
+                <InputNumber
+                  min={1}
+                  max={28}
+                  className="w-full"
+                  placeholder="默认与账单日相同"
+                />
+              </Form.Item>
             </div>
             <Form.Item label="宽限天数" name="graceDays">
               <InputNumber
@@ -305,6 +327,147 @@ export default function LeaseFormPage() {
                 <InputNumber min={0} className="w-full" />
               </Form.Item>
             </div>
+
+            <Divider orientation="left" className={styles.sectionDivider}>
+              阶梯单价配置
+            </Divider>
+            <Form.Item
+              name="enableWaterTiers"
+              valuePropName="checked"
+              initialValue={false}
+            >
+              <Checkbox>启用阶梯水价</Checkbox>
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate>
+              {({ getFieldValue }) =>
+                getFieldValue('enableWaterTiers') ? (
+                  <Form.List name="waterPricingTiers" initialValue={[]}>
+                    {(fields, { add, remove }) => (
+                      <div>
+                        {fields.map((field, index) => (
+                          <Space
+                            key={field.key}
+                            className={styles.feeItem}
+                            align="baseline"
+                          >
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'limit']}
+                              rules={[{ required: true }]}
+                              label={index === 0 ? '用量上限' : ''}
+                            >
+                              <InputNumber
+                                min={0}
+                                placeholder="吨"
+                                style={{ width: 100 }}
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'price']}
+                              rules={[{ required: true }]}
+                              label={index === 0 ? '单价' : ''}
+                            >
+                              <InputNumber
+                                min={0}
+                                placeholder="元/吨"
+                                prefix="¥"
+                                style={{ width: 120 }}
+                              />
+                            </Form.Item>
+                            <Button
+                              type="link"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(field.name)}
+                            >
+                              删除
+                            </Button>
+                          </Space>
+                        ))}
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          onClick={() => add()}
+                          className="w-full mb-16"
+                        >
+                          添加阶梯
+                        </Button>
+                      </div>
+                    )}
+                  </Form.List>
+                ) : null
+              }
+            </Form.Item>
+
+            <Form.Item
+              name="enablePowerTiers"
+              valuePropName="checked"
+              initialValue={false}
+            >
+              <Checkbox>启用阶梯电价</Checkbox>
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate>
+              {({ getFieldValue }) =>
+                getFieldValue('enablePowerTiers') ? (
+                  <Form.List name="powerPricingTiers" initialValue={[]}>
+                    {(fields, { add, remove }) => (
+                      <div>
+                        {fields.map((field, index) => (
+                          <Space
+                            key={field.key}
+                            className={styles.feeItem}
+                            align="baseline"
+                          >
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'limit']}
+                              rules={[{ required: true }]}
+                              label={index === 0 ? '用量上限' : ''}
+                            >
+                              <InputNumber
+                                min={0}
+                                placeholder="度"
+                                style={{ width: 100 }}
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'price']}
+                              rules={[{ required: true }]}
+                              label={index === 0 ? '单价' : ''}
+                            >
+                              <InputNumber
+                                min={0}
+                                placeholder="元/度"
+                                prefix="¥"
+                                style={{ width: 120 }}
+                              />
+                            </Form.Item>
+                            <Button
+                              type="link"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(field.name)}
+                            >
+                              删除
+                            </Button>
+                          </Space>
+                        ))}
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          onClick={() => add()}
+                          className="w-full mb-16"
+                        >
+                          添加阶梯
+                        </Button>
+                      </div>
+                    )}
+                  </Form.List>
+                ) : null
+              }
+            </Form.Item>
             <Form.Item label="滞纳金日费率" name="lateFeeRate">
               <InputNumber
                 min={0}

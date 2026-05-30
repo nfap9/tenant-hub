@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Table,
   Tag,
@@ -12,8 +13,15 @@ import {
   DatePicker,
   message,
   Popconfirm,
+  Upload,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   getMaintenanceOrders,
@@ -23,6 +31,7 @@ import {
   deleteMaintenanceOrder,
   type MaintenanceOrder,
 } from '@/api/maintenance';
+import { uploadFile } from '@/api/uploads';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { money } from '@/utils/format';
@@ -168,6 +177,11 @@ export default function MaintenancePage() {
       key: 'action',
       render: (_: unknown, record: MaintenanceOrder) => (
         <Space>
+          <Link to={`/maintenance/${record.id}`}>
+            <Button size="small" icon={<EyeOutlined />}>
+              详情
+            </Button>
+          </Link>
           {canManage && (
             <>
               <Button
@@ -320,11 +334,49 @@ export default function MaintenancePage() {
               <InputNumber min={0} className="w-full" prefix="¥" />
             </Form.Item>
           </div>
-          <Form.Item name="beforePhotoUrl" label="维修前照片URL">
-            <Input placeholder="请输入照片链接" />
+          <Form.Item name="beforePhotoUrl" label="维修前照片">
+            <Upload
+              maxCount={1}
+              listType="picture"
+              customRequest={async ({ file, onSuccess, onError }) => {
+                try {
+                  const res = await uploadFile(currentOrgId!, file as File);
+                  onSuccess?.(res);
+                } catch (e) {
+                  onError?.(e instanceof Error ? e : new Error('上传失败'));
+                }
+              }}
+              onChange={(info) => {
+                if (info.file.status === 'done') {
+                  const res = info.file.response as { url: string };
+                  form.setFieldValue('beforePhotoUrl', res.url);
+                }
+              }}
+            >
+              <Button icon={<UploadOutlined />}>上传照片</Button>
+            </Upload>
           </Form.Item>
-          <Form.Item name="afterPhotoUrl" label="维修后照片URL">
-            <Input placeholder="请输入照片链接" />
+          <Form.Item name="afterPhotoUrl" label="维修后照片">
+            <Upload
+              maxCount={1}
+              listType="picture"
+              customRequest={async ({ file, onSuccess, onError }) => {
+                try {
+                  const res = await uploadFile(currentOrgId!, file as File);
+                  onSuccess?.(res);
+                } catch (e) {
+                  onError?.(e instanceof Error ? e : new Error('上传失败'));
+                }
+              }}
+              onChange={(info) => {
+                if (info.file.status === 'done') {
+                  const res = info.file.response as { url: string };
+                  form.setFieldValue('afterPhotoUrl', res.url);
+                }
+              }}
+            >
+              <Button icon={<UploadOutlined />}>上传照片</Button>
+            </Upload>
           </Form.Item>
           <Form.Item name="acceptanceNote" label="验收备注">
             <Input.TextArea rows={2} placeholder="验收意见" />

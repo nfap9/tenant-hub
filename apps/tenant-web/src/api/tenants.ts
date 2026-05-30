@@ -1,6 +1,30 @@
 import { apiClient } from './client';
 import type { Tenant, AccountTransaction } from '@/types/domain';
 
+export async function createTenant(
+  organizationId: string,
+  payload: {
+    name: string;
+    phone: string;
+    idCard?: string;
+    idCardFrontUrl?: string;
+    idCardBackUrl?: string;
+    workUnit?: string;
+    jobTitle?: string;
+    emergencyContact?: string;
+    emergencyPhone?: string;
+    sourceChannel?: string;
+    creditScore?: number;
+    remark?: string;
+  }
+) {
+  return apiClient<Tenant>('/tenants', {
+    method: 'POST',
+    body: payload,
+    organizationId,
+  });
+}
+
 export async function getTenants(organizationId: string) {
   return apiClient<Tenant[]>('/tenants', { organizationId });
 }

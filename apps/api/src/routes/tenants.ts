@@ -34,6 +34,57 @@ tenantRouter.get(
   })
 );
 
+tenantRouter.post(
+  '/',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        name: z.string().min(1),
+        phone: z.string().min(6),
+        idCard: z.string().optional(),
+        idCardFrontUrl: z.string().optional(),
+        idCardBackUrl: z.string().optional(),
+        workUnit: z.string().optional(),
+        jobTitle: z.string().optional(),
+        emergencyContact: z.string().optional(),
+        emergencyPhone: z.string().optional(),
+        sourceChannel: z
+          .enum([
+            'PLATFORM_58',
+            'DOUBAN',
+            'BEIKE',
+            'REFERRAL',
+            'AGENT',
+            'WALK_IN',
+            'OTHER',
+          ])
+          .optional(),
+        creditScore: z.coerce.number().int().min(0).max(1000).optional(),
+        remark: z.string().optional(),
+      })
+      .parse(req.body);
+
+    const existing = await prisma.tenant.findFirst({
+      where: {
+        organizationId: req.organizationId!,
+        phone: input.phone,
+        deletedAt: null,
+      },
+    });
+    if (existing) throw new HttpError(409, '该手机号已存在');
+
+    const tenant = await prisma.tenant.create({
+      data: {
+        ...input,
+        organizationId: req.organizationId!,
+      },
+      include: { account: true },
+    });
+    ok(res, tenant);
+  })
+);
+
 tenantRouter.get(
   '/search',
   requirePermission(PERMISSIONS.LEASE_VIEW),

@@ -12,7 +12,7 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getTenant, updateTenant } from '@/api/tenants';
+import { getTenant, createTenant, updateTenant } from '@/api/tenants';
 import type { Tenant } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './TenantFormPage.module.scss';
@@ -73,12 +73,34 @@ export default function TenantFormPage() {
   }, [isEdit, tenant, form]);
 
   const handleSubmit = async (values: Record<string, unknown>) => {
-    if (!currentOrgId || !id) return;
+    if (!currentOrgId) return;
     setSaving(true);
     try {
-      await updateTenant(currentOrgId, id, values);
-      message.success('保存成功');
-      navigate(`/tenants/${id}`);
+      if (isEdit && id) {
+        await updateTenant(currentOrgId, id, values);
+        message.success('保存成功');
+        navigate(`/tenants/${id}`);
+      } else {
+        const created = await createTenant(
+          currentOrgId,
+          values as {
+            name: string;
+            phone: string;
+            idCard?: string;
+            idCardFrontUrl?: string;
+            idCardBackUrl?: string;
+            workUnit?: string;
+            jobTitle?: string;
+            emergencyContact?: string;
+            emergencyPhone?: string;
+            sourceChannel?: string;
+            creditScore?: number;
+            remark?: string;
+          }
+        );
+        message.success('租客已创建');
+        navigate(`/tenants/${created.id}`);
+      }
     } catch (e) {
       message.error(e instanceof Error ? e.message : '保存失败');
     } finally {

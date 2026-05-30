@@ -3,7 +3,7 @@ const API_BASE =
 
 export type ApiOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  body?: Record<string, unknown>;
+  body?: Record<string, unknown> | FormData;
   headers?: Record<string, string>;
   organizationId?: string;
 };
@@ -52,15 +52,20 @@ export async function apiClient<T>(
   const token = session.token;
   const orgId = options.organizationId ?? readOrgId();
 
+  const isFormData = options.body instanceof FormData;
   const response = await fetch(`${API_BASE}${path}`, {
     method: options.method || 'GET',
     headers: {
-      'content-type': 'application/json',
+      ...(isFormData ? {} : { 'content-type': 'application/json' }),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...(orgId ? { 'x-organization-id': orgId } : {}),
       ...options.headers,
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: isFormData
+      ? (options.body as FormData)
+      : options.body
+        ? JSON.stringify(options.body)
+        : undefined,
   });
 
   const text = await response.text();

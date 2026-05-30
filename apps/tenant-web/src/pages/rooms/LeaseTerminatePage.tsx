@@ -24,7 +24,11 @@ import {
 import dayjs from 'dayjs';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getRooms } from '@/api/rooms';
-import { getSettlementPreview, terminateLease } from '@/api/leases';
+import {
+  getSettlementPreview,
+  terminateLease,
+  recordSettlementPayment,
+} from '@/api/leases';
 import type { Room } from '@/types/domain';
 import { money, today, numberValue } from '@/utils/format';
 import { terminationLabels } from './constants';
@@ -53,6 +57,7 @@ export default function LeaseTerminatePage() {
     string,
     unknown
   > | null>(null);
+  const [paymentForm] = Form.useForm();
 
   useEffect(() => {
     if (!currentOrgId) return;
@@ -138,7 +143,7 @@ export default function LeaseTerminatePage() {
     if (!currentOrgId || !lease || !confirmValues) return;
     setConfirmSubmitting(true);
     try {
-      await terminateLease(currentOrgId, lease.id, {
+      const result = await terminateLease(currentOrgId, lease.id, {
         type: String(confirmValues.type),
         reason:
           String(confirmValues.reason || '').trim() ||
@@ -161,8 +166,24 @@ export default function LeaseTerminatePage() {
         compensationReason:
           String(confirmValues.compensationReason || '').trim() || undefined,
       });
+
+      const paymentValues = paymentForm.getFieldsValue();
+      const settlementId = result.settlement?.id;
+      const paymentAmount = Number(paymentValues.paymentAmount || 0);
+      if (settlementId && paymentAmount > 0 && paymentValues.paymentMethod) {
+        await recordSettlementPayment(currentOrgId, settlementId, {
+          direction: preview.net > 0 ? 'RECEIVE' : 'REFUND',
+          amount: paymentAmount,
+          method: String(paymentValues.paymentMethod),
+          note: paymentValues.paymentNote
+            ? String(paymentValues.paymentNote)
+            : undefined,
+        });
+      }
+
       message.success('退租成功，已生成结算账单');
       setConfirmOpen(false);
+      paymentForm.resetFields();
       navigate('/');
     } catch (e) {
       message.error(e instanceof Error ? e.message : '退租失败');
@@ -529,6 +550,76 @@ export default function LeaseTerminatePage() {
                         </DetailItem>
                       </Col>
                     </Row>
+                  </div>
+
+                  <Divider style={{ margin: '16px 0' }} />
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ margin: '0 0 8px', fontWeight: 500 }}>
+                      结算收/退款
+                    </h4>
+                    <Form
+                      form={paymentForm}
+                      layout="inline"
+                      style={{ alignItems: 'flex-start' }}
+                    >
+                      <Form.Item
+                        label={
+                          preview.net > 0
+                            ? '收款金额'
+                            : preview.net < 0
+                              ? '退款金额'
+                              : '金额'
+                        }
+                        name="paymentAmount"
+                        initialValue={Math.abs(preview.net)}
+                        rules={[
+                          {
+                            required: preview.net !== 0,
+                            message: '请输入金额',
+                          },
+                        ]}
+                      >
+                        <InputNumber
+                          prefix="¥"
+                          min={0}
+                          precision={2}
+                          style={{ width: 160 }}
+                          disabled={preview.net === 0}
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        label="方式"
+                        name="paymentMethod"
+                        rules={[
+                          {
+                            required: preview.net !== 0,
+                            message: '请选择方式',
+                          },
+                        ]}
+                      >
+                        <select
+                          className="ant-select"
+                          style={{
+                            width: 120,
+                            height: 32,
+                            borderRadius: 6,
+                            padding: '0 8px',
+                            border: '1px solid #d9d9d9',
+                          }}
+                          disabled={preview.net === 0}
+                          defaultValue=""
+                        >
+                          <option value="">请选择</option>
+                          <option value="CASH">现金</option>
+                          <option value="BANK_TRANSFER">银行转账</option>
+                          <option value="WECHAT">微信</option>
+                          <option value="ALIPAY">支付宝</option>
+                        </select>
+                      </Form.Item>
+                      <Form.Item label="备注" name="paymentNote">
+                        <Input placeholder="选填" style={{ width: 200 }} />
+                      </Form.Item>
+                    </Form>
                   </div>
 
                   <Alert

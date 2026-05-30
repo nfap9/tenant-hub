@@ -7,6 +7,7 @@ import {
   requirePermission,
 } from '../middleware/auth.js';
 import { PERMISSIONS } from '../services/roles.js';
+import { createNotification } from '../services/notification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 
@@ -58,6 +59,7 @@ maintenanceRouter.get(
     const orders = await prisma.maintenanceOrder.findMany({
       where: {
         organizationId: req.organizationId!,
+        deletedAt: null,
         ...(status ? { status } : {}),
       },
       include: {
@@ -77,17 +79,23 @@ maintenanceRouter.post(
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
     const input = orderInput.parse(req.body);
-    ok(
-      res,
-      await prisma.maintenanceOrder.create({
-        data: {
-          ...input,
-          organizationId: req.organizationId!,
-          createdById: req.user!.id,
-        },
-        include: { apartment: true, room: true, items: true },
-      })
-    );
+    const order = await prisma.maintenanceOrder.create({
+      data: {
+        ...input,
+        organizationId: req.organizationId!,
+        createdById: req.user!.id,
+      },
+      include: { apartment: true, room: true, items: true },
+    });
+    await createNotification({
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+      type: 'MAINTENANCE_CREATED',
+      title: '新维修工单',
+      content: `工单「${order.title}」已创建`,
+      link: `/maintenance/${order.id}`,
+    }).catch(() => {});
+    ok(res, order);
   })
 );
 
@@ -96,7 +104,11 @@ maintenanceRouter.get(
   requirePermission(PERMISSIONS.LEASE_VIEW),
   asyncHandler(async (req, res) => {
     const order = await prisma.maintenanceOrder.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
+      where: {
+        id: req.params.id,
+        organizationId: req.organizationId!,
+        deletedAt: null,
+      },
       include: {
         apartment: true,
         room: true,
@@ -115,7 +127,11 @@ maintenanceRouter.put(
   asyncHandler(async (req, res) => {
     const input = orderInput.partial().parse(req.body);
     const order = await prisma.maintenanceOrder.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
+      where: {
+        id: req.params.id,
+        organizationId: req.organizationId!,
+        deletedAt: null,
+      },
     });
     if (!order) throw new HttpError(404, '工单不存在');
     ok(
@@ -152,7 +168,11 @@ maintenanceRouter.patch(
       })
       .parse(req.body);
     const order = await prisma.maintenanceOrder.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
+      where: {
+        id: req.params.id,
+        organizationId: req.organizationId!,
+        deletedAt: null,
+      },
     });
     if (!order) throw new HttpError(404, '工单不存在');
 
@@ -168,14 +188,22 @@ maintenanceRouter.patch(
       data.isTenantFault = input.isTenantFault;
     if (input.status === 'COMPLETED') data.completedDate = new Date();
 
-    ok(
-      res,
-      await prisma.maintenanceOrder.update({
-        where: { id: req.params.id },
-        data,
-        include: { apartment: true, room: true, items: true },
-      })
-    );
+    const updated = await prisma.maintenanceOrder.update({
+      where: { id: req.params.id },
+      data,
+      include: { apartment: true, room: true, items: true },
+    });
+    if (input.status === 'COMPLETED') {
+      await createNotification({
+        organizationId: req.organizationId!,
+        userId: order.createdById || req.user!.id,
+        type: 'MAINTENANCE_COMPLETED',
+        title: '维修工单已完成',
+        content: `工单「${order.title}」已完成`,
+        link: `/maintenance/${order.id}`,
+      }).catch(() => {});
+    }
+    ok(res, updated);
   })
 );
 
@@ -184,10 +212,17 @@ maintenanceRouter.delete(
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
     const order = await prisma.maintenanceOrder.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
+      where: {
+        id: req.params.id,
+        organizationId: req.organizationId!,
+        deletedAt: null,
+      },
     });
     if (!order) throw new HttpError(404, '工单不存在');
-    await prisma.maintenanceOrder.delete({ where: { id: req.params.id } });
+    await prisma.maintenanceOrder.update({
+      where: { id: req.params.id },
+      data: { deletedAt: new Date() },
+    });
     ok(res, { deleted: true });
   })
 );

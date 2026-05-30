@@ -1,5 +1,14 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Layout, Menu, Dropdown, Spin, message, Modal, Avatar } from 'antd';
+import {
+  Layout,
+  Menu,
+  Dropdown,
+  Spin,
+  message,
+  Modal,
+  Avatar,
+  Badge,
+} from 'antd';
 import {
   HomeTwoTone,
   HomeOutlined,
@@ -21,15 +30,149 @@ import {
   DollarOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  getNotifications,
+  getUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+  type Notification,
+} from '@/api/notifications';
 import styles from './MainLayout.module.scss';
 
 const { Header, Sider, Content } = Layout;
+
+function NotificationBell() {
+  const { currentOrgId } = useAppSession();
+  const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [open, setOpen] = useState(false);
+
+  const fetchUnread = async () => {
+    if (!currentOrgId) return;
+    try {
+      const { count } = await getUnreadCount(currentOrgId);
+      setUnreadCount(count);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!currentOrgId) return;
+    try {
+      const list = await getNotifications(currentOrgId);
+      setNotifications(list);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    fetchUnread();
+    const timer = setInterval(fetchUnread, 30000);
+    return () => clearInterval(timer);
+  }, [currentOrgId]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen && currentOrgId) {
+      fetchNotifications();
+    }
+  };
+
+  const handleRead = async (id: string, link?: string) => {
+    if (!currentOrgId) return;
+    await markNotificationRead(currentOrgId, id);
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === id ? { ...n, readAt: new Date().toISOString() } : n
+      )
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+    if (link) {
+      navigate(link);
+      setOpen(false);
+    }
+  };
+
+  const handleReadAll = async () => {
+    if (!currentOrgId) return;
+    await markAllNotificationsRead(currentOrgId);
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, readAt: new Date().toISOString() }))
+    );
+    setUnreadCount(0);
+  };
+
+  const menuItems = notifications.map((n) => ({
+    key: n.id,
+    label: (
+      <div
+        className={styles.notificationItem}
+        style={{ opacity: n.readAt ? 0.6 : 1 }}
+        onClick={() => handleRead(n.id, n.link)}
+      >
+        <div className={styles.notificationTitle}>{n.title}</div>
+        <div className={styles.notificationContent}>{n.content}</div>
+        <div className={styles.notificationTime}>
+          {new Date(n.createdAt).toLocaleString()}
+        </div>
+      </div>
+    ),
+  }));
+
+  return (
+    <Dropdown
+      open={open}
+      onOpenChange={handleOpenChange}
+      menu={{
+        items: [
+          ...(menuItems.length > 0
+            ? [
+                {
+                  key: 'read-all',
+                  label: (
+                    <div
+                      className={styles.notificationReadAll}
+                      onClick={handleReadAll}
+                    >
+                      全部已读
+                    </div>
+                  ),
+                },
+              ]
+            : []),
+          ...(menuItems.length > 0
+            ? menuItems
+            : [
+                {
+                  key: 'empty',
+                  label: (
+                    <div className={styles.notificationEmpty}>暂无通知</div>
+                  ),
+                  disabled: true,
+                },
+              ]),
+        ],
+      }}
+      placement="bottomRight"
+    >
+      <div className={styles.headerIconBtn}>
+        <Badge count={unreadCount} size="small">
+          <BellOutlined />
+        </Badge>
+      </div>
+    </Dropdown>
+  );
+}
 
 function getMenuKeyFromPath(pathname: string): string {
   if (pathname === '/') return 'dashboard';
   if (pathname.startsWith('/apartments')) return 'apartments';
   if (pathname.startsWith('/landlord-contracts')) return 'landlord-contracts';
+  if (pathname.startsWith('/landlord-payments')) return 'landlord-payments';
   if (pathname.startsWith('/rooms')) return 'rooms';
   if (pathname.startsWith('/leases')) return 'leases';
   if (pathname.startsWith('/tenants')) return 'tenants';
@@ -111,6 +254,11 @@ export default function MainLayout() {
             key: 'landlord-contracts',
             icon: <FileTextOutlined />,
             label: '房东合同',
+          },
+          {
+            key: 'landlord-payments',
+            icon: <DollarOutlined />,
+            label: '房东付款',
           },
           { key: 'co-residents', icon: <TeamOutlined />, label: '同住人' },
           { key: 'meters', icon: <ToolOutlined />, label: '表具' },
@@ -271,10 +419,7 @@ export default function MainLayout() {
 
           <div className={styles.headerRight}>
             {/* Notifications */}
-            <BellOutlined
-              className={styles.headerIconBtn}
-              onClick={() => message.warning('暂无通知')}
-            />
+            <NotificationBell />
 
             {/* Org Switcher */}
             {memberships.length > 1 ? (

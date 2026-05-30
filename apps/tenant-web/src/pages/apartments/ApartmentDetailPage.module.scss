@@ -57,3 +57,27 @@
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
 }
+
+.simpleTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--th-border);
+  }
+
+  th {
+    font-weight: 600;
+    background: var(--th-surface-hover);
+    color: var(--th-foreground-muted);
+    font-size: 13px;
+  }
+
+  tbody tr:hover {
+    background: var(--th-surface-hover);
+  }
+}
