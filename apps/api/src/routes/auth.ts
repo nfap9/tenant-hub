@@ -11,12 +11,16 @@ import { HttpError, ok } from '../utils/http.js';
 export const authRouter = Router();
 
 const phoneSchema = z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确');
-const passwordSchema = z.string().min(8, '密码至少 8 位');
+const passwordSchema = z
+  .string()
+  .min(8, '密码至少 8 位')
+  .regex(/[a-zA-Z]/, '密码必须包含字母')
+  .regex(/\d/, '密码必须包含数字');
 
 const verifyOtp = async (
   phone: string,
   code: string,
-  purpose: 'REGISTER' | 'LOGIN'
+  purpose: 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD'
 ) => {
   const otp = await prisma.otpCode.findFirst({
     where: { phone, purpose, usedAt: null, expiresAt: { gt: new Date() } },
@@ -35,7 +39,10 @@ authRouter.post(
   '/otp',
   asyncHandler(async (req, res) => {
     const input = z
-      .object({ phone: phoneSchema, purpose: z.enum(['REGISTER', 'LOGIN']) })
+      .object({
+        phone: phoneSchema,
+        purpose: z.enum(['REGISTER', 'LOGIN', 'RESET_PASSWORD']),
+      })
       .parse(req.body);
     const code = String(Math.floor(100000 + Math.random() * 900000));
     await prisma.otpCode.create({
@@ -223,5 +230,43 @@ authRouter.put(
     });
 
     ok(res, { message: '密码已更新' });
+  })
+);
+
+authRouter.post(
+  '/reset-password',
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        phone: phoneSchema,
+        code: z.string().length(6),
+        password: passwordSchema,
+        confirmPassword: passwordSchema,
+      })
+      .refine(
+        (value) => value.password === value.confirmPassword,
+        '两次密码不一致'
+      )
+      .parse(req.body);
+
+    const user = await prisma.user.findUnique({
+      where: { phone: input.phone },
+    });
+    if (!user) throw new HttpError(404, '用户不存在');
+
+    await verifyOtp(input.phone, input.code, 'RESET_PASSWORD');
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: await bcrypt.hash(
+          input.password,
+          env.BCRYPT_PASSWORD_SALT_ROUNDS
+        ),
+        passwordChangedAt: new Date(),
+      },
+    });
+
+    ok(res, { message: '密码重置成功' });
   })
 );

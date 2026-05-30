@@ -12,6 +12,7 @@ datasource db {
 enum OtpPurpose {
   REGISTER
   LOGIN
+  RESET_PASSWORD
 }
 
 enum OrgStatus {

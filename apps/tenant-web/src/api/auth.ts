@@ -9,7 +9,7 @@ export type LoginResult = {
 
 export type SendOtpInput = {
   phone: string;
-  purpose: 'REGISTER' | 'LOGIN';
+  purpose: 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD';
 };
 
 export type PasswordLoginInput = {
@@ -33,6 +33,13 @@ export type RegisterInput = {
 export type UpdatePasswordInput = {
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
+};
+
+export type ResetPasswordInput = {
+  phone: string;
+  code: string;
+  password: string;
   confirmPassword: string;
 };
 
@@ -74,6 +81,13 @@ export async function getMe() {
 export async function updatePassword(input: UpdatePasswordInput) {
   return apiClient<{ message: string }>('/auth/password', {
     method: 'PUT',
+    body: input as Record<string, unknown>,
+  });
+}
+
+export async function resetPassword(input: ResetPasswordInput) {
+  return apiClient<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
     body: input as Record<string, unknown>,
   });
 }

@@ -83,7 +83,7 @@ export default function RegisterPage() {
       });
       await signIn(result);
       message.success('注册成功');
-      navigate('/', { replace: true });
+      navigate('/settings/organization?action=create', { replace: true });
     } catch (e) {
       message.error(e instanceof Error ? e.message : '注册失败');
     } finally {
@@ -147,6 +147,14 @@ export default function RegisterPage() {
             rules={[
               { required: true, message: '请输入密码' },
               { min: 8, message: '密码至少 8 位' },
+              {
+                pattern: /[a-zA-Z]/,
+                message: '密码必须包含字母',
+              },
+              {
+                pattern: /\d/,
+                message: '密码必须包含数字',
+              },
             ]}
           >
             <Input.Password

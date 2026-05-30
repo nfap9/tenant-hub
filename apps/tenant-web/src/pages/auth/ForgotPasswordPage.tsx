@@ -8,7 +8,7 @@ import {
   HomeOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { sendOtp as sendOtpRequest, updatePassword } from '@/api/auth';
+import { sendOtp as sendOtpRequest, resetPassword } from '@/api/auth';
 import styles from '@/pages/LoginPage.module.scss';
 import clsx from 'clsx';
 
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
     try {
       await sendOtpRequest({
         phone: phone.trim(),
-        purpose: 'LOGIN',
+        purpose: 'RESET_PASSWORD',
       });
       message.success('验证码已发送，请查看短信');
       startCountdown(60);
@@ -72,9 +72,10 @@ export default function ForgotPasswordPage() {
     if (busy) return;
     setBusy(true);
     try {
-      await updatePassword({
-        currentPassword: values.code,
-        newPassword: values.password,
+      await resetPassword({
+        phone: values.phone,
+        code: values.code,
+        password: values.password,
         confirmPassword: values.confirmPassword,
       });
       message.success('密码重置成功，请登录');
@@ -154,6 +155,14 @@ export default function ForgotPasswordPage() {
             rules={[
               { required: true, message: '请输入新密码' },
               { min: 8, message: '密码至少 8 位' },
+              {
+                pattern: /[a-zA-Z]/,
+                message: '密码必须包含字母',
+              },
+              {
+                pattern: /\d/,
+                message: '密码必须包含数字',
+              },
             ]}
           >
             <Input.Password
