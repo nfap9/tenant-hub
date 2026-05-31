@@ -12,6 +12,8 @@ import {
   Row,
   Col,
   Input,
+  Form,
+  InputNumber,
 } from 'antd';
 import {
   StopOutlined,
@@ -19,9 +21,10 @@ import {
   WalletOutlined,
   FileTextOutlined,
   HomeOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getBills, voidBill } from '@/api/bills';
+import { getBills, voidBill, updateBillItem } from '@/api/bills';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
 import { groupBills, type BillGroup } from './utils';
@@ -41,6 +44,12 @@ export default function MonthlyDetailPage() {
   const [allBills, setAllBills] = useState<Bill[]>([]);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editItemModalOpen, setEditItemModalOpen] = useState(false);
+  const [editItemForm] = Form.useForm();
+  const [editingItem, setEditingItem] = useState<{
+    billId: string;
+    itemId: string;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
@@ -104,6 +113,28 @@ export default function MonthlyDetailPage() {
         }
       },
     });
+  };
+
+  const handleEditItem = async (values: { name: string; amount: number }) => {
+    if (!currentOrgId || !editingItem) return;
+    try {
+      await updateBillItem(
+        currentOrgId,
+        editingItem.billId,
+        editingItem.itemId,
+        {
+          name: values.name.trim(),
+          amount: values.amount,
+        }
+      );
+      message.success('子项已更新');
+      setEditItemModalOpen(false);
+      editItemForm.resetFields();
+      setEditingItem(null);
+      await loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '更新失败');
+    }
   };
 
   if (!group) {
@@ -261,6 +292,25 @@ export default function MonthlyDetailPage() {
                           >
                             ¥{money(item.amount)}
                           </span>
+                          {child.status !== 'PAID' &&
+                            child.status !== 'VOID' && (
+                              <Button
+                                type="text"
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => {
+                                  editItemForm.setFieldsValue({
+                                    name: item.name,
+                                    amount: item.amount,
+                                  });
+                                  setEditingItem({
+                                    billId: child.id,
+                                    itemId: item.id,
+                                  });
+                                  setEditItemModalOpen(true);
+                                }}
+                              />
+                            )}
                         </Space>
                       </div>
                     ))}
@@ -320,6 +370,23 @@ export default function MonthlyDetailPage() {
         onSuccess={loadData}
         defaultLeaseId={group?.lease?.id}
       />
+
+      <Modal
+        title="编辑账单子项"
+        open={editItemModalOpen}
+        onCancel={() => setEditItemModalOpen(false)}
+        onOk={() => editItemForm.submit()}
+        destroyOnClose
+      >
+        <Form form={editItemForm} layout="vertical" onFinish={handleEditItem}>
+          <Form.Item name="name" label="子项名称" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="amount" label="金额" rules={[{ required: true }]}>
+            <InputNumber style={{ width: '100%' }} precision={2} prefix="¥" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

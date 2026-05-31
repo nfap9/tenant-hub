@@ -553,6 +553,43 @@ billRouter.delete(
   })
 );
 
+billRouter.put(
+  '/:id/items/:itemId',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        name: z.string().min(1).optional(),
+        amount: z.coerce.number().optional(),
+        description: z.string().optional(),
+        quantity: z.coerce.number().optional(),
+        unitPrice: z.coerce.number().optional(),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
+
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不可修改');
+    if (bill.status === 'VOID') throw new HttpError(400, '已作废账单不可修改');
+
+    const item = await prisma.billItem.findFirst({
+      where: { id: req.params.itemId, billId: req.params.id },
+    });
+    if (!item) throw new HttpError(404, '账单子项不存在');
+
+    await prisma.billItem.update({
+      where: { id: item.id },
+      data: input,
+    });
+
+    await refreshBillTotals(req.params.id);
+    ok(res, { message: '子项已更新' });
+  })
+);
+
 // US-702: 账单作废
 billRouter.patch(
   '/:id/status',

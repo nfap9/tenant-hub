@@ -151,3 +151,23 @@ export async function writeOffBill(
 export async function getUtilityBills(organizationId: string) {
   return apiClient<Bill[]>('/bills/utility', { organizationId });
 }
+
+export async function updateBillItem(
+  organizationId: string,
+  billId: string,
+  itemId: string,
+  payload: {
+    name?: string;
+    amount?: number;
+    description?: string;
+    quantity?: number;
+    unitPrice?: number;
+    note?: string;
+  }
+) {
+  return apiClient<{ message: string }>(`/bills/${billId}/items/${itemId}`, {
+    method: 'PUT',
+    organizationId,
+    body: payload as Record<string, unknown>,
+  });
+}
