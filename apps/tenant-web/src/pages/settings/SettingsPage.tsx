@@ -11,6 +11,7 @@ import {
   BellOutlined,
   WalletOutlined,
   RollbackOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { message } from 'antd';
@@ -44,6 +45,11 @@ export default function SettingsPage() {
             title: '成员管理',
             icon: <TeamOutlined />,
             path: '/settings/members',
+          },
+          {
+            title: '角色权限',
+            icon: <SafetyCertificateOutlined />,
+            path: '/settings/roles',
           },
           {
             title: '套餐订阅',

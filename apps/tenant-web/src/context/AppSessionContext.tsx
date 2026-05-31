@@ -14,7 +14,7 @@ import {
   getOrgId,
   setOrgId,
 } from '@/utils/storage';
-import { getMe } from '@/api/auth';
+import { getMe, logout } from '@/api/auth';
 import {
   getOrganizationMembers,
   getOrganizationRoles,
@@ -159,6 +159,7 @@ export function AppSessionProvider({
   );
 
   const signOut = useCallback(() => {
+    logout().catch(() => {});
     clearSession();
     setSessionState(undefined);
     setMemberships([]);

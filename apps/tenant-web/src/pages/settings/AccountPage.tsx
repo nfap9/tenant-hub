@@ -9,7 +9,7 @@ import {
   EditOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { updatePassword } from '@/api/auth';
+import { updatePassword, updateMe } from '@/api/auth';
 import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
@@ -33,10 +33,10 @@ export default function AccountPage() {
     }
   }, [session, form]);
 
-  const handleUpdateProfile = async (_values: { username: string }) => {
+  const handleUpdateProfile = async (values: { username: string }) => {
     setProfileLoading(true);
     try {
-      // 目前后端没有独立的更新用户名接口，预留此处
+      await updateMe({ username: values.username.trim() });
       message.success('保存成功');
       setProfileModalOpen(false);
     } catch (e) {

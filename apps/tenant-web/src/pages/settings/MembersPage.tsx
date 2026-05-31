@@ -1,14 +1,26 @@
 // PAGE-006: 组织成员管理页面
 import { useState, useEffect, useCallback } from 'react';
 
-import { Card, Table, Tag, Select, Button, message, Spin, Modal } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import {
+  Card,
+  Table,
+  Tag,
+  Select,
+  Button,
+  message,
+  Spin,
+  Modal,
+  Form,
+  Input,
+} from 'antd';
+import { ReloadOutlined, UserAddOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
   getOrganizationMembers,
   getOrganizationRoles,
   updateMemberRole,
   removeMember,
+  addMemberByPhone,
 } from '@/api/organization';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -20,6 +32,9 @@ export default function MembersPage() {
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [roles, setRoles] = useState<OrgRole[]>(ctxRoles);
   const [loading, setLoading] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteForm] = Form.useForm();
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
@@ -75,6 +90,22 @@ export default function MembersPage() {
         }
       },
     });
+  };
+
+  const handleInviteByPhone = async (values: { phone: string }) => {
+    if (!currentOrgId) return;
+    setInviteLoading(true);
+    try {
+      await addMemberByPhone(currentOrgId, values.phone.trim());
+      message.success('成员已添加');
+      setInviteModalOpen(false);
+      inviteForm.resetFields();
+      loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '添加失败');
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   const columns = [
@@ -141,13 +172,21 @@ export default function MembersPage() {
           { label: '成员管理' },
         ]}
         actions={
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={loadData}
-            loading={loading}
-          >
-            刷新
-          </Button>
+          <>
+            <Button
+              icon={<UserAddOutlined />}
+              onClick={() => setInviteModalOpen(true)}
+            >
+              邀请成员
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={loadData}
+              loading={loading}
+            >
+              刷新
+            </Button>
+          </>
         }
       />
 
@@ -168,6 +207,31 @@ export default function MembersPage() {
           </Card>
         )}
       </Spin>
+
+      <Modal
+        title="通过手机号添加成员"
+        open={inviteModalOpen}
+        onCancel={() => setInviteModalOpen(false)}
+        onOk={() => inviteForm.submit()}
+        confirmLoading={inviteLoading}
+      >
+        <Form
+          form={inviteForm}
+          layout="vertical"
+          onFinish={handleInviteByPhone}
+        >
+          <Form.Item
+            name="phone"
+            label="手机号"
+            rules={[
+              { required: true, message: '请输入手机号' },
+              { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' },
+            ]}
+          >
+            <Input placeholder="请输入用户手机号" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

@@ -129,6 +129,7 @@ const OrganizationPage = lazy(
 const AccountPage = lazy(() => import('@/pages/settings/AccountPage'));
 const PlanPage = lazy(() => import('@/pages/settings/PlanPage'));
 const MembersPage = lazy(() => import('@/pages/settings/MembersPage'));
+const RolesPage = lazy(() => import('@/pages/settings/RolesPage'));
 
 // 通知中心
 const NotificationsPage = lazy(
@@ -327,6 +328,7 @@ const routes: RouteConfig[] = [
   { path: '/settings/account', element: <AccountPage /> },
   { path: '/settings/plan', element: <PlanPage />, requireOrg: true },
   { path: '/settings/members', element: <MembersPage />, requireOrg: true },
+  { path: '/settings/roles', element: <RolesPage />, requireOrg: true },
 
   // 通知中心
   { path: '/notifications', element: <NotificationsPage />, requireOrg: true },

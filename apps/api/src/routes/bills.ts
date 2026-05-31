@@ -641,3 +641,29 @@ billRouter.patch(
     ok(res, updated);
   })
 );
+
+billRouter.patch(
+  '/:id/waive-late-fee',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { items: true, overduePenalties: true },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单无法减免');
+    if (bill.status === 'VOID') throw new HttpError(400, '已作废账单无法减免');
+
+    await prisma.$transaction(async (tx) => {
+      await tx.billItem.deleteMany({
+        where: { billId: bill.id, type: 'LATE_FEE' },
+      });
+      await tx.overduePenalty.deleteMany({
+        where: { billId: bill.id },
+      });
+    });
+
+    await refreshBillTotals(bill.id);
+    ok(res, { message: '滞纳金已减免' });
+  })
+);

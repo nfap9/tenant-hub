@@ -437,6 +437,52 @@ apartmentRouter.post(
 );
 
 apartmentRouter.put(
+  '/rooms/batch/facilities',
+  requirePermission(PERMISSIONS.ROOM_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        roomIds: z.array(z.string()).min(1),
+        facilities: z.array(z.string()).min(1),
+      })
+      .parse(req.body);
+
+    await prisma.room.updateMany({
+      where: {
+        id: { in: input.roomIds },
+        apartment: { organizationId: req.organizationId! },
+      },
+      data: { facilities: input.facilities },
+    });
+
+    ok(res, { updated: input.roomIds.length });
+  })
+);
+
+apartmentRouter.put(
+  '/rooms/batch/rent',
+  requirePermission(PERMISSIONS.ROOM_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        roomIds: z.array(z.string()).min(1),
+        rentPrice: z.coerce.number().positive(),
+      })
+      .parse(req.body);
+
+    await prisma.room.updateMany({
+      where: {
+        id: { in: input.roomIds },
+        apartment: { organizationId: req.organizationId! },
+      },
+      data: { currentRentPrice: input.rentPrice },
+    });
+
+    ok(res, { updated: input.roomIds.length });
+  })
+);
+
+apartmentRouter.put(
   '/rooms/:roomId',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
