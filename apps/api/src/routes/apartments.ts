@@ -587,6 +587,26 @@ apartmentRouter.patch(
   })
 );
 
+apartmentRouter.get(
+  '/:id/status-history',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const logs = await prisma.auditLog.findMany({
+      where: {
+        organizationId: req.organizationId!,
+        tableName: 'Apartment',
+        recordId: req.params.id,
+        action: 'UPDATE',
+        fieldName: 'status',
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    ok(res, logs);
+  })
+);
+
 // US-103: 运营支出分类统计
 apartmentRouter.get(
   '/:id/expense-summary',

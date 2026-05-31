@@ -38,6 +38,17 @@ export async function joinOrganization(input: JoinOrganizationInput) {
   });
 }
 
+export async function updateOrganization(
+  organizationId: string,
+  input: { name: string; description?: string }
+) {
+  return apiClient<void>(`/organizations/${organizationId}`, {
+    method: 'PUT',
+    organizationId,
+    body: input as Record<string, unknown>,
+  });
+}
+
 export async function getOrganizationInvites(organizationId: string) {
   return apiClient<OrgInvite[]>(`/organizations/${organizationId}/invites`, {
     organizationId,

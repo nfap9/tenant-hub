@@ -195,3 +195,20 @@ export async function getApartmentRentDistribution(
     { organizationId }
   );
 }
+
+export async function getApartmentStatusHistory(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<
+    {
+      id: string;
+      action: string;
+      fieldName: string;
+      oldValue: string;
+      newValue: string;
+      userId: string;
+      createdAt: string;
+    }[]
+  >(`/apartments/${apartmentId}/status-history`, { organizationId });
+}

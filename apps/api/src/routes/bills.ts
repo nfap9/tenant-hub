@@ -64,6 +64,29 @@ billRouter.get(
   })
 );
 
+billRouter.get(
+  '/utility',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const bills = await prisma.bill.findMany({
+      where: {
+        organizationId: req.organizationId!,
+        items: {
+          some: {
+            type: { in: ['WATER', 'POWER', 'GAS'] },
+          },
+        },
+      },
+      include: {
+        lease: { include: { room: true } },
+        items: true,
+      },
+      orderBy: { dueDate: 'desc' },
+    });
+    ok(res, bills);
+  })
+);
+
 billRouter.post(
   '/generate',
   requirePermission(PERMISSIONS.BILL_MANAGE),

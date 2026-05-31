@@ -21,7 +21,7 @@ import {
   SwapOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
-import { getMeters, deleteMeter, replaceMeter } from '@/api/meters';
+import { getMeter, deleteMeter, replaceMeter } from '@/api/meters';
 import type { Meter } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
@@ -53,9 +53,8 @@ export default function MeterDetailPage() {
     if (!currentOrgId || !id) return;
     setLoading(true);
     try {
-      const data = await getMeters(currentOrgId);
-      const found = data.find((m) => m.id === id);
-      if (found) setMeter(found);
+      const data = await getMeter(currentOrgId, id);
+      setMeter(data);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载表具详情失败');
     } finally {

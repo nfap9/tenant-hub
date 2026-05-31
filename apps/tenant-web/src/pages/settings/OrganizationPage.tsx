@@ -26,6 +26,7 @@ import {
   joinOrganization,
   getOrganizationInvites,
   createOrganizationInvite,
+  updateOrganization,
 } from '@/api/organization';
 import type { OrgInvite, Membership } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
@@ -44,6 +45,9 @@ export default function OrganizationPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editForm] = Form.useForm();
+  const [editLoading, setEditLoading] = useState(false);
 
   const isInOrg = Boolean(currentOrgId);
 
@@ -126,6 +130,25 @@ export default function OrganizationPage() {
     }
   };
 
+  const handleEdit = async (values: { name: string; description?: string }) => {
+    if (!currentOrgId) return;
+    setEditLoading(true);
+    try {
+      await updateOrganization(currentOrgId, {
+        name: values.name.trim(),
+        description: values.description?.trim(),
+      });
+      message.success('组织信息已更新');
+      editForm.resetFields();
+      await reload();
+      setEditModalOpen(false);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '更新失败');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const copyInviteCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
       message.success('邀请码已复制');
@@ -148,6 +171,25 @@ export default function OrganizationPage() {
       title: '组织编码',
       dataIndex: ['organization', 'code'],
       key: 'code',
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_: unknown, record: Membership) =>
+        record.organization.id === currentOrgId ? (
+          <Button
+            type="link"
+            onClick={() => {
+              editForm.setFieldsValue({
+                name: record.organization.name,
+                description: record.organization.description,
+              });
+              setEditModalOpen(true);
+            }}
+          >
+            编辑
+          </Button>
+        ) : null,
     },
   ];
 
@@ -337,6 +379,44 @@ export default function OrganizationPage() {
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={joinLoading}>
               加入组织
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="编辑组织"
+        open={editModalOpen}
+        onCancel={() => setEditModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={handleEdit}
+          className={styles.settingsForm}
+        >
+          <Form.Item
+            label="组织名称"
+            name="name"
+            rules={[{ required: true, message: '请输入组织名称' }]}
+          >
+            <Input
+              prefix={<HomeOutlined className="text-subtle" />}
+              placeholder="例如：阳光公寓"
+            />
+          </Form.Item>
+          <Form.Item label="组织描述（可选）" name="description">
+            <Input.TextArea
+              placeholder="简要描述你的组织"
+              rows={3}
+              className="w-full"
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={editLoading}>
+              保存
             </Button>
           </Form.Item>
         </Form>

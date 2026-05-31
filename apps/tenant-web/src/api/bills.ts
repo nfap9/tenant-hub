@@ -147,3 +147,7 @@ export async function writeOffBill(
     organizationId,
   });
 }
+
+export async function getUtilityBills(organizationId: string) {
+  return apiClient<Bill[]>('/bills/utility', { organizationId });
+}

@@ -81,6 +81,28 @@ meterRouter.post(
   })
 );
 
+meterRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const meter = await prisma.meter.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: {
+        room: { select: { id: true, roomNo: true } },
+        apartment: { select: { id: true, name: true } },
+        parent: { select: { id: true, name: true } },
+        subMeters: { select: { id: true, name: true } },
+        readings: {
+          orderBy: { readingDate: 'desc' },
+          take: 12,
+        },
+      },
+    });
+    if (!meter) throw new HttpError(404, '表具不存在');
+    ok(res, meter);
+  })
+);
+
 meterRouter.put(
   '/:id',
   requirePermission(PERMISSIONS.BILL_MANAGE),

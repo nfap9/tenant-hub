@@ -19,6 +19,10 @@ export async function getMeters(
   return apiClient<Meter[]>(`/meters${qs ? `?${qs}` : ''}`, { organizationId });
 }
 
+export async function getMeter(organizationId: string, meterId: string) {
+  return apiClient<Meter>(`/meters/${meterId}`, { organizationId });
+}
+
 export async function createMeter(
   organizationId: string,
   payload: {
