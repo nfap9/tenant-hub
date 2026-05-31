@@ -18,20 +18,12 @@ import { useAppSession } from '@/context/AppSessionContext';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { money } from '@/utils/format';
+import { getRefunds, createRefund, type Refund } from '@/api/refunds';
+import { getTenants } from '@/api/tenants';
+import type { Tenant } from '@/types/domain';
 import styles from './RefundsPage.module.scss';
 
-type RefundRecord = {
-  id: string;
-  tenantName: string;
-  tenantPhone: string;
-  type: 'DEPOSIT' | 'PREPAID' | 'OVERPAY';
-  amount: number;
-  reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
-  createdAt: string;
-  approvedAt?: string;
-  approver?: string;
-};
+type RefundRecord = Refund;
 
 const statusLabels: Record<string, string> = {
   PENDING: '待审批',
@@ -56,6 +48,7 @@ const typeLabels: Record<string, string> = {
 export default function RefundsPage() {
   const { currentOrgId } = useAppSession();
   const [refunds, setRefunds] = useState<RefundRecord[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
@@ -64,7 +57,12 @@ export default function RefundsPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      setRefunds([]);
+      const [data, tenantList] = await Promise.all([
+        getRefunds(),
+        getTenants(currentOrgId),
+      ]);
+      setRefunds(data);
+      setTenants(tenantList);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载失败');
     } finally {
@@ -76,10 +74,15 @@ export default function RefundsPage() {
     loadData();
   }, [loadData]);
 
-  const handleSubmit = async (values: Record<string, unknown>) => {
+  const handleSubmit = async (values: {
+    tenantId: string;
+    type: 'DEPOSIT' | 'PREPAID' | 'OVERPAY';
+    amount: number;
+    reason: string;
+  }) => {
     if (!currentOrgId) return;
     try {
-      console.log(values);
+      await createRefund(values);
       message.success('退款申请已提交');
       setModalOpen(false);
       form.resetFields();
@@ -183,6 +186,16 @@ export default function RefundsPage() {
         onOk={() => form.submit()}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item name="tenantId" label="租客" rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="请选择租客"
+              options={tenants.map((t) => ({
+                value: t.id,
+                label: `${t.name} (${t.phone})`,
+              }))}
+            />
+          </Form.Item>
           <Form.Item name="type" label="退款类型" rules={[{ required: true }]}>
             <Select
               options={[

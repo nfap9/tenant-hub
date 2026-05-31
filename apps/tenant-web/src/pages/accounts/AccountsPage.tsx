@@ -21,25 +21,15 @@ import { useAppSession } from '@/context/AppSessionContext';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { money } from '@/utils/format';
+import {
+  getAccounts,
+  createAccount,
+  getAllTransfers,
+  transferBetweenAccounts,
+  type Account,
+  type TransferRecord,
+} from '@/api/accounts';
 import styles from './AccountsPage.module.scss';
-
-type Account = {
-  id: string;
-  name: string;
-  type: 'CASH' | 'BANK' | 'WECHAT' | 'ALIPAY';
-  balance: number;
-  bankName?: string;
-  accountNo?: string;
-};
-
-type TransferRecord = {
-  id: string;
-  fromAccountId: string;
-  toAccountId: string;
-  amount: number;
-  note?: string;
-  createdAt: string;
-};
 
 const typeLabels: Record<string, string> = {
   CASH: '现金',
@@ -69,8 +59,12 @@ export default function AccountsPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      setAccounts([]);
-      setTransfers([]);
+      const [accts, tsfrs] = await Promise.all([
+        getAccounts(),
+        getAllTransfers(),
+      ]);
+      setAccounts(accts);
+      setTransfers(tsfrs);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载失败');
     } finally {
@@ -82,11 +76,16 @@ export default function AccountsPage() {
     loadData();
   }, [loadData]);
 
-  const handleCreate = async (values: Record<string, unknown>) => {
+  const handleCreate = async (values: {
+    name: string;
+    type: 'CASH' | 'BANK' | 'WECHAT' | 'ALIPAY';
+    bankName?: string;
+    accountNo?: string;
+  }) => {
     if (!currentOrgId) return;
     try {
-      console.log(values);
-      message.success('账户已创建（演示）');
+      await createAccount(values);
+      message.success('账户已创建');
       setModalOpen(false);
       form.resetFields();
       loadData();
@@ -95,11 +94,16 @@ export default function AccountsPage() {
     }
   };
 
-  const handleTransfer = async (values: Record<string, unknown>) => {
+  const handleTransfer = async (values: {
+    fromAccountId: string;
+    toAccountId: string;
+    amount: number;
+    note?: string;
+  }) => {
     if (!currentOrgId) return;
     try {
-      console.log(values);
-      message.success('转账已记录（演示）');
+      await transferBetweenAccounts(values);
+      message.success('转账已完成');
       setTransferModalOpen(false);
       transferForm.resetFields();
       loadData();

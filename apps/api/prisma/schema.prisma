@@ -247,6 +247,19 @@ enum AccountReferenceType {
   SETTLEMENT
 }
 
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum RefundType {
+  DEPOSIT
+  PREPAID
+  OVERPAY
+}
+
 enum MaintenanceOrderStatus {
   PENDING
   DISPATCHED
@@ -350,6 +363,7 @@ model User {
   cashierJournals    CashierJournal[]
   invoices           Invoice[]
   notifications      Notification[]
+  refunds            Refund[]
 }
 
 model OtpCode {
@@ -392,6 +406,9 @@ model Organization {
   incomeCategories  IncomeExpenseCategory[]
   invoices          Invoice[]
   notifications     Notification[]
+  accounts          Account[]
+  accountTransfers  AccountTransfer[]
+  refunds           Refund[]
 }
 
 model Role {
@@ -619,6 +636,7 @@ model Tenant {
   depositLedgers   DepositLedger[]
   coResidents      CoResident[]
   invoices         Invoice[]
+  refunds          Refund[]
 
   @@unique([organizationId, phone])
   @@index([organizationId, name])
@@ -1367,4 +1385,59 @@ model Notification {
 
   @@index([organizationId, userId, readAt])
   @@index([createdAt])
+}
+
+model Account {
+  id             String            @id @default(cuid())
+  organizationId String
+  name           String
+  type           String
+  bankName       String?
+  accountNo      String?
+  balance        Decimal           @default(0) @db.Decimal(12, 2)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outTransfers   AccountTransfer[] @relation("FromAccount")
+  inTransfers    AccountTransfer[] @relation("ToAccount")
+
+  @@index([organizationId])
+}
+
+model AccountTransfer {
+  id              String       @id @default(cuid())
+  organizationId  String
+  fromAccountId   String
+  toAccountId     String
+  amount          Decimal      @db.Decimal(12, 2)
+  note            String?
+  createdById     String?
+  createdAt       DateTime     @default(now())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromAccount     Account      @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccount       Account      @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  organizationId String
+  tenantId       String
+  type           RefundType
+  amount         Decimal      @db.Decimal(12, 2)
+  reason         String
+  status         RefundStatus @default(PENDING)
+  approverId     String?
+  approvedAt     DateTime?
+  note           String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  approver       User?        @relation(fields: [approverId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([tenantId])
 }

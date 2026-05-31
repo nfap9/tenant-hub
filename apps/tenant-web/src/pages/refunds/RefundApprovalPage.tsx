@@ -1,6 +1,6 @@
 // PAGE-305: 退款审批页面
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Table, Tag, Button, message, Spin, Modal } from 'antd';
+import { Card, Table, Tag, Button, message, Spin, Modal, Input } from 'antd';
 import {
   ReloadOutlined,
   CheckCircleOutlined,
@@ -10,20 +10,15 @@ import { useAppSession } from '@/context/AppSessionContext';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { money } from '@/utils/format';
+import {
+  getRefunds,
+  approveRefund,
+  rejectRefund,
+  type Refund,
+} from '@/api/refunds';
 import styles from './RefundsPage.module.scss';
 
-type RefundRecord = {
-  id: string;
-  tenantName: string;
-  tenantPhone: string;
-  type: 'DEPOSIT' | 'PREPAID' | 'OVERPAY';
-  amount: number;
-  reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
-  createdAt: string;
-  approvedAt?: string;
-  approver?: string;
-};
+type RefundRecord = Refund;
 
 const statusLabels: Record<string, string> = {
   PENDING: '待审批',
@@ -54,7 +49,8 @@ export default function RefundApprovalPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      setRefunds([]);
+      const data = await getRefunds('PENDING');
+      setRefunds(data);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '加载失败');
     } finally {
@@ -71,20 +67,42 @@ export default function RefundApprovalPage() {
       title: '审批退款',
       content: `确认批准 ${record.tenantName} 的 ¥${money(record.amount)} 退款申请吗？`,
       onOk: async () => {
-        message.success('已批准（演示）');
-        loadData();
+        try {
+          await approveRefund(record.id);
+          message.success('已批准');
+          loadData();
+        } catch (e) {
+          message.error(e instanceof Error ? e.message : '审批失败');
+        }
       },
     });
   };
 
   const handleReject = (record: RefundRecord) => {
+    let reason = '';
     Modal.confirm({
       title: '拒绝退款',
-      content: `确认拒绝 ${record.tenantName} 的退款申请吗？`,
+      content: (
+        <div>
+          <p>确认拒绝 {record.tenantName} 的退款申请吗？</p>
+          <Input.TextArea
+            rows={2}
+            placeholder="请输入拒绝原因"
+            onChange={(e) => {
+              reason = e.target.value;
+            }}
+          />
+        </div>
+      ),
       okButtonProps: { danger: true },
       onOk: async () => {
-        message.success('已拒绝（演示）');
-        loadData();
+        try {
+          await rejectRefund(record.id, reason || '管理员拒绝');
+          message.success('已拒绝');
+          loadData();
+        } catch (e) {
+          message.error(e instanceof Error ? e.message : '拒绝操作失败');
+        }
       },
     });
   };
