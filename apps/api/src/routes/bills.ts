@@ -37,6 +37,7 @@ billRouter.get(
         'PAID',
         'FAILED',
         'VOID',
+        'OVERDUE',
       ])
       .optional()
       .parse(req.query.status);
@@ -469,6 +470,23 @@ billRouter.post(
   })
 );
 
+billRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: {
+        lease: { include: { room: true } },
+        items: true,
+        payments: true,
+      },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    ok(res, bill);
+  })
+);
+
 billRouter.post(
   '/:id/payments',
   requirePermission(PERMISSIONS.BILL_MANAGE),
@@ -534,6 +552,30 @@ billRouter.patch(
     const updated = await prisma.bill.update({
       where: { id: bill.id },
       data: { status, note: reason },
+    });
+
+    ok(res, updated);
+  })
+);
+
+billRouter.patch(
+  '/:id/write-off',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({ reason: z.string().min(1, '核销原因不能为空') })
+      .parse(req.body);
+
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不能核销');
+    if (bill.status === 'VOID') throw new HttpError(400, '已作废账单不能核销');
+
+    const updated = await prisma.bill.update({
+      where: { id: bill.id },
+      data: { status: 'VOID', note: input.reason },
     });
 
     ok(res, updated);

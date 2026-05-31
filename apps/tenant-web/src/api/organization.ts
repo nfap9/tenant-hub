@@ -67,9 +67,51 @@ export async function getOrganizationRoles(organizationId: string) {
   });
 }
 
+export async function getOrganization(organizationId: string) {
+  return apiClient<{
+    id: string;
+    name: string;
+    description?: string;
+    _count: { members: number; apartments: number; tenants: number };
+  }>(`/organizations/${organizationId}`, { organizationId });
+}
+
 export async function getOrganizationSubscription(organizationId: string) {
   return apiClient<SubscriptionOverview>(
     `/organizations/${organizationId}/subscription`,
     { organizationId }
+  );
+}
+
+export async function addMemberByPhone(organizationId: string, phone: string) {
+  return apiClient<{ message: string }>(
+    `/organizations/${organizationId}/members`,
+    {
+      method: 'POST',
+      organizationId,
+      body: { phone },
+    }
+  );
+}
+
+export async function removeMember(organizationId: string, memberId: string) {
+  return apiClient<void>(
+    `/organizations/${organizationId}/members/${memberId}`,
+    { method: 'DELETE', organizationId }
+  );
+}
+
+export async function updateMemberRole(
+  organizationId: string,
+  memberId: string,
+  roleId: string
+) {
+  return apiClient<void>(
+    `/organizations/${organizationId}/members/${memberId}/role`,
+    {
+      method: 'PUT',
+      organizationId,
+      body: { roleId },
+    }
   );
 }

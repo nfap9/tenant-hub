@@ -7,6 +7,8 @@ import { useAppSession } from '@/context/AppSessionContext';
 import {
   getOrganizationMembers,
   getOrganizationRoles,
+  updateMemberRole,
+  removeMember,
 } from '@/api/organization';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -40,14 +42,15 @@ export default function MembersPage() {
     loadData();
   }, [loadData]);
 
-  const handleRoleChange = async (_memberId: string, _roleId: string) => {
+  const handleRoleChange = async (memberId: string, roleId: string) => {
     if (!currentOrgId) return;
     Modal.confirm({
       title: '修改角色',
       content: '确定要修改该成员的角色吗？',
       onOk: async () => {
         try {
-          message.success('角色已更新（演示）');
+          await updateMemberRole(currentOrgId, memberId, roleId);
+          message.success('角色已更新');
           loadData();
         } catch (e) {
           message.error(e instanceof Error ? e.message : '更新失败');
@@ -56,7 +59,7 @@ export default function MembersPage() {
     });
   };
 
-  const handleRemove = async (_memberId: string) => {
+  const handleRemove = async (memberId: string) => {
     if (!currentOrgId) return;
     Modal.confirm({
       title: '移除成员',
@@ -64,7 +67,8 @@ export default function MembersPage() {
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          message.success('成员已移除（演示）');
+          await removeMember(currentOrgId, memberId);
+          message.success('成员已移除');
           loadData();
         } catch (e) {
           message.error(e instanceof Error ? e.message : '移除失败');

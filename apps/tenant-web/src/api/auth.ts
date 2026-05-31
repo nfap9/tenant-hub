@@ -91,3 +91,22 @@ export async function resetPassword(input: ResetPasswordInput) {
     body: input as Record<string, unknown>,
   });
 }
+
+export async function updateMe(input: { username: string }) {
+  return apiClient<AppSession['user']>('/auth/me', {
+    method: 'PUT',
+    body: input as Record<string, unknown>,
+  });
+}
+
+export async function logout() {
+  return apiClient<{ message: string }>('/auth/logout', {
+    method: 'POST',
+  });
+}
+
+export async function refreshToken() {
+  return apiClient<LoginResult>('/auth/refresh', {
+    method: 'POST',
+  });
+}

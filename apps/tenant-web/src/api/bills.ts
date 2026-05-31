@@ -135,3 +135,15 @@ export async function generateBills(
     }
   );
 }
+
+export async function writeOffBill(
+  organizationId: string,
+  billId: string,
+  reason: string
+) {
+  return apiClient<void>(`/bills/${billId}/write-off`, {
+    method: 'PATCH',
+    body: { reason },
+    organizationId,
+  });
+}

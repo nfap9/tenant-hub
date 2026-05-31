@@ -190,6 +190,45 @@ authRouter.get(
 );
 
 authRouter.put(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({ username: z.string().min(1).max(24) })
+      .parse(req.body);
+    const user = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { username: input.username },
+      select: { id: true, phone: true, username: true, platformRole: true },
+    });
+    ok(res, user);
+  })
+);
+
+authRouter.post(
+  '/logout',
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    ok(res, { message: '已退出登录' });
+  })
+);
+
+authRouter.post(
+  '/refresh',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: req.user!.id },
+      select: { id: true, phone: true, username: true },
+    });
+    ok(res, {
+      user,
+      token: signToken(user),
+    });
+  })
+);
+
+authRouter.put(
   '/password',
   requireAuth,
   asyncHandler(async (req, res) => {

@@ -260,6 +260,27 @@ orgRouter.post(
   })
 );
 
+orgRouter.get(
+  '/:organizationId',
+  requireOrg,
+  asyncHandler(async (req, res) => {
+    const org = await prisma.organization.findUnique({
+      where: { id: req.organizationId! },
+      include: {
+        _count: {
+          select: {
+            members: { where: { status: 'ACTIVE' } },
+            apartments: { where: { deletedAt: null } },
+            tenants: { where: { deletedAt: null } },
+          },
+        },
+      },
+    });
+    if (!org) throw new HttpError(404, '组织不存在');
+    ok(res, org);
+  })
+);
+
 orgRouter.put(
   '/:organizationId',
   requireOrg,
@@ -315,6 +336,59 @@ orgRouter.get(
         orderBy: [{ system: 'desc' }, { createdAt: 'asc' }],
       })
     );
+  })
+);
+
+orgRouter.post(
+  '/:organizationId/members',
+  requireOrg,
+  requirePermission(PERMISSIONS.MEMBER_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z.object({ phone: z.string().min(7) }).parse(req.body);
+    const user = await prisma.user.findUnique({
+      where: { phone: input.phone },
+    });
+    if (!user) throw new HttpError(404, '用户不存在，请先完成注册');
+    const existing = await prisma.orgMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: req.organizationId!,
+          userId: user.id,
+        },
+      },
+    });
+    if (existing) {
+      if (existing.status === 'ACTIVE')
+        throw new HttpError(409, '用户已是组织成员');
+      await prisma.orgMember.update({
+        where: { id: existing.id },
+        data: { status: 'ACTIVE' },
+      });
+    } else {
+      const role = await prisma.role.findUniqueOrThrow({
+        where: { code: 'readonly' },
+      });
+      await enforceOrganizationQuota(
+        prisma,
+        req.organizationId!,
+        'member',
+        async () =>
+          prisma.orgMember.count({
+            where: {
+              organizationId: req.organizationId!,
+              status: 'ACTIVE',
+            },
+          })
+      );
+      await prisma.orgMember.create({
+        data: {
+          organizationId: req.organizationId!,
+          userId: user.id,
+          roleId: role.id,
+        },
+      });
+    }
+    ok(res, { message: '成员已添加' });
   })
 );
 
