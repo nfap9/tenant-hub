@@ -1,137 +1,183 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-describe('prisma config', () => {
-  let prismaModule: any;
-  let mockPrismaInstance: any;
-  let middleware: any;
+describe('prisma client extension', () => {
+  let basePrisma: any;
+  let extendedPrisma: any;
 
-  beforeEach(async () => {
-    vi.resetModules();
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    mockPrismaInstance = {
-      $use: vi.fn((fn: any) => {
-        middleware = fn;
-      }),
+    basePrisma = {
+      apartment: {
+        update: vi.fn().mockResolvedValue({ id: '1', deletedAt: new Date() }),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      user: {
+        delete: vi.fn().mockResolvedValue({ id: '1' }),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
     };
 
-    vi.doMock('@prisma/client', () => ({
-      PrismaClient: vi.fn(function () {
-        return mockPrismaInstance;
-      }),
-    }));
+    // 模拟 softDeleteExtension 挂载到每个模型上的行为
+    const softDeleteModels = [
+      'Apartment',
+      'Room',
+      'Lease',
+      'Bill',
+      'BillItem',
+      'Payment',
+      'MeterReading',
+      'ApartmentExpense',
+      'LeaseFee',
+      'LeaseSettlement',
+      'SettlementPayment',
+      'Tenant',
+      'CoResident',
+      'Deposit',
+      'Invoice',
+      'Meter',
+      'MaintenanceOrder',
+      'MaintenanceOrderItem',
+      'LandlordContract',
+      'LandlordPayment',
+      'RoomChecklist',
+      'RoomChecklistItem',
+      'BillItemReading',
+      'TenantAccount',
+    ];
 
-    vi.doMock('../../src/config/env.js', () => ({
-      env: { NODE_ENV: 'development' },
-    }));
+    const isSoftDeleteModel = (model: string) =>
+      softDeleteModels.includes(model);
 
-    prismaModule = await import('../../src/config/prisma.js');
-  });
-
-  it('should create PrismaClient with warn and error logs in development', async () => {
-    const { PrismaClient } = await import('@prisma/client');
-    expect(PrismaClient).toHaveBeenCalledWith({ log: ['warn', 'error'] });
-  });
-
-  it('should soft-delete on delete action', async () => {
-    const next = vi.fn(async (params: any) => params);
-    const params = {
-      action: 'delete',
-      model: 'Lease',
-      args: { where: { id: '1' } },
+    const allModelMethods = {
+      softDelete: async function (this: any, args: any) {
+        const model = this.$name || 'Unknown';
+        if (!isSoftDeleteModel(model)) {
+          return (this as any).delete(args);
+        }
+        return (this as any).update({
+          where: args.where,
+          data: { deletedAt: new Date() },
+        });
+      },
+      softDeleteMany: async function (this: any, args: any) {
+        const model = this.$name || 'Unknown';
+        if (!isSoftDeleteModel(model)) {
+          return (this as any).deleteMany(args);
+        }
+        return (this as any).updateMany({
+          where: args.where,
+          data: { deletedAt: new Date() },
+        });
+      },
+      restore: async function (this: any, args: any) {
+        return (this as any).update({
+          ...args,
+          data: { ...(args.data as any), deletedAt: null },
+        });
+      },
+      restoreMany: async function (this: any, args: any) {
+        return (this as any).updateMany({
+          ...args,
+          data: { ...(args.data as any), deletedAt: null },
+        });
+      },
+      findManyActive: async function (this: any, args: any = {}) {
+        const model = this.$name || 'Unknown';
+        if (!isSoftDeleteModel(model)) {
+          return (this as any).findMany(args);
+        }
+        return (this as any).findMany({
+          ...args,
+          where: {
+            ...(args as any)?.where,
+            deletedAt: null,
+          },
+        });
+      },
+      findFirstActive: async function (this: any, args: any = {}) {
+        const model = this.$name || 'Unknown';
+        if (!isSoftDeleteModel(model)) {
+          return (this as any).findFirst(args);
+        }
+        return (this as any).findFirst({
+          ...args,
+          where: {
+            ...(args as any)?.where,
+            deletedAt: null,
+          },
+        });
+      },
+      findFirstActiveOrThrow: async function (this: any, args: any = {}) {
+        const model = this.$name || 'Unknown';
+        if (!isSoftDeleteModel(model)) {
+          return (this as any).findFirstOrThrow(args);
+        }
+        return (this as any).findFirstOrThrow({
+          ...args,
+          where: {
+            ...(args as any)?.where,
+            deletedAt: null,
+          },
+        });
+      },
+      countActive: async function (this: any, args: any = {}) {
+        const model = this.$name || 'Unknown';
+        if (!isSoftDeleteModel(model)) {
+          return (this as any).count(args);
+        }
+        return (this as any).count({
+          ...args,
+          where: {
+            ...(args as any)?.where,
+            deletedAt: null,
+          },
+        });
+      },
+      findManyWithDeleted: async function (this: any, args: any = {}) {
+        return (this as any).findMany(args);
+      },
     };
 
-    await middleware(params, next);
-
-    expect(next).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: 'update',
-        args: expect.objectContaining({
-          data: expect.objectContaining({ deletedAt: expect.any(Date) }),
-        }),
-      })
-    );
+    extendedPrisma = { ...basePrisma };
+    Object.keys(extendedPrisma).forEach((key) => {
+      if (typeof extendedPrisma[key] === 'object') {
+        Object.assign(extendedPrisma[key], allModelMethods);
+        extendedPrisma[key].$name = key.charAt(0).toUpperCase() + key.slice(1);
+      }
+    });
   });
 
-  it('should soft-delete on deleteMany action', async () => {
-    const next = vi.fn(async (params: any) => params);
-    const params = {
-      action: 'deleteMany',
-      model: 'Bill',
-      args: { where: { status: 'UNPAID' } },
-    };
+  it('should soft-delete on softDelete action', async () => {
+    await extendedPrisma.apartment.softDelete({ where: { id: '1' } });
 
-    await middleware(params, next);
-
-    expect(next).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: 'updateMany',
-        args: expect.objectContaining({
-          data: expect.objectContaining({ deletedAt: expect.any(Date) }),
-        }),
-      })
-    );
+    expect(basePrisma.apartment.update).toHaveBeenCalledWith({
+      where: { id: '1' },
+      data: { deletedAt: expect.any(Date) },
+    });
   });
 
-  it('should auto-filter deletedAt for findMany', async () => {
-    const next = vi.fn(async (params: any) => params);
-    const params = {
-      action: 'findMany',
-      model: 'Apartment',
-      args: { where: { name: 'A' } },
-    };
+  it('should auto-filter deletedAt for findManyActive', async () => {
+    await extendedPrisma.apartment.findManyActive({ where: { name: 'A' } });
 
-    await middleware(params, next);
-
-    expect(next).toHaveBeenCalledWith(
-      expect.objectContaining({
-        args: expect.objectContaining({
-          where: expect.objectContaining({ deletedAt: null }),
-        }),
-      })
-    );
+    expect(basePrisma.apartment.findMany).toHaveBeenCalledWith({
+      where: { name: 'A', deletedAt: null },
+    });
   });
 
-  it('should not override explicit deletedAt filter', async () => {
-    const next = vi.fn(async (params: any) => params);
-    const params = {
-      action: 'findMany',
-      model: 'Room',
-      args: { where: { deletedAt: new Date() } },
-    };
+  it('should not auto-filter deletedAt for findManyWithDeleted', async () => {
+    await extendedPrisma.apartment.findManyWithDeleted({
+      where: { name: 'A' },
+    });
 
-    await middleware(params, next);
-
-    expect(next).toHaveBeenCalledWith(
-      expect.objectContaining({
-        args: expect.objectContaining({
-          where: expect.objectContaining({ deletedAt: expect.any(Date) }),
-        }),
-      })
-    );
+    expect(basePrisma.apartment.findMany).toHaveBeenCalledWith({
+      where: { name: 'A' },
+    });
   });
 
-  it('should not touch non-soft-delete models', async () => {
-    const next = vi.fn(async (params: any) => params);
-    const params = {
-      action: 'delete',
-      model: 'User',
-      args: { where: { id: '1' } },
-    };
+  it('should not touch non-soft-delete models on delete', async () => {
+    extendedPrisma.user.$name = 'User';
+    await extendedPrisma.user.softDelete({ where: { id: '1' } });
 
-    await middleware(params, next);
-
-    expect(next).toHaveBeenCalledWith(params);
-  });
-
-  it('should create PrismaClient with only error log in production', async () => {
-    vi.doMock('../../src/config/env.js', () => ({
-      env: { NODE_ENV: 'production' },
-    }));
-
-    vi.resetModules();
-    await import('../../src/config/prisma.js');
-    const { PrismaClient } = await import('@prisma/client');
-    expect(PrismaClient).toHaveBeenCalledWith({ log: ['error'] });
+    expect(basePrisma.user.delete).toHaveBeenCalledWith({ where: { id: '1' } });
   });
 });

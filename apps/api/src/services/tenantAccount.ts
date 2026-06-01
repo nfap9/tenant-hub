@@ -1,4 +1,4 @@
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 
 export const getOrCreateAccount = async (tenantId: string) => {
   const existing = await prisma.tenantAccount.findUnique({

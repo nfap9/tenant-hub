@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -172,7 +172,7 @@ roomChecklistRouter.delete(
       where: { id: req.params.id, organizationId: req.organizationId! },
     });
     if (!checklist) throw new HttpError(404, '检查清单不存在');
-    await prisma.roomChecklist.delete({ where: { id: req.params.id } });
+    await prisma.roomChecklist.softDelete({ where: { id: req.params.id } });
     ok(res, { deleted: true });
   })
 );

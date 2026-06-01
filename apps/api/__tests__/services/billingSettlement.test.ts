@@ -5,7 +5,7 @@ vi.mock('../../src/services/deposit.js', () => ({
   refreshDepositStatus: vi.fn(async () => {}),
 }));
 
-vi.mock('../../src/config/prisma.js', () => ({
+vi.mock('../../src/prisma/client.js', () => ({
   prisma: {
     bill: {
       findUnique: vi.fn(),
@@ -26,7 +26,7 @@ import {
   refreshBillTotals,
   recordBillPayment,
 } from '../../src/services/billing.js';
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 import { refreshDepositStatus } from '../../src/services/deposit.js';
 
 describe('billing settlement', () => {

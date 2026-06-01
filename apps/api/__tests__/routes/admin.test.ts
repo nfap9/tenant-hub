@@ -11,7 +11,7 @@ vi.mock('../../src/config/env.js', () => ({
   corsOrigins: ['http://localhost:5173'],
 }));
 
-vi.mock('../../src/config/prisma.js', () => ({
+vi.mock('../../src/prisma/client.js', () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
@@ -57,7 +57,7 @@ vi.mock('../../src/config/prisma.js', () => ({
 }));
 
 import { app } from '../../src/app.js';
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 
 const authToken = jwt.sign(
   { id: 'user-1', phone: '13800138000', username: '测试用户' },

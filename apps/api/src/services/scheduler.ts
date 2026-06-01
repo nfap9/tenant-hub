@@ -3,7 +3,7 @@ import { processAutoRenewLeases } from './autoRenew.js';
 import { generateCurrentLeaseBills } from './billing.js';
 import { markOverdueBills, calculateOverduePenalties } from './overdue.js';
 import { processLeaseExpirations } from './leaseExpiration.js';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 
 let running = false;
 

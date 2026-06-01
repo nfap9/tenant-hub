@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -122,10 +122,7 @@ landlordContractRouter.delete(
       },
     });
     if (!contract) throw new HttpError(404, '合同不存在');
-    await prisma.landlordContract.update({
-      where: { id: req.params.id },
-      data: { deletedAt: new Date() },
-    });
+    await prisma.landlordContract.softDelete({ where: { id: req.params.id } });
     ok(res, { deleted: true });
   })
 );

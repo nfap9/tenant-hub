@@ -1,4 +1,4 @@
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { cycleMonths, type LeaseCycle } from './leaseLifecycle.js';

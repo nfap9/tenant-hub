@@ -3,7 +3,7 @@ import { processAutoRenewLeases } from '../../src/services/autoRenew.js';
 
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
-vi.mock('../../src/config/prisma.js', () => ({
+vi.mock('../../src/prisma/client.js', () => ({
   prisma: {
     lease: {
       findMany: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('../../src/services/billing.js', () => ({
   generateLeaseBills: vi.fn(),
 }));
 
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 import { generateLeaseBills } from '../../src/services/billing.js';
 
 describe('autoRenew', () => {

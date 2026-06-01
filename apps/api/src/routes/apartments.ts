@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { basePrisma, prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -248,7 +248,7 @@ apartmentRouter.post(
     const input = apartmentInput.parse(req.body);
     ok(
       res,
-      await prisma.$transaction(async (tx) => {
+      await basePrisma.$transaction(async (tx) => {
         await enforceOrganizationQuota(
           tx,
           req.organizationId!,
@@ -357,10 +357,7 @@ apartmentRouter.delete(
     });
     if (activeLeaseCount > 0)
       throw new HttpError(400, '公寓存在活跃租约，无法删除');
-    await prisma.apartment.update({
-      where: { id: req.params.id },
-      data: { deletedAt: new Date() },
-    });
+    await prisma.apartment.softDelete({ where: { id: req.params.id } });
     ok(res, { deleted: true });
   })
 );
@@ -424,7 +421,7 @@ apartmentRouter.post(
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
     ok(
       res,
-      await prisma.$transaction(async (tx) => {
+      await basePrisma.$transaction(async (tx) => {
         await enforceOrganizationQuota(
           tx,
           req.organizationId!,
@@ -615,7 +612,8 @@ apartmentRouter.delete(
     });
     if (activeLeaseCount > 0)
       throw new HttpError(400, '房间存在活跃租约，无法删除');
-    ok(res, await prisma.room.delete({ where: { id: req.params.roomId } }));
+    await prisma.room.softDelete({ where: { id: req.params.roomId } });
+    ok(res, { deleted: true });
   })
 );
 

@@ -364,6 +364,7 @@ model User {
   invoices           Invoice[]
   notifications      Notification[]
   refunds            Refund[]
+  ownedOrganizations Organization[]
 }
 
 model OtpCode {
@@ -387,6 +388,7 @@ model Organization {
   ownerId           String
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
+  owner             User                  @relation(fields: [ownerId], references: [id])
   members           OrgMember[]
   apartments        Apartment[]
   tenants           Tenant[]
@@ -553,6 +555,7 @@ model LandlordPayment {
   note               String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
 
   landlordContract   LandlordContract  @relation(fields: [landlordContractId], references: [id], onDelete: Cascade)
   apartment          Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
@@ -643,17 +646,18 @@ model Tenant {
 }
 
 model CoResident {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   tenantId    String
   leaseId     String
   name        String
   idCard      String?
   phone       String?
-  relation    String   // 配偶/父母/子女/朋友/同事/其他
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  lease       Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  relation    String    // 配偶/父母/子女/朋友/同事/其他
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lease       Lease     @relation(fields: [leaseId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([leaseId])
@@ -956,6 +960,7 @@ model BillItemReading {
   meterId        String?
   meterReadingId String?
   createdAt      DateTime      @default(now())
+  deletedAt      DateTime?
   billItem       BillItem      @relation(fields: [billItemId], references: [id], onDelete: Cascade)
   meter          Meter?        @relation(fields: [meterId], references: [id])
   meterReading   MeterReading? @relation(fields: [meterReadingId], references: [id])
@@ -1041,6 +1046,7 @@ model Invoice {
   createdById    String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
   organization   Organization  @relation(fields: [organizationId], references: [id])
   tenant         Tenant?       @relation(fields: [tenantId], references: [id])
   bill           Bill?         @relation(fields: [billId], references: [id])
@@ -1161,6 +1167,7 @@ model MaintenanceOrderItem {
   unitPrice          Decimal          @default(0) @db.Decimal(12, 2)
   amount             Decimal          @default(0) @db.Decimal(12, 2)
   isLabor            Boolean          @default(false)
+  deletedAt          DateTime?
   maintenanceOrder   MaintenanceOrder @relation(fields: [maintenanceOrderId], references: [id], onDelete: Cascade)
 
   @@index([maintenanceOrderId])
@@ -1200,6 +1207,7 @@ model RoomChecklistItem {
   photoUrl        String?
   deductionAmount Decimal?      @db.Decimal(12, 2)
   note            String?
+  deletedAt       DateTime?
   roomChecklist   RoomChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
 
   @@index([checklistId])
@@ -1264,6 +1272,7 @@ model TenantAccount {
   totalUnpaid    Decimal              @default(0) @db.Decimal(12, 2)
   netBalance     Decimal              @default(0) @db.Decimal(12, 2)
   updatedAt      DateTime             @updatedAt
+  deletedAt      DateTime?
   tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactions   AccountTransaction[]
 }

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -151,10 +151,7 @@ meterRouter.delete(
     });
     if (!meter) throw new HttpError(404, '表具不存在');
 
-    await prisma.meter.update({
-      where: { id: meter.id },
-      data: { deletedAt: new Date() },
-    });
+    await prisma.meter.softDelete({ where: { id: meter.id } });
     ok(res, { success: true });
   })
 );

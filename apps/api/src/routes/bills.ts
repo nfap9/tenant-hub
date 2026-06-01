@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -13,7 +13,7 @@ import {
   generateLeaseBills,
   recordBillPayment,
   refreshBillTotals,
-  retryPostpaidBillAndMonthlyBill,
+  retryPostpaidBill,
 } from '../services/billing.js';
 import { toCsv } from '../services/csv.js';
 import { PERMISSIONS } from '../services/roles.js';
@@ -225,9 +225,7 @@ billRouter.post(
       select: { id: true },
     });
     await Promise.all(
-      pendingBills.map((b) =>
-        retryPostpaidBillAndMonthlyBill(b.id).catch(() => null)
-      )
+      pendingBills.map((b) => retryPostpaidBill(b.id).catch(() => null))
     );
 
     ok(res, reading);
@@ -489,7 +487,7 @@ billRouter.post(
     if (!bill) throw new HttpError(404, '账单不存在');
     if (bill.mode !== 'POSTPAID')
       throw new HttpError(400, '仅后付费账单需要重新出账');
-    ok(res, await retryPostpaidBillAndMonthlyBill(bill.id));
+    ok(res, await retryPostpaidBill(bill.id));
   })
 );
 
@@ -544,10 +542,7 @@ billRouter.delete(
     if (!bill) throw new HttpError(404, '账单不存在');
     if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不能删除');
 
-    await prisma.$transaction([
-      prisma.payment.deleteMany({ where: { billId: bill.id } }),
-      prisma.bill.delete({ where: { id: bill.id } }),
-    ]);
+    await prisma.bill.softDelete({ where: { id: bill.id } });
 
     ok(res, { deleted: true });
   })

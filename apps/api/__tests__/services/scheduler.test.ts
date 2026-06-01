@@ -20,7 +20,7 @@ describe('scheduler', () => {
       generateCurrentLeaseBills: vi.fn(async () => ['bill-1']),
     }));
 
-    vi.doMock('../../src/config/prisma.js', () => ({
+    vi.doMock('../../src/prisma/client.js', () => ({
       prisma: {
         organization: {
           findMany: vi.fn(async () => [{ id: 'org-1' }, { id: 'org-2' }]),

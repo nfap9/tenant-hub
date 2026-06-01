@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -288,7 +288,7 @@ landlordPaymentRouter.delete(
       throw new HttpError(400, '已付款的计划不能删除');
     }
 
-    await prisma.landlordPayment.delete({ where: { id: req.params.id } });
+    await prisma.landlordPayment.softDelete({ where: { id: req.params.id } });
     ok(res, { deleted: true });
   })
 );

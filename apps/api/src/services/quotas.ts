@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../config/prisma.js';
+import { basePrisma } from '../prisma/client.js';
 import { HttpError } from '../utils/http.js';
 
 type QuotaKind = 'apartment' | 'room' | 'member';
@@ -28,8 +28,6 @@ const limitLabel: Record<QuotaKind, string> = {
   member: '成员',
 };
 
-type PrismaLike = typeof prisma | Prisma.TransactionClient;
-
 export const lockOrganizationQuota = async (
   db: Prisma.TransactionClient,
   organizationId: string
@@ -37,7 +35,9 @@ export const lockOrganizationQuota = async (
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`quota:${organizationId}`}))`;
 };
 
-export const isQuotaLimitEnabled = async (db: PrismaLike = prisma) => {
+export const isQuotaLimitEnabled = async (
+  db: Prisma.TransactionClient = basePrisma
+) => {
   const setting = await db.systemSetting.findUnique({
     where: { key: 'quota_limit_enabled' },
   });
@@ -47,7 +47,7 @@ export const isQuotaLimitEnabled = async (db: PrismaLike = prisma) => {
 
 export const getOrganizationQuota = async (
   organizationId: string,
-  db: PrismaLike = prisma
+  db: Prisma.TransactionClient = basePrisma
 ) => {
   const enabled = await isQuotaLimitEnabled(db);
   if (!enabled) {
@@ -88,7 +88,11 @@ export const getOrganizationQuota = async (
 
   if (!subscription) return undefined;
 
-  const extraQuota = quotaPackages.reduce(
+  const extraQuota = quotaPackages.reduce<{
+    apartmentQuota: number;
+    roomQuota: number;
+    memberQuota: number;
+  }>(
     (sum, item) => ({
       apartmentQuota: sum.apartmentQuota + item.apartmentQuota,
       roomQuota: sum.roomQuota + item.roomQuota,
@@ -104,7 +108,7 @@ export const assertOrganizationQuota = async (
   organizationId: string,
   kind: QuotaKind,
   nextCount: number,
-  db: PrismaLike = prisma
+  db: Prisma.TransactionClient = basePrisma
 ) => {
   const enabled = await isQuotaLimitEnabled(db);
   if (!enabled) return;

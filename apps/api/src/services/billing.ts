@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { Prisma } from '@prisma/client';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   cycleMonths,
   getLeaseBillGenerationEnd,
@@ -891,7 +891,7 @@ export const generateActiveAutoRenewBills = async (organizationId: string) => {
   await generateCurrentLeaseBills(organizationId);
 };
 
-export const retryPostpaidBillAndMonthlyBill = async (billId: string) => {
+export const retryPostpaidBill = async (billId: string) => {
   return completePostpaidBillFromReadings(billId);
 };
 

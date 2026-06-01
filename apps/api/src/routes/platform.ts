@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok } from '../utils/http.js';
 

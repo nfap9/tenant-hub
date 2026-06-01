@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -212,10 +212,7 @@ tenantRouter.delete(
     if (activeLeases > 0)
       throw new HttpError(400, '租客仍有进行中的租约，无法删除');
 
-    await prisma.tenant.update({
-      where: { id: tenant.id },
-      data: { deletedAt: new Date() },
-    });
+    await prisma.tenant.softDelete({ where: { id: tenant.id } });
     ok(res, { success: true });
   })
 );

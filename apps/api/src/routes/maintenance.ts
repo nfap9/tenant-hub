@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -219,10 +219,7 @@ maintenanceRouter.delete(
       },
     });
     if (!order) throw new HttpError(404, '工单不存在');
-    await prisma.maintenanceOrder.update({
-      where: { id: req.params.id },
-      data: { deletedAt: new Date() },
-    });
+    await prisma.maintenanceOrder.softDelete({ where: { id: req.params.id } });
     ok(res, { deleted: true });
   })
 );

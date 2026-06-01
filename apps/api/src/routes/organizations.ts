@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { customAlphabet } from 'nanoid';
 import { z } from 'zod';
 import { env } from '../config/env.js';
-import { prisma } from '../config/prisma.js';
+import { basePrisma, prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -74,7 +74,7 @@ orgRouter.post(
     const role = await prisma.role.findUniqueOrThrow({
       where: { code: 'readonly' },
     });
-    const member = await prisma.$transaction(async (tx) => {
+    const member = await basePrisma.$transaction(async (tx) => {
       const existingMember = await tx.orgMember.findUnique({
         where: {
           organizationId_userId: {
@@ -240,7 +240,7 @@ orgRouter.post(
     const plan = await prisma.plan.findUnique({ where: { id: input.planId } });
     if (!plan || !plan.enabled) throw new HttpError(404, '套餐不存在或已停用');
 
-    const subscription = await prisma.$transaction(async (tx) => {
+    const subscription = await basePrisma.$transaction(async (tx) => {
       await tx.subscription.updateMany({
         where: { organizationId: req.organizationId!, active: true },
         data: { active: false, endsAt: new Date() },
@@ -369,7 +369,7 @@ orgRouter.post(
         where: { code: 'readonly' },
       });
       await enforceOrganizationQuota(
-        prisma,
+        basePrisma,
         req.organizationId!,
         'member',
         async () =>
@@ -472,7 +472,7 @@ orgRouter.post(
     const managerRole = await prisma.role.findUniqueOrThrow({
       where: { code: 'manager' },
     });
-    await prisma.$transaction([
+    await basePrisma.$transaction([
       prisma.organization.update({
         where: { id: org.id },
         data: { ownerId: input.userId },

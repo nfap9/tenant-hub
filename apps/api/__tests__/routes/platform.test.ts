@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/app.js';
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 
 describe('GET /api/platform/info', () => {
   beforeEach(async () => {

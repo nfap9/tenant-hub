@@ -1,5 +1,5 @@
 import { Prisma, DepositStatus } from '@prisma/client';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import { HttpError } from '../utils/http.js';
 import { calculateUtilityAmount } from './billing.js';
 import { startOfLeaseDay } from './leaseLifecycle.js';

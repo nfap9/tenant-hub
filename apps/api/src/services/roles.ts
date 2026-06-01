@@ -1,4 +1,4 @@
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 
 export const PERMISSIONS = {
   APARTMENT_VIEW: 'apartment:view',

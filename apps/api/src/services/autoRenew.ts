@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import { cycleMonths } from './leaseLifecycle.js';
 import { generateLeaseBills } from './billing.js';
 

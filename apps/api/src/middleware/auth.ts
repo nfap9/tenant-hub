@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
 import { env } from '../config/env.js';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import { HttpError } from '../utils/http.js';
 
 export type AuthUser = {

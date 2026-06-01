@@ -29,7 +29,7 @@ vi.mock('bcryptjs', () => ({
   },
 }));
 
-vi.mock('../../src/config/prisma.js', () => ({
+vi.mock('../../src/prisma/client.js', () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
@@ -53,7 +53,7 @@ vi.mock('../../src/config/prisma.js', () => ({
 }));
 
 import { app } from '../../src/app.js';
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 
 describe('auth routes', () => {
   beforeEach(() => {

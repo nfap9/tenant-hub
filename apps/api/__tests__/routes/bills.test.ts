@@ -11,73 +11,93 @@ vi.mock('../../src/config/env.js', () => ({
   corsOrigins: ['http://localhost:5173'],
 }));
 
-vi.mock('../../src/config/prisma.js', () => ({
-  prisma: {
-    $transaction: vi.fn(async (arg: any) => {
-      if (typeof arg === 'function') {
-        const tx = {
-          billItem: { update: vi.fn() },
-          bill: { update: vi.fn() },
-          meterReading: { createMany: vi.fn() },
-        };
-        return arg(tx);
-      }
-      for (const p of arg) await p;
+vi.mock('../../src/prisma/client.js', () => {
+  const mockBill = {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    findUnique: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+    count: vi.fn(),
+    update: vi.fn(),
+    softDelete: vi.fn(async ({ where }: any) => {
+      mockBill.update({ where, data: { deletedAt: new Date() } });
+      return { id: where.id, deletedAt: new Date() };
     }),
-    bill: {
-      findMany: vi.fn(),
-      findFirst: vi.fn(),
-      findUnique: vi.fn(),
-      delete: vi.fn(),
-      deleteMany: vi.fn(),
-      count: vi.fn(),
-      update: vi.fn(),
+  };
+
+  return {
+    prisma: {
+      $transaction: vi.fn(async (arg: any) => {
+        if (typeof arg === 'function') {
+          const tx = {
+            billItem: { update: vi.fn() },
+            bill: { update: vi.fn() },
+            meterReading: { createMany: vi.fn() },
+          };
+          return arg(tx);
+        }
+        for (const p of arg) await p;
+      }),
+      bill: mockBill,
+      monthlyBill: {
+        findMany: vi.fn(),
+        findFirst: vi.fn(),
+        delete: vi.fn(),
+        update: vi.fn(),
+      },
+      billItem: {
+        findFirst: vi.fn(),
+        update: vi.fn(),
+      },
+      payment: {
+        deleteMany: vi.fn(),
+        create: vi.fn(),
+      },
+      meterReading: {
+        findMany: vi.fn(),
+        findFirst: vi.fn(),
+        create: vi.fn(),
+        createMany: vi.fn(),
+      },
+      apartment: {
+        findFirst: vi.fn(),
+      },
+      auditLog: {
+        create: vi.fn(),
+      },
+      room: {
+        findFirst: vi.fn(),
+      },
+      lease: {
+        findFirst: vi.fn(),
+      },
+      user: {
+        findUnique: vi.fn(async () => ({
+          id: 'user-1',
+          phone: '13800138000',
+          username: '测试用户',
+          passwordChangedAt: null,
+        })),
+      },
+      orgMember: {
+        findUnique: vi.fn(),
+      },
     },
-    monthlyBill: {
-      findMany: vi.fn(),
-      findFirst: vi.fn(),
-      delete: vi.fn(),
-      update: vi.fn(),
+    basePrisma: {
+      $transaction: vi.fn(async (arg: any) => {
+        if (typeof arg === 'function') {
+          return arg({
+            billItem: { update: vi.fn() },
+            bill: { update: vi.fn() },
+            meterReading: { createMany: vi.fn() },
+          });
+        }
+        for (const p of arg) await p;
+      }),
     },
-    billItem: {
-      findFirst: vi.fn(),
-      update: vi.fn(),
-    },
-    payment: {
-      deleteMany: vi.fn(),
-      create: vi.fn(),
-    },
-    meterReading: {
-      findMany: vi.fn(),
-      findFirst: vi.fn(),
-      create: vi.fn(),
-      createMany: vi.fn(),
-    },
-    apartment: {
-      findFirst: vi.fn(),
-    },
-    auditLog: {
-      create: vi.fn(),
-    },
-    room: {
-      findFirst: vi.fn(),
-    },
-    lease: {
-      findFirst: vi.fn(),
-    },
-    user: {
-      findUnique: vi.fn(async () => ({
-        id: 'user-1',
-        phone: '13800138000',
-        username: '测试用户',
-        passwordChangedAt: null,
-      })),
-    },
-    orgMember: {
-      findUnique: vi.fn(),
-    },
-  },
-}));
+  };
+});
 
 vi.mock('../../src/services/billing.js', () => ({
   generateCurrentLeaseBills: vi.fn(async () => ({
@@ -91,7 +111,7 @@ vi.mock('../../src/services/billing.js', () => ({
     method: '现金',
     status: 'COMPLETED',
   })),
-  retryPostpaidBillAndMonthlyBill: vi.fn(async () => ({
+  retryPostpaidBill: vi.fn(async () => ({
     id: 'bill-1',
     status: 'UNPAID',
     items: [{ id: 'item-1', type: 'WATER', amount: 32 }],
@@ -126,7 +146,7 @@ vi.mock('../../src/services/utilityImport.js', () => ({
 }));
 
 import { app } from '../../src/app.js';
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 
 const authToken = jwt.sign(
   { id: 'user-1', phone: '13800138000', username: '测试用户' },

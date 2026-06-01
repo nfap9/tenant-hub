@@ -27,7 +27,7 @@ vi.mock('../../src/services/quotas.js', () => ({
   enforceOrganizationQuota: vi.fn(),
 }));
 
-vi.mock('../../src/config/prisma.js', () => {
+vi.mock('../../src/prisma/client.js', () => {
   const tx = {
     systemSetting: { findUnique: vi.fn(async () => null) },
     apartment: {
@@ -38,54 +38,65 @@ vi.mock('../../src/config/prisma.js', () => {
     $executeRaw: vi.fn(),
   };
 
-  return {
-    prisma: {
-      $transaction: vi.fn(
-        async (callback: (transaction: typeof tx) => Promise<unknown>) =>
-          callback(tx)
-      ),
-      systemSetting: { findUnique: vi.fn(async () => null) },
-      apartment: {
-        findMany: vi.fn(),
-        findFirst: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-        count: vi.fn(),
-      },
-      room: {
-        findMany: vi.fn(),
-        findFirst: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-        createMany: vi.fn(),
-      },
-      lease: {
-        count: vi.fn(),
-      },
-      apartmentExpense: {
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      },
-      user: {
-        findUnique: vi.fn(async () => ({
-          id: 'user-1',
-          phone: '13800138000',
-          username: '测试用户',
-          passwordChangedAt: null,
-        })),
-      },
-      orgMember: {
-        findUnique: vi.fn(),
-      },
-      __tx: tx,
+  const mockPrisma = {
+    $transaction: vi.fn(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx)
+    ),
+    systemSetting: { findUnique: vi.fn(async () => null) },
+    apartment: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+      softDelete: vi.fn(async ({ where }: any) => {
+        mockPrisma.apartment.update({ where, data: { deletedAt: new Date() } });
+        return { id: where.id, deletedAt: new Date() };
+      }),
     },
+    room: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      createMany: vi.fn(),
+      softDelete: vi.fn(async ({ where }: any) => {
+        mockPrisma.room.update({ where, data: { deletedAt: new Date() } });
+        return { id: where.id, deletedAt: new Date() };
+      }),
+    },
+    lease: {
+      count: vi.fn(),
+    },
+    apartmentExpense: {
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    user: {
+      findUnique: vi.fn(async () => ({
+        id: 'user-1',
+        phone: '13800138000',
+        username: '测试用户',
+        passwordChangedAt: null,
+      })),
+    },
+    orgMember: {
+      findUnique: vi.fn(),
+    },
+    __tx: tx,
+  };
+
+  return {
+    prisma: mockPrisma,
+    basePrisma: mockPrisma,
   };
 });
 
 import { app } from '../../src/app.js';
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 
 const authToken = jwt.sign(
   { id: 'user-1', phone: '13800138000', username: '测试用户' },

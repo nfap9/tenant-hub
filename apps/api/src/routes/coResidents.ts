@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
   requireOrg,
@@ -114,7 +114,7 @@ coResidentRouter.delete(
       },
     });
     if (!resident) throw new HttpError(404, '同住人不存在');
-    await prisma.coResident.delete({ where: { id: req.params.id } });
+    await prisma.coResident.softDelete({ where: { id: req.params.id } });
     ok(res, { deleted: true });
   })
 );

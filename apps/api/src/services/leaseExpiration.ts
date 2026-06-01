@@ -1,4 +1,4 @@
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../prisma/client.js';
 
 /**
  * US-502: 租约到期状态机

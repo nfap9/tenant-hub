@@ -1,5 +1,5 @@
 import { env } from './config/env.js';
-import { prisma } from './config/prisma.js';
+import { prisma } from './prisma/client.js';
 import { app } from './app.js';
 import { ensureSystemRoles } from './services/roles.js';
 import { ensureSystemSettings } from './services/adminInit.js';

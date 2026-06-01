@@ -13,19 +13,21 @@ vi.mock('../../src/config/env.js', () => ({
   corsOrigins: ['http://localhost:5173'],
 }));
 
-vi.mock('../../src/config/prisma.js', () => ({
-  prisma: {
+vi.mock('../../src/prisma/client.js', () => {
+  const mockTx = {
+    orgMember: {
+      findUnique: vi.fn(),
+      count: vi.fn(),
+      upsert: vi.fn(async () => ({ id: 'member-1' })),
+    },
+    orgInvite: { updateMany: vi.fn(async () => ({ count: 1 })) },
+    subscription: { updateMany: vi.fn(), create: vi.fn() },
+  };
+
+  const mockPrisma = {
     $transaction: vi.fn(async (callback: any) => {
       if (typeof callback === 'function') {
-        return callback({
-          orgMember: {
-            findUnique: vi.fn(),
-            count: vi.fn(),
-            upsert: vi.fn(async () => ({ id: 'member-1' })),
-          },
-          orgInvite: { updateMany: vi.fn(async () => ({ count: 1 })) },
-          subscription: { updateMany: vi.fn(), create: vi.fn() },
-        });
+        return callback(mockTx);
       }
       for (const p of callback) await p;
     }),
@@ -75,8 +77,13 @@ vi.mock('../../src/config/prisma.js', () => ({
         passwordChangedAt: null,
       })),
     },
-  },
-}));
+  };
+
+  return {
+    prisma: mockPrisma,
+    basePrisma: mockPrisma,
+  };
+});
 
 vi.mock('../../src/services/quotas.js', () => ({
   enforceOrganizationQuota: vi.fn(),
@@ -91,7 +98,7 @@ vi.mock('../../src/services/orgInvites.js', () => ({
 }));
 
 import { app } from '../../src/app.js';
-import { prisma } from '../../src/config/prisma.js';
+import { prisma } from '../../src/prisma/client.js';
 
 const authToken = jwt.sign(
   { id: 'user-1', phone: '13800138000', username: '测试用户' },
