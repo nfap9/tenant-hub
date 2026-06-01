@@ -108,6 +108,7 @@ describe('apartments routes', () => {
 
   describe('GET /api/apartments', () => {
     it('should return apartments with rooms and leases', async () => {
+      (prisma.apartment.count as ReturnType<typeof vi.fn>).mockResolvedValue(1);
       (prisma.apartment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(
         [
           {
@@ -118,7 +119,12 @@ describe('apartments routes', () => {
                 id: 'room-1',
                 roomNo: '101',
                 leases: [
-                  { id: 'lease-1', tenantName: '张三', monthlyBills: [] },
+                  {
+                    id: 'lease-1',
+                    tenantName: '张三',
+                    bills: [],
+                    fees: [],
+                  },
                 ],
               },
             ],
@@ -133,7 +139,28 @@ describe('apartments routes', () => {
         .set('x-organization-id', 'org-1');
 
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(Array.isArray(res.body.data.items)).toBe(true);
+      expect(res.body.data.items).toHaveLength(1);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.page).toBe(1);
+      expect(res.body.data.pageSize).toBe(20);
+
+      const apartment = res.body.data.items[0];
+      expect(apartment.id).toBe('apt-1');
+      expect(apartment.name).toBe('阳光公寓');
+      expect(Array.isArray(apartment.rooms)).toBe(true);
+
+      const room = apartment.rooms[0];
+      expect(room.id).toBe('room-1');
+      expect(room.roomNo).toBe('101');
+      expect(Array.isArray(room.leases)).toBe(true);
+
+      const lease = room.leases[0];
+      expect(lease.id).toBe('lease-1');
+      expect(lease.tenantName).toBe('张三');
+      expect(lease.currentMonthBillGenerated).toBe(false);
+      expect(lease.currentMonthBillSettled).toBe(false);
+      expect(lease.currentMonthBillLabel).toBe('2026年7月');
     });
   });
 
@@ -155,6 +182,8 @@ describe('apartments routes', () => {
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data[0].id).toBe('room-1');
+      expect(res.body.data[0].apartment.name).toBe('阳光公寓');
     });
   });
 
@@ -173,6 +202,8 @@ describe('apartments routes', () => {
         });
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('apartment-1');
+      expect(res.body.data.name).toBe('阳光公寓');
       expect((prisma as any).__tx.apartment.create).toHaveBeenCalledWith({
         data: {
           name: '阳光公寓',

@@ -15,11 +15,12 @@ vi.mock('../../src/config/prisma.js', () => ({
   prisma: {
     $transaction: vi.fn(async (arg: any) => {
       if (typeof arg === 'function') {
-        return arg({
+        const tx = {
           billItem: { update: vi.fn() },
           bill: { update: vi.fn() },
           meterReading: { createMany: vi.fn() },
-        });
+        };
+        return arg(tx);
       }
       for (const p of arg) await p;
     }),
@@ -48,6 +49,7 @@ vi.mock('../../src/config/prisma.js', () => ({
     },
     meterReading: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       createMany: vi.fn(),
     },
@@ -83,16 +85,23 @@ vi.mock('../../src/services/billing.js', () => ({
     billIds: ['bill-1'],
   })),
   generateLeaseBills: vi.fn(async () => ['bill-1']),
-  recordBillPayment: vi.fn(async () => ({ id: 'payment-1' })),
-  recordMonthlyBillPayment: vi.fn(async () => ({ id: 'payment-1' })),
-  retryPostpaidBillAndMonthlyBill: vi.fn(async () => ({})),
+  recordBillPayment: vi.fn(async () => ({
+    id: 'payment-1',
+    amount: 100,
+    method: '现金',
+    status: 'COMPLETED',
+  })),
+  retryPostpaidBillAndMonthlyBill: vi.fn(async () => ({
+    id: 'bill-1',
+    status: 'UNPAID',
+    items: [{ id: 'item-1', type: 'WATER', amount: 32 }],
+  })),
   refreshBillTotals: vi.fn(async () => {}),
-  refreshMonthlyBillTotals: vi.fn(async () => {}),
-  tryCreateMonthlyBill: vi.fn(async () => {}),
   calculateUtilityLineAmounts: vi.fn(() => ({
     waterAmount: 32,
     powerAmount: 48,
   })),
+  detectAbnormalUsage: vi.fn(async () => false),
   getCurrentMonthBillWindow: vi.fn(() => ({
     start: new Date(),
     end: new Date(),
@@ -138,7 +147,14 @@ describe('bills routes', () => {
   describe('GET /api/bills', () => {
     it('should return bills for organization', async () => {
       (prisma.bill.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-        { id: 'bill-1' },
+        {
+          id: 'bill-1',
+          status: 'UNPAID',
+          totalAmount: 1000,
+          lease: { id: 'lease-1', room: { id: 'room-1', roomNo: '101' } },
+          items: [{ id: 'item-1', type: 'RENT', amount: 1000 }],
+          payments: [],
+        },
       ]);
 
       const res = await request(app)
@@ -147,7 +163,14 @@ describe('bills routes', () => {
         .set('x-organization-id', 'org-1');
 
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual([{ id: 'bill-1' }]);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data[0].id).toBe('bill-1');
+      expect(res.body.data[0].status).toBe('UNPAID');
+      expect(res.body.data[0].totalAmount).toBe(1000);
+      expect(res.body.data[0].lease).toBeDefined();
+      expect(res.body.data[0].lease.room.roomNo).toBe('101');
+      expect(Array.isArray(res.body.data[0].items)).toBe(true);
+      expect(Array.isArray(res.body.data[0].payments)).toBe(true);
       expect(prisma.bill.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ organizationId: 'org-1' }),
@@ -161,22 +184,6 @@ describe('bills routes', () => {
     });
   });
 
-  describe('GET /api/bills/monthly', () => {
-    it('should return monthly bills', async () => {
-      (
-        prisma.monthlyBill.findMany as ReturnType<typeof vi.fn>
-      ).mockResolvedValue([{ id: 'mb-1' }]);
-
-      const res = await request(app)
-        .get('/api/bills/monthly')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('x-organization-id', 'org-1');
-
-      expect(res.status).toBe(200);
-      expect(res.body.data).toEqual([{ id: 'mb-1' }]);
-    });
-  });
-
   describe('POST /api/bills/generate', () => {
     it('should generate bills for all current leases', async () => {
       const res = await request(app)
@@ -187,6 +194,7 @@ describe('bills routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.leaseCount).toBe(2);
+      expect(res.body.data.billIds).toEqual(['bill-1']);
     });
 
     it('should generate bills for specific lease', async () => {
@@ -218,6 +226,10 @@ describe('bills routes', () => {
         .send({ amount: 100, method: '现金' });
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('payment-1');
+      expect(res.body.data.amount).toBe(100);
+      expect(res.body.data.method).toBe('现金');
+      expect(res.body.data.status).toBe('COMPLETED');
     });
   });
 
@@ -255,6 +267,7 @@ describe('bills routes', () => {
         .set('x-organization-id', 'org-1');
 
       expect(res.status).toBe(400);
+      expect(res.body.error).toBe('已结清账单不能删除');
     });
   });
 
@@ -269,6 +282,9 @@ describe('bills routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('text/csv');
+      expect(res.text).toContain('billId');
+      expect(res.text).toContain('房间号');
+      expect(res.text).toContain('租客');
     });
   });
 
@@ -276,7 +292,15 @@ describe('bills routes', () => {
     it('should return meter readings', async () => {
       (
         prisma.meterReading.findMany as ReturnType<typeof vi.fn>
-      ).mockResolvedValue([{ id: 'mr-1' }]);
+      ).mockResolvedValue([
+        {
+          id: 'mr-1',
+          roomId: 'room-1',
+          meterType: 'WATER',
+          value: 100,
+          usage: 10,
+        },
+      ]);
 
       const res = await request(app)
         .get('/api/bills/meter-readings')
@@ -285,6 +309,10 @@ describe('bills routes', () => {
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data[0].id).toBe('mr-1');
+      expect(res.body.data[0].meterType).toBe('WATER');
+      expect(res.body.data[0].value).toBe(100);
+      expect(res.body.data[0].usage).toBe(10);
     });
   });
 
@@ -299,7 +327,15 @@ describe('bills routes', () => {
       });
       (
         prisma.meterReading.create as ReturnType<typeof vi.fn>
-      ).mockResolvedValue({ id: 'mr-1' });
+      ).mockResolvedValue({
+        id: 'mr-1',
+        roomId: 'room-1',
+        meterType: 'WATER',
+        readingDate: new Date('2026-05-01'),
+        value: 100,
+        usage: 0,
+        status: 'NORMAL',
+      });
       (prisma.bill.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const res = await request(app)
@@ -314,6 +350,11 @@ describe('bills routes', () => {
         });
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('mr-1');
+      expect(res.body.data.roomId).toBe('room-1');
+      expect(res.body.data.meterType).toBe('WATER');
+      expect(res.body.data.value).toBe(100);
+      expect(res.body.data.status).toBe('NORMAL');
     });
 
     it('should return 404 for non-existent room', async () => {
@@ -333,36 +374,7 @@ describe('bills routes', () => {
         });
 
       expect(res.status).toBe(404);
-    });
-  });
-
-  describe('POST /api/bills/monthly/:id/payments', () => {
-    it('should record a monthly bill payment', async () => {
-      (
-        prisma.monthlyBill.findFirst as ReturnType<typeof vi.fn>
-      ).mockResolvedValue({ id: 'mb-1' });
-
-      const res = await request(app)
-        .post('/api/bills/monthly/mb-1/payments')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('x-organization-id', 'org-1')
-        .send({ amount: 100, method: '现金' });
-
-      expect(res.status).toBe(200);
-    });
-
-    it('should return 404 for missing monthly bill', async () => {
-      (
-        prisma.monthlyBill.findFirst as ReturnType<typeof vi.fn>
-      ).mockResolvedValue(null);
-
-      const res = await request(app)
-        .post('/api/bills/monthly/mb-1/payments')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('x-organization-id', 'org-1')
-        .send({ amount: 100, method: '现金' });
-
-      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('房间不存在');
     });
   });
 
@@ -379,6 +391,10 @@ describe('bills routes', () => {
         .set('x-organization-id', 'org-1');
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('bill-1');
+      expect(res.body.data.status).toBe('UNPAID');
+      expect(Array.isArray(res.body.data.items)).toBe(true);
+      expect(res.body.data.items[0].type).toBe('WATER');
     });
 
     it('should reject retry for non-postpaid bill', async () => {
@@ -393,45 +409,7 @@ describe('bills routes', () => {
         .set('x-organization-id', 'org-1');
 
       expect(res.status).toBe(400);
-    });
-  });
-
-  describe('DELETE /api/bills/monthly/:id', () => {
-    it('should delete a monthly bill', async () => {
-      (
-        prisma.monthlyBill.findFirst as ReturnType<typeof vi.fn>
-      ).mockResolvedValue({
-        id: 'mb-1',
-        status: 'UNPAID',
-        bills: [{ id: 'bill-1' }],
-        payments: [],
-      });
-
-      const res = await request(app)
-        .delete('/api/bills/monthly/mb-1')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('x-organization-id', 'org-1');
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.deleted).toBe(true);
-    });
-
-    it('should reject deleting paid monthly bill', async () => {
-      (
-        prisma.monthlyBill.findFirst as ReturnType<typeof vi.fn>
-      ).mockResolvedValue({
-        id: 'mb-1',
-        status: 'PAID',
-        bills: [],
-        payments: [],
-      });
-
-      const res = await request(app)
-        .delete('/api/bills/monthly/mb-1')
-        .set('Authorization', `Bearer ${authToken}`)
-        .set('x-organization-id', 'org-1');
-
-      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('仅后付费账单需要重新出账');
     });
   });
 
@@ -454,6 +432,14 @@ describe('bills routes', () => {
           { id: 'power-item', type: 'POWER', powerUnitPrice: 0.8 },
         ],
       });
+      (prisma.bill.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'bill-1',
+        status: 'UNPAID',
+        items: [
+          { id: 'water-item', type: 'WATER', amount: 32 },
+          { id: 'power-item', type: 'POWER', amount: 48 },
+        ],
+      });
 
       const res = await request(app)
         .post('/api/bills/utility/import')
@@ -472,6 +458,10 @@ describe('bills routes', () => {
         });
 
       expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data[0].id).toBe('bill-1');
+      expect(Array.isArray(res.body.data[0].items)).toBe(true);
+      expect(res.body.data[0].items).toHaveLength(2);
     });
   });
 });

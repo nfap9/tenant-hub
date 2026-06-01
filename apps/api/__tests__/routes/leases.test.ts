@@ -13,12 +13,29 @@ vi.mock('../../src/config/env.js', () => ({
 
 vi.mock('../../src/config/prisma.js', () => ({
   prisma: {
-    $transaction: vi.fn(async (callback: any) =>
-      callback({
-        leaseFee: { deleteMany: vi.fn(), createMany: vi.fn() },
-        lease: { update: vi.fn() },
-      })
-    ),
+    $transaction: vi.fn(async (callback: any) => {
+      if (typeof callback === 'function') {
+        const tx = {
+          leaseFee: { deleteMany: vi.fn(), createMany: vi.fn() },
+          lease: {
+            create: vi.fn(async (...args: any[]) =>
+              (prisma.lease.create as any)(...args)
+            ),
+            update: vi.fn(async (...args: any[]) =>
+              (prisma.lease.update as any)(...args)
+            ),
+            findUniqueOrThrow: vi.fn(async (...args: any[]) =>
+              (prisma.lease.findFirst as any)(...args)
+            ),
+          },
+          deposit: { findUnique: vi.fn(), update: vi.fn() },
+          leaseChangeLog: { create: vi.fn() },
+          bill: { create: vi.fn() },
+        };
+        return callback(tx);
+      }
+      for (const p of callback) await p;
+    }),
     lease: {
       findMany: vi.fn(),
       create: vi.fn(),
@@ -35,6 +52,11 @@ vi.mock('../../src/config/prisma.js', () => ({
     },
     leaseSettlement: {
       findMany: vi.fn(),
+    },
+    tenant: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      create: vi.fn(),
     },
     user: {
       findUnique: vi.fn(async () => ({
@@ -83,6 +105,11 @@ describe('leases routes', () => {
         role: { permissions: ['*'] },
       }
     );
+    (prisma.tenant.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'tenant-1',
+      name: '张三',
+      phone: '13800138000',
+    });
   });
 
   describe('GET /api/leases', () => {
@@ -98,6 +125,7 @@ describe('leases routes', () => {
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data[0].id).toBe('lease-1');
     });
 
     it('should return 401 without auth', async () => {
@@ -115,6 +143,12 @@ describe('leases routes', () => {
       (prisma.lease.create as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'lease-1',
         roomId: 'room-1',
+        tenantName: '张三',
+        tenantPhone: '13800138000',
+        rentAmount: 1000,
+        room: { id: 'room-1', roomNo: '101' },
+        fees: [],
+        deposit: null,
       });
       (prisma.room.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
@@ -136,6 +170,12 @@ describe('leases routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.id).toBe('lease-1');
+      expect(res.body.data.roomId).toBe('room-1');
+      expect(res.body.data.tenantName).toBe('张三');
+      expect(res.body.data.rentAmount).toBe(1000);
+      expect(res.body.data.room).toBeDefined();
+      expect(res.body.data.room.id).toBe('room-1');
+      expect(Array.isArray(res.body.data.fees)).toBe(true);
     });
 
     it('should reject non-vacant room', async () => {
@@ -161,6 +201,7 @@ describe('leases routes', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.error).toBe('仅空闲房间可以签约');
     });
 
     it('should reject endDate before startDate', async () => {
@@ -181,6 +222,8 @@ describe('leases routes', () => {
         });
 
       expect(res.status).toBe(400);
+      expect(res.body.error).toBe('参数不正确');
+      expect(res.body.details).toBeDefined();
     });
   });
 
@@ -194,6 +237,11 @@ describe('leases routes', () => {
       (prisma.lease.update as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'lease-1',
         rentAmount: 1200,
+        roomId: 'room-1',
+        tenantName: '张三',
+        room: { id: 'room-1', roomNo: '101' },
+        fees: [],
+        deposit: null,
       });
 
       const res = await request(app)
@@ -203,6 +251,10 @@ describe('leases routes', () => {
         .send({ rentAmount: 1200 });
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('lease-1');
+      expect(res.body.data.rentAmount).toBe(1200);
+      expect(res.body.data.room).toBeDefined();
+      expect(Array.isArray(res.body.data.fees)).toBe(true);
     });
 
     it('should reject updating non-active lease', async () => {
@@ -219,6 +271,7 @@ describe('leases routes', () => {
         .send({ rentAmount: 1200 });
 
       expect(res.status).toBe(400);
+      expect(res.body.error).toBe('仅有效租约可以变更');
     });
   });
 
@@ -240,6 +293,7 @@ describe('leases routes', () => {
         });
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('settlement-1');
     });
 
     it('should pass penalty and compensation to settlement', async () => {
@@ -263,6 +317,7 @@ describe('leases routes', () => {
         });
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('settlement-1');
     });
 
     it('should return 404 for missing lease', async () => {
@@ -281,6 +336,7 @@ describe('leases routes', () => {
         });
 
       expect(res.status).toBe(404);
+      expect(res.body.error).toBe('租约不存在');
     });
   });
 
@@ -309,6 +365,7 @@ describe('leases routes', () => {
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data[0].id).toBe('s-1');
     });
   });
 
@@ -321,6 +378,7 @@ describe('leases routes', () => {
         .send({ direction: 'RECEIVE', amount: 500, method: '现金' });
 
       expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('payment-1');
     });
   });
 });

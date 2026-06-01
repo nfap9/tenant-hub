@@ -38,6 +38,7 @@ describe('billing settlement', () => {
     it('should skip settlement bills', async () => {
       (prisma.bill.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'bill-settlement',
+        type: 'SETTLEMENT',
         note: 'LEASE_SETTLEMENT',
         items: [{ amount: new Prisma.Decimal(100) }],
         payments: [],
@@ -120,6 +121,7 @@ describe('billing settlement', () => {
       (prisma.bill.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'bill-settlement',
         mode: 'DEPOSIT',
+        type: 'SETTLEMENT',
         note: 'LEASE_SETTLEMENT',
         status: 'UNPAID',
         totalAmount: new Prisma.Decimal(100),
@@ -156,6 +158,7 @@ describe('billing settlement', () => {
       (prisma.bill.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'bill-settlement',
         mode: 'DEPOSIT',
+        type: 'SETTLEMENT',
         note: 'LEASE_SETTLEMENT',
         status: 'UNPAID',
         totalAmount: new Prisma.Decimal(100),
