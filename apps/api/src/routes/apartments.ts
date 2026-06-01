@@ -176,6 +176,25 @@ apartmentRouter.get(
 );
 
 apartmentRouter.get(
+  '/all',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    const apartments = await prisma.apartment.findMany({
+      where: {
+        organizationId: req.organizationId!,
+        deletedAt: null,
+      },
+      include: {
+        rooms: true,
+        expenses: { orderBy: { spentAt: 'desc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    ok(res, apartments);
+  })
+);
+
+apartmentRouter.get(
   '/rooms',
   requirePermission(PERMISSIONS.ROOM_VIEW),
   asyncHandler(async (req, res) => {

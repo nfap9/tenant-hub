@@ -31,11 +31,7 @@ export async function getApartment(organizationId: string, id: string) {
 }
 
 export async function getAllApartments(organizationId: string) {
-  const data = await getApartments(organizationId, {
-    page: 1,
-    pageSize: 1000,
-  });
-  return data.items;
+  return apiClient<Apartment[]>('/apartments/all', { organizationId });
 }
 
 export async function createApartment(
