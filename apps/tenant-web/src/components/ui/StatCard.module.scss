@@ -1,0 +1,35 @@
+.card {
+  height: 100%;
+}
+
+.title {
+  font-size: 13px;
+  color: var(--th-foreground-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.icon {
+  font-size: 14px;
+}
+
+.value {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--th-font-heading);
+}
+
+.prefix {
+  font-size: 16px;
+  font-weight: 500;
+  margin-right: 2px;
+}
+
+.suffix {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--th-foreground-muted);
+  margin-left: 4px;
+}

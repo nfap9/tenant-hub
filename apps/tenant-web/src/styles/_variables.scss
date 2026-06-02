@@ -1,0 +1,49 @@
+:root {
+  --th-primary: #2563eb;
+  --th-primary-light: #3b82f6;
+  --th-primary-dark: #1d4ed8;
+  --th-accent: #2563eb;
+  --th-accent-light: #60a5fa;
+
+  --th-bg: #f3f4f6;
+  --th-bg-elevated: #ffffff;
+  --th-surface: #ffffff;
+  --th-surface-hover: #f3f4f6;
+
+  --th-foreground: #1f2937;
+  --th-foreground-muted: #6b7280;
+  --th-foreground-subtle: #9ca3af;
+
+  --th-border: #e5e7eb;
+  --th-border-light: #f3f4f6;
+
+  --th-danger: #dc2626;
+  --th-danger-bg: #fef2f2;
+  --th-success: #22c55e;
+  --th-success-bg: #f0fdf4;
+  --th-warning: #ea580c;
+  --th-warning-bg: #fff7ed;
+
+  --th-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --th-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --th-shadow-md:
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --th-shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  --th-radius-sm: 6px;
+  --th-radius: 8px;
+  --th-radius-lg: 12px;
+  --th-radius-xl: 16px;
+
+  --th-font-heading: 'Poppins', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --th-font-body: 'Open Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  --th-space-4: 4px;
+  --th-space-5: 8px;
+  --th-space-6: 12px;
+  --th-space-7: 16px;
+  --th-space-8: 20px;
+  --th-space-9: 24px;
+  --th-space-10: 32px;
+}

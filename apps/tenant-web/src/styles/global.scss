@@ -1,0 +1,189 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;500;600&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--th-font-body);
+  color: var(--th-foreground);
+  background: var(--th-bg);
+  line-height: 1.6;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--th-font-heading);
+  font-weight: 600;
+  color: var(--th-foreground);
+}
+
+a {
+  color: var(--th-primary);
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.flex-col-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--th-foreground-muted);
+}
+
+.text-subtle {
+  color: var(--th-foreground-subtle);
+}
+
+.text-primary {
+  color: var(--th-primary);
+}
+
+.text-success {
+  color: var(--th-success);
+}
+
+.text-warning {
+  color: var(--th-warning);
+}
+
+.text-danger {
+  color: var(--th-danger);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.shrink-0 {
+  flex-shrink: 0;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mb-28 {
+  margin-bottom: 28px;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.p-64 {
+  padding: 64px;
+}
+
+.page-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========== Ant Design Overrides ========== */
+
+.ant-card {
+  box-shadow: var(--th-shadow);
+  border: 1px solid var(--th-border);
+}
+
+.ant-tabs-nav {
+  margin-bottom: 24px;
+
+  &::before {
+    border-bottom-color: var(--th-border);
+  }
+}
+
+.ant-btn-primary {
+  box-shadow: var(--th-shadow-sm);
+}
+
+.ant-tag {
+  border-radius: var(--th-radius-sm);
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+  background: var(--th-bg);
+  color: var(--th-foreground-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--th-border);
+}
+
+.ant-spin-container {
+  position: relative;
+}
+
+.ant-pagination {
+  margin-top: 16px;
+}
+
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primary {
+  box-shadow: none;
+}

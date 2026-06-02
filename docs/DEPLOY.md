@@ -5,6 +5,7 @@
 - **API Dockerfile**（`apps/api/Dockerfile`）：多阶段构建（base → deps → development → build → production）
   - 生产镜像基于 `node:22-alpine`，运行 `prisma migrate deploy && node dist/server.js`
   - 暴露端口 `4000`
+
 ### Docker Compose
 
 - **`docker-compose.infra.yml`**：本地开发 PostgreSQL 16（宿主机端口 `5433`）
