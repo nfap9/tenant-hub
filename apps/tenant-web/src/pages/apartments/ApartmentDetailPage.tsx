@@ -36,7 +36,6 @@ import {
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
 import { money, day } from '@/utils/format';
-import { contractText } from './utils';
 import RoomCard from '@/components/rooms/RoomCard';
 import ApartmentDashboard from '@/components/apartments/ApartmentDashboard';
 import PageHeader from '@/components/ui/PageHeader';
@@ -332,63 +331,6 @@ export default function ApartmentDetailPage() {
                         </DetailItem>
                       </Col>
                     )}
-                  </Row>
-                </DetailSection>
-
-                {/* 上游信息 */}
-                <DetailSection
-                  title={
-                    <>
-                      <UserOutlined className="text-primary" /> 上游信息
-                    </>
-                  }
-                >
-                  <Row gutter={[24, 0]}>
-                    <Col span={8}>
-                      <DetailItem label="房东姓名">
-                        {apartment.landlordName || '未维护'}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="联系方式">
-                        {apartment.landlordPhone || '未维护'}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="合同编号">
-                        {apartment.landlordContractNo || '未维护'}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="合同期">
-                        {contractText(apartment)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="上游租金">
-                        ¥{money(apartment.rentAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="押金">
-                        ¥{money(apartment.depositAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="付款方式">
-                        {apartment.paymentMethod
-                          ? paymentMethodLabels[apartment.paymentMethod] ||
-                            apartment.paymentMethod
-                          : '-'}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="递增规则">
-                        {apartment.rentEscalationType
-                          ? `${apartment.rentEscalationType} (${apartment.rentEscalationValue} / ${apartment.rentEscalationCycle}个月)`
-                          : '-'}
-                      </DetailItem>
-                    </Col>
                   </Row>
                 </DetailSection>
 

@@ -6,11 +6,6 @@ export const emptyApartmentForm = {
   floors: '',
   landArea: '',
   totalArea: '',
-  landlordName: '',
-  landlordPhone: '',
-  contractStart: '',
-  contractEnd: '',
-  rentAmount: '',
 };
 
 export const emptyRoomForm = {

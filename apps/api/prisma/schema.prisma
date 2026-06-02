@@ -476,17 +476,6 @@ model Apartment {
   buildYear            Int?
   elevatorCount        Int                @default(0)
   propertyRight        PropertyRight      @default(LONG_TERM_LEASE)
-  landlordName         String?
-  landlordPhone        String?
-  landlordContractNo   String?
-  contractStart        DateTime?
-  contractEnd          DateTime?
-  rentAmount           Decimal?           @db.Decimal(12, 2)
-  depositAmount        Decimal?           @db.Decimal(12, 2)
-  paymentMethod        String?            // 月付/季付/半年付/年付
-  rentEscalationType   String?            // FIXED_AMOUNT / PERCENTAGE
-  rentEscalationValue  Decimal?           @db.Decimal(10, 4)
-  rentEscalationCycle  Int?               // 几个月递增一次
   costElectricityPrice Decimal?           @db.Decimal(10, 4)
   costWaterPrice       Decimal?           @db.Decimal(10, 4)
   costGasPrice         Decimal?           @db.Decimal(10, 4)

@@ -40,11 +40,6 @@ export const apartmentMonthlyExpense = (apartment: Apartment) =>
     .filter((expense) => isThisMonth(expense.spentAt))
     .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
 
-export const contractText = (apartment: Apartment) => {
-  const start = apartment.contractStart
-    ? apartment.contractStart.slice(0, 10)
-    : '';
-  const end = apartment.contractEnd ? apartment.contractEnd.slice(0, 10) : '';
-  if (!start && !end) return '未维护';
-  return `${start || '未填'} 至 ${end || '未填'}`;
+export const contractText = (_apartment: Apartment) => {
+  return '请在房东合同模块查看';
 };

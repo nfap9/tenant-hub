@@ -6,7 +6,6 @@ import {
   Input,
   InputNumber,
   Button,
-  DatePicker,
   message,
   Spin,
   Select,
@@ -16,11 +15,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   SaveOutlined,
   HomeOutlined,
-  UserOutlined,
   DollarOutlined,
   SafetyOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   createApartment,
@@ -53,19 +50,6 @@ const propertyRightOptions = [
   { label: '自有产权', value: 'OWNED' },
   { label: '长租托管', value: 'LONG_TERM_LEASE' },
   { label: '受托管理', value: 'TRUSTEESHIP' },
-];
-
-const paymentMethodOptions = [
-  { label: '月付', value: 'MONTHLY' },
-  { label: '季付', value: 'QUARTERLY' },
-  { label: '半年付', value: 'HALF_YEARLY' },
-  { label: '年付', value: 'YEARLY' },
-];
-
-const escalationTypeOptions = [
-  { label: '无递增', value: 'NONE' },
-  { label: '固定金额', value: 'FIXED_AMOUNT' },
-  { label: '百分比', value: 'PERCENTAGE' },
 ];
 
 export default function ApartmentFormPage() {
@@ -110,27 +94,6 @@ export default function ApartmentFormPage() {
         buildYear: apartment.buildYear,
         elevatorCount: apartment.elevatorCount,
         propertyRight: apartment.propertyRight,
-        landlordName: apartment.landlordName,
-        landlordPhone: apartment.landlordPhone,
-        landlordContractNo: apartment.landlordContractNo,
-        contractStart: apartment.contractStart
-          ? dayjs(apartment.contractStart)
-          : undefined,
-        contractEnd: apartment.contractEnd
-          ? dayjs(apartment.contractEnd)
-          : undefined,
-        rentAmount: apartment.rentAmount
-          ? Number(apartment.rentAmount)
-          : undefined,
-        depositAmount: apartment.depositAmount
-          ? Number(apartment.depositAmount)
-          : undefined,
-        paymentMethod: apartment.paymentMethod,
-        rentEscalationType: apartment.rentEscalationType,
-        rentEscalationValue: apartment.rentEscalationValue
-          ? Number(apartment.rentEscalationValue)
-          : undefined,
-        rentEscalationCycle: apartment.rentEscalationCycle,
         costElectricityPrice: apartment.costElectricityPrice
           ? Number(apartment.costElectricityPrice)
           : undefined,
@@ -175,21 +138,6 @@ export default function ApartmentFormPage() {
       buildYear: optionalNumber(values.buildYear),
       elevatorCount: optionalNumber(values.elevatorCount),
       propertyRight: optionalText(values.propertyRight),
-      landlordName: optionalText(values.landlordName),
-      landlordPhone: optionalText(values.landlordPhone),
-      landlordContractNo: optionalText(values.landlordContractNo),
-      contractStart: values.contractStart
-        ? dayjs(values.contractStart as string).format('YYYY-MM-DD')
-        : undefined,
-      contractEnd: values.contractEnd
-        ? dayjs(values.contractEnd as string).format('YYYY-MM-DD')
-        : undefined,
-      rentAmount: optionalNumber(values.rentAmount),
-      depositAmount: optionalNumber(values.depositAmount),
-      paymentMethod: optionalText(values.paymentMethod),
-      rentEscalationType: optionalText(values.rentEscalationType),
-      rentEscalationValue: optionalNumber(values.rentEscalationValue),
-      rentEscalationCycle: optionalNumber(values.rentEscalationCycle),
       costElectricityPrice: optionalNumber(values.costElectricityPrice),
       costWaterPrice: optionalNumber(values.costWaterPrice),
       costGasPrice: optionalNumber(values.costGasPrice),
@@ -320,78 +268,6 @@ export default function ApartmentFormPage() {
                   options={propertyRightOptions}
                   allowClear
                 />
-              </Form.Item>
-            </div>
-
-            <Divider />
-
-            {/* 上游信息 */}
-            <h3 className={styles.sectionTitle}>
-              <UserOutlined /> 上游信息
-            </h3>
-            <div className={styles.formRow}>
-              <Form.Item label="房东姓名" name="landlordName">
-                <Input placeholder="请输入房东姓名" />
-              </Form.Item>
-              <Form.Item label="房东电话" name="landlordPhone">
-                <Input placeholder="请输入手机号" />
-              </Form.Item>
-            </div>
-            <div className={styles.formRow}>
-              <Form.Item label="合同编号" name="landlordContractNo">
-                <Input placeholder="请输入合同编号" />
-              </Form.Item>
-              <Form.Item label="押金" name="depositAmount">
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  placeholder="押金金额"
-                />
-              </Form.Item>
-            </div>
-            <div className={styles.formRow}>
-              <Form.Item label="合同开始日期" name="contractStart">
-                <DatePicker className="w-full" />
-              </Form.Item>
-              <Form.Item label="合同结束日期" name="contractEnd">
-                <DatePicker className="w-full" />
-              </Form.Item>
-            </div>
-            <div className={styles.formRow}>
-              <Form.Item label="上游租金" name="rentAmount">
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  placeholder="每期金额"
-                />
-              </Form.Item>
-              <Form.Item label="付款方式" name="paymentMethod">
-                <Select
-                  placeholder="请选择付款方式"
-                  options={paymentMethodOptions}
-                  allowClear
-                />
-              </Form.Item>
-            </div>
-            <div className={styles.formRow}>
-              <Form.Item label="递增类型" name="rentEscalationType">
-                <Select
-                  placeholder="请选择递增类型"
-                  options={escalationTypeOptions}
-                  allowClear
-                />
-              </Form.Item>
-              <Form.Item label="递增数值" name="rentEscalationValue">
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  placeholder="固定金额或百分比"
-                />
-              </Form.Item>
-            </div>
-            <div className={styles.formRow}>
-              <Form.Item label="递增周期（月）" name="rentEscalationCycle">
-                <InputNumber min={1} className="w-full" placeholder="例如 12" />
               </Form.Item>
             </div>
 

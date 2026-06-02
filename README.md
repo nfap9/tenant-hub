@@ -55,14 +55,14 @@ docker compose -f docker-compose.prod.yml up --build
 
 ## 各服务独立启动命令
 
-| 命令               | 说明                        |
-| ------------------ | --------------------------- |
-| `pnpm dev:infra`   | Docker 启动 PostgreSQL      |
-| `pnpm dev`         | 同时启动 API + tenant-web   |
-| `pnpm dev:web`     | 同 `pnpm dev`               |
-| `pnpm db:generate` | 生成 Prisma Client          |
-| `pnpm db:migrate`  | 执行 Prisma 数据库迁移      |
-| `pnpm check`       | 全量类型检查 + Lint + 构建  |
+| 命令               | 说明                       |
+| ------------------ | -------------------------- |
+| `pnpm dev:infra`   | Docker 启动 PostgreSQL     |
+| `pnpm dev`         | 同时启动 API + tenant-web  |
+| `pnpm dev:web`     | 同 `pnpm dev`              |
+| `pnpm db:generate` | 生成 Prisma Client         |
+| `pnpm db:migrate`  | 执行 Prisma 数据库迁移     |
+| `pnpm check`       | 全量类型检查 + Lint + 构建 |
 
 ## 环境变量
 

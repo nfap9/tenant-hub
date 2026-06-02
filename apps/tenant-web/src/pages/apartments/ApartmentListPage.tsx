@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
-import { money, day } from '@/utils/format';
+import { money } from '@/utils/format';
 import { apartmentMonthlyIncome, apartmentMonthlyExpense } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -232,12 +232,12 @@ export default function ApartmentListPage() {
                         </div>
                       </div>
                     </div>
-                    {apt.contractStart && (
-                      <div className={styles.contractPeriod}>
-                        合同期：{day(apt.contractStart)} 至{' '}
-                        {day(apt.contractEnd)}
-                      </div>
-                    )}
+                    {apt.landlordContracts &&
+                      apt.landlordContracts.length > 0 && (
+                        <div className={styles.contractPeriod}>
+                          有效房东合同：{apt.landlordContracts.length} 份
+                        </div>
+                      )}
                   </Card>
                 );
               })}

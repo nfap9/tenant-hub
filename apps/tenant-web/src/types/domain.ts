@@ -190,17 +190,6 @@ export type Apartment = {
   buildYear?: number;
   elevatorCount?: number;
   propertyRight?: string;
-  landlordName?: string;
-  landlordPhone?: string;
-  landlordContractNo?: string;
-  contractStart?: string;
-  contractEnd?: string;
-  rentAmount?: string | number;
-  depositAmount?: string | number;
-  paymentMethod?: string;
-  rentEscalationType?: string;
-  rentEscalationValue?: string | number;
-  rentEscalationCycle?: number;
   costElectricityPrice?: string | number;
   costWaterPrice?: string | number;
   costGasPrice?: string | number;
