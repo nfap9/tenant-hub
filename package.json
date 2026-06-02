@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "轻量化公寓管理系统 monorepo",
   "scripts": {
-    "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/tenant-web dev",
+    "dev": "pnpm --filter @tenant-hub/api dev",
     "dev:infra": "docker compose -f docker-compose.infra.yml up -d",
     "dev:all": "pnpm dev:infra && pnpm db:generate && pnpm db:push && pnpm dev",
     "build": "pnpm -r build",

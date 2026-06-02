@@ -5,8 +5,7 @@
 ```
 tenant-hub/
 ├── apps/
-│   ├── api/                 # 后端 API
-│   └── tenant-web/          # Web 管理后台
+│   └── api/                 # 后端 API
 ├── package.json             # 根 workspace 配置
 ├── pnpm-workspace.yaml      # packages: ['apps/*']
 ├── tsconfig.base.json       # 共享 TypeScript 基础配置
@@ -16,8 +15,6 @@ tenant-hub/
 ├── docker-compose.prod.yml  # 生产环境 Docker 编排
 └── .github/workflows/       # GitHub Actions CI/CD
 ```
-
-> **注意**：当前 monorepo 只有 `apps/*`，没有共享的 `packages/*` 公共库。两个应用之间代码独立，各自维护 domain types 与 API client。
 
 ## 技术栈
 
@@ -34,18 +31,6 @@ tenant-hub/
 | 定时任务  | node-cron（每日 02:00 Asia/Shanghai 执行）           |
 | 开发/构建 | `tsx watch`（开发）、`tsc`（构建）、`vitest`（测试） |
 | 其他      | helmet（安全头）、cors、dayjs、dotenv                |
-
-### Web 管理端 (`apps/tenant-web`)
-
-| 层级       | 技术                                                  |
-| ---------- | ----------------------------------------------------- |
-| 框架       | React 18                                              |
-| 构建工具   | Vite 6                                                |
-| UI 库      | Ant Design 5 + `@ant-design/icons`                    |
-| 路由       | React Router DOM 7                                    |
-| 样式       | SCSS（全局 + 组件级）                                 |
-| 开发服务器 | 端口 5174，启用 polling watch（兼容 Docker/容器环境） |
-| 构建流程   | `tsc -b && vite build`                                |
 
 ## 代码组织
 
@@ -98,42 +83,3 @@ apps/api/
     ├── services/
     └── utils/
 ```
-
-### Web 端代码结构
-
-```
-apps/tenant-web/src/
-├── main.tsx                    # Vite 入口
-├── App.tsx                     # ConfigProvider + 路由
-├── router/
-│   └── index.tsx               # React Router，懒加载页面 + 认证守卫
-├── layout/
-│   └── MainLayout.tsx          # 侧边栏 + 头部 + 内容区
-├── pages/                      # 按业务域分组
-│   ├── dashboard/
-│   ├── apartments/             # 列表、详情、表单、费用、批量房间
-│   ├── rooms/                  # 列表、表单、租约新建/编辑/退租
-│   ├── bills/                  # 列表、收款、抄表、水电、导入导出、月度明细
-│   ├── settings/               # 设置、我的租约、组织、账户、套餐
-│   └── ops/                    # 运营后台（Dashboard、用户、套餐、组织、角色、短信、系统设置）
-├── api/                        # 按域分组的 API client（fetch 封装）
-├── components/ui/              # 可复用 UI（EmptyState、PageHeader、StatCard）
-├── context/
-│   └── AppSessionContext.tsx   # 全局会话/组织/权限状态（React Context）
-├── styles/
-│   ├── global.scss
-│   ├── _variables.scss
-│   └── _mixins.scss
-├── types/
-│   └── domain.ts
-└── utils/
-    ├── batchRooms.ts
-    ├── format.ts
-    └── storage.ts            # localStorage 封装
-```
-
-**路由认证守卫：**
-
-- `RequireAuth` — 未登录重定向到 `/login`
-- `RequireOrg` — 无组织成员资格时拦截
-- `RequireSuperAdmin` — 限制 `/ops/*` 仅 SUPER_ADMIN 可访问
