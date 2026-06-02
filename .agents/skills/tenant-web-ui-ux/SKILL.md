@@ -74,24 +74,23 @@ B 端用户关注效率，不是审美体验。不必要的装饰会分散注意
 
 遇到以下场景时，不需要翻 reference，直接按表执行：
 
-| 场景                           | 决策                                                          |
-| ------------------------------ | ------------------------------------------------------------- |
-| 列表页 Table 要不要包 Card？   | **不要**，Table 直接展示                                      |
-| 详情视图要不要包 Card？        | **不要**，用 `DetailSection`                                  |
-| 表单录入/编辑页要不要包 Card？ | **要**，Card 提供编辑边界                                     |
-| 状态用什么组件展示？           | **`<Tag>`**，禁止自定义 StatusTag                             |
-| 内联删除确认用什么？           | **`<Popconfirm>`**                                            |
-| 非删除类二次确认用什么？       | **`Modal.confirm`**                                           |
-| 表单弹窗 footer 怎么放？       | **`footer={null}`**，提交按钮放 Form 内                       |
-| 空态用什么？                   | **`<EmptyState>`**，不用 antd `<Empty>`                       |
-| 页面加载用什么？               | **`<Spin spinning={loading}>`**（默认大小）                   |
-| 表格加载用什么？               | **Table `loading` prop**                                      |
-| 消息反馈用什么？               | **`message.success/error/warning`**                           |
-| 页面级筛选切换用什么？         | **`Tabs`**                                                    |
-| 表单内单选用什么？             | **`Radio.Group`**                                             |
-| 状态颜色怎么选？               | success=绿 warning=橙 error=红 default=灰                     |
-| 一组按钮几个 primary？         | **只能有 1 个**                                               |
-| 删除按钮用什么样式？           | 页面级 `primary` + `danger`；表单内行删除用 `link` + `danger` |
+| 场景                         | 决策                                                          |
+| ---------------------------- | ------------------------------------------------------------- |
+| 列表页 Table 要不要包 Card？ | **不要**，Table 直接展示                                      |
+| 详情视图要不要包 Card？      | **不要**，用 `DetailSection`                                  |
+| 状态用什么组件展示？         | **`<Tag>`**，禁止自定义 StatusTag                             |
+| 内联删除确认用什么？         | **`<Popconfirm>`**                                            |
+| 非删除类二次确认用什么？     | **`Modal.confirm`**                                           |
+| 表单弹窗 footer 怎么放？     | **`footer={null}`**，提交按钮放 Form 内                       |
+| 空态用什么？                 | **`<EmptyState>`**，不用 antd `<Empty>`                       |
+| 页面加载用什么？             | **`<Spin spinning={loading}>`**（默认大小）                   |
+| 表格加载用什么？             | **Table `loading` prop**                                      |
+| 消息反馈用什么？             | **`message.success/error/warning`**                           |
+| 页面级筛选切换用什么？       | **`Tabs`**                                                    |
+| 表单内单选用什么？           | **`Radio.Group`**                                             |
+| 状态颜色怎么选？             | success=绿 warning=橙 error=红 default=灰                     |
+| 一组按钮几个 primary？       | **只能有 1 个**                                               |
+| 删除按钮用什么样式？         | 页面级 `primary` + `danger`；表单内行删除用 `link` + `danger` |
 
 ## 核心组件速查
 
