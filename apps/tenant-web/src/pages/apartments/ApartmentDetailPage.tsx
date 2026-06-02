@@ -1,5 +1,14 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Button, Tabs, message, Popconfirm, Spin, Row, Col } from 'antd';
+import {
+  Button,
+  Tabs,
+  message,
+  Popconfirm,
+  Spin,
+  Row,
+  Col,
+  Divider,
+} from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   EditOutlined,
@@ -7,12 +16,19 @@ import {
   PlusOutlined,
   AppstoreAddOutlined,
   HomeOutlined,
-  UserOutlined,
   DollarOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
-import { getApartments, deleteApartment } from '@/api/apartments';
-import type { Apartment } from '@/types/domain';
+import {
+  getApartments,
+  deleteApartment,
+  getApartmentContract,
+  createApartmentContract,
+  updateApartmentContract,
+  deleteApartmentContract,
+} from '@/api/apartments';
+import type { Apartment, ApartmentContract } from '@/types/domain';
 import { money } from '@/utils/format';
 import { contractText } from './utils';
 import RoomCard from '@/components/rooms/RoomCard';
@@ -20,6 +36,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
+import UpstreamContractModal from './UpstreamContractModal';
 import styles from './ApartmentDetailPage.module.scss';
 
 export default function ApartmentDetailPage() {
@@ -30,7 +47,11 @@ export default function ApartmentDetailPage() {
   const canManageRoom = useHasPermission('room:manage');
 
   const [apartments, setApartments] = useState<Apartment[]>([]);
+  const [contract, setContract] = useState<ApartmentContract | null>(null);
   const [loading, setLoading] = useState(false);
+  const [contractLoading, setContractLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadApartments = useCallback(async () => {
     if (!currentOrgId) return;
@@ -45,9 +66,26 @@ export default function ApartmentDetailPage() {
     }
   }, [currentOrgId]);
 
+  const loadContract = useCallback(async () => {
+    if (!currentOrgId || !id) return;
+    setContractLoading(true);
+    try {
+      const data = await getApartmentContract(currentOrgId, id);
+      setContract(data);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加载上游合同失败');
+    } finally {
+      setContractLoading(false);
+    }
+  }, [currentOrgId, id]);
+
   useEffect(() => {
     loadApartments();
   }, [loadApartments]);
+
+  useEffect(() => {
+    loadContract();
+  }, [loadContract]);
 
   const apartment = useMemo(
     () => apartments.find((a) => a.id === id),
@@ -78,6 +116,37 @@ export default function ApartmentDetailPage() {
       navigate('/apartments');
     } catch (e) {
       message.error(e instanceof Error ? e.message : '删除公寓失败');
+    }
+  };
+
+  const handleSubmitContract = async (values: Record<string, unknown>) => {
+    if (!currentOrgId || !id) return;
+    setSubmitting(true);
+    try {
+      if (contract) {
+        await updateApartmentContract(currentOrgId, id, values);
+        message.success('上游合同已更新');
+      } else {
+        await createApartmentContract(currentOrgId, id, values);
+        message.success('上游合同已录入');
+      }
+      setModalOpen(false);
+      await loadContract();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteContract = async () => {
+    if (!currentOrgId || !id) return;
+    try {
+      await deleteApartmentContract(currentOrgId, id);
+      message.success('上游合同已删除');
+      await loadContract();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '删除失败');
     }
   };
 
@@ -149,63 +218,20 @@ export default function ApartmentDetailPage() {
                     }
                   >
                     <Row gutter={[24, 0]}>
-                      <Col span={8}>
+                      <Col span={12}>
+                        <DetailItem label="公寓名称">
+                          {apartment.name}
+                        </DetailItem>
+                      </Col>
+                      <Col span={12}>
                         <DetailItem label="地址">
                           {apartment.location || '未填写'}
-                        </DetailItem>
-                      </Col>
-                      <Col span={8}>
-                        <DetailItem label="楼层数">
-                          {apartment.floors} 层
-                        </DetailItem>
-                      </Col>
-                      <Col span={8}>
-                        <DetailItem label="占地面积">
-                          {apartment.landArea
-                            ? `${apartment.landArea} ㎡`
-                            : '未填'}
-                        </DetailItem>
-                      </Col>
-                      <Col span={8}>
-                        <DetailItem label="总面积">
-                          {apartment.totalArea
-                            ? `${apartment.totalArea} ㎡`
-                            : '未填'}
                         </DetailItem>
                       </Col>
                     </Row>
                   </DetailSection>
 
-                  <DetailSection
-                    title={
-                      <>
-                        <UserOutlined className="text-primary" /> 上游信息
-                      </>
-                    }
-                  >
-                    <Row gutter={[24, 0]}>
-                      <Col span={8}>
-                        <DetailItem label="房东姓名">
-                          {apartment.landlordName || '未维护'}
-                        </DetailItem>
-                      </Col>
-                      <Col span={8}>
-                        <DetailItem label="联系方式">
-                          {apartment.landlordPhone || '未维护'}
-                        </DetailItem>
-                      </Col>
-                      <Col span={8}>
-                        <DetailItem label="合同期">
-                          {contractText(apartment)}
-                        </DetailItem>
-                      </Col>
-                      <Col span={8}>
-                        <DetailItem label="上游租金">
-                          ¥{money(apartment.rentAmount)}
-                        </DetailItem>
-                      </Col>
-                    </Row>
-                  </DetailSection>
+                  <Divider />
 
                   <DetailSection
                     title={
@@ -256,6 +282,106 @@ export default function ApartmentDetailPage() {
                     )}
                   </DetailSection>
                 </>
+              ),
+            },
+            {
+              key: 'upstream',
+              label: '上游信息',
+              children: (
+                <Spin spinning={contractLoading}>
+                  {contract ? (
+                    <DetailSection
+                      title={
+                        <>
+                          <FileTextOutlined className="text-primary" /> 上游合同
+                        </>
+                      }
+                      actions={
+                        canManageApartment && (
+                          <>
+                            <Button
+                              icon={<EditOutlined />}
+                              onClick={() => setModalOpen(true)}
+                            >
+                              编辑
+                            </Button>
+                            <Popconfirm
+                              title="删除上游合同"
+                              description="删除后不可恢复，是否继续？"
+                              onConfirm={handleDeleteContract}
+                              okText="确认删除"
+                              cancelText="取消"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Button danger icon={<DeleteOutlined />}>
+                                删除
+                              </Button>
+                            </Popconfirm>
+                          </>
+                        )
+                      }
+                    >
+                      <Row gutter={[24, 0]}>
+                        <Col span={8}>
+                          <DetailItem label="房东姓名">
+                            {contract.landlordName || '未维护'}
+                          </DetailItem>
+                        </Col>
+                        <Col span={8}>
+                          <DetailItem label="联系方式">
+                            {contract.landlordPhone || '未维护'}
+                          </DetailItem>
+                        </Col>
+                        <Col span={8}>
+                          <DetailItem label="合同期">
+                            {contractText(contract)}
+                          </DetailItem>
+                        </Col>
+                        <Col span={8}>
+                          <DetailItem label="上游租金">
+                            {contract.rentAmount
+                              ? `¥${money(contract.rentAmount)}`
+                              : '未维护'}
+                          </DetailItem>
+                        </Col>
+                        <Col span={8}>
+                          <DetailItem label="楼层数">
+                            {contract.floors
+                              ? `${contract.floors} 层`
+                              : '未维护'}
+                          </DetailItem>
+                        </Col>
+                        <Col span={8}>
+                          <DetailItem label="占地面积">
+                            {contract.landArea
+                              ? `${contract.landArea} ㎡`
+                              : '未维护'}
+                          </DetailItem>
+                        </Col>
+                        <Col span={8}>
+                          <DetailItem label="总面积">
+                            {contract.totalArea
+                              ? `${contract.totalArea} ㎡`
+                              : '未维护'}
+                          </DetailItem>
+                        </Col>
+                      </Row>
+                    </DetailSection>
+                  ) : (
+                    <EmptyState
+                      title="暂无上游合同信息"
+                      description="录入与上游房东签订的合同信息及房东信息"
+                      action={
+                        canManageApartment
+                          ? {
+                              label: '录入合同',
+                              onClick: () => setModalOpen(true),
+                            }
+                          : undefined
+                      }
+                    />
+                  )}
+                </Spin>
               ),
             },
             {
@@ -330,6 +456,14 @@ export default function ApartmentDetailPage() {
           ]}
         />
       </Spin>
+
+      <UpstreamContractModal
+        open={modalOpen}
+        contract={contract}
+        onCancel={() => setModalOpen(false)}
+        onSubmit={handleSubmitContract}
+        submitting={submitting}
+      />
     </div>
   );
 }

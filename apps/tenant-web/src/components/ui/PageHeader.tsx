@@ -26,6 +26,7 @@ export default function PageHeader({
             ...(back
               ? [
                   {
+                    key: 'back',
                     title: (
                       <span
                         className={styles.breadcrumbBack}
@@ -45,6 +46,7 @@ export default function PageHeader({
                 ]
               : []),
             ...breadcrumb.map((item, idx) => ({
+              key: `crumb-${idx}`,
               title: item.path ? (
                 <span
                   className={styles.breadcrumbLink}
@@ -55,7 +57,6 @@ export default function PageHeader({
               ) : (
                 item.label
               ),
-              key: idx,
             })),
           ]}
         />

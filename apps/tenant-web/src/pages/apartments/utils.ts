@@ -1,4 +1,4 @@
-import type { Apartment } from '@/types/domain';
+import type { Apartment, ApartmentContract } from '@/types/domain';
 
 export const isThisMonth = (value?: string) => {
   if (!value) return false;
@@ -40,11 +40,11 @@ export const apartmentMonthlyExpense = (apartment: Apartment) =>
     .filter((expense) => isThisMonth(expense.spentAt))
     .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
 
-export const contractText = (apartment: Apartment) => {
-  const start = apartment.contractStart
-    ? apartment.contractStart.slice(0, 10)
+export const contractText = (contract?: ApartmentContract) => {
+  const start = contract?.contractStart
+    ? contract.contractStart.slice(0, 10)
     : '';
-  const end = apartment.contractEnd ? apartment.contractEnd.slice(0, 10) : '';
+  const end = contract?.contractEnd ? contract.contractEnd.slice(0, 10) : '';
   if (!start && !end) return '未维护';
   return `${start || '未填'} 至 ${end || '未填'}`;
 };

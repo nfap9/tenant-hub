@@ -1,5 +1,9 @@
 import { apiClient } from './client';
-import type { Apartment, ApartmentExpense } from '@/types/domain';
+import type {
+  Apartment,
+  ApartmentContract,
+  ApartmentExpense,
+} from '@/types/domain';
 
 export async function getApartments(organizationId: string) {
   return apiClient<Apartment[]>('/apartments', { organizationId });
@@ -10,14 +14,6 @@ export async function createApartment(
   payload: {
     name: string;
     location: string;
-    floors?: number;
-    landArea?: number;
-    totalArea?: number;
-    landlordName?: string;
-    landlordPhone?: string;
-    contractStart?: string;
-    contractEnd?: string;
-    rentAmount?: number;
   }
 ) {
   return apiClient<Apartment>('/apartments', {
@@ -33,14 +29,6 @@ export async function updateApartment(
   payload: {
     name?: string;
     location?: string;
-    floors?: number;
-    landArea?: number;
-    totalArea?: number;
-    landlordName?: string;
-    landlordPhone?: string;
-    contractStart?: string;
-    contractEnd?: string;
-    rentAmount?: number;
   }
 ) {
   return apiClient<Apartment>(`/apartments/${id}`, {
@@ -70,6 +58,68 @@ export async function createApartmentExpense(
   return apiClient<ApartmentExpense>(`/apartments/${apartmentId}/expenses`, {
     method: 'POST',
     body: payload,
+    organizationId,
+  });
+}
+
+export async function getApartmentContract(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<ApartmentContract | null>(
+    `/apartments/${apartmentId}/contract`,
+    { organizationId }
+  );
+}
+
+export async function createApartmentContract(
+  organizationId: string,
+  apartmentId: string,
+  payload: {
+    landlordName?: string;
+    landlordPhone?: string;
+    contractStart?: string;
+    contractEnd?: string;
+    rentAmount?: number;
+    floors?: number;
+    landArea?: number;
+    totalArea?: number;
+  }
+) {
+  return apiClient<ApartmentContract>(`/apartments/${apartmentId}/contract`, {
+    method: 'POST',
+    body: payload,
+    organizationId,
+  });
+}
+
+export async function updateApartmentContract(
+  organizationId: string,
+  apartmentId: string,
+  payload: {
+    landlordName?: string;
+    landlordPhone?: string;
+    contractStart?: string;
+    contractEnd?: string;
+    rentAmount?: number;
+    floors?: number;
+    landArea?: number;
+    totalArea?: number;
+  }
+) {
+  return apiClient<ApartmentContract>(`/apartments/${apartmentId}/contract`, {
+    method: 'PUT',
+    body: payload,
+    organizationId,
+  });
+}
+
+export async function deleteApartmentContract(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<void>(`/apartments/${apartmentId}/contract`, {
+    method: 'DELETE',
     organizationId,
   });
 }

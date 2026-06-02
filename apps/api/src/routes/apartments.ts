@@ -22,14 +22,6 @@ apartmentRouter.use(requireAuth, requireOrg);
 const apartmentInput = z.object({
   name: z.string().min(1),
   location: z.string().min(1),
-  floors: z.coerce.number().int().min(1),
-  landArea: z.coerce.number().optional(),
-  totalArea: z.coerce.number().optional(),
-  landlordName: z.string().optional(),
-  landlordPhone: z.string().optional(),
-  contractStart: z.coerce.date().optional(),
-  contractEnd: z.coerce.date().optional(),
-  rentAmount: z.coerce.number().optional(),
 });
 
 const ensureApartmentInOrg = async (
@@ -62,6 +54,7 @@ apartmentRouter.get(
     const apartments = await prisma.apartment.findMany({
       where: { organizationId: req.organizationId! },
       include: {
+        contract: true,
         rooms: {
           include: {
             leases: {

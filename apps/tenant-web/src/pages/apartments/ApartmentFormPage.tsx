@@ -1,26 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Button,
-  DatePicker,
-  message,
-  Spin,
-} from 'antd';
+import { Card, Form, Input, Button, message, Spin } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   SaveOutlined,
   HomeOutlined,
   EnvironmentOutlined,
-  BuildOutlined,
-  AreaChartOutlined,
-  UserOutlined,
-  PhoneOutlined,
-  DollarOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   createApartment,
@@ -28,7 +13,6 @@ import {
   getApartments,
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
-import { optionalNumber, optionalText } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './ApartmentFormPage.module.scss';
 
@@ -61,22 +45,6 @@ export default function ApartmentFormPage() {
       form.setFieldsValue({
         name: apartment.name,
         location: apartment.location,
-        floors: apartment.floors,
-        landArea: apartment.landArea ? Number(apartment.landArea) : undefined,
-        totalArea: apartment.totalArea
-          ? Number(apartment.totalArea)
-          : undefined,
-        landlordName: apartment.landlordName,
-        landlordPhone: apartment.landlordPhone,
-        contractStart: apartment.contractStart
-          ? dayjs(apartment.contractStart)
-          : undefined,
-        contractEnd: apartment.contractEnd
-          ? dayjs(apartment.contractEnd)
-          : undefined,
-        rentAmount: apartment.rentAmount
-          ? Number(apartment.rentAmount)
-          : undefined,
       });
       initializedRef.current = true;
     }
@@ -99,18 +67,6 @@ export default function ApartmentFormPage() {
     const payload = {
       name: String(values.name).trim(),
       location: String(values.location).trim(),
-      floors: Number(values.floors || 1),
-      landArea: optionalNumber(values.landArea),
-      totalArea: optionalNumber(values.totalArea),
-      landlordName: optionalText(values.landlordName),
-      landlordPhone: optionalText(values.landlordPhone),
-      contractStart: values.contractStart
-        ? dayjs(values.contractStart as string).format('YYYY-MM-DD')
-        : undefined,
-      contractEnd: values.contractEnd
-        ? dayjs(values.contractEnd as string).format('YYYY-MM-DD')
-        : undefined,
-      rentAmount: optionalNumber(values.rentAmount),
     };
 
     setSaving(true);
@@ -162,64 +118,6 @@ export default function ApartmentFormPage() {
               <Input
                 prefix={<EnvironmentOutlined className="text-subtle" />}
                 placeholder="请输入地址或片区"
-              />
-            </Form.Item>
-            <Form.Item
-              label="楼层数"
-              name="floors"
-              rules={[{ required: true, message: '请输入楼层数' }]}
-            >
-              <InputNumber
-                min={1}
-                className="w-full"
-                prefix={<BuildOutlined className="text-subtle" />}
-                placeholder="例如 6"
-              />
-            </Form.Item>
-            <div className={styles.formRow}>
-              <Form.Item label="占地面积（㎡）" name="landArea">
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  prefix={<AreaChartOutlined className="text-subtle" />}
-                  placeholder="例如 500"
-                />
-              </Form.Item>
-              <Form.Item label="总面积（㎡）" name="totalArea">
-                <InputNumber
-                  min={0}
-                  className="w-full"
-                  prefix={<AreaChartOutlined className="text-subtle" />}
-                  placeholder="例如 3000"
-                />
-              </Form.Item>
-            </div>
-            <Form.Item label="房东姓名" name="landlordName">
-              <Input
-                prefix={<UserOutlined className="text-subtle" />}
-                placeholder="请输入房东姓名"
-              />
-            </Form.Item>
-            <Form.Item label="房东电话" name="landlordPhone">
-              <Input
-                prefix={<PhoneOutlined className="text-subtle" />}
-                placeholder="请输入手机号"
-              />
-            </Form.Item>
-            <div className={styles.formRow}>
-              <Form.Item label="合同开始日期" name="contractStart">
-                <DatePicker className="w-full" />
-              </Form.Item>
-              <Form.Item label="合同结束日期" name="contractEnd">
-                <DatePicker className="w-full" />
-              </Form.Item>
-            </div>
-            <Form.Item label="上游租金" name="rentAmount">
-              <InputNumber
-                min={0}
-                className="w-full"
-                prefix={<DollarOutlined className="text-subtle" />}
-                placeholder="每期金额"
               />
             </Form.Item>
             <Form.Item>

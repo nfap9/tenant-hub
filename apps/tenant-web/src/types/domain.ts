@@ -105,19 +105,28 @@ export type ApartmentExpense = {
   note?: string;
 };
 
-export type Apartment = {
+export type ApartmentContract = {
   id: string;
   organizationId: string;
-  name: string;
-  location: string;
-  floors: number;
-  landArea?: string | number;
-  totalArea?: string | number;
+  apartmentId: string;
   landlordName?: string;
   landlordPhone?: string;
   contractStart?: string;
   contractEnd?: string;
   rentAmount?: string | number;
+  floors?: number;
+  landArea?: string | number;
+  totalArea?: string | number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type Apartment = {
+  id: string;
+  organizationId: string;
+  name: string;
+  location: string;
+  contract?: ApartmentContract;
   rooms?: Room[];
   expenses?: ApartmentExpense[];
 };
