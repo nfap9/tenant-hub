@@ -21,9 +21,9 @@ cp .env.example .env
 # 3. 启动 PostgreSQL
 pnpm dev:infra
 
-# 4. 生成 Prisma Client 并同步数据库结构
+# 4. 生成 Prisma Client 并执行迁移
 pnpm db:generate
-pnpm db:push
+pnpm db:migrate
 
 # 5. 同时启动 API + tenant-web
 pnpm dev
@@ -43,7 +43,7 @@ pnpm dev
 pnpm dev:all
 ```
 
-这条命令会自动执行：启动 PostgreSQL → Prisma generate → Prisma db push → 同时启动 API + tenant-web。
+这条命令会自动执行：启动 PostgreSQL → Prisma generate → Prisma migrate dev → 同时启动 API + tenant-web。
 
 ### 方式三：全 Docker 启动（验证生产镜像）
 
@@ -61,7 +61,7 @@ docker compose -f docker-compose.prod.yml up --build
 | `pnpm dev`         | 同时启动 API + tenant-web   |
 | `pnpm dev:web`     | 同 `pnpm dev`               |
 | `pnpm db:generate` | 生成 Prisma Client          |
-| `pnpm db:push`     | 同步数据库结构到 PostgreSQL |
+| `pnpm db:migrate`  | 执行 Prisma 数据库迁移      |
 | `pnpm check`       | 全量类型检查 + Lint + 构建  |
 
 ## 环境变量
@@ -77,17 +77,15 @@ docker compose -f docker-compose.prod.yml up --build
 
 ## 数据库同步
 
-修改 `apps/api/prisma/schema.prisma` 后，直接推送结构变更到数据库：
+修改 `apps/api/prisma/schema.prisma` 后，执行迁移更新数据库结构：
 
 ```bash
 # 本地 pnpm 环境
-pnpm db:push
+pnpm db:migrate
 pnpm db:generate
 ```
 
-如果 Docker 中的 PostgreSQL 已启动但同步失败，检查 `.env` 中的 `DATABASE_URL` 是否指向 `localhost:5433`。
-
-> 当前项目使用 `prisma db push` 进行开发，不维护迁移文件。后续如需切回迁移模式，请重新初始化迁移历史。
+如果 Docker 中的 PostgreSQL 已启动但迁移失败，检查 `.env` 中的 `DATABASE_URL` 是否指向 `localhost:5433`。
 
 ## 权限说明
 

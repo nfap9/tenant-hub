@@ -298,6 +298,7 @@ CREATE TABLE "LandlordPayment" (
     "note" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "LandlordPayment_pkey" PRIMARY KEY ("id")
 );
@@ -374,6 +375,7 @@ CREATE TABLE "CoResident" (
     "relation" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "CoResident_pkey" PRIMARY KEY ("id")
 );
@@ -625,6 +627,7 @@ CREATE TABLE "BillItemReading" (
     "meterId" TEXT,
     "meterReadingId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "BillItemReading_pkey" PRIMARY KEY ("id")
 );
@@ -696,6 +699,7 @@ CREATE TABLE "Invoice" (
     "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "Invoice_pkey" PRIMARY KEY ("id")
 );
@@ -786,6 +790,7 @@ CREATE TABLE "MaintenanceOrderItem" (
     "unitPrice" DECIMAL(12,2) NOT NULL DEFAULT 0,
     "amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
     "isLabor" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "MaintenanceOrderItem_pkey" PRIMARY KEY ("id")
 );
@@ -819,6 +824,7 @@ CREATE TABLE "RoomChecklistItem" (
     "photoUrl" TEXT,
     "deductionAmount" DECIMAL(12,2),
     "note" TEXT,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "RoomChecklistItem_pkey" PRIMARY KEY ("id")
 );
@@ -871,6 +877,7 @@ CREATE TABLE "TenantAccount" (
     "totalUnpaid" DECIMAL(12,2) NOT NULL DEFAULT 0,
     "netBalance" DECIMAL(12,2) NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "TenantAccount_pkey" PRIMARY KEY ("id")
 );
@@ -1283,6 +1290,9 @@ CREATE INDEX "Refund_organizationId_status_idx" ON "Refund"("organizationId", "s
 
 -- CreateIndex
 CREATE INDEX "Refund_tenantId_idx" ON "Refund"("tenantId");
+
+-- AddForeignKey
+ALTER TABLE "Organization" ADD CONSTRAINT "Organization_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrgMember" ADD CONSTRAINT "OrgMember_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
