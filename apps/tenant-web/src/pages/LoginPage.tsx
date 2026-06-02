@@ -55,6 +55,7 @@ function useCountdown() {
 export default function LoginPage() {
   const navigate = useNavigate();
   const { signIn, platformInfo } = useAppSession();
+  const smsEnabled = platformInfo.smsConfigured;
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [mode, setMode] = useState<LoginMode>('password');
   const [form] = Form.useForm();
@@ -64,10 +65,10 @@ export default function LoginPage() {
   const isRegister = authMode === 'register';
 
   useEffect(() => {
-    if (isRegister) {
+    if (isRegister && smsEnabled) {
       setMode('code');
     }
-  }, [isRegister]);
+  }, [isRegister, smsEnabled]);
 
   const sendOtp = async () => {
     const phone = form.getFieldValue('phone');
@@ -106,7 +107,7 @@ export default function LoginPage() {
             username: values.username?.trim() ?? '',
             password: values.password ?? '',
             confirmPassword: values.confirmPassword ?? '',
-            code: values.code ?? '',
+            ...(smsEnabled ? { code: values.code ?? '' } : {}),
           })
         : mode === 'password'
           ? await loginWithPassword({
@@ -153,12 +154,14 @@ export default function LoginPage() {
           </Title>
           <Text type="secondary" className={styles.loginSubtitle}>
             {isRegister
-              ? '手机号验证后即可创建账号'
+              ? smsEnabled
+                ? '手机号验证后即可创建账号'
+                : '填写信息即可创建账号'
               : '使用手机号登录你的公寓经营工作台'}
           </Text>
         </div>
 
-        {!isRegister && (
+        {!isRegister && smsEnabled && (
           <div className={styles.loginSegmentedWrapper}>
             <Segmented
               value={mode}
@@ -242,7 +245,7 @@ export default function LoginPage() {
             </Form.Item>
           )}
 
-          {(mode === 'code' || isRegister) && (
+          {(mode === 'code' || (isRegister && smsEnabled)) && (
             <Form.Item
               label="验证码"
               name="code"

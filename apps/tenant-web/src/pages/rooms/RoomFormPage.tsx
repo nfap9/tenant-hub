@@ -14,16 +14,16 @@ import {
   HomeOutlined,
   BuildOutlined,
   NumberOutlined,
-  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import { createRoom, updateRoom } from '@/api/rooms';
 import type { Apartment, Room } from '@/types/domain';
-import { optionalNumber, toFacilityArray } from '@/utils/format';
+import { optionalNumber } from '@/utils/format';
 import { emptyRoomForm, roomStatuses, statusLabels } from './constants';
 import { roomLayoutOptions } from '@/pages/apartments/constants';
+import { facilityOptions } from '@/constants/facilities';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './RoomFormPage.module.scss';
 
@@ -69,7 +69,7 @@ export default function RoomFormPage() {
         roomNo: editingRoom.roomNo,
         layout: editingRoom.layout,
         area: editingRoom.area ? Number(editingRoom.area) : undefined,
-        facilities: editingRoom.facilities?.join(',') ?? '',
+        facilities: editingRoom.facilities ?? [],
         status: editingRoom.status,
       });
       initializedRef.current = true;
@@ -101,7 +101,7 @@ export default function RoomFormPage() {
           roomNo: String(values.roomNo).trim(),
           layout: String(values.layout).trim(),
           area: optionalNumber(values.area),
-          facilities: toFacilityArray(String(values.facilities)),
+          facilities: (values.facilities as string[]) ?? [],
           status: String(values.status),
         });
         message.success('房间信息已更新');
@@ -116,7 +116,7 @@ export default function RoomFormPage() {
           roomNo: String(values.roomNo).trim(),
           layout: String(values.layout).trim(),
           area: optionalNumber(values.area),
-          facilities: toFacilityArray(String(values.facilities)),
+          facilities: (values.facilities as string[]) ?? [],
         });
         message.success('房间已添加');
         if (urlApartmentId) {
@@ -221,9 +221,13 @@ export default function RoomFormPage() {
                 )}
               </div>
               <Form.Item label="设施" name="facilities">
-                <Input
-                  placeholder="多个设施用逗号分隔，如：空调,热水器,洗衣机"
-                  prefix={<AppstoreOutlined className="text-subtle" />}
+                <Select
+                  mode="tags"
+                  placeholder="选择或输入设施，如：空调、热水器"
+                  options={facilityOptions.map((f) => ({
+                    label: f,
+                    value: f,
+                  }))}
                 />
               </Form.Item>
               <Form.Item className={styles.formActions}>

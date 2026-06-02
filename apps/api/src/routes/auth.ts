@@ -13,6 +13,14 @@ export const authRouter = Router();
 const phoneSchema = z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确');
 const passwordSchema = z.string().min(8, '密码至少 8 位');
 
+const getSmsConfigured = async (): Promise<boolean> => {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: 'sms_config' },
+  });
+  const value = setting?.value as Record<string, unknown> | undefined;
+  return Boolean(value?.url);
+};
+
 const verifyOtp = async (
   phone: string,
   code: string,
@@ -34,6 +42,10 @@ const verifyOtp = async (
 authRouter.post(
   '/otp',
   asyncHandler(async (req, res) => {
+    const smsConfigured = await getSmsConfigured();
+    if (!smsConfigured) {
+      throw new HttpError(400, '短信服务未配置，暂不支持验证码功能');
+    }
     const input = z
       .object({ phone: phoneSchema, purpose: z.enum(['REGISTER', 'LOGIN']) })
       .parse(req.body);
@@ -96,13 +108,14 @@ authRouter.post(
 authRouter.post(
   '/register',
   asyncHandler(async (req, res) => {
+    const smsConfigured = await getSmsConfigured();
     const input = z
       .object({
         phone: phoneSchema,
         username: z.string().min(1).max(24),
         password: passwordSchema,
         confirmPassword: passwordSchema,
-        code: z.string().length(6),
+        code: smsConfigured ? z.string().length(6) : z.string().optional(),
       })
       .refine(
         (value) => value.password === value.confirmPassword,
@@ -114,7 +127,9 @@ authRouter.post(
       where: { phone: input.phone },
     });
     if (existed) throw new HttpError(409, '手机号已注册');
-    await verifyOtp(input.phone, input.code, 'REGISTER');
+    if (smsConfigured) {
+      await verifyOtp(input.phone, input.code!, 'REGISTER');
+    }
 
     const isFirstUser = (await prisma.user.count()) === 0;
     const user = await prisma.user.create({
@@ -153,6 +168,10 @@ authRouter.post(
 authRouter.post(
   '/login/otp',
   asyncHandler(async (req, res) => {
+    const smsConfigured = await getSmsConfigured();
+    if (!smsConfigured) {
+      throw new HttpError(400, '短信服务未配置，暂不支持验证码登录');
+    }
     const input = z
       .object({ phone: phoneSchema, code: z.string().length(6) })
       .parse(req.body);

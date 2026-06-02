@@ -38,6 +38,12 @@ export default defineConfig({
   },
   server: {
     port: 8080,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
     watch: { usePolling: true, interval: 100 },
   },
 });

@@ -27,6 +27,7 @@ export type PlatformInfo = {
   name: string;
   logoUrl: string;
   contactPhone: string;
+  smsConfigured: boolean;
 };
 
 export type AppSession = {
@@ -79,6 +80,7 @@ export function AppSessionProvider({
     name: 'Tenant Hub',
     logoUrl: '',
     contactPhone: '',
+    smsConfigured: false,
   });
   const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
   const [platformRole, setPlatformRole] = useState<string | undefined>(

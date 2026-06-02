@@ -77,7 +77,7 @@ export const emptyRoomForm = {
   roomNo: '',
   layout: '',
   area: '',
-  facilities: '',
+  facilities: [] as string[],
   status: 'VACANT' as RoomStatus,
 };
 

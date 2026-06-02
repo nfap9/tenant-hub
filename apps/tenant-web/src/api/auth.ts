@@ -27,7 +27,7 @@ export type RegisterInput = {
   username: string;
   password: string;
   confirmPassword: string;
-  code: string;
+  code?: string;
 };
 
 export type UpdatePasswordInput = {

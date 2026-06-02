@@ -21,6 +21,7 @@ export type PlatformInfo = {
   name: string;
   logoUrl: string;
   contactPhone: string;
+  smsConfigured: boolean;
 };
 
 type AppSessionContextType = {

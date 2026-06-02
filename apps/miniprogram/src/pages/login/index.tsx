@@ -35,6 +35,7 @@ function useCountdown() {
 
 export default function LoginPage() {
   const { signIn, platformInfo } = useAppSession();
+  const smsEnabled = platformInfo.smsConfigured;
 
   useEffect(() => {
     if (platformInfo.name) {
@@ -97,9 +98,11 @@ export default function LoginPage() {
       showToast('两次输入的密码不一致');
       return;
     }
-    if ((isRegister || mode === 'code') && !code) {
-      showToast('请输入验证码');
-      return;
+    if ((isRegister && smsEnabled) || mode === 'code') {
+      if (!code) {
+        showToast('请输入验证码');
+        return;
+      }
     }
 
     setBusy(true);
@@ -116,7 +119,7 @@ export default function LoginPage() {
             username: username.trim(),
             password,
             confirmPassword,
-            code,
+            ...(smsEnabled ? { code } : {}),
           }
         : mode === 'password'
           ? { phone: phone.trim(), password }
@@ -140,8 +143,8 @@ export default function LoginPage() {
   const toggleAuthMode = () => {
     const next = isRegister ? 'login' : 'register';
     setAuthMode(next);
-    if (!isRegister) {
-      // 切换到注册时默认使用验证码模式
+    if (!isRegister && smsEnabled) {
+      // 切换到注册时默认使用验证码模式（仅当短信已配置时）
       setMode('code');
     }
   };
@@ -163,11 +166,13 @@ export default function LoginPage() {
         </Text>
         <Text className="login-card__subtitle">
           {isRegister
-            ? '手机号验证后即可创建账号'
+            ? smsEnabled
+              ? '手机号验证后即可创建账号'
+              : '填写信息即可创建账号'
             : '使用手机号登录你的公寓经营工作台'}
         </Text>
 
-        {!isRegister && (
+        {!isRegister && smsEnabled && (
           <View className="login-segment">
             <View
               className={`login-segment__item ${mode === 'code' ? 'login-segment__item--active' : ''}`}
@@ -230,7 +235,7 @@ export default function LoginPage() {
             />
           )}
 
-          {(mode === 'code' || isRegister) && (
+          {(mode === 'code' || (isRegister && smsEnabled)) && (
             <View>
               <Input
                 label="验证码"

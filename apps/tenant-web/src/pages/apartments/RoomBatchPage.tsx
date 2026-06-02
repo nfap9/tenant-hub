@@ -1,5 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Card, Form, InputNumber, Button, message, Checkbox } from 'antd';
+import {
+  Card,
+  Form,
+  InputNumber,
+  Button,
+  message,
+  Checkbox,
+  Select,
+} from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SaveOutlined, BuildOutlined, HomeOutlined } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
@@ -11,6 +19,7 @@ import {
 } from '@/utils/batchRooms';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import { facilityOptions } from '@/constants/facilities';
 import styles from './RoomBatchPage.module.scss';
 
 export default function RoomBatchPage() {
@@ -26,6 +35,7 @@ export default function RoomBatchPage() {
   const [selectedBatchRoomNos, setSelectedBatchRoomNos] = useState<string[]>(
     []
   );
+  const [batchFacilities, setBatchFacilities] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const generatedBatchRoomNos = useMemo(
@@ -74,7 +84,7 @@ export default function RoomBatchPage() {
         selectedGeneratedBatchRoomNos.map((roomNo) => ({
           roomNo,
           layout: '未配置',
-          facilities: [],
+          facilities: batchFacilities,
         }))
       );
       message.success(
@@ -135,6 +145,18 @@ export default function RoomBatchPage() {
               />
             </Form.Item>
           </div>
+          <Form.Item label="设施">
+            <Select
+              mode="tags"
+              placeholder="选择或输入设施，如：空调、热水器"
+              value={batchFacilities}
+              onChange={setBatchFacilities}
+              options={facilityOptions.map((f) => ({
+                label: f,
+                value: f,
+              }))}
+            />
+          </Form.Item>
         </Form>
 
         <div className="mt-16">
