@@ -6,7 +6,6 @@
 tenant-hub/
 ├── apps/
 │   ├── api/                 # 后端 API
-│   ├── miniprogram/         # 微信小程序
 │   └── tenant-web/          # Web 管理后台
 ├── package.json             # 根 workspace 配置
 ├── pnpm-workspace.yaml      # packages: ['apps/*']
@@ -18,7 +17,7 @@ tenant-hub/
 └── .github/workflows/       # GitHub Actions CI/CD
 ```
 
-> **注意**：当前 monorepo 只有 `apps/*`，没有共享的 `packages/*` 公共库。三个应用之间代码独立，各自维护 domain types 与 API client。
+> **注意**：当前 monorepo 只有 `apps/*`，没有共享的 `packages/*` 公共库。两个应用之间代码独立，各自维护 domain types 与 API client。
 
 ## 技术栈
 
@@ -47,16 +46,6 @@ tenant-hub/
 | 样式       | SCSS（全局 + 组件级）                                 |
 | 开发服务器 | 端口 5174，启用 polling watch（兼容 Docker/容器环境） |
 | 构建流程   | `tsc -b && vite build`                                |
-
-### 微信小程序端 (`apps/miniprogram`)
-
-| 层级     | 技术                      |
-| -------- | ------------------------- |
-| 框架     | Taro 4.0.9 + React 18     |
-| 编译器   | Webpack 5                 |
-| 样式     | SCSS / Sass               |
-| 主要平台 | 微信小程序（WeChat）      |
-| 构建命令 | `taro build --type weapp` |
 
 ## 代码组织
 
@@ -148,36 +137,3 @@ apps/tenant-web/src/
 - `RequireAuth` — 未登录重定向到 `/login`
 - `RequireOrg` — 无组织成员资格时拦截
 - `RequireSuperAdmin` — 限制 `/ops/*` 仅 SUPER_ADMIN 可访问
-
-### 小程序端代码结构
-
-```
-apps/miniprogram/src/
-├── app.tsx                     # Taro 应用入口，提供 AppSessionContext
-├── app.config.ts               # 页面列表 + TabBar 配置
-├── app.scss                    # 全局样式 + CSS 变量
-├── api/
-│   └── client.ts               # Taro.request 封装 + 401 处理
-├── pages/                      # 按业务域分组（与 Web 端对应）
-│   ├── index/                  # 首页（Dashboard）
-│   ├── apartments/
-│   ├── rooms/
-│   ├── bills/
-│   ├── settings/
-│   └── login/
-├── components/
-│   ├── ui/                     # 自定义 UI 组件库（Button、Card、Input、Badge 等）
-│   ├── NoOrganization.tsx
-│   ├── TaskSheet.tsx
-│   └── Toast.tsx
-├── context/
-│   └── AppSessionContext.tsx   # 全局会话/组织状态
-├── theme/
-│   └── tokens.scss             # SCSS 设计令牌
-├── types/
-│   └── domain.ts
-└── utils/
-    ├── batchRooms.ts
-    ├── format.ts
-    └── storage.ts              # Taro 存储封装
-```

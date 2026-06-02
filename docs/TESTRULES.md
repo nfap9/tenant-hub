@@ -17,8 +17,8 @@
 
 - **Mock 策略**：大量使用 `vi.mock()` 模拟 `prisma`、`env`、`bcryptjs`、`smsService` 等模块。Prisma 模型被模拟为带 `vi.fn()` 方法的普通对象。
 
-### Web 端与小程序端测试
+### Web 端测试
 
-- **当前状态**：`apps/tenant-web` 与 `apps/miniprogram` **均无测试代码**。
+- **当前状态**：`apps/tenant-web` **无测试代码**。
 - 无 `__tests__` 目录，无 `*.test.*` / `*.spec.*` 文件。
 - `tenant-web` 的 devDependencies 中未引入 vitest、jest、@testing-library/react、playwright、cypress 等测试库。

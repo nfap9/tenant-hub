@@ -4,7 +4,6 @@
 
 - `apps/api`：Node.js + Express + Prisma 5 + PostgreSQL
 - `apps/tenant-web`：React 18 + Vite + Ant Design 5 + React Router 7，集成运营配置与业务前台
-- `apps/miniprogram`：小程序端（Taro 4 + React 18），用于组织、公寓、房间、租约、账单等业务管理
 
 ## 开发环境
 
@@ -38,13 +37,6 @@ pnpm dev
 
 > 开发环境验证码会打印在 API 控制台。
 
-如果只启动 API 和小程序 H5 预览：
-
-```bash
-# 启动 API + 小程序 H5 模式
-pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/miniprogram dev:h5
-```
-
 ### 方式二：一键全量启动
 
 ```bash
@@ -63,15 +55,14 @@ docker compose -f docker-compose.prod.yml up --build
 
 ## 各服务独立启动命令
 
-| 命令                   | 说明                             |
-| ---------------------- | -------------------------------- |
-| `pnpm dev:infra`       | Docker 启动 PostgreSQL           |
-| `pnpm dev`             | 同时启动 API + tenant-web        |
-| `pnpm dev:web`         | 同 `pnpm dev`                    |
-| `pnpm dev:miniprogram` | 启动小程序微信开发者工具编译模式 |
-| `pnpm db:generate`     | 生成 Prisma Client               |
-| `pnpm db:push`         | 同步数据库结构到 PostgreSQL      |
-| `pnpm check`           | 全量类型检查 + Lint + 构建       |
+| 命令               | 说明                        |
+| ------------------ | --------------------------- |
+| `pnpm dev:infra`   | Docker 启动 PostgreSQL      |
+| `pnpm dev`         | 同时启动 API + tenant-web   |
+| `pnpm dev:web`     | 同 `pnpm dev`               |
+| `pnpm db:generate` | 生成 Prisma Client          |
+| `pnpm db:push`     | 同步数据库结构到 PostgreSQL |
+| `pnpm check`       | 全量类型检查 + Lint + 构建  |
 
 ## 环境变量
 
@@ -113,7 +104,6 @@ pnpm db:generate
 - 租约签订、终止、自动生成周期账单
 - 房租、水电、其他费用子账单，水电读数录入、批量导出/导入、收款记录
 - 运营端（整合在 tenant-web 中）：套餐配置、租户组织状态管理、角色权限配置、系统参数、短信配置
-- 移动端承载最终用户的组织、公寓、房间、租约、账单、水电录入、收款等业务入口
 
 ## 设计说明
 

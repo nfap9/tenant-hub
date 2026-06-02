@@ -37,11 +37,8 @@ app.use(
         callback(null, true);
         return;
       }
-      // 允许配置的域名 + 微信小程序官方域名
-      if (
-        corsOrigins.includes(origin) ||
-        origin.includes('servicewechat.com')
-      ) {
+      // 允许配置的域名
+      if (corsOrigins.includes(origin)) {
         callback(null, true);
         return;
       }
