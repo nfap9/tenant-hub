@@ -10,10 +10,10 @@ import { PERMISSIONS } from '../services/roles.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 
-export const roomChecklistRouter = Router();
-roomChecklistRouter.use(requireAuth, requireOrg);
+export const checklistRouter = Router();
+checklistRouter.use(requireAuth, requireOrg);
 
-roomChecklistRouter.get(
+checklistRouter.get(
   '/',
   requirePermission(PERMISSIONS.LEASE_VIEW),
   asyncHandler(async (req, res) => {
@@ -41,7 +41,7 @@ roomChecklistRouter.get(
   })
 );
 
-roomChecklistRouter.post(
+checklistRouter.post(
   '/',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
@@ -59,7 +59,7 @@ roomChecklistRouter.post(
             z.object({
               category: z.string(),
               itemName: z.string(),
-              status: z.string(), // 完好/损坏/缺失/脏污
+              status: z.string(),
               description: z.string().optional(),
               photoUrl: z.string().optional(),
               deductionAmount: z.coerce.number().optional(),
@@ -90,7 +90,7 @@ roomChecklistRouter.post(
   })
 );
 
-roomChecklistRouter.get(
+checklistRouter.get(
   '/:id',
   requirePermission(PERMISSIONS.LEASE_VIEW),
   asyncHandler(async (req, res) => {
@@ -107,7 +107,67 @@ roomChecklistRouter.get(
   })
 );
 
-roomChecklistRouter.put(
+checklistRouter.get(
+  '/:id/comparison',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const checklist = await prisma.roomChecklist.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: {
+        lease: true,
+        items: true,
+      },
+    });
+    if (!checklist) throw new HttpError(404, '检查清单不存在');
+
+    // 查找对应的入住/退租清单
+    const counterpart = await prisma.roomChecklist.findFirst({
+      where: {
+        leaseId: checklist.leaseId,
+        roomId: checklist.roomId,
+        checkType: checklist.checkType === 'CHECKIN' ? 'CHECKOUT' : 'CHECKIN',
+        organizationId: req.organizationId!,
+      },
+      include: { items: true },
+    });
+
+    const comparison = {
+      checkout: checklist.checkType === 'CHECKOUT' ? checklist : counterpart,
+      checkin: checklist.checkType === 'CHECKIN' ? checklist : counterpart,
+      deductionSuggestions: [] as Array<{
+        itemName: string;
+        checkinStatus: string;
+        checkoutStatus: string;
+        suggestedAmount: number;
+      }>,
+    };
+
+    if (counterpart) {
+      const checkoutItems =
+        checklist.checkType === 'CHECKOUT'
+          ? checklist.items
+          : counterpart.items;
+      const checkinItems =
+        checklist.checkType === 'CHECKIN' ? checklist.items : counterpart.items;
+
+      for (const coItem of checkoutItems) {
+        const ciItem = checkinItems.find((i) => i.itemName === coItem.itemName);
+        if (ciItem && ciItem.status === '完好' && coItem.status !== '完好') {
+          comparison.deductionSuggestions.push({
+            itemName: coItem.itemName,
+            checkinStatus: ciItem.status,
+            checkoutStatus: coItem.status,
+            suggestedAmount: Number(coItem.deductionAmount ?? 0),
+          });
+        }
+      }
+    }
+
+    ok(res, comparison);
+  })
+);
+
+checklistRouter.put(
   '/:id',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
@@ -164,7 +224,7 @@ roomChecklistRouter.put(
   })
 );
 
-roomChecklistRouter.delete(
+checklistRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {

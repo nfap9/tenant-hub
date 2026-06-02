@@ -121,7 +121,6 @@ leaseRouter.post(
       ...leaseData
     } = input;
 
-    // Auto-associate or create tenant
     let resolvedTenantId = inputTenantId;
     if (!resolvedTenantId && leaseData.tenantPhone) {
       const tenant = await findOrCreateTenant(
@@ -222,6 +221,45 @@ leaseRouter.post(
   })
 );
 
+leaseRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const lease = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: {
+        ...leaseInclude,
+        coResidents: true,
+        changeLogs: { orderBy: { changedAt: 'desc' } },
+      },
+    });
+    if (!lease) throw new HttpError(404, '租约不存在');
+    ok(res, withLeaseLifecycle(lease));
+  })
+);
+
+leaseRouter.delete(
+  '/:id',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const lease = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { room: { select: { status: true } } },
+    });
+    if (!lease) throw new HttpError(404, '租约不存在');
+    if (lease.status !== 'DRAFT')
+      throw new HttpError(400, '仅草稿租约可以删除');
+    if (lease.room.status !== 'VACANT')
+      throw new HttpError(400, '房间已被占用，无法删除');
+    const bills = await prisma.bill.count({
+      where: { leaseId: lease.id, status: { not: 'VOID' } },
+    });
+    if (bills > 0) throw new HttpError(400, '租约存在关联账单，无法删除');
+    await prisma.lease.softDelete({ where: { id: lease.id } });
+    ok(res, { deleted: true });
+  })
+);
+
 leaseRouter.put(
   '/:id',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
@@ -284,7 +322,6 @@ leaseRouter.put(
         }
       }
 
-      // 记录变更日志
       const changeFields = Object.keys(leaseData) as Array<
         keyof typeof leaseData
       >;
@@ -315,13 +352,142 @@ leaseRouter.put(
   })
 );
 
+// Get lease bills
+leaseRouter.get(
+  '/:id/bills',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const bills = await prisma.bill.findMany({
+      where: { leaseId: req.params.id, organizationId: req.organizationId! },
+      include: { items: true, payments: true },
+      orderBy: { billingDate: 'desc' },
+    });
+    ok(res, bills);
+  })
+);
+
+// Get lease change logs
+leaseRouter.get(
+  '/:id/changes',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const logs = await prisma.leaseChangeLog.findMany({
+      where: { leaseId: req.params.id },
+      orderBy: { changedAt: 'desc' },
+    });
+    ok(res, logs);
+  })
+);
+
+// Cohabitants sub-resource
+leaseRouter.get(
+  '/:id/cohabitants',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const residents = await prisma.coResident.findMany({
+      where: {
+        leaseId: req.params.id,
+        tenant: { organizationId: req.organizationId! },
+      },
+      include: { tenant: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    ok(res, residents);
+  })
+);
+
+leaseRouter.post(
+  '/:id/cohabitants',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        tenantId: z.string(),
+        name: z.string().min(1),
+        idCard: z.string().optional(),
+        phone: z.string().optional(),
+        relation: z.string(),
+      })
+      .parse(req.body);
+
+    const lease = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!lease) throw new HttpError(404, '租约不存在');
+
+    const tenant = await prisma.tenant.findFirst({
+      where: { id: input.tenantId, organizationId: req.organizationId! },
+    });
+    if (!tenant) throw new HttpError(404, '租客不存在');
+
+    ok(
+      res,
+      await prisma.coResident.create({
+        data: { ...input, leaseId: req.params.id },
+        include: { tenant: true },
+      })
+    );
+  })
+);
+
+leaseRouter.put(
+  '/:id/cohabitants/:cid',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        name: z.string().min(1).optional(),
+        idCard: z.string().optional(),
+        phone: z.string().optional(),
+        relation: z.string().optional(),
+      })
+      .parse(req.body);
+
+    const resident = await prisma.coResident.findFirst({
+      where: {
+        id: req.params.cid,
+        leaseId: req.params.id,
+        tenant: { organizationId: req.organizationId! },
+      },
+    });
+    if (!resident) throw new HttpError(404, '同住人不存在');
+
+    ok(
+      res,
+      await prisma.coResident.update({
+        where: { id: req.params.cid },
+        data: input,
+        include: { tenant: true },
+      })
+    );
+  })
+);
+
+leaseRouter.delete(
+  '/:id/cohabitants/:cid',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const resident = await prisma.coResident.findFirst({
+      where: {
+        id: req.params.cid,
+        leaseId: req.params.id,
+        tenant: { organizationId: req.organizationId! },
+      },
+    });
+    if (!resident) throw new HttpError(404, '同住人不存在');
+    await prisma.coResident.softDelete({ where: { id: req.params.cid } });
+    ok(res, { deleted: true });
+  })
+);
+
+// Settlement
 leaseRouter.post(
   '/:id/terminate',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
       .object({
-        type: z.enum(['EXPIRED', 'NEGOTIATED', 'BREACH']),
+        type: z.enum(['EXPIRED', 'NEGOTIATED', 'BREACH', 'FORCED']),
         reason: z.string().optional(),
         terminatedAt: z.coerce.date().default(new Date()),
         rentAdjustmentAmount: z.coerce.number().default(0),
@@ -428,7 +594,7 @@ leaseRouter.post(
   })
 );
 
-// US-504: 续租
+// Renew
 leaseRouter.post(
   '/:id/renew',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
@@ -528,7 +694,7 @@ leaseRouter.post(
   })
 );
 
-// US-505: 换房
+// Room change
 leaseRouter.post(
   '/:id/room-change',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
@@ -566,7 +732,6 @@ leaseRouter.post(
       throw new HttpError(400, '目标房间不是空闲状态');
 
     const result = await prisma.$transaction(async (tx) => {
-      // 终止旧租约
       await tx.lease.update({
         where: { id: oldLease.id },
         data: {
@@ -582,7 +747,6 @@ leaseRouter.post(
         data: { status: 'CHECKOUT_CLEANING' },
       });
 
-      // 创建新租约
       const newLease = await tx.lease.create({
         data: {
           organizationId: req.organizationId!,
@@ -624,7 +788,6 @@ leaseRouter.post(
         data: { status: 'OCCUPIED' },
       });
 
-      // 押金转结
       if (oldLease.deposit) {
         await tx.deposit.update({
           where: { id: oldLease.deposit.id },

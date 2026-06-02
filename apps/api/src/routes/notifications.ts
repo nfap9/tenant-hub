@@ -71,7 +71,7 @@ notificationRouter.patch(
   })
 );
 
-notificationRouter.post(
+notificationRouter.put(
   '/read-all',
   requirePermission(PERMISSIONS.LEASE_VIEW),
   asyncHandler(async (req, res) => {

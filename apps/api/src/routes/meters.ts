@@ -155,3 +155,28 @@ meterRouter.delete(
     ok(res, { success: true });
   })
 );
+
+meterRouter.get(
+  '/:id/last-reading',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const meter = await prisma.meter.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!meter) throw new HttpError(404, '表具不存在');
+
+    const reading = await prisma.meterReading.findFirst({
+      where: {
+        meterId: meter.id,
+        status: { not: 'VOID' },
+      },
+      orderBy: { readingDate: 'desc' },
+      include: {
+        room: { select: { id: true, roomNo: true } },
+        createdBy: { select: { id: true, username: true } },
+      },
+    });
+
+    ok(res, { meterId: meter.id, lastReading: reading });
+  })
+);

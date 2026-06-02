@@ -36,7 +36,7 @@ const verifyOtp = async (
 };
 
 authRouter.post(
-  '/otp',
+  '/send-sms',
   asyncHandler(async (req, res) => {
     const input = z
       .object({
@@ -228,8 +228,8 @@ authRouter.post(
   })
 );
 
-authRouter.put(
-  '/password',
+authRouter.post(
+  '/change-password',
   requireAuth,
   asyncHandler(async (req, res) => {
     const input = z

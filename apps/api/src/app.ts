@@ -2,27 +2,29 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { corsOrigins, env } from './config/env.js';
-import { adminRouter } from './routes/admin.js';
+import { accountRouter } from './routes/accounts.js';
 import { apartmentRouter } from './routes/apartments.js';
 import { auditLogRouter } from './routes/auditLogs.js';
 import { authRouter } from './routes/auth.js';
 import { billRouter } from './routes/bills.js';
-import { cashierJournalRouter } from './routes/cashierJournals.js';
-import { coResidentRouter } from './routes/coResidents.js';
+import { checklistRouter } from './routes/checklists.js';
+import { dashboardRouter } from './routes/dashboard.js';
 import { depositRouter } from './routes/deposits.js';
 import { invoiceRouter } from './routes/invoices.js';
-import { landlordPaymentRouter } from './routes/landlordPayments.js';
+import { jobRouter } from './routes/jobs.js';
+import { landlordContractRouter } from './routes/landlordContracts.js';
 import { leaseRouter } from './routes/leases.js';
 import { maintenanceRouter } from './routes/maintenance.js';
+import { meterReadingRouter } from './routes/meterReadings.js';
 import { meterRouter } from './routes/meters.js';
-import { orgRouter } from './routes/organizations.js';
-import { platformRouter } from './routes/platform.js';
 import { notificationRouter } from './routes/notifications.js';
-import { reportRouter } from './routes/reports.js';
+import { orgRouter } from './routes/organizations.js';
+import { paymentRouter } from './routes/payments.js';
+import { permissionRouter } from './routes/permissions.js';
 import { refundRouter } from './routes/refunds.js';
-import { accountRouter } from './routes/accounts.js';
-import { roomChecklistRouter } from './routes/roomChecklists.js';
-import { uploadRouter } from './routes/uploads.js';
+import { reportRouter } from './routes/reports.js';
+import { roleRouter } from './routes/roles.js';
+import { roomRouter } from './routes/rooms.js';
 import { tenantRouter } from './routes/tenants.js';
 import { errorHandler } from './middleware/error.js';
 
@@ -36,7 +38,6 @@ app.use(
         callback(null, true);
         return;
       }
-      // 允许配置的域名
       if (corsOrigins.includes(origin)) {
         callback(null, true);
         return;
@@ -48,27 +49,49 @@ app.use(
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// Flow J: 组织权限
 app.use('/api/auth', authRouter);
 app.use('/api/organizations', orgRouter);
+app.use('/api/roles', roleRouter);
+app.use('/api/permissions', permissionRouter);
+
+// Flow A: 物业初始化
 app.use('/api/apartments', apartmentRouter);
-app.use('/api/leases', leaseRouter);
-app.use('/api/bills', billRouter);
-app.use('/api/deposits', depositRouter);
+app.use('/api/rooms', roomRouter);
 app.use('/api/meters', meterRouter);
+app.use('/api/landlord-contracts', landlordContractRouter);
+
+// Flow B: 租客入驻 + Flow E: 退租结算 + Flow F: 租约变更
+app.use('/api/leases', leaseRouter);
 app.use('/api/tenants', tenantRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/platform', platformRouter);
-app.use('/api/maintenance', maintenanceRouter);
-app.use('/api/room-checklists', roomChecklistRouter);
-app.use('/api/landlord-payments', landlordPaymentRouter);
-app.use('/api/co-residents', coResidentRouter);
-app.use('/api/cashier-journals', cashierJournalRouter);
-app.use('/api/invoices', invoiceRouter);
+
+// Flow C: 月度出账运营
+app.use('/api/bills', billRouter);
+app.use('/api/meter-readings', meterReadingRouter);
+
+// Flow D: 收款核销
+app.use('/api/payments', paymentRouter);
+
+// Flow E: 退租结算 (押金)
+app.use('/api/deposits', depositRouter);
+
+// Flow B/E: 检查清单
+app.use('/api/checklists', checklistRouter);
+
+// Flow H: 维修工单
+app.use('/api/maintenance-orders', maintenanceRouter);
+
+// Flow I: 财务报表
+app.use('/api/reports', reportRouter);
+
+// Flow J + 支撑流程
+app.use('/api/dashboard', dashboardRouter);
 app.use('/api/audit-logs', auditLogRouter);
 app.use('/api/notifications', notificationRouter);
-app.use('/api/reports', reportRouter);
 app.use('/api/refunds', refundRouter);
+app.use('/api/invoices', invoiceRouter);
 app.use('/api/accounts', accountRouter);
-app.use('/api/uploads', uploadRouter);
-app.use('/uploads', express.static('uploads'));
+app.use('/api/jobs', jobRouter);
+
 app.use(errorHandler);

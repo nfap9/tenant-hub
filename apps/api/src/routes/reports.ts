@@ -295,6 +295,157 @@ reportRouter.get(
   })
 );
 
+// US-1102: 公寓盈亏
+reportRouter.get(
+  '/apartment-profit',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const { year, month } = z
+      .object({
+        year: z.coerce.number().int(),
+        month: z.coerce.number().int().min(1).max(12).optional(),
+      })
+      .parse(req.query);
+
+    const startDate = month
+      ? new Date(year, month - 1, 1)
+      : new Date(year, 0, 1);
+    const endDate = month ? new Date(year, month, 1) : new Date(year + 1, 0, 1);
+
+    const apartments = await prisma.apartment.findMany({
+      where: { organizationId: req.organizationId! },
+      include: {
+        rooms: {
+          include: {
+            leases: {
+              include: {
+                bills: {
+                  where: {
+                    billingDate: { gte: startDate, lt: endDate },
+                    status: { in: ['PAID', 'PARTIAL_PAID'] },
+                  },
+                },
+              },
+            },
+          },
+        },
+        expenses: {
+          where: {
+            spentAt: { gte: startDate, lt: endDate },
+            deletedAt: null,
+          },
+        },
+      },
+    });
+
+    const result = apartments.map((apt) => {
+      const income = apt.rooms.reduce(
+        (sum, room) =>
+          sum +
+          room.leases.reduce(
+            (lSum, lease) =>
+              lSum +
+              lease.bills.reduce(
+                (bSum, bill) => bSum + Number(bill.paidAmount),
+                0
+              ),
+            0
+          ),
+        0
+      );
+      const expense = apt.expenses.reduce(
+        (sum, e) => sum + Number(e.amount),
+        0
+      );
+      return {
+        apartmentId: apt.id,
+        apartmentName: apt.name,
+        income,
+        expense,
+        profit: income - expense,
+      };
+    });
+
+    ok(res, {
+      period: { startDate, endDate },
+      apartments: result,
+      totalIncome: result.reduce((s, r) => s + r.income, 0),
+      totalExpense: result.reduce((s, r) => s + r.expense, 0),
+      totalProfit: result.reduce((s, r) => s + r.profit, 0),
+    });
+  })
+);
+
+// US-1101: 逾期分析
+reportRouter.get(
+  '/overdue-analysis',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const { days = 30 } = z
+      .object({ days: z.coerce.number().int().optional() })
+      .parse(req.query);
+
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const overdueBills = await prisma.bill.findMany({
+      where: {
+        organizationId: req.organizationId!,
+        status: 'OVERDUE',
+        dueDate: { gte: cutoffDate },
+      },
+      include: {
+        lease: {
+          include: {
+            room: { include: { apartment: true } },
+            tenant: true,
+          },
+        },
+        items: true,
+      },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    const totalOverdue = overdueBills.reduce(
+      (sum, b) => sum + Number(b.totalAmount) - Number(b.paidAmount),
+      0
+    );
+
+    const byApartment: Record<string, { count: number; amount: number }> = {};
+    for (const bill of overdueBills) {
+      const aptName = bill.lease.room.apartment.name;
+      if (!byApartment[aptName]) {
+        byApartment[aptName] = { count: 0, amount: 0 };
+      }
+      byApartment[aptName].count++;
+      byApartment[aptName].amount +=
+        Number(bill.totalAmount) - Number(bill.paidAmount);
+    }
+
+    const topOverdue = overdueBills
+      .map((b) => ({
+        billId: b.id,
+        tenantName: b.lease.tenantName,
+        roomNo: b.lease.room.roomNo,
+        apartmentName: b.lease.room.apartment.name,
+        amount: Number(b.totalAmount) - Number(b.paidAmount),
+        dueDate: b.dueDate,
+        daysOverdue: Math.floor(
+          (Date.now() - b.dueDate.getTime()) / (1000 * 60 * 60 * 24)
+        ),
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+
+    ok(res, {
+      period: { days },
+      totalOverdue,
+      billCount: overdueBills.length,
+      byApartment,
+      topOverdue,
+    });
+  })
+);
+
 // US-104/1102: 收支趋势（最近6个月）
 reportRouter.get(
   '/income-expense-trend',

@@ -77,6 +77,10 @@ depositRouter.get(
           },
         },
         bill: { include: { payments: { include: { user: true } } } },
+        depositLedgers: {
+          orderBy: { createdAt: 'desc' },
+          include: { operator: { select: { id: true, username: true } } },
+        },
       },
     });
     if (!deposit) throw new HttpError(404, '押金记录不存在');
@@ -84,13 +88,13 @@ depositRouter.get(
   })
 );
 
+// Collect deposit
 depositRouter.post(
-  '/:id/payments',
+  '/:id/collect',
   requirePermission(PERMISSIONS.DEPOSIT_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
       .object({
-        type: z.enum(['COLLECT', 'REFUND', 'DEDUCT']),
         amount: z.coerce.number().positive(),
         method: z.string().min(1),
         note: z.string().optional(),
@@ -107,6 +111,85 @@ depositRouter.post(
       await recordDepositPayment({
         depositId: deposit.id,
         userId: req.user!.id,
+        type: 'COLLECT',
+        ...input,
+      })
+    );
+  })
+);
+
+// Deduct deposit
+depositRouter.post(
+  '/:id/deduct',
+  requirePermission(PERMISSIONS.DEPOSIT_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        amount: z.coerce.number().positive(),
+        reason: z.string().min(1),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
+
+    const deposit = await prisma.deposit.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!deposit) throw new HttpError(404, '押金记录不存在');
+    if (
+      Number(deposit.paidAmount) -
+        Number(deposit.deductedAmount) -
+        Number(deposit.refundedAmount) <
+      input.amount
+    ) {
+      throw new HttpError(400, '抵扣金额超过可用押金余额');
+    }
+
+    ok(
+      res,
+      await recordDepositPayment({
+        depositId: deposit.id,
+        userId: req.user!.id,
+        type: 'DEDUCT',
+        amount: input.amount,
+        method: 'DEDUCT',
+        note: input.reason + (input.note ? `; ${input.note}` : ''),
+      })
+    );
+  })
+);
+
+// Refund deposit
+depositRouter.post(
+  '/:id/refund',
+  requirePermission(PERMISSIONS.DEPOSIT_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        amount: z.coerce.number().positive(),
+        method: z.string().min(1),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
+
+    const deposit = await prisma.deposit.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!deposit) throw new HttpError(404, '押金记录不存在');
+    if (
+      Number(deposit.paidAmount) -
+        Number(deposit.deductedAmount) -
+        Number(deposit.refundedAmount) <
+      input.amount
+    ) {
+      throw new HttpError(400, '退还金额超过可用押金余额');
+    }
+
+    ok(
+      res,
+      await recordDepositPayment({
+        depositId: deposit.id,
+        userId: req.user!.id,
+        type: 'REFUND',
         ...input,
       })
     );

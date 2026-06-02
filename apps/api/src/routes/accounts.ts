@@ -191,6 +191,78 @@ accountRouter.get(
 );
 
 accountRouter.get(
+  '/:id/daily-report',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const { date } = z
+      .object({ date: z.coerce.date().optional() })
+      .parse(req.query);
+
+    const targetDate = date ?? new Date();
+    const startOfDay = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate()
+    );
+    const endOfDay = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate() + 1
+    );
+
+    const account = await prisma.account.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!account) throw new HttpError(404, '账户不存在');
+
+    // Get opening balance (balance before this day)
+    const transfersBefore = await prisma.accountTransfer.findMany({
+      where: {
+        organizationId: req.organizationId!,
+        OR: [{ fromAccountId: req.params.id }, { toAccountId: req.params.id }],
+        createdAt: { lt: startOfDay },
+      },
+    });
+
+    let openingBalance = Number(account.balance);
+    for (const t of transfersBefore) {
+      if (t.fromAccountId === req.params.id) {
+        openingBalance += Number(t.amount);
+      } else {
+        openingBalance -= Number(t.amount);
+      }
+    }
+
+    // Get today's transactions
+    const transfersToday = await prisma.accountTransfer.findMany({
+      where: {
+        organizationId: req.organizationId!,
+        OR: [{ fromAccountId: req.params.id }, { toAccountId: req.params.id }],
+        createdAt: { gte: startOfDay, lt: endOfDay },
+      },
+    });
+
+    const income = transfersToday
+      .filter((t) => t.toAccountId === req.params.id)
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    const expense = transfersToday
+      .filter((t) => t.fromAccountId === req.params.id)
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    ok(res, {
+      accountId: account.id,
+      accountName: account.name,
+      date: startOfDay,
+      openingBalance,
+      income,
+      expense,
+      closingBalance: openingBalance + income - expense,
+      transactions: transfersToday,
+    });
+  })
+);
+
+accountRouter.get(
   '/transfers/all',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {

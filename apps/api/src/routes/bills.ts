@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { BillItemType } from '@prisma/client';
 import { prisma } from '../prisma/client.js';
 import {
   requireAuth,
@@ -16,6 +17,7 @@ import {
   retryPostpaidBill,
 } from '../services/billing.js';
 import { toCsv } from '../services/csv.js';
+import { createNotification } from '../services/notification.js';
 import { PERMISSIONS } from '../services/roles.js';
 import { parseUtilityImportRows } from '../services/utilityImport.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -531,6 +533,104 @@ billRouter.post(
   })
 );
 
+billRouter.post(
+  '/',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        leaseId: z.string(),
+        type: z.enum(['MONTHLY', 'SETTLEMENT', 'DEPOSIT']),
+        mode: z.enum(['PREPAID', 'POSTPAID', 'DEPOSIT']).optional(),
+        totalAmount: z.coerce.number().nonnegative(),
+        billingDate: z.coerce.date(),
+        dueDate: z.coerce.date(),
+        periodStart: z.coerce.date(),
+        periodEnd: z.coerce.date(),
+        note: z.string().optional(),
+        items: z
+          .array(
+            z.object({
+              type: z.nativeEnum(BillItemType),
+              name: z.string().min(1),
+              amount: z.coerce.number().nonnegative(),
+            })
+          )
+          .min(1),
+      })
+      .parse(req.body);
+
+    const lease = await prisma.lease.findFirst({
+      where: { id: input.leaseId, organizationId: req.organizationId! },
+    });
+    if (!lease) throw new HttpError(404, '租约不存在');
+
+    const bill = await prisma.bill.create({
+      data: {
+        organizationId: req.organizationId!,
+        leaseId: input.leaseId,
+        type: input.type,
+        mode: input.mode ?? 'PREPAID',
+        totalAmount: input.totalAmount,
+        paidAmount: 0,
+        billingDate: input.billingDate,
+        dueDate: input.dueDate,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        status: 'UNPAID',
+        note: input.note,
+        items: {
+          create: input.items.map((item) => ({
+            type: item.type,
+            name: item.name,
+            amount: item.amount,
+            status: 'UNPAID',
+          })),
+        },
+      },
+      include: {
+        lease: { include: { room: true } },
+        items: true,
+      },
+    });
+
+    ok(res, bill);
+  })
+);
+
+billRouter.put(
+  '/:id',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        totalAmount: z.coerce.number().nonnegative().optional(),
+        dueDate: z.coerce.date().optional(),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
+
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不可修改');
+    if (bill.status === 'VOID') throw new HttpError(400, '已作废账单不可修改');
+
+    const updated = await prisma.bill.update({
+      where: { id: bill.id },
+      data: input,
+      include: {
+        lease: { include: { room: true } },
+        items: true,
+        payments: true,
+      },
+    });
+
+    ok(res, updated);
+  })
+);
+
 billRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.BILL_MANAGE),
@@ -660,5 +760,238 @@ billRouter.patch(
 
     await refreshBillTotals(bill.id);
     ok(res, { message: '滞纳金已减免' });
+  })
+);
+
+// Split bill
+billRouter.post(
+  '/:id/split',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        amounts: z.array(z.coerce.number().positive()).min(2),
+      })
+      .parse(req.body);
+
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { items: true, lease: true },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不能拆分');
+    if (bill.status === 'VOID') throw new HttpError(400, '已作废账单不能拆分');
+
+    const totalSplit = input.amounts.reduce((a, b) => a + b, 0);
+    if (Math.abs(totalSplit - Number(bill.totalAmount)) > 0.01) {
+      throw new HttpError(400, '拆分金额总和必须等于原账单金额');
+    }
+
+    const newBills = await prisma.$transaction(async (tx) => {
+      // Mark original as void
+      await tx.bill.update({
+        where: { id: bill.id },
+        data: { status: 'VOID', note: '账单拆分' },
+      });
+
+      const created = [];
+      for (let i = 0; i < input.amounts.length; i++) {
+        const newBill = await tx.bill.create({
+          data: {
+            organizationId: bill.organizationId,
+            leaseId: bill.leaseId,
+            mode: bill.mode,
+            type: bill.type,
+            billingDate: bill.billingDate,
+            periodStart: bill.periodStart,
+            periodEnd: bill.periodEnd,
+            dueDate: bill.dueDate,
+            status: 'UNPAID',
+            totalAmount: input.amounts[i],
+            paidAmount: 0,
+            note: `拆分自账单 ${bill.id.slice(0, 8)} (${i + 1}/${input.amounts.length})`,
+            items: {
+              create: bill.items.map((item) => ({
+                type: item.type,
+                name: item.name,
+                amount:
+                  (Number(item.amount) / Number(bill.totalAmount)) *
+                  input.amounts[i],
+                status: 'UNPAID',
+              })),
+            },
+          },
+        });
+        created.push(newBill);
+      }
+      return created;
+    });
+
+    ok(res, { originalBillId: bill.id, splitBills: newBills });
+  })
+);
+
+// Merge bills
+billRouter.post(
+  '/merge',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        billIds: z.array(z.string()).min(2),
+      })
+      .parse(req.body);
+
+    const bills = await prisma.bill.findMany({
+      where: {
+        id: { in: input.billIds },
+        organizationId: req.organizationId!,
+        status: { in: ['UNPAID', 'PARTIAL_PAID'] },
+      },
+      include: { items: true },
+    });
+
+    if (bills.length !== input.billIds.length) {
+      throw new HttpError(400, '部分账单不存在或已结清/已作废');
+    }
+
+    const leaseIds = new Set(bills.map((b) => b.leaseId));
+    if (leaseIds.size > 1) {
+      throw new HttpError(400, '只能合并同一租约的账单');
+    }
+
+    const mergedBill = await prisma.$transaction(async (tx) => {
+      const totalAmount = bills.reduce(
+        (sum, b) => sum + Number(b.totalAmount),
+        0
+      );
+      const paidAmount = bills.reduce(
+        (sum, b) => sum + Number(b.paidAmount),
+        0
+      );
+
+      // Mark originals as void
+      await tx.bill.updateMany({
+        where: { id: { in: input.billIds } },
+        data: { status: 'VOID', note: '账单合并' },
+      });
+
+      const items = bills.flatMap((bill) =>
+        bill.items.map((item) => ({
+          type: item.type,
+          name: item.name,
+          amount: Number(item.amount),
+          status: 'UNPAID' as const,
+        }))
+      );
+
+      return tx.bill.create({
+        data: {
+          organizationId: req.organizationId!,
+          leaseId: bills[0].leaseId,
+          mode: bills[0].mode,
+          type: bills[0].type,
+          billingDate: bills[0].billingDate,
+          periodStart: bills[0].periodStart,
+          periodEnd: bills[bills.length - 1].periodEnd,
+          dueDate: bills[0].dueDate,
+          status: paidAmount > 0 ? 'PARTIAL_PAID' : 'UNPAID',
+          totalAmount,
+          paidAmount,
+          note: `合并账单 (${input.billIds.length}笔)`,
+          items: { create: items },
+        },
+      });
+    });
+
+    ok(res, { mergedBill });
+  })
+);
+
+// Get late fees for a bill
+billRouter.get(
+  '/:id/late-fees',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { overduePenalties: true },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+
+    ok(res, {
+      billId: bill.id,
+      lateFees: bill.overduePenalties,
+      totalLateFee: bill.overduePenalties.reduce(
+        (sum, p) => sum + Number(p.amount),
+        0
+      ),
+    });
+  })
+);
+
+// Waive late fee
+billRouter.post(
+  '/:id/late-fees/waive',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        reason: z.string().min(1, '减免原因不能为空'),
+      })
+      .parse(req.body);
+
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { items: true, overduePenalties: true },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单无法减免');
+    if (bill.status === 'VOID') throw new HttpError(400, '已作废账单无法减免');
+
+    await prisma.$transaction(async (tx) => {
+      await tx.billItem.deleteMany({
+        where: { billId: bill.id, type: 'LATE_FEE' },
+      });
+      await tx.overduePenalty.updateMany({
+        where: { billId: bill.id },
+        data: {
+          isWaived: true,
+          waiveReason: input.reason,
+          waivedById: req.user!.id,
+          waivedAt: new Date(),
+        },
+      });
+    });
+
+    await refreshBillTotals(bill.id);
+    ok(res, { message: '滞纳金已减免', reason: input.reason });
+  })
+);
+
+// Notify tenant about bill
+billRouter.post(
+  '/:id/notify',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const bill = await prisma.bill.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { lease: { include: { tenant: true, room: true } } },
+    });
+    if (!bill) throw new HttpError(404, '账单不存在');
+
+    // Create notification for the tenant
+    if (bill.lease?.tenant) {
+      await createNotification({
+        organizationId: req.organizationId!,
+        userId: req.user!.id,
+        type: 'BILL_NOTIFICATION',
+        title: '账单通知',
+        content: `您有账单待支付，金额: ¥${bill.totalAmount}`,
+        link: `/bills/${bill.id}`,
+      }).catch(() => {});
+    }
+
+    ok(res, { message: '账单通知已发送' });
   })
 );

@@ -301,3 +301,59 @@ tenantRouter.post(
     );
   })
 );
+
+tenantRouter.get(
+  '/:id/credit',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        id: req.params.id,
+        organizationId: req.organizationId!,
+      },
+      include: {
+        leases: {
+          include: {
+            bills: {
+              select: { status: true, paidAmount: true, totalAmount: true },
+            },
+            settlement: true,
+          },
+        },
+      },
+    });
+    if (!tenant) throw new HttpError(404, '租客不存在');
+
+    // Calculate credit score based on payment history and move-out records
+    const score = tenant.creditScore;
+    const totalBills = tenant.leases.reduce(
+      (sum, l) => sum + l.bills.length,
+      0
+    );
+    const paidBills = tenant.leases.reduce(
+      (sum, l) => sum + l.bills.filter((b) => b.status === 'PAID').length,
+      0
+    );
+    const overdueBills = tenant.leases.reduce(
+      (sum, l) => sum + l.bills.filter((b) => b.status === 'OVERDUE').length,
+      0
+    );
+
+    const paymentRate = totalBills > 0 ? (paidBills / totalBills) * 100 : 100;
+    const deduction = overdueBills * 5;
+    const finalScore = Math.max(
+      0,
+      Math.min(1000, score - deduction + (paymentRate > 90 ? 10 : 0))
+    );
+
+    ok(res, {
+      creditScore: finalScore,
+      baseScore: score,
+      paymentRate: Number(paymentRate.toFixed(2)),
+      totalBills,
+      paidBills,
+      overdueBills,
+      leaseCount: tenant.leases.length,
+    });
+  })
+);

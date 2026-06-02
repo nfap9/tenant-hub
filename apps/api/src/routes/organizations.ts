@@ -260,6 +260,28 @@ orgRouter.post(
   })
 );
 
+orgRouter.post(
+  '/:organizationId/switch',
+  asyncHandler(async (req, res) => {
+    const org = await prisma.organization.findFirst({
+      where: { id: req.params.organizationId },
+    });
+    if (!org) throw new HttpError(404, '组织不存在');
+    const member = await prisma.orgMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: req.params.organizationId,
+          userId: req.user!.id,
+        },
+      },
+      include: { role: true },
+    });
+    if (!member || member.status !== 'ACTIVE')
+      throw new HttpError(403, '无组织访问权限');
+    ok(res, { organization: org });
+  })
+);
+
 orgRouter.get(
   '/:organizationId',
   requireOrg,
@@ -321,19 +343,6 @@ orgRouter.delete(
       await prisma.organization.update({
         where: { id: org.id },
         data: { status: 'DELETED' },
-      })
-    );
-  })
-);
-
-orgRouter.get(
-  '/:organizationId/roles',
-  requireOrg,
-  asyncHandler(async (_req, res) => {
-    ok(
-      res,
-      await prisma.role.findMany({
-        orderBy: [{ system: 'desc' }, { createdAt: 'asc' }],
       })
     );
   })

@@ -128,7 +128,7 @@ export const createLeaseSettlement = async ({
   organizationId: string;
   userId: string;
   input: {
-    type: 'EXPIRED' | 'NEGOTIATED' | 'BREACH';
+    type: 'EXPIRED' | 'NEGOTIATED' | 'BREACH' | 'FORCED';
     reason?: string;
     terminatedAt: Date;
     rentAdjustmentAmount: DecimalValue;
