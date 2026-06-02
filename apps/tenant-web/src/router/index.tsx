@@ -102,20 +102,6 @@ const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
 // 审计日志
 const AuditLogsPage = lazy(() => import('@/pages/audit-logs/AuditLogsPage'));
 
-// 房东合同
-const LandlordContractListPage = lazy(
-  () => import('@/pages/landlord-contracts/LandlordContractListPage')
-);
-const LandlordPaymentListPage = lazy(
-  () => import('@/pages/landlord-payments/LandlordPaymentListPage')
-);
-const LandlordContractFormPage = lazy(
-  () => import('@/pages/landlord-contracts/LandlordContractFormPage')
-);
-const LandlordContractDetailPage = lazy(
-  () => import('@/pages/landlord-contracts/LandlordContractDetailPage')
-);
-
 // 表具
 const MeterListPage = lazy(() => import('@/pages/meters/MeterListPage'));
 const MeterFormPage = lazy(() => import('@/pages/meters/MeterFormPage'));
@@ -284,33 +270,6 @@ const routes: RouteConfig[] = [
 
   // 报表
   { path: '/reports', element: <ReportsPage />, requireOrg: true },
-
-  // 房东合同
-  {
-    path: '/landlord-contracts',
-    element: <LandlordContractListPage />,
-    requireOrg: true,
-  },
-  {
-    path: '/landlord-contracts/new',
-    element: <LandlordContractFormPage />,
-    requireOrg: true,
-  },
-  {
-    path: '/landlord-contracts/:id',
-    element: <LandlordContractDetailPage />,
-    requireOrg: true,
-  },
-  {
-    path: '/landlord-contracts/:id/edit',
-    element: <LandlordContractFormPage />,
-    requireOrg: true,
-  },
-  {
-    path: '/landlord-payments',
-    element: <LandlordPaymentListPage />,
-    requireOrg: true,
-  },
 
   // 审计日志
   { path: '/audit-logs', element: <AuditLogsPage />, requireOrg: true },

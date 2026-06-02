@@ -172,6 +172,29 @@ export type LandlordContract = {
   isActive: boolean;
   createdAt: string;
   apartment?: { id: string; name: string };
+  payments?: LandlordPayment[];
+};
+
+export type LandlordPayment = {
+  id: string;
+  organizationId: string;
+  landlordContractId: string;
+  apartmentId: string;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+  plannedAmount: string | number;
+  paidAmount?: string | number;
+  paidAt?: string;
+  voucherNo?: string;
+  paymentMethod?: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  expenseId?: string;
+  note?: string;
+  createdAt: string;
+  landlordContract?: { id: string; contractNo: string };
+  apartment?: { id: string; name: string };
+  expense?: { id: string; name: string; amount: string | number };
 };
 
 export type Apartment = {

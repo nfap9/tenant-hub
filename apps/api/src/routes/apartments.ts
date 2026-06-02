@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { basePrisma, prisma } from '../prisma/client.js';
 import {
   requireAuth,
@@ -56,6 +57,64 @@ const apartmentInput = z.object({
   fireExtinguisherCount: z.coerce.number().int().min(0).optional(),
   escapeRouteCount: z.coerce.number().int().min(0).optional(),
 });
+
+const contractInput = z.object({
+  contractNo: z.string().optional(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+  rentAmount: z.coerce.number().nonnegative(),
+  depositAmount: z.coerce.number().nonnegative().default(0),
+  paymentMethod: z.string(),
+  escalationType: z.string().optional(),
+  escalationValue: z.coerce.number().optional(),
+  escalationCycle: z.coerce.number().int().optional(),
+  freeRentDays: z.coerce.number().int().min(0).default(0),
+  freeRentStart: z.coerce.date().optional(),
+  freeRentEnd: z.coerce.date().optional(),
+  signDate: z.coerce.date().optional(),
+  attachmentUrl: z.string().optional(),
+  note: z.string().optional(),
+});
+
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+function diffInMonths(start: Date, end: Date): number {
+  return (
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth())
+  );
+}
+
+function getIntervalMonths(method: string): number {
+  switch (method) {
+    case 'MONTHLY':
+      return 1;
+    case 'QUARTERLY':
+      return 3;
+    case 'HALF_YEARLY':
+      return 6;
+    case 'YEARLY':
+      return 12;
+    default:
+      return 1;
+  }
+}
+
+function cleanContractPayload<T extends Record<string, unknown>>(
+  obj: T
+): Partial<T> {
+  const result: Partial<T> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      (result as Record<string, unknown>)[key] = value;
+    }
+  }
+  return result;
+}
 
 const ensureApartmentInOrg = async (
   apartmentId: string,
@@ -134,6 +193,11 @@ apartmentRouter.get(
             },
           },
           expenses: { orderBy: { spentAt: 'desc' } },
+          landlordContracts: {
+            where: { deletedAt: null, isActive: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
@@ -235,6 +299,9 @@ apartmentRouter.post(
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
     const input = apartmentInput.parse(req.body);
+    const contract = req.body.contract
+      ? contractInput.parse(req.body.contract)
+      : undefined;
     ok(
       res,
       await basePrisma.$transaction(async (tx) => {
@@ -249,9 +316,15 @@ apartmentRouter.post(
             return apartmentCount + 1;
           }
         );
-        return tx.apartment.create({
+        const apartment = await tx.apartment.create({
           data: { ...input, organizationId: req.organizationId! },
         });
+        if (contract) {
+          await tx.landlordContract.create({
+            data: { ...contract, apartmentId: apartment.id },
+          });
+        }
+        return apartment;
       })
     );
   })
@@ -262,12 +335,38 @@ apartmentRouter.put(
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
     const input = apartmentInput.partial().parse(req.body);
+    const contract = req.body.contract
+      ? contractInput.partial().parse(req.body.contract)
+      : undefined;
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
     ok(
       res,
-      await prisma.apartment.update({
-        where: { id: req.params.id },
-        data: input,
+      await basePrisma.$transaction(async (tx) => {
+        const apartment = await tx.apartment.update({
+          where: { id: req.params.id },
+          data: input,
+        });
+        if (contract) {
+          const existing = await tx.landlordContract.findFirst({
+            where: { apartmentId: req.params.id, deletedAt: null },
+            orderBy: { createdAt: 'desc' },
+          });
+          const cleanContract = cleanContractPayload(contract);
+          if (existing) {
+            await tx.landlordContract.update({
+              where: { id: existing.id },
+              data: cleanContract as Prisma.LandlordContractUpdateInput,
+            });
+          } else {
+            await tx.landlordContract.create({
+              data: {
+                ...cleanContract,
+                apartmentId: req.params.id,
+              } as Prisma.LandlordContractUncheckedCreateInput,
+            });
+          }
+        }
+        return apartment;
       })
     );
   })
@@ -849,5 +948,262 @@ apartmentRouter.get(
         overdue,
       },
     });
+  })
+);
+
+// ===== 合同子资源（US-101：公寓档案包含房东合同） =====
+
+apartmentRouter.get(
+  '/:id/contract',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const contract = await prisma.landlordContract.findFirst({
+      where: { apartmentId: req.params.id, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      include: { payments: { orderBy: { dueDate: 'asc' } } },
+    });
+    if (!contract) throw new HttpError(404, '该公寓暂无合同信息');
+    ok(res, contract);
+  })
+);
+
+apartmentRouter.put(
+  '/:id/contract',
+  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = contractInput.parse(req.body);
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const existing = await prisma.landlordContract.findFirst({
+      where: { apartmentId: req.params.id, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) {
+      ok(
+        res,
+        await prisma.landlordContract.update({
+          where: { id: existing.id },
+          data: input,
+        })
+      );
+    } else {
+      ok(
+        res,
+        await prisma.landlordContract.create({
+          data: { ...input, apartmentId: req.params.id },
+        })
+      );
+    }
+  })
+);
+
+apartmentRouter.post(
+  '/:id/payment-plan/generate',
+  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const contract = await prisma.landlordContract.findFirst({
+      where: { apartmentId: req.params.id, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!contract)
+      throw new HttpError(404, '该公寓暂无合同信息，无法生成付款计划');
+
+    // 删除该公寓下所有未付款的计划，重新生成
+    await prisma.landlordPayment.deleteMany({
+      where: {
+        apartmentId: req.params.id,
+        organizationId: req.organizationId!,
+        status: 'PENDING',
+      },
+    });
+
+    const intervalMonths = getIntervalMonths(contract.paymentMethod);
+    const startDate = new Date(contract.startDate);
+    const endDate = new Date(contract.endDate);
+    const payments = [];
+
+    let currentDate = new Date(startDate);
+    let periodIndex = 0;
+    let currentRent = Number(contract.rentAmount);
+
+    while (currentDate < endDate) {
+      const periodStart = new Date(currentDate);
+      let periodEnd = addMonths(currentDate, intervalMonths);
+      if (periodEnd > endDate) {
+        periodEnd = new Date(endDate);
+      }
+
+      let plannedAmount = currentRent * intervalMonths;
+      const actualMonths = diffInMonths(periodStart, periodEnd);
+      if (actualMonths !== intervalMonths) {
+        plannedAmount = currentRent * actualMonths;
+      }
+
+      if (
+        contract.freeRentDays > 0 &&
+        contract.freeRentStart &&
+        contract.freeRentEnd
+      ) {
+        const frStart = new Date(contract.freeRentStart);
+        const frEnd = new Date(contract.freeRentEnd);
+        if (periodStart >= frStart && periodEnd <= frEnd) {
+          plannedAmount = 0;
+        } else if (periodStart < frEnd && periodEnd > frStart) {
+          const overlapStart = periodStart > frStart ? periodStart : frStart;
+          const overlapEnd = periodEnd < frEnd ? periodEnd : frEnd;
+          const overlapDays =
+            (overlapEnd.getTime() - overlapStart.getTime()) /
+            (1000 * 60 * 60 * 24);
+          const periodDays =
+            (periodEnd.getTime() - periodStart.getTime()) /
+            (1000 * 60 * 60 * 24);
+          if (periodDays > 0) {
+            plannedAmount = plannedAmount * (1 - overlapDays / periodDays);
+          }
+        }
+      }
+
+      if (
+        periodIndex > 0 &&
+        contract.escalationType &&
+        contract.escalationValue &&
+        contract.escalationCycle &&
+        contract.escalationCycle > 0
+      ) {
+        const monthsElapsed = diffInMonths(startDate, periodStart);
+        if (
+          monthsElapsed > 0 &&
+          monthsElapsed % contract.escalationCycle === 0
+        ) {
+          if (contract.escalationType === 'FIXED_AMOUNT') {
+            currentRent += Number(contract.escalationValue);
+          } else if (contract.escalationType === 'PERCENTAGE') {
+            currentRent *= 1 + Number(contract.escalationValue) / 100;
+          }
+          plannedAmount = currentRent * actualMonths;
+        }
+      }
+
+      payments.push({
+        organizationId: req.organizationId!,
+        landlordContractId: contract.id,
+        apartmentId: req.params.id,
+        periodStart,
+        periodEnd,
+        dueDate: periodStart,
+        plannedAmount: Math.round(plannedAmount * 100) / 100,
+        status: 'PENDING',
+      });
+
+      currentDate = periodEnd;
+      periodIndex++;
+    }
+
+    const created = await prisma.landlordPayment.createMany({ data: payments });
+    ok(res, { generated: created.count });
+  })
+);
+
+apartmentRouter.get(
+  '/:id/payments',
+  requirePermission(PERMISSIONS.APARTMENT_VIEW),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const status = z
+      .enum(['PENDING', 'PAID', 'OVERDUE'])
+      .optional()
+      .parse(req.query.status);
+    const payments = await prisma.landlordPayment.findMany({
+      where: {
+        apartmentId: req.params.id,
+        organizationId: req.organizationId!,
+        ...(status ? { status } : {}),
+      },
+      include: { expense: { select: { id: true, name: true, amount: true } } },
+      orderBy: { dueDate: 'asc' },
+    });
+    ok(res, payments);
+  })
+);
+
+apartmentRouter.post(
+  '/:id/payments/:paymentId/pay',
+  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        paidAmount: z.coerce.number().positive(),
+        paidAt: z.coerce.date(),
+        voucherNo: z.string().optional(),
+        paymentMethod: z.string().optional(),
+        note: z.string().optional(),
+        createExpense: z.boolean().optional(),
+      })
+      .parse(req.body);
+
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const payment = await prisma.landlordPayment.findFirst({
+      where: {
+        id: req.params.paymentId,
+        apartmentId: req.params.id,
+        organizationId: req.organizationId!,
+      },
+    });
+    if (!payment) throw new HttpError(404, '付款计划不存在');
+
+    let expenseId: string | undefined;
+    if (input.createExpense) {
+      const expense = await prisma.apartmentExpense.create({
+        data: {
+          apartmentId: req.params.id,
+          name: `房东租金付款 - ${payment.landlordContractId.slice(0, 8)}`,
+          amount: input.paidAmount,
+          spentAt: input.paidAt,
+          note: input.note || input.voucherNo,
+          createdById: req.user!.id,
+        },
+      });
+      expenseId = expense.id;
+    }
+
+    const updated = await prisma.landlordPayment.update({
+      where: { id: req.params.paymentId },
+      data: {
+        paidAmount: input.paidAmount,
+        paidAt: input.paidAt,
+        voucherNo: input.voucherNo,
+        paymentMethod: input.paymentMethod,
+        status: 'PAID',
+        note: input.note,
+        ...(expenseId ? { expenseId } : {}),
+      },
+      include: { expense: true },
+    });
+
+    ok(res, updated);
+  })
+);
+
+apartmentRouter.delete(
+  '/:id/payments/:paymentId',
+  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
+  asyncHandler(async (req, res) => {
+    await ensureApartmentInOrg(req.params.id, req.organizationId!);
+    const payment = await prisma.landlordPayment.findFirst({
+      where: {
+        id: req.params.paymentId,
+        apartmentId: req.params.id,
+        organizationId: req.organizationId!,
+      },
+    });
+    if (!payment) throw new HttpError(404, '付款计划不存在');
+    if (payment.status === 'PAID') {
+      throw new HttpError(400, '已付款的计划不能删除');
+    }
+    await prisma.landlordPayment.softDelete({
+      where: { id: req.params.paymentId },
+    });
+    ok(res, { deleted: true });
   })
 );

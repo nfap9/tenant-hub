@@ -138,11 +138,12 @@
 - 按组织展示所有公寓卡片/表格
 - 支持按名称搜索
 - 支持按状态筛选
+- 卡片展示合同有效期（如有）
 - 快捷进入公寓详情、编辑、删除
 
 **使用 API：**
 
-- `GET /api/apartments` — 查询公寓列表（支持分页、搜索、筛选）
+- `GET /api/apartments` — 查询公寓列表（支持分页、搜索、筛选，包含当前合同摘要）
 - `DELETE /api/apartments/:id` — 删除公寓
 
 ---
@@ -153,15 +154,15 @@
 
 - 录入/修改公寓基础信息：名称、地址、物业类型、建筑年代、总层数、电梯数量
 - 录入/修改产权信息：产权性质、产权面积、公摊比例
-- 录入/修改房东合同信息：房东姓名、联系方式、合同起止日期、月租金、付款方式、递增规则
+- **录入/修改房东合同信息：合同编号、签约日期、起止日期、月租金、押金、付款方式、递增规则、免租期、附件、备注**
 - 录入/修改运营配置：水电成本单价、公摊比例、提醒日设置
 - 录入/修改消防与安全信息：消防等级、灭火器数量、逃生通道数量
 
 **使用 API：**
 
-- `POST /api/apartments` — 创建公寓
+- `POST /api/apartments` — 创建公寓（可同时创建合同）
 - `GET /api/apartments/:id` — 查询公寓详情
-- `PUT /api/apartments/:id` — 更新公寓
+- `PUT /api/apartments/:id` — 更新公寓（可同时更新合同）
 
 ---
 
@@ -172,12 +173,17 @@
 - 展示公寓完整档案信息（只读视图）
 - 展示公寓当前状态
 - 展示状态变更历史记录
+- **展示合同信息（合同详情、付款计划、生成付款计划、记录付款）**
 - 快捷入口：查看房间列表、运营支出、看板数据
 
 **使用 API：**
 
 - `GET /api/apartments/:id` — 查询公寓详情
 - `GET /api/apartments/:id/status-history` — 查询状态变更历史
+- `GET /api/apartments/:id/contract` — 合同详情
+- `GET /api/apartments/:id/payments` — 付款计划列表
+- `POST /api/apartments/:id/payment-plan/generate` — 生成付款计划
+- `POST /api/apartments/:id/payments/:paymentId/pay` — 记录付款
 
 ---
 
@@ -372,74 +378,6 @@
 - `PUT /api/checklists/:id` — 更新检查清单
 - `DELETE /api/checklists/:id` — 删除检查清单
 - `GET /api/checklists/:id/comparison` — 入住退租对比
-
----
-
-### 房东合同列表页面 `(PAGE-115)`
-
-**功能描述：**
-
-- 按公寓展示房东合同列表
-- 展示合同起止日期、状态、到期提醒
-- 支持搜索和筛选
-- 快捷查看详情、编辑、删除
-
-**使用 API：**
-
-- `GET /api/landlord-contracts` — 查询房东合同列表
-- `DELETE /api/landlord-contracts/:id` — 删除合同
-
----
-
-### 房东合同新增/编辑页面 `(PAGE-116)`
-
-**功能描述：**
-
-- 录入/修改合同编号、签约日期、起止日期
-- 设置付款方式、租金金额、押金金额
-- 设置租金递增规则（固定金额/百分比、递增周期）
-- 设置免租期
-- 上传合同附件（PDF）
-
-**使用 API：**
-
-- `POST /api/landlord-contracts` — 创建房东合同
-- `GET /api/landlord-contracts/:id` — 查询合同详情
-- `PUT /api/landlord-contracts/:id` — 更新合同
-
----
-
-### 房东合同详情页面 `(PAGE-117)`
-
-**功能描述：**
-
-- 展示完整合同信息
-- 附件预览/下载
-- 合同到期提醒状态
-- 关联付款计划入口
-
-**使用 API：**
-
-- `GET /api/landlord-contracts/:id` — 查询合同详情
-
----
-
-### 房东付款计划页面 `(PAGE-118)`
-
-**功能描述：**
-
-- 展示根据合同自动生成的付款计划表
-- 展示应付日期、应付金额、实付日期、实付金额、状态
-- 录入实际付款记录（日期、金额、凭证号）
-- 逾期付款预警标记
-- 一键将付款记录转为公寓运营支出
-
-**使用 API：**
-
-- `GET /api/landlord-contracts/:id/payment-plan` — 查询付款计划
-- `POST /api/landlord-contracts/:id/payment-plan/generate` — 生成付款计划
-- `POST /api/landlord-contracts/:id/payments` — 记录实际付款
-- `POST /api/landlord-contracts/:id/payments/:paymentId/convert-expense` — 付款转运营支出
 
 ---
 

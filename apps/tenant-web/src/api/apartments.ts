@@ -1,5 +1,10 @@
 import { apiClient } from './client';
-import type { Apartment, ApartmentExpense } from '@/types/domain';
+import type {
+  Apartment,
+  ApartmentExpense,
+  LandlordContract,
+  LandlordPayment,
+} from '@/types/domain';
 
 export async function getApartments(
   organizationId: string,
@@ -55,6 +60,23 @@ export async function createApartment(
     fireRating?: string;
     fireExtinguisherCount?: number;
     escapeRouteCount?: number;
+    contract?: {
+      contractNo?: string;
+      startDate: string;
+      endDate: string;
+      rentAmount: number;
+      depositAmount?: number;
+      paymentMethod: string;
+      escalationType?: string;
+      escalationValue?: number;
+      escalationCycle?: number;
+      freeRentDays?: number;
+      freeRentStart?: string;
+      freeRentEnd?: string;
+      signDate?: string;
+      attachmentUrl?: string;
+      note?: string;
+    };
   }
 ) {
   return apiClient<Apartment>('/apartments', {
@@ -86,6 +108,23 @@ export async function updateApartment(
     fireRating?: string;
     fireExtinguisherCount?: number;
     escapeRouteCount?: number;
+    contract?: {
+      contractNo?: string;
+      startDate?: string;
+      endDate?: string;
+      rentAmount?: number;
+      depositAmount?: number;
+      paymentMethod?: string;
+      escalationType?: string;
+      escalationValue?: number;
+      escalationCycle?: number;
+      freeRentDays?: number;
+      freeRentStart?: string;
+      freeRentEnd?: string;
+      signDate?: string;
+      attachmentUrl?: string;
+      note?: string;
+    };
   }
 ) {
   return apiClient<Apartment>(`/apartments/${id}`, {
@@ -185,4 +224,102 @@ export async function getApartmentStatusHistory(
       createdAt: string;
     }[]
   >(`/apartments/${apartmentId}/status-history`, { organizationId });
+}
+
+// ===== 合同子资源 API（合并自 landlord-contracts / landlord-payments） =====
+
+export async function getApartmentContract(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<LandlordContract>(`/apartments/${apartmentId}/contract`, {
+    organizationId,
+  });
+}
+
+export async function updateApartmentContract(
+  organizationId: string,
+  apartmentId: string,
+  payload: {
+    contractNo?: string;
+    startDate: string;
+    endDate: string;
+    rentAmount: number;
+    depositAmount?: number;
+    paymentMethod: string;
+    escalationType?: string;
+    escalationValue?: number;
+    escalationCycle?: number;
+    freeRentDays?: number;
+    freeRentStart?: string;
+    freeRentEnd?: string;
+    signDate?: string;
+    attachmentUrl?: string;
+    note?: string;
+  }
+) {
+  return apiClient<LandlordContract>(`/apartments/${apartmentId}/contract`, {
+    method: 'PUT',
+    body: payload,
+    organizationId,
+  });
+}
+
+export async function generateApartmentPaymentPlan(
+  organizationId: string,
+  apartmentId: string
+) {
+  return apiClient<{ generated: number }>(
+    `/apartments/${apartmentId}/payment-plan/generate`,
+    {
+      method: 'POST',
+      organizationId,
+    }
+  );
+}
+
+export async function getApartmentPayments(
+  organizationId: string,
+  apartmentId: string,
+  status?: string
+) {
+  const query = status ? `?status=${status}` : '';
+  return apiClient<LandlordPayment[]>(
+    `/apartments/${apartmentId}/payments${query}`,
+    { organizationId }
+  );
+}
+
+export async function recordApartmentPayment(
+  organizationId: string,
+  apartmentId: string,
+  paymentId: string,
+  payload: {
+    paidAmount: number;
+    paidAt: string;
+    voucherNo?: string;
+    paymentMethod?: string;
+    note?: string;
+    createExpense?: boolean;
+  }
+) {
+  return apiClient<LandlordPayment>(
+    `/apartments/${apartmentId}/payments/${paymentId}/pay`,
+    {
+      method: 'POST',
+      body: payload,
+      organizationId,
+    }
+  );
+}
+
+export async function deleteApartmentPayment(
+  organizationId: string,
+  apartmentId: string,
+  paymentId: string
+) {
+  return apiClient<void>(`/apartments/${apartmentId}/payments/${paymentId}`, {
+    method: 'DELETE',
+    organizationId,
+  });
 }

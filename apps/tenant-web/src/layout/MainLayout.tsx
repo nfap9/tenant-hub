@@ -171,8 +171,6 @@ function NotificationBell() {
 function getMenuKeyFromPath(pathname: string): string {
   if (pathname === '/') return 'dashboard';
   if (pathname.startsWith('/apartments')) return 'apartments';
-  if (pathname.startsWith('/landlord-contracts')) return 'landlord-contracts';
-  if (pathname.startsWith('/landlord-payments')) return 'landlord-payments';
   if (pathname.startsWith('/rooms')) return 'rooms';
   if (pathname.startsWith('/leases')) return 'leases';
   if (pathname.startsWith('/tenants')) return 'tenants';
@@ -250,16 +248,6 @@ export default function MainLayout() {
           { key: 'maintenance', icon: <ToolOutlined />, label: '维修' },
           { key: 'deposits', icon: <FileTextOutlined />, label: '押金' },
           { key: 'apartments', icon: <ApartmentOutlined />, label: '公寓' },
-          {
-            key: 'landlord-contracts',
-            icon: <FileTextOutlined />,
-            label: '房东合同',
-          },
-          {
-            key: 'landlord-payments',
-            icon: <DollarOutlined />,
-            label: '房东付款',
-          },
           { key: 'co-residents', icon: <TeamOutlined />, label: '同住人' },
           { key: 'meters', icon: <ToolOutlined />, label: '表具' },
           { key: 'cashier-journals', icon: <DollarOutlined />, label: '出纳' },
@@ -329,12 +317,6 @@ export default function MainLayout() {
         break;
       case 'apartments':
         navigate('/apartments');
-        break;
-      case 'landlord-contracts':
-        navigate('/landlord-contracts');
-        break;
-      case 'landlord-payments':
-        navigate('/landlord-payments');
         break;
       case 'tenants':
         navigate('/tenants');

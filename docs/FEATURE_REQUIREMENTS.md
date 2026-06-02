@@ -128,7 +128,11 @@
 - 支持按组织查询、搜索、筛选公寓
 
 > **页面**：`PAGE-101` 公寓列表、`PAGE-102` 公寓新增/编辑、`PAGE-103` 公寓详情（均为独立页面）  
-> **API**：`GET /apartments`（列表）、`POST /apartments`（创建）、`GET /apartments/:id`（详情）、`PUT /apartments/:id`（更新）、`DELETE /apartments/:id`（删除）
+> **API**：
+>
+> - `GET /apartments`（列表）、`POST /apartments`（创建，可同时创建合同）、`GET /apartments/:id`（详情）、`PUT /apartments/:id`（更新，可同时更新合同）、`DELETE /apartments/:id`（删除）
+> - `GET /apartments/:id/contract`（合同详情）、`PUT /apartments/:id/contract`（更新/创建合同）
+> - `POST /apartments/:id/payment-plan/generate`（生成付款计划）、`GET /apartments/:id/payments`（付款计划列表）、`POST /apartments/:id/payments/:paymentId/pay`（记录付款）、`DELETE /apartments/:id/payments/:paymentId`（删除付款计划）
 
 **FR-102 公寓状态生命周期管理**
 
@@ -208,31 +212,6 @@
 > **页面**：`PAGE-114` 检查清单（内嵌于 `PAGE-110` 房间详情页的组件 `RoomChecklistSection`）  
 > **API**：`GET /room-checklists`（列表）、`POST /room-checklists`（创建）、`DELETE /room-checklists/:id`（删除）  
 > **实现形式**：房间详情页「检查清单」区块，含表格、新建弹窗、详情弹窗、对比视图弹窗，无独立路由页面
-
-### 1.3 房东合同管理
-
-**FR-301 房东合同档案管理**
-
-- 维护合同信息：合同编号、签约日期、起止日期、付款方式、租金金额、押金金额
-- 租金递增规则：固定金额/百分比、递增周期
-- 免租期设置
-- 合同附件上传与管理
-- 合同到期前30天、7天自动提醒
-
-> **页面**：`PAGE-115` 房东合同列表、`PAGE-116` 房东合同新增/编辑、`PAGE-117` 房东合同详情（均为独立页面）  
-> **API**：`GET /landlord-contracts`（列表）、`POST /landlord-contracts`（创建）、`GET /landlord-contracts/:id`（详情）、`PUT /landlord-contracts/:id`（更新）、`DELETE /landlord-contracts/:id`（删除）
-
-**FR-302 房东付款计划管理**
-
-- 根据合同自动生成付款计划（应付日期、金额）
-- 记录实际付款（日期、金额、凭证号）
-- 逾期未付预警
-- 付款计划与公寓运营支出一键关联
-
-> **页面**：`PAGE-118` 房东付款计划页面（独立页面）  
-> **API**：`GET /landlord-payments`（列表）、`POST /landlord-payments`（记录付款）
-
----
 
 ## 二、运营模块
 

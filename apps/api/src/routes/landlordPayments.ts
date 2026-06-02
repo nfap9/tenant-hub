@@ -94,23 +94,42 @@ landlordPaymentRouter.post(
   '/generate',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
-    const { landlordContractId } = z
-      .object({ landlordContractId: z.string() })
+    const { landlordContractId, apartmentId } = z
+      .object({
+        landlordContractId: z.string().optional(),
+        apartmentId: z.string().optional(),
+      })
       .parse(req.body);
 
-    const contract = await prisma.landlordContract.findFirst({
-      where: {
-        id: landlordContractId,
-        apartment: { organizationId: req.organizationId! },
-        deletedAt: null,
-      },
-    });
+    if (!landlordContractId && !apartmentId) {
+      throw new HttpError(400, '请提供 landlordContractId 或 apartmentId');
+    }
+
+    let contract;
+    if (apartmentId) {
+      contract = await prisma.landlordContract.findFirst({
+        where: {
+          apartmentId,
+          apartment: { organizationId: req.organizationId! },
+          deletedAt: null,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    } else {
+      contract = await prisma.landlordContract.findFirst({
+        where: {
+          id: landlordContractId,
+          apartment: { organizationId: req.organizationId! },
+          deletedAt: null,
+        },
+      });
+    }
     if (!contract) throw new HttpError(404, '合同不存在');
 
     // 删除该合同下所有未付款的计划，重新生成
     await prisma.landlordPayment.deleteMany({
       where: {
-        landlordContractId,
+        landlordContractId: contract.id,
         organizationId: req.organizationId!,
         status: 'PENDING',
       },

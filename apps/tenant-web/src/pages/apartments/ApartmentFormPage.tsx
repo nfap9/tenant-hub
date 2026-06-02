@@ -10,6 +10,7 @@ import {
   Spin,
   Select,
   Divider,
+  DatePicker,
 } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -17,6 +18,7 @@ import {
   HomeOutlined,
   DollarOutlined,
   SafetyOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
@@ -25,6 +27,7 @@ import {
   getApartment,
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
+import dayjs from 'dayjs';
 import { optionalNumber, optionalText } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import styles from './ApartmentFormPage.module.scss';
@@ -50,6 +53,19 @@ const propertyRightOptions = [
   { label: '自有产权', value: 'OWNED' },
   { label: '长租托管', value: 'LONG_TERM_LEASE' },
   { label: '受托管理', value: 'TRUSTEESHIP' },
+];
+
+const paymentMethodOptions = [
+  { label: '月付', value: 'MONTHLY' },
+  { label: '季付', value: 'QUARTERLY' },
+  { label: '半年付', value: 'HALF_YEARLY' },
+  { label: '年付', value: 'YEARLY' },
+];
+
+const escalationTypeOptions = [
+  { label: '无递增', value: 'NONE' },
+  { label: '固定金额', value: 'FIXED_AMOUNT' },
+  { label: '百分比', value: 'PERCENTAGE' },
 ];
 
 export default function ApartmentFormPage() {
@@ -78,6 +94,7 @@ export default function ApartmentFormPage() {
 
   useEffect(() => {
     if (isEdit && apartment && !initializedRef.current) {
+      const contract = apartment.landlordContracts?.[0];
       form.setFieldsValue({
         name: apartment.name,
         location: apartment.location,
@@ -107,6 +124,39 @@ export default function ApartmentFormPage() {
         fireRating: apartment.fireRating,
         fireExtinguisherCount: apartment.fireExtinguisherCount,
         escapeRouteCount: apartment.escapeRouteCount,
+        contract: contract
+          ? {
+              contractNo: contract.contractNo,
+              signDate: contract.signDate
+                ? dayjs(contract.signDate)
+                : undefined,
+              startDate: contract.startDate
+                ? dayjs(contract.startDate)
+                : undefined,
+              endDate: contract.endDate ? dayjs(contract.endDate) : undefined,
+              rentAmount: contract.rentAmount
+                ? Number(contract.rentAmount)
+                : undefined,
+              depositAmount: contract.depositAmount
+                ? Number(contract.depositAmount)
+                : undefined,
+              paymentMethod: contract.paymentMethod,
+              escalationType: contract.escalationType || 'NONE',
+              escalationValue: contract.escalationValue
+                ? Number(contract.escalationValue)
+                : undefined,
+              escalationCycle: contract.escalationCycle,
+              freeRentDays: contract.freeRentDays,
+              freeRentStart: contract.freeRentStart
+                ? dayjs(contract.freeRentStart)
+                : undefined,
+              freeRentEnd: contract.freeRentEnd
+                ? dayjs(contract.freeRentEnd)
+                : undefined,
+              attachmentUrl: contract.attachmentUrl,
+              note: contract.note,
+            }
+          : undefined,
       });
       initializedRef.current = true;
     }
@@ -125,6 +175,38 @@ export default function ApartmentFormPage() {
       message.warning('当前角色没有管理公寓权限');
       return;
     }
+
+    const contractValues = values.contract as
+      | Record<string, unknown>
+      | undefined;
+    const contract = contractValues?.startDate
+      ? {
+          contractNo: optionalText(contractValues.contractNo),
+          startDate: (contractValues.startDate as dayjs.Dayjs)?.toISOString(),
+          endDate: (contractValues.endDate as dayjs.Dayjs)?.toISOString(),
+          rentAmount: Number(contractValues.rentAmount || 0),
+          depositAmount: optionalNumber(contractValues.depositAmount),
+          paymentMethod: String(contractValues.paymentMethod || 'MONTHLY'),
+          escalationType:
+            optionalText(contractValues.escalationType) === 'NONE'
+              ? undefined
+              : optionalText(contractValues.escalationType),
+          escalationValue: optionalNumber(contractValues.escalationValue),
+          escalationCycle: optionalNumber(contractValues.escalationCycle),
+          freeRentDays: optionalNumber(contractValues.freeRentDays),
+          freeRentStart: contractValues.freeRentStart
+            ? (contractValues.freeRentStart as dayjs.Dayjs).toISOString()
+            : undefined,
+          freeRentEnd: contractValues.freeRentEnd
+            ? (contractValues.freeRentEnd as dayjs.Dayjs).toISOString()
+            : undefined,
+          signDate: contractValues.signDate
+            ? (contractValues.signDate as dayjs.Dayjs).toISOString()
+            : undefined,
+          attachmentUrl: optionalText(contractValues.attachmentUrl),
+          note: optionalText(contractValues.note),
+        }
+      : undefined;
 
     const payload = {
       name: String(values.name).trim(),
@@ -145,6 +227,7 @@ export default function ApartmentFormPage() {
       fireRating: optionalText(values.fireRating),
       fireExtinguisherCount: optionalNumber(values.fireExtinguisherCount),
       escapeRouteCount: optionalNumber(values.escapeRouteCount),
+      ...(contract ? { contract } : {}),
     };
 
     setSaving(true);
@@ -268,6 +351,122 @@ export default function ApartmentFormPage() {
                   options={propertyRightOptions}
                   allowClear
                 />
+              </Form.Item>
+            </div>
+
+            <Divider />
+
+            {/* 合同信息（US-101：公寓档案包含房东合同） */}
+            <h3 className={styles.sectionTitle}>
+              <FileTextOutlined /> 合同信息
+            </h3>
+            <div className={styles.formRow}>
+              <Form.Item label="合同编号" name={['contract', 'contractNo']}>
+                <Input placeholder="例如 HT-2024-001" />
+              </Form.Item>
+              <Form.Item label="签约日期" name={['contract', 'signDate']}>
+                <DatePicker className="w-full" placeholder="选择签约日期" />
+              </Form.Item>
+            </div>
+            <div className={styles.formRow}>
+              <Form.Item
+                label="合同开始日期"
+                name={['contract', 'startDate']}
+                rules={[{ required: true, message: '请选择合同开始日期' }]}
+              >
+                <DatePicker className="w-full" placeholder="选择开始日期" />
+              </Form.Item>
+              <Form.Item
+                label="合同结束日期"
+                name={['contract', 'endDate']}
+                rules={[{ required: true, message: '请选择合同结束日期' }]}
+              >
+                <DatePicker className="w-full" placeholder="选择结束日期" />
+              </Form.Item>
+            </div>
+            <div className={styles.formRow}>
+              <Form.Item
+                label="月租金"
+                name={['contract', 'rentAmount']}
+                rules={[{ required: true, message: '请输入月租金' }]}
+              >
+                <InputNumber
+                  min={0}
+                  step={0.01}
+                  className="w-full"
+                  placeholder="元/月"
+                />
+              </Form.Item>
+              <Form.Item label="押金" name={['contract', 'depositAmount']}>
+                <InputNumber
+                  min={0}
+                  step={0.01}
+                  className="w-full"
+                  placeholder="元"
+                />
+              </Form.Item>
+            </div>
+            <div className={styles.formRow}>
+              <Form.Item
+                label="付款方式"
+                name={['contract', 'paymentMethod']}
+                rules={[{ required: true, message: '请选择付款方式' }]}
+              >
+                <Select
+                  placeholder="请选择付款方式"
+                  options={paymentMethodOptions}
+                />
+              </Form.Item>
+              <Form.Item label="递增类型" name={['contract', 'escalationType']}>
+                <Select
+                  placeholder="请选择递增类型"
+                  options={escalationTypeOptions}
+                  allowClear
+                />
+              </Form.Item>
+            </div>
+            <div className={styles.formRow}>
+              <Form.Item
+                label="递增数值"
+                name={['contract', 'escalationValue']}
+              >
+                <InputNumber
+                  min={0}
+                  step={0.01}
+                  className="w-full"
+                  placeholder="金额或百分比"
+                />
+              </Form.Item>
+              <Form.Item
+                label="递增周期（月）"
+                name={['contract', 'escalationCycle']}
+              >
+                <InputNumber min={1} className="w-full" placeholder="例如 12" />
+              </Form.Item>
+            </div>
+            <div className={styles.formRow}>
+              <Form.Item label="免租天数" name={['contract', 'freeRentDays']}>
+                <InputNumber min={0} className="w-full" placeholder="天" />
+              </Form.Item>
+              <Form.Item
+                label="免租开始日期"
+                name={['contract', 'freeRentStart']}
+              >
+                <DatePicker className="w-full" placeholder="选择日期" />
+              </Form.Item>
+              <Form.Item
+                label="免租结束日期"
+                name={['contract', 'freeRentEnd']}
+              >
+                <DatePicker className="w-full" placeholder="选择日期" />
+              </Form.Item>
+            </div>
+            <div className={styles.formRow}>
+              <Form.Item label="附件链接" name={['contract', 'attachmentUrl']}>
+                <Input placeholder="合同扫描件链接" />
+              </Form.Item>
+              <Form.Item label="备注" name={['contract', 'note']}>
+                <Input placeholder="合同备注" />
               </Form.Item>
             </div>
 

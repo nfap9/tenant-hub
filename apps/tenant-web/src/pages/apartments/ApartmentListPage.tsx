@@ -10,7 +10,12 @@ import {
   Select,
   Pagination,
 } from 'antd';
-import { PlusOutlined, HomeOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  HomeOutlined,
+  SearchOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
@@ -235,7 +240,12 @@ export default function ApartmentListPage() {
                     {apt.landlordContracts &&
                       apt.landlordContracts.length > 0 && (
                         <div className={styles.contractPeriod}>
-                          有效房东合同：{apt.landlordContracts.length} 份
+                          <FileTextOutlined style={{ marginRight: 4 }} />
+                          合同有效期：
+                          {apt.landlordContracts[0].startDate.slice(
+                            0,
+                            10
+                          )} ~ {apt.landlordContracts[0].endDate.slice(0, 10)}
                         </div>
                       )}
                   </Card>

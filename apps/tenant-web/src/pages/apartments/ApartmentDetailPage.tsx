@@ -27,6 +27,7 @@ import {
   UserOutlined,
   DollarOutlined,
   SafetyOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
@@ -38,6 +39,7 @@ import type { Apartment } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import RoomCard from '@/components/rooms/RoomCard';
 import ApartmentDashboard from '@/components/apartments/ApartmentDashboard';
+import ApartmentContractSection from '@/components/apartments/ApartmentContractSection';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
@@ -525,6 +527,22 @@ export default function ApartmentDetailPage() {
                 </DetailSection>
               </>
             ),
+          },
+          {
+            key: 'contract',
+            label: (
+              <span>
+                <FileTextOutlined /> 合同信息
+              </span>
+            ),
+            children:
+              id && currentOrgId ? (
+                <ApartmentContractSection
+                  apartmentId={id}
+                  organizationId={currentOrgId}
+                  canManage={canManageApartment}
+                />
+              ) : null,
           },
           {
             key: 'dashboard',
