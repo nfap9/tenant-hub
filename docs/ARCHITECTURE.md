@@ -24,17 +24,17 @@ tenant-hub/
 
 ### 后端 API (`apps/api`)
 
-| 层级      | 技术                                                 |
-| --------- | ---------------------------------------------------- |
-| 运行时    | Node.js 22（`type: "module"`，纯 ESM）               |
-| 框架      | Express 4                                            |
-| ORM       | Prisma 5.22.0                                        |
-| 数据库    | PostgreSQL 16                                        |
-| 认证      | bcryptjs + jsonwebtoken + nanoid（OTP）              |
-| 校验      | Zod                                                  |
-| 定时任务  | node-cron（每日 02:00 Asia/Shanghai 执行）           |
-| 开发/构建 | `tsx watch`（开发）、`tsc`（构建）、`vitest`（测试） |
-| 其他      | helmet（安全头）、cors、dayjs、dotenv                |
+| 层级      | 技术                                       |
+| --------- | ------------------------------------------ |
+| 运行时    | Node.js 22（`type: "module"`，纯 ESM）     |
+| 框架      | Express 4                                  |
+| ORM       | Prisma 5.22.0                              |
+| 数据库    | PostgreSQL 16                              |
+| 认证      | bcryptjs + jsonwebtoken + nanoid（OTP）    |
+| 校验      | Zod                                        |
+| 定时任务  | node-cron（每日 02:00 Asia/Shanghai 执行） |
+| 开发/构建 | `tsx watch`（开发）、`tsc`（构建）         |
+| 其他      | helmet（安全头）、cors、dayjs、dotenv      |
 
 ### Web 管理端 (`apps/tenant-web`)
 
@@ -102,12 +102,6 @@ apps/api/
 │   └── utils/
 │       ├── asyncHandler.ts  # 包装 async 路由处理器以捕获异常
 │       └── http.ts          # HttpError 类 + ok() 响应辅助函数
-└── __tests__/               # 测试目录，与 src 目录结构镜像对应
-    ├── config/
-    ├── middleware/
-    ├── routes/
-    ├── services/
-    └── utils/
 ```
 
 ### Web 端代码结构

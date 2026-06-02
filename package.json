@@ -14,7 +14,6 @@
     "lint": "pnpm -r lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma generate",
     "db:push": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma db push",
