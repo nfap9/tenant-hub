@@ -2,63 +2,20 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Layout, Menu, Dropdown, Spin, message, Modal, Avatar } from 'antd';
 import {
   HomeTwoTone,
-  HomeOutlined,
-  ApartmentOutlined,
-  HomeFilled,
-  FileTextOutlined,
-  SettingOutlined,
   SwapOutlined,
   LogoutOutlined,
   UserOutlined,
   DownOutlined,
   DashboardOutlined,
   BellOutlined,
-  TeamOutlined,
-  AppstoreOutlined,
-  SafetyCertificateOutlined,
-  MailOutlined,
-  ToolOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo } from 'react';
+import { menuConfig, opsMenuConfig } from './menuConfig';
+import { getKeyFromPath, getPathFromKey, getLabelFromKey } from './menuUtils';
 import styles from './MainLayout.module.scss';
 
 const { Header, Sider, Content } = Layout;
-
-function getMenuKeyFromPath(pathname: string): string {
-  if (pathname === '/') return 'dashboard';
-  if (pathname.startsWith('/apartments')) return 'apartments';
-  if (pathname.startsWith('/rooms')) return 'rooms';
-  if (pathname.startsWith('/leases')) return 'leases';
-  if (pathname.startsWith('/deposits')) return 'deposits';
-  if (pathname.startsWith('/bills')) return 'bills';
-  if (pathname.startsWith('/settings')) return 'settings';
-  if (pathname === '/ops') return 'ops-dashboard';
-  if (pathname.startsWith('/ops/users')) return 'ops-users';
-  if (pathname.startsWith('/ops/plans')) return 'ops-plans';
-  if (pathname.startsWith('/ops/organizations')) return 'ops-organizations';
-  if (pathname.startsWith('/ops/roles')) return 'ops-roles';
-  if (pathname.startsWith('/ops')) return 'ops-dashboard';
-  return 'dashboard';
-}
-
-function getMenuLabel(
-  items: Array<{
-    key: string;
-    label: string;
-    children?: Array<{ key: string; label: string }>;
-  }>,
-  key: string
-): string {
-  for (const item of items) {
-    if (item.key === key) return item.label;
-    if (item.children) {
-      const child = item.children.find((c) => c.key === key);
-      if (child) return child.label;
-    }
-  }
-  return '';
-}
 
 export default function MainLayout() {
   const location = useLocation();
@@ -75,109 +32,45 @@ export default function MainLayout() {
     platformRole,
   } = useAppSession();
 
-  const selectedKey = useMemo(
-    () => getMenuKeyFromPath(location.pathname),
-    [location.pathname]
-  );
   const noOrg = memberships.length === 0;
 
-  const menuItems = [
-    ...(noOrg
-      ? []
-      : [
-          { key: 'dashboard', icon: <HomeOutlined />, label: '首页' },
-          { key: 'rooms', icon: <HomeFilled />, label: '房间' },
-          { key: 'bills', icon: <FileTextOutlined />, label: '账单' },
-          { key: 'leases', icon: <FileTextOutlined />, label: '租约' },
-          { key: 'deposits', icon: <FileTextOutlined />, label: '押金' },
-          { key: 'apartments', icon: <ApartmentOutlined />, label: '公寓' },
-        ]),
-    { key: 'settings', icon: <SettingOutlined />, label: '更多' },
-    ...(platformRole === 'SUPER_ADMIN'
-      ? [
-          {
-            key: 'ops',
-            icon: <DashboardOutlined />,
-            label: '运营配置',
-            children: [
-              {
-                key: 'ops-dashboard',
-                icon: <DashboardOutlined />,
-                label: '运营总览',
-              },
-              { key: 'ops-users', icon: <TeamOutlined />, label: '租户管理' },
-              {
-                key: 'ops-plans',
-                icon: <AppstoreOutlined />,
-                label: '套餐配置',
-              },
-              {
-                key: 'ops-organizations',
-                icon: <ApartmentOutlined />,
-                label: '组织管理',
-              },
-              {
-                key: 'ops-roles',
-                icon: <SafetyCertificateOutlined />,
-                label: '角色权限',
-              },
-              { key: 'ops-sms', icon: <MailOutlined />, label: '短信配置' },
-              {
-                key: 'ops-settings',
-                icon: <ToolOutlined />,
-                label: '系统配置',
-              },
-            ],
-          },
-        ]
-      : []),
-  ];
+  const menuItems = useMemo(() => {
+    const baseItems = menuConfig
+      .filter((item) => {
+        if (item.requireOrg && noOrg) return false;
+        return true;
+      })
+      .map(({ key, label, icon: Icon }) => ({
+        key,
+        icon: <Icon />,
+        label,
+      }));
+
+    if (platformRole !== 'SUPER_ADMIN') return baseItems;
+
+    return [
+      ...baseItems,
+      {
+        key: 'ops',
+        icon: <DashboardOutlined />,
+        label: '运营配置',
+        children: opsMenuConfig.map(({ key, label, icon: Icon }) => ({
+          key,
+          icon: <Icon />,
+          label,
+        })),
+      },
+    ];
+  }, [noOrg, platformRole]);
+
+  const selectedKey = useMemo(
+    () => getKeyFromPath([...menuConfig, ...opsMenuConfig], location.pathname),
+    [location.pathname]
+  );
 
   const handleMenuClick = (key: string) => {
-    switch (key) {
-      case 'dashboard':
-        navigate('/');
-        break;
-      case 'rooms':
-        navigate('/rooms');
-        break;
-      case 'leases':
-        navigate('/leases');
-        break;
-      case 'deposits':
-        navigate('/deposits');
-        break;
-      case 'bills':
-        navigate('/bills');
-        break;
-      case 'apartments':
-        navigate('/apartments');
-        break;
-      case 'settings':
-        navigate('/settings');
-        break;
-      case 'ops-dashboard':
-        navigate('/ops');
-        break;
-      case 'ops-users':
-        navigate('/ops/users');
-        break;
-      case 'ops-plans':
-        navigate('/ops/plans');
-        break;
-      case 'ops-organizations':
-        navigate('/ops/organizations');
-        break;
-      case 'ops-roles':
-        navigate('/ops/roles');
-        break;
-      case 'ops-sms':
-        navigate('/ops/sms');
-        break;
-      case 'ops-settings':
-        navigate('/ops');
-        break;
-    }
+    const path = getPathFromKey([...menuConfig, ...opsMenuConfig], key);
+    if (path) navigate(path);
   };
 
   const orgOptions = useMemo(
@@ -226,18 +119,13 @@ export default function MainLayout() {
             onClick={({ key }) => handleMenuClick(key)}
           />
         </div>
-
-        {/* Bottom section */}
-        <div className={styles.siderFooter}>
-          <div className={styles.userPhone}>{session?.user?.phone}</div>
-        </div>
       </Sider>
 
       <Layout className={styles.mainContentLayout}>
         <Header className={styles.mainHeader}>
           {/* Breadcrumb placeholder / page title could go here */}
           <div className={styles.headerPageTitle}>
-            {getMenuLabel(menuItems, selectedKey)}
+            {getLabelFromKey([...menuConfig, ...opsMenuConfig], selectedKey)}
           </div>
 
           <div className={styles.headerRight}>
