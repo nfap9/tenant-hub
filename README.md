@@ -25,9 +25,6 @@ pnpm dev:infra
 # 4. 生成 Prisma Client 并同步数据库结构
 pnpm db:generate
 
-# 本地快速开发
-pnpm dev:push
-
 # 当模型改动确定后，生成正式迁移文件（提交前）
 pnpm db:migrate     # 按提示命名迁移，然后将生成的 migrations/ 目录一起提交
 
@@ -75,7 +72,7 @@ docker compose -f docker-compose.prod.yml up --build
 | `pnpm dev:web`         | 同 `pnpm dev`                    |
 | `pnpm dev:miniprogram` | 启动小程序微信开发者工具编译模式 |
 | `pnpm db:generate`     | 生成 Prisma Client               |
-| `pnpm db:push`         | 同步数据库结构到 PostgreSQL      |
+| `pnpm db:migrate`      | 同步数据库结构到 PostgreSQL      |
 | `pnpm check`           | 全量类型检查 + Lint + 构建       |
 
 ## 环境变量
@@ -91,17 +88,15 @@ docker compose -f docker-compose.prod.yml up --build
 
 ## 数据库同步
 
-修改 `apps/api/prisma/schema.prisma` 后，直接推送结构变更到数据库：
+修改 `apps/api/prisma/schema.prisma` 后，通过迁移同步结构变更到数据库：
 
 ```bash
 # 本地 pnpm 环境
-pnpm db:push
+pnpm db:migrate
 pnpm db:generate
 ```
 
 如果 Docker 中的 PostgreSQL 已启动但同步失败，检查 `.env` 中的 `DATABASE_URL` 是否指向 `localhost:5433`。
-
-> 当前项目使用 `prisma db push` 进行开发，不维护迁移文件。后续如需切回迁移模式，请重新初始化迁移历史。
 
 ## 权限说明
 

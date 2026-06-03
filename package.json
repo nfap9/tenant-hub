@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @tenant-hub/api --filter @tenant-hub/tenant-web dev",
     "dev:infra": "docker compose -f docker-compose.infra.yml up -d",
-    "dev:all": "pnpm dev:infra && pnpm db:generate && pnpm db:push && pnpm dev",
+    "dev:all": "pnpm dev:infra && pnpm db:generate && pnpm db:migrate && pnpm dev",
     "dev:miniprogram": "pnpm --filter @tenant-hub/miniprogram dev:weapp",
     "build:miniprogram": "pnpm --filter @tenant-hub/miniprogram build:weapp",
     "build": "pnpm -r build",
@@ -16,7 +16,6 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma generate",
-    "db:push": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma db push",
     "db:migrate": "dotenv -e .env -- pnpm --filter @tenant-hub/api prisma migrate dev",
     "prepare": "husky && pnpm db:generate",
     "release": "node scripts/release.js",
