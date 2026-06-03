@@ -26,8 +26,8 @@ const methodOptions = [
 ];
 
 const defaultBodyParams = [
-  { key: 'code', value: '{{code}}' },
-  { key: 'phoneNumber', value: '{{phoneNumber}}' },
+  { paramKey: 'code', value: '{{code}}' },
+  { paramKey: 'phoneNumber', value: '{{phoneNumber}}' },
 ];
 
 export default function OpsSmsConfigPage() {
@@ -45,15 +45,14 @@ export default function OpsSmsConfigPage() {
         form.setFieldsValue({
           url: value.url ?? '',
           method: value.method ?? 'POST',
-          headers: Object.entries(value.headers ?? {}).map(([key, val]) => ({
-            key,
-            value: val,
-          })),
+          headers: Object.entries(value.headers ?? {}).map(
+            ([paramKey, val]) => ({ paramKey, value: val })
+          ),
           queryParams: Object.entries(value.queryParams ?? {}).map(
-            ([key, val]) => ({ key, value: val })
+            ([paramKey, val]) => ({ paramKey, value: val })
           ),
           bodyParams: Object.entries(value.bodyParams ?? {}).map(
-            ([key, val]) => ({ key, value: val })
+            ([paramKey, val]) => ({ paramKey, value: val })
           ),
         });
       })
@@ -70,11 +69,11 @@ export default function OpsSmsConfigPage() {
       .finally(() => setLoading(false));
   }, [form]);
 
-  const toRecord = (items: Array<{ key: string; value: string }>) => {
+  const toRecord = (items: Array<{ paramKey: string; value: string }>) => {
     const record: Record<string, string> = {};
     for (const item of items) {
-      if (item.key && item.value !== undefined) {
-        record[item.key] = item.value;
+      if (item.paramKey && item.value !== undefined) {
+        record[item.paramKey] = item.value;
       }
     }
     return record;
@@ -95,9 +94,9 @@ export default function OpsSmsConfigPage() {
   const handleSave = async (values: {
     url: string;
     method: 'GET' | 'POST' | 'PUT';
-    headers: Array<{ key: string; value: string }>;
-    queryParams: Array<{ key: string; value: string }>;
-    bodyParams: Array<{ key: string; value: string }>;
+    headers: Array<{ paramKey: string; value: string }>;
+    queryParams: Array<{ paramKey: string; value: string }>;
+    bodyParams: Array<{ paramKey: string; value: string }>;
   }) => {
     const payload = {
       value: {
@@ -130,35 +129,42 @@ export default function OpsSmsConfigPage() {
     <Form.List name={name}>
       {(fields, { add, remove }) => (
         <div>
-          {fields.map((field) => (
-            <Space key={field.key} align="baseline" className={styles.kvSpace}>
-              <Form.Item
-                {...field}
-                name={[field.name, 'key']}
-                rules={[{ required: true, message: '请输入字段名' }]}
-                noStyle
-              >
-                <Input
-                  placeholder={keyPlaceholder}
-                  className={styles.kvInputKey}
-                />
-              </Form.Item>
-              <Form.Item
-                {...field}
-                name={[field.name, 'value']}
-                rules={[{ required: true, message: '请输入字段值' }]}
-                noStyle
-              >
-                <Input
-                  placeholder={valuePlaceholder}
-                  className={styles.kvInputValue}
-                />
-              </Form.Item>
-              <Button type="link" danger onClick={() => remove(field.name)}>
-                删除
-              </Button>
-            </Space>
-          ))}
+          {fields.map((field) => {
+            const { key, ...restField } = field;
+            return (
+              <Space key={key} align="baseline" className={styles.kvSpace}>
+                <Form.Item
+                  {...restField}
+                  name={[restField.name, 'paramKey']}
+                  rules={[{ required: true, message: '请输入字段名' }]}
+                  noStyle
+                >
+                  <Input
+                    placeholder={keyPlaceholder}
+                    className={styles.kvInputKey}
+                  />
+                </Form.Item>
+                <Form.Item
+                  {...restField}
+                  name={[restField.name, 'value']}
+                  rules={[{ required: true, message: '请输入字段值' }]}
+                  noStyle
+                >
+                  <Input
+                    placeholder={valuePlaceholder}
+                    className={styles.kvInputValue}
+                  />
+                </Form.Item>
+                <Button
+                  type="link"
+                  danger
+                  onClick={() => remove(restField.name)}
+                >
+                  删除
+                </Button>
+              </Space>
+            );
+          })}
           <Button
             type="dashed"
             onClick={() => add()}
