@@ -9,6 +9,10 @@ import {
 } from './leaseLifecycle.js';
 import { refreshDepositStatus } from './deposit.js';
 import { HttpError } from '../utils/http.js';
+import {
+  createTransaction,
+  getCategoryFromBillItemType,
+} from './transaction.js';
 
 dayjs.extend(utc);
 
@@ -268,7 +272,7 @@ export const refundBill = async ({
   if (refundAmount.greaterThan(netPaid))
     throw new HttpError(400, '退款金额不能超过已付金额');
 
-  await prisma.payment.create({
+  const payment = await prisma.payment.create({
     data: {
       billId,
       userId,
@@ -279,6 +283,35 @@ export const refundBill = async ({
       status: 'COMPLETED',
     },
   });
+
+  // 创建收支记录
+  const billWithLease = await prisma.bill.findUnique({
+    where: { id: billId },
+    include: {
+      items: true,
+      lease: { include: { room: { include: { apartment: true } } } },
+    },
+  });
+  if (billWithLease) {
+    const category = 'BILL_REFUND';
+    const description = `${billWithLease.lease.room.apartment.name} - ${billWithLease.lease.room.roomNo} 账单退款`;
+
+    await createTransaction({
+      organizationId: billWithLease.organizationId,
+      type: 'EXPENSE',
+      category,
+      amount: refundAmount,
+      method,
+      description,
+      note,
+      operatorId: userId,
+      sourceType: 'BILL_PAYMENT',
+      sourceId: payment.id,
+      billId,
+      leaseId: billWithLease.leaseId,
+      apartmentId: billWithLease.lease.room.apartmentId,
+    });
+  }
 
   await refreshBillTotals(billId);
 
@@ -687,6 +720,10 @@ export const recordBillPayment = async ({
 }) => {
   const bill = await prisma.bill.findFirst({
     where: { id: billId, organizationId },
+    include: {
+      items: true,
+      lease: { include: { room: { include: { apartment: true } } } },
+    },
   });
   if (!bill) throw new HttpError(404, '账单不存在');
   assertBillPaymentAllowed({ ...bill, amount });
@@ -694,6 +731,52 @@ export const recordBillPayment = async ({
   const payment = await prisma.payment.create({
     data: { billId, userId, amount, method, note, status: 'COMPLETED' },
   });
+
+  // 创建收支记录（按账单明细项拆分）
+  if (
+    bill.items.length > 0 &&
+    new Prisma.Decimal(bill.totalAmount).greaterThan(0)
+  ) {
+    const totalAmount = new Prisma.Decimal(bill.totalAmount);
+    const paymentAmount = new Prisma.Decimal(amount);
+    const apartmentName = bill.lease.room.apartment.name;
+    const roomNo = bill.lease.room.roomNo;
+
+    for (const item of bill.items) {
+      const itemAmount = new Prisma.Decimal(item.amount);
+      if (itemAmount.lessThanOrEqualTo(0)) continue;
+
+      // 按金额比例拆分
+      const splitAmount = itemAmount
+        .div(totalAmount)
+        .mul(paymentAmount)
+        .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+
+      if (splitAmount.lessThanOrEqualTo(0)) continue;
+
+      const category = getCategoryFromBillItemType(item.type);
+      const description =
+        bill.note === 'LEASE_SETTLEMENT'
+          ? `${apartmentName} - ${roomNo} 退租结算${item.name}`
+          : `${apartmentName} - ${roomNo} ${item.name}`;
+
+      await createTransaction({
+        organizationId: bill.organizationId,
+        type: 'INCOME',
+        category,
+        amount: splitAmount,
+        method,
+        description,
+        note,
+        operatorId: userId,
+        sourceType: 'BILL_PAYMENT',
+        sourceId: payment.id,
+        billId,
+        leaseId: bill.leaseId,
+        apartmentId: bill.lease.room.apartmentId,
+      });
+    }
+  }
 
   // 退租结算账单手动管理状态
   if (bill.note === 'LEASE_SETTLEMENT') {

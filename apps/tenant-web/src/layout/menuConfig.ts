@@ -6,6 +6,7 @@ import {
   ApartmentOutlined,
   SettingOutlined,
   DashboardOutlined,
+  AccountBookOutlined,
   TeamOutlined,
   AppstoreOutlined,
   SafetyCertificateOutlined,
@@ -56,6 +57,13 @@ export const menuConfig: MenuItemConfig[] = [
     label: '押金',
     path: '/deposits',
     icon: FileTextOutlined,
+    requireOrg: true,
+  },
+  {
+    key: 'transactions',
+    label: '收支记录',
+    path: '/transactions',
+    icon: AccountBookOutlined,
     requireOrg: true,
   },
   {

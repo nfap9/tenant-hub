@@ -13,6 +13,7 @@ import {
   getBillMonthLabel,
   getCurrentMonthBillWindow,
 } from '../services/billing.js';
+import { createTransaction } from '../services/transaction.js';
 import { withLeaseLifecycle } from '../services/leaseLifecycle.js';
 import { enforceOrganizationQuota } from '../services/quotas.js';
 
@@ -222,12 +223,31 @@ apartmentRouter.post(
       })
       .parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
-    ok(
-      res,
-      await prisma.apartmentExpense.create({
-        data: { ...input, apartmentId: req.params.id },
-      })
-    );
+
+    const expense = await prisma.apartmentExpense.create({
+      data: { ...input, apartmentId: req.params.id },
+    });
+
+    // 创建收支记录
+    const apartment = await prisma.apartment.findUnique({
+      where: { id: req.params.id },
+      select: { name: true },
+    });
+    await createTransaction({
+      organizationId: req.organizationId!,
+      type: 'EXPENSE',
+      category: 'OTHER_EXPENSE',
+      amount: input.amount,
+      method: '现金',
+      description: `${apartment?.name || '公寓'} - ${input.name}`,
+      note: input.note,
+      operatorId: req.user!.id,
+      sourceType: 'APARTMENT_EXPENSE',
+      sourceId: expense.id,
+      apartmentId: req.params.id,
+    });
+
+    ok(res, expense);
   })
 );
 

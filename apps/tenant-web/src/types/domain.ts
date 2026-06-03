@@ -289,6 +289,52 @@ export type SettlementPayment = {
   user?: { id: string; username: string; phone: string };
 };
 
+export type TransactionType = 'INCOME' | 'EXPENSE';
+export type TransactionStatus = 'COMPLETED' | 'PENDING' | 'CANCELLED';
+export type TransactionSourceType =
+  | 'BILL_PAYMENT'
+  | 'DEPOSIT_PAYMENT'
+  | 'SETTLEMENT_PAYMENT'
+  | 'APARTMENT_EXPENSE'
+  | 'RESERVATION'
+  | 'MANUAL';
+
+export type TransactionCategory = {
+  key: string;
+  label: string;
+  type: TransactionType;
+};
+
+export type Transaction = {
+  id: string;
+  organizationId: string;
+  type: TransactionType;
+  category: string;
+  amount: string | number;
+  method: string;
+  status: TransactionStatus;
+  occurredAt: string;
+  description?: string;
+  note?: string;
+  operatorId: string;
+  operator?: { id: string; username: string };
+  sourceType: TransactionSourceType;
+  sourceId: string;
+  billId?: string;
+  depositId?: string;
+  leaseId?: string;
+  apartmentId?: string;
+  bill?: { id: string; mode: string; periodStart: string; periodEnd: string };
+  lease?: {
+    id: string;
+    tenantName: string;
+    room?: { roomNo: string; apartment?: { name: string } };
+  };
+  apartment?: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type LeaseSettlement = {
   id: string;
   organizationId: string;

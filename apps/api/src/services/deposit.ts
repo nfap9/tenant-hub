@@ -1,6 +1,7 @@
 import { Prisma, DepositStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
+import { createTransaction } from './transaction.js';
 
 type DecimalValue = Prisma.Decimal.Value;
 
@@ -95,6 +96,39 @@ export const recordDepositPayment = async ({
       status: 'COMPLETED',
     },
   });
+
+  // 创建收支记录
+  const depositWithLease = await prisma.deposit.findUnique({
+    where: { id: depositId },
+    include: { lease: { include: { room: { include: { apartment: true } } } } },
+  });
+  if (depositWithLease) {
+    const categoryMap: Record<string, string> = {
+      COLLECT: 'DEPOSIT_COLLECT',
+      REFUND: 'DEPOSIT_REFUND',
+      DEDUCT: 'OTHER_EXPENSE',
+    };
+    const descriptionMap: Record<string, string> = {
+      COLLECT: '押金收款',
+      REFUND: '押金退款',
+      DEDUCT: '押金抵扣',
+    };
+    await createTransaction({
+      organizationId: depositWithLease.organizationId,
+      type: type === 'COLLECT' ? 'INCOME' : 'EXPENSE',
+      category: categoryMap[type] as any,
+      amount: paymentAmount,
+      method,
+      description: `${depositWithLease.lease.room.apartment.name} - ${depositWithLease.lease.room.roomNo} ${descriptionMap[type]}`,
+      note,
+      operatorId: userId,
+      sourceType: 'DEPOSIT_PAYMENT',
+      sourceId: payment.id,
+      depositId,
+      leaseId: depositWithLease.leaseId,
+      apartmentId: depositWithLease.lease.room.apartmentId,
+    });
+  }
 
   await prisma.deposit.update({
     where: { id: depositId },

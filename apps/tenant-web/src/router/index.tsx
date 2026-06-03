@@ -30,6 +30,11 @@ const DepositDetailPage = lazy(
   () => import('@/pages/deposits/DepositDetailPage')
 );
 
+// 收支记录
+const TransactionsPage = lazy(
+  () => import('@/pages/transactions/TransactionsPage')
+);
+
 // 账单
 const BillListPage = lazy(() => import('@/pages/bills/BillListPage'));
 const UtilityImportPage = lazy(() => import('@/pages/bills/UtilityImportPage'));
@@ -209,6 +214,16 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <DepositDetailPage />
+              </RequireOrg>
+            }
+          />
+
+          {/* 收支记录 */}
+          <Route
+            path="/transactions"
+            element={
+              <RequireOrg>
+                <TransactionsPage />
               </RequireOrg>
             }
           />

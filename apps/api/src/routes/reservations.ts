@@ -33,7 +33,13 @@ reservationRouter.post(
         id: input.roomId,
         apartment: { organizationId: req.organizationId! },
       },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        apartmentId: true,
+        roomNo: true,
+        apartment: { select: { name: true } },
+      },
     });
     if (!room) throw new HttpError(404, '房间不存在');
     if (room.status !== 'VACANT' && room.status !== 'RESERVED')
@@ -52,13 +58,14 @@ reservationRouter.post(
         expectedMoveInDate: input.expectedMoveInDate,
       };
 
+      let reservationRecord;
       if (existing) {
-        await tx.reservation.update({
+        reservationRecord = await tx.reservation.update({
           where: { roomId: input.roomId },
           data,
         });
       } else {
-        await tx.reservation.create({
+        reservationRecord = await tx.reservation.create({
           data: { roomId: input.roomId, ...data },
         });
       }
@@ -67,6 +74,24 @@ reservationRouter.post(
         await tx.room.update({
           where: { id: input.roomId },
           data: { status: 'RESERVED' },
+        });
+      }
+
+      // 创建收支记录（定金收入）
+      if (input.deposit > 0) {
+        await tx.transaction.create({
+          data: {
+            organizationId: req.organizationId!,
+            type: 'INCOME',
+            category: 'RESERVATION_FEE',
+            amount: input.deposit,
+            method: input.paymentMethod || '现金',
+            description: `${room.apartment.name} - ${room.roomNo} 预订定金`,
+            operatorId: req.user!.id,
+            sourceType: 'RESERVATION',
+            sourceId: reservationRecord.id,
+            apartmentId: room.apartmentId,
+          },
         });
       }
 

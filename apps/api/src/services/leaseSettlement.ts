@@ -3,6 +3,10 @@ import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import { calculateUtilityAmount } from './billing.js';
 import { startOfLeaseDay } from './leaseLifecycle.js';
+import {
+  createTransaction,
+  getCategoryFromBillItemType,
+} from './transaction.js';
 
 type DecimalValue = Prisma.Decimal.Value;
 
@@ -144,7 +148,7 @@ export const createLeaseSettlement = async ({
 }) => {
   const lease = await prisma.lease.findFirst({
     where: { id: leaseId, organizationId },
-    include: { room: true, deposit: true },
+    include: { room: { include: { apartment: true } }, deposit: true },
   });
   if (!lease) throw new HttpError(404, '租约不存在');
   if (lease.status !== 'ACTIVE')
@@ -409,13 +413,14 @@ export const createLeaseSettlement = async ({
     // 结清该租约下所有未结清账单
     const pendingBills = await tx.bill.findMany({
       where: { leaseId: lease.id, status: { notIn: ['PAID', 'VOID'] } },
+      include: { items: true },
     });
     for (const bill of pendingBills) {
       const remaining = new Prisma.Decimal(bill.totalAmount).minus(
         bill.paidAmount
       );
       if (remaining.greaterThan(0)) {
-        await tx.payment.create({
+        const payment = await tx.payment.create({
           data: {
             billId: bill.id,
             userId,
@@ -425,6 +430,39 @@ export const createLeaseSettlement = async ({
             status: 'COMPLETED',
           },
         });
+
+        // 创建收支记录（按账单明细项拆分）
+        const billTotal = new Prisma.Decimal(bill.totalAmount);
+        for (const item of bill.items) {
+          const itemAmount = new Prisma.Decimal(item.amount);
+          if (itemAmount.lessThanOrEqualTo(0)) continue;
+
+          const splitAmount = itemAmount
+            .div(billTotal)
+            .mul(remaining)
+            .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+
+          if (splitAmount.lessThanOrEqualTo(0)) continue;
+
+          const category = getCategoryFromBillItemType(item.type);
+          await tx.transaction.create({
+            data: {
+              organizationId,
+              type: 'INCOME',
+              category,
+              amount: splitAmount,
+              method: '退租自动结清',
+              description: `${lease.room.apartment.name} - ${lease.room.roomNo} ${item.name}（退租自动结清）`,
+              note: '退租结算时自动结清未收账单',
+              operatorId: userId,
+              sourceType: 'BILL_PAYMENT',
+              sourceId: payment.id,
+              billId: bill.id,
+              leaseId: lease.id,
+              apartmentId: lease.room.apartmentId,
+            },
+          });
+        }
       }
       await tx.bill.update({
         where: { id: bill.id },
@@ -469,7 +507,11 @@ export const recordSettlementPayment = async ({
 }) => {
   const settlement = await prisma.leaseSettlement.findFirst({
     where: { id: settlementId, organizationId },
-    include: { payments: true, bill: true },
+    include: {
+      payments: true,
+      bill: true,
+      lease: { include: { room: { include: { apartment: true } } } },
+    },
   });
   if (!settlement) throw new HttpError(404, '退租结算单不存在');
   const expectedDirection = getSettlementDirection(settlement.netAmount);
@@ -523,6 +565,71 @@ export const recordSettlementPayment = async ({
         status: isPaid ? 'PAID' : 'PARTIAL_PAID',
       },
     });
+  }
+
+  // 创建收支记录（按退租结算账单明细项拆分）
+  if (settlement.bill) {
+    const billWithItems = await prisma.bill.findUnique({
+      where: { id: settlement.bill.id },
+      include: { items: true },
+    });
+
+    if (
+      billWithItems &&
+      billWithItems.items.length > 0 &&
+      new Prisma.Decimal(billWithItems.totalAmount).greaterThan(0)
+    ) {
+      const billTotal = new Prisma.Decimal(billWithItems.totalAmount);
+      const apartmentName = settlement.lease.room.apartment.name;
+      const roomNo = settlement.lease.room.roomNo;
+
+      for (const item of billWithItems.items) {
+        const itemAmount = new Prisma.Decimal(item.amount);
+        if (itemAmount.lessThanOrEqualTo(0)) continue;
+
+        // 按金额比例拆分
+        const splitAmount = itemAmount
+          .div(billTotal)
+          .mul(paymentAmount)
+          .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+
+        if (splitAmount.lessThanOrEqualTo(0)) continue;
+
+        // 根据明细项名称判断收入/支出和科目
+        let transType: 'INCOME' | 'EXPENSE';
+        let category: string;
+
+        if (item.name.includes('退款')) {
+          transType = 'EXPENSE';
+          if (item.type === 'DEPOSIT') {
+            category = 'DEPOSIT_REFUND';
+          } else if (item.type === 'RENT') {
+            category = 'BILL_REFUND';
+          } else {
+            category = 'OTHER_EXPENSE';
+          }
+        } else {
+          transType = 'INCOME';
+          category = getCategoryFromBillItemType(item.type);
+        }
+
+        await createTransaction({
+          organizationId,
+          type: transType,
+          category: category as any,
+          amount: splitAmount,
+          method,
+          description: `${apartmentName} - ${roomNo} ${item.name}`,
+          note: note || `退租结算${direction === 'RECEIVE' ? '收款' : '退款'}`,
+          operatorId: userId,
+          sourceType: 'SETTLEMENT_PAYMENT',
+          sourceId: settlementPayment.id,
+          billId: settlement.billId || undefined,
+          leaseId: settlement.leaseId,
+          apartmentId: settlement.lease.room.apartmentId,
+        });
+      }
+    }
   }
 
   const nextHandledAmount = handledAmount.plus(paymentAmount);
