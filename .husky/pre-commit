@@ -1,1 +1,1 @@
-pnpm lint
+./node_modules/.bin/lint-staged
