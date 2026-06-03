@@ -17,23 +17,9 @@ const ApartmentListPage = lazy(
 const ApartmentDetailPage = lazy(
   () => import('@/pages/apartments/ApartmentDetailPage')
 );
-const ApartmentFormPage = lazy(
-  () => import('@/pages/apartments/ApartmentFormPage')
-);
-const ApartmentExpensePage = lazy(
-  () => import('@/pages/apartments/ApartmentExpensePage')
-);
-const RoomBatchPage = lazy(() => import('@/pages/apartments/RoomBatchPage'));
-
 // 房间
 const RoomListPage = lazy(() => import('@/pages/rooms/RoomListPage'));
 const RoomDetailPage = lazy(() => import('@/pages/rooms/RoomDetailPage'));
-const RoomFormPage = lazy(() => import('@/pages/rooms/RoomFormPage'));
-const LeaseFormPage = lazy(() => import('@/pages/rooms/LeaseFormPage'));
-const LeaseEditPage = lazy(() => import('@/pages/rooms/LeaseEditPage'));
-const LeaseTerminatePage = lazy(
-  () => import('@/pages/rooms/LeaseTerminatePage')
-);
 
 // 租约
 const LeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
@@ -46,11 +32,7 @@ const DepositDetailPage = lazy(
 
 // 账单
 const BillListPage = lazy(() => import('@/pages/bills/BillListPage'));
-const PaymentPage = lazy(() => import('@/pages/bills/PaymentPage'));
-const ReadingPage = lazy(() => import('@/pages/bills/ReadingPage'));
-const UtilityPage = lazy(() => import('@/pages/bills/UtilityPage'));
 const UtilityImportPage = lazy(() => import('@/pages/bills/UtilityImportPage'));
-const UtilityExportPage = lazy(() => import('@/pages/bills/UtilityExportPage'));
 const MonthlyDetailPage = lazy(() => import('@/pages/bills/MonthlyDetailPage'));
 
 // 设置
@@ -70,10 +52,6 @@ const OpsOrganizationsPage = lazy(
   () => import('@/pages/ops/OpsOrganizationsPage')
 );
 const OpsRolesPage = lazy(() => import('@/pages/ops/OpsRolesPage'));
-const OpsSmsConfigPage = lazy(() => import('@/pages/ops/OpsSmsConfigPage'));
-const OpsSystemSettingsPage = lazy(
-  () => import('@/pages/ops/OpsSystemSettingsPage')
-);
 
 function PageLoading() {
   return (
@@ -189,40 +167,6 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/apartments/new"
-            element={
-              <RequireOrg>
-                <ApartmentFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/:id/edit"
-            element={
-              <RequireOrg>
-                <ApartmentFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/:id/expenses"
-            element={
-              <RequireOrg>
-                <ApartmentExpensePage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/apartments/:id/rooms/batch"
-            element={
-              <RequireOrg>
-                <RoomBatchPage />
-              </RequireOrg>
-            }
-          />
-
-          {/* 租约 */}
-          <Route
             path="/leases"
             element={
               <RequireOrg>
@@ -247,47 +191,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-          <Route
-            path="/rooms/new"
-            element={
-              <RequireOrg>
-                <RoomFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/edit"
-            element={
-              <RequireOrg>
-                <RoomFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/lease/new"
-            element={
-              <RequireOrg>
-                <LeaseFormPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/lease/edit"
-            element={
-              <RequireOrg>
-                <LeaseEditPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/rooms/:id/lease/terminate"
-            element={
-              <RequireOrg>
-                <LeaseTerminatePage />
-              </RequireOrg>
-            }
-          />
-
           {/* 押金 */}
           <Route
             path="/deposits"
@@ -316,42 +219,10 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/bills/payment"
-            element={
-              <RequireOrg>
-                <PaymentPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/reading"
-            element={
-              <RequireOrg>
-                <ReadingPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/utility"
-            element={
-              <RequireOrg>
-                <UtilityPage />
-              </RequireOrg>
-            }
-          />
-          <Route
             path="/bills/utility-import"
             element={
               <RequireOrg>
                 <UtilityImportPage />
-              </RequireOrg>
-            }
-          />
-          <Route
-            path="/bills/utility-export"
-            element={
-              <RequireOrg>
-                <UtilityExportPage />
               </RequireOrg>
             }
           />
@@ -422,22 +293,6 @@ export default function AppRouter() {
             element={
               <RequireSuperAdmin>
                 <OpsRolesPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/sms"
-            element={
-              <RequireSuperAdmin>
-                <OpsSmsConfigPage />
-              </RequireSuperAdmin>
-            }
-          />
-          <Route
-            path="/ops/settings"
-            element={
-              <RequireSuperAdmin>
-                <OpsSystemSettingsPage />
               </RequireSuperAdmin>
             }
           />

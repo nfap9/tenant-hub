@@ -38,8 +38,6 @@ function getMenuKeyFromPath(pathname: string): string {
   if (pathname.startsWith('/ops/plans')) return 'ops-plans';
   if (pathname.startsWith('/ops/organizations')) return 'ops-organizations';
   if (pathname.startsWith('/ops/roles')) return 'ops-roles';
-  if (pathname.startsWith('/ops/sms')) return 'ops-sms';
-  if (pathname.startsWith('/ops/settings')) return 'ops-settings';
   if (pathname.startsWith('/ops')) return 'ops-dashboard';
   return 'dashboard';
 }
@@ -174,10 +172,8 @@ export default function MainLayout() {
         navigate('/ops/roles');
         break;
       case 'ops-sms':
-        navigate('/ops/sms');
-        break;
       case 'ops-settings':
-        navigate('/ops/settings');
+        navigate('/ops');
         break;
     }
   };

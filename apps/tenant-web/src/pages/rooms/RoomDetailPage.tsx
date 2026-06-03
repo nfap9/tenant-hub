@@ -10,6 +10,8 @@ import {
   Row,
   Col,
 } from 'antd';
+import LeaseEditDrawer from './LeaseEditDrawer';
+import LeaseFormDrawer from './LeaseFormDrawer';
 import {
   EditOutlined,
   DeleteOutlined,
@@ -26,6 +28,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
+import LeaseTerminateDrawer from './LeaseTerminateDrawer';
 import styles from './RoomDetailPage.module.scss';
 
 const statusColorMap: Record<string, string> = {
@@ -44,6 +47,9 @@ export default function RoomDetailPage() {
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(false);
+  const [terminateDrawerOpen, setTerminateDrawerOpen] = useState(false);
+  const [leaseDrawerOpen, setLeaseDrawerOpen] = useState(false);
+  const [leaseEditDrawerOpen, setLeaseEditDrawerOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -180,18 +186,14 @@ export default function RoomDetailPage() {
                       <>
                         <Button
                           icon={<EditLeaseIcon />}
-                          onClick={() =>
-                            navigate(`/rooms/${room.id}/lease/edit`)
-                          }
+                          onClick={() => setLeaseEditDrawerOpen(true)}
                         >
                           编辑租约
                         </Button>
                         <Button
                           danger
                           icon={<LogoutOutlined />}
-                          onClick={() =>
-                            navigate(`/rooms/${room.id}/lease/terminate`)
-                          }
+                          onClick={() => setTerminateDrawerOpen(true)}
                         >
                           退租
                         </Button>
@@ -273,7 +275,7 @@ export default function RoomDetailPage() {
                     <Button
                       type="primary"
                       icon={<UserAddOutlined />}
-                      onClick={() => navigate(`/rooms/${room.id}/lease/new`)}
+                      onClick={() => setLeaseDrawerOpen(true)}
                     >
                       签约
                     </Button>
@@ -292,6 +294,34 @@ export default function RoomDetailPage() {
           </>
         )}
       </Spin>
+
+      <LeaseFormDrawer
+        open={leaseDrawerOpen}
+        roomId={room?.id ?? ''}
+        onCancel={() => setLeaseDrawerOpen(false)}
+        onSuccess={() => {
+          setLeaseDrawerOpen(false);
+          loadData();
+        }}
+      />
+      <LeaseEditDrawer
+        open={leaseEditDrawerOpen}
+        roomId={room?.id ?? ''}
+        onCancel={() => setLeaseEditDrawerOpen(false)}
+        onSuccess={() => {
+          setLeaseEditDrawerOpen(false);
+          loadData();
+        }}
+      />
+      <LeaseTerminateDrawer
+        open={terminateDrawerOpen}
+        roomId={room?.id ?? ''}
+        onCancel={() => setTerminateDrawerOpen(false)}
+        onSuccess={() => {
+          setTerminateDrawerOpen(false);
+          loadData();
+        }}
+      />
     </div>
   );
 }

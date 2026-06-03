@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import PageHeader from '@/components/ui/PageHeader';
 import PaymentDialog from '@/components/PaymentDialog';
+import ReadingDrawer from '@/pages/bills/ReadingDrawer';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
@@ -81,6 +82,7 @@ export default function DashboardPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [readingOpen, setReadingOpen] = useState(false);
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
@@ -249,7 +251,7 @@ export default function DashboardPage() {
             </Button>
             <Button
               icon={<ThunderboltOutlined />}
-              onClick={() => navigate('/bills/reading')}
+              onClick={() => setReadingOpen(true)}
             >
               抄表录入
             </Button>
@@ -392,6 +394,12 @@ export default function DashboardPage() {
       <PaymentDialog
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
+        onSuccess={loadData}
+      />
+
+      <ReadingDrawer
+        open={readingOpen}
+        onClose={() => setReadingOpen(false)}
         onSuccess={loadData}
       />
     </div>

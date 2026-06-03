@@ -37,6 +37,10 @@ import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import UpstreamContractModal from './UpstreamContractModal';
+import ApartmentFormModal from './ApartmentFormModal';
+import ApartmentExpenseModal from './ApartmentExpenseModal';
+import RoomBatchDrawer from './RoomBatchDrawer';
+import RoomFormDrawer from '@/pages/rooms/RoomFormDrawer';
 import styles from './ApartmentDetailPage.module.scss';
 
 export default function ApartmentDetailPage() {
@@ -51,6 +55,10 @@ export default function ApartmentDetailPage() {
   const [loading, setLoading] = useState(false);
   const [contractLoading, setContractLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [batchDrawerOpen, setBatchDrawerOpen] = useState(false);
+  const [formDrawerOpen, setFormDrawerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const loadApartments = useCallback(async () => {
@@ -197,7 +205,7 @@ export default function ApartmentDetailPage() {
                         <>
                           <Button
                             icon={<EditOutlined />}
-                            onClick={() => navigate(`/apartments/${id}/edit`)}
+                            onClick={() => setEditModalOpen(true)}
                           >
                             编辑
                           </Button>
@@ -245,7 +253,7 @@ export default function ApartmentDetailPage() {
                           type="primary"
                           size="small"
                           icon={<PlusOutlined />}
-                          onClick={() => navigate(`/apartments/${id}/expenses`)}
+                          onClick={() => setExpenseModalOpen(true)}
                         >
                           记录花费
                         </Button>
@@ -408,17 +416,13 @@ export default function ApartmentDetailPage() {
                       <div className={styles.actionGroup}>
                         <Button
                           icon={<PlusOutlined />}
-                          onClick={() =>
-                            navigate(`/rooms/new?apartmentId=${id}`)
-                          }
+                          onClick={() => setFormDrawerOpen(true)}
                         >
                           新增房间
                         </Button>
                         <Button
                           icon={<AppstoreAddOutlined />}
-                          onClick={() =>
-                            navigate(`/apartments/${id}/rooms/batch`)
-                          }
+                          onClick={() => setBatchDrawerOpen(true)}
                         >
                           批量添加
                         </Button>
@@ -433,8 +437,7 @@ export default function ApartmentDetailPage() {
                         canManageRoom
                           ? {
                               label: '新增房间',
-                              onClick: () =>
-                                navigate(`/rooms/new?apartmentId=${id}`),
+                              onClick: () => setFormDrawerOpen(true),
                             }
                           : undefined
                       }
@@ -463,6 +466,46 @@ export default function ApartmentDetailPage() {
         onCancel={() => setModalOpen(false)}
         onSubmit={handleSubmitContract}
         submitting={submitting}
+      />
+
+      <ApartmentFormModal
+        open={editModalOpen}
+        apartmentId={apartment.id}
+        onCancel={() => setEditModalOpen(false)}
+        onSuccess={() => {
+          setEditModalOpen(false);
+          loadApartments();
+        }}
+      />
+
+      <ApartmentExpenseModal
+        open={expenseModalOpen}
+        apartmentId={apartment.id}
+        onCancel={() => setExpenseModalOpen(false)}
+        onSuccess={() => {
+          setExpenseModalOpen(false);
+          loadApartments();
+        }}
+      />
+
+      <RoomBatchDrawer
+        open={batchDrawerOpen}
+        apartmentId={apartment.id}
+        onCancel={() => setBatchDrawerOpen(false)}
+        onSuccess={() => {
+          setBatchDrawerOpen(false);
+          loadApartments();
+        }}
+      />
+
+      <RoomFormDrawer
+        open={formDrawerOpen}
+        defaultApartmentId={id}
+        onCancel={() => setFormDrawerOpen(false)}
+        onSuccess={() => {
+          setFormDrawerOpen(false);
+          loadApartments();
+        }}
       />
     </div>
   );

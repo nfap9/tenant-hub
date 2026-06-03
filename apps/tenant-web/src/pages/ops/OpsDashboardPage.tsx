@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Tag, message } from 'antd';
+import { Table, Tag, message, Space, Button } from 'antd';
 import {
   ApartmentOutlined,
   TeamOutlined,
@@ -7,13 +7,19 @@ import {
   AppstoreOutlined,
   FileTextOutlined,
   WarningOutlined,
+  SettingOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import { getAdminSummary, getAdminOrganizations } from '@/api/admin';
 import PageHeader from '@/components/ui/PageHeader';
 import StatCard from '@/components/ui/StatCard';
+import OpsSmsDrawer from './OpsSmsDrawer';
+import OpsSystemSettingsDrawer from './OpsSystemSettingsDrawer';
 import styles from './OpsDashboardPage.module.scss';
 
 export default function OpsDashboardPage() {
+  const [smsDrawerOpen, setSmsDrawerOpen] = useState(false);
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [summary, setSummary] = useState<{
     organizations: number;
     users: number;
@@ -86,7 +92,25 @@ export default function OpsDashboardPage() {
 
   return (
     <div className="page-content">
-      <PageHeader breadcrumb={[{ label: '运营总览' }]} />
+      <PageHeader
+        breadcrumb={[{ label: '运营总览' }]}
+        actions={
+          <Space>
+            <Button
+              icon={<MessageOutlined />}
+              onClick={() => setSmsDrawerOpen(true)}
+            >
+              短信配置
+            </Button>
+            <Button
+              icon={<SettingOutlined />}
+              onClick={() => setSettingsDrawerOpen(true)}
+            >
+              系统配置
+            </Button>
+          </Space>
+        }
+      />
 
       <div className={styles.opsStatsGrid}>
         {stats.map((item) => (
@@ -134,6 +158,16 @@ export default function OpsDashboardPage() {
             ),
           },
         ]}
+      />
+
+      <OpsSmsDrawer
+        open={smsDrawerOpen}
+        onClose={() => setSmsDrawerOpen(false)}
+      />
+
+      <OpsSystemSettingsDrawer
+        open={settingsDrawerOpen}
+        onClose={() => setSettingsDrawerOpen(false)}
       />
     </div>
   );

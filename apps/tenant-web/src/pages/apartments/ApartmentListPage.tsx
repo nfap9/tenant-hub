@@ -9,6 +9,7 @@ import { money, day } from '@/utils/format';
 import { apartmentMonthlyIncome, apartmentMonthlyExpense } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import ApartmentFormModal from './ApartmentFormModal';
 import styles from './ApartmentListPage.module.scss';
 import clsx from 'clsx';
 
@@ -19,6 +20,7 @@ export default function ApartmentListPage() {
 
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [formModalOpen, setFormModalOpen] = useState(false);
 
   const loadApartments = useCallback(async () => {
     if (!currentOrgId) return;
@@ -46,7 +48,7 @@ export default function ApartmentListPage() {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => navigate('/apartments/new')}
+              onClick={() => setFormModalOpen(true)}
             >
               新增公寓
             </Button>
@@ -64,7 +66,7 @@ export default function ApartmentListPage() {
                 canManageApartment
                   ? {
                       label: '新增公寓',
-                      onClick: () => navigate('/apartments/new'),
+                      onClick: () => setFormModalOpen(true),
                     }
                   : undefined
               }
@@ -138,6 +140,15 @@ export default function ApartmentListPage() {
           </div>
         )}
       </Spin>
+
+      <ApartmentFormModal
+        open={formModalOpen}
+        onCancel={() => setFormModalOpen(false)}
+        onSuccess={() => {
+          setFormModalOpen(false);
+          loadApartments();
+        }}
+      />
     </div>
   );
 }

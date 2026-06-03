@@ -31,7 +31,7 @@ export default function RoomCard({
 
   const handleLeaseClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/rooms/${room.id}/lease/new`);
+    navigate(`/rooms/${room.id}`);
   };
 
   const showLeaseButton = canManageLease && room.status === 'VACANT';

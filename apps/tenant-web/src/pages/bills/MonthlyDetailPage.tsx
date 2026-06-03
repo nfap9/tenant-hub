@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Button,
   Tag,
@@ -26,6 +26,7 @@ import { groupBills, type BillGroup } from './utils';
 import type { Bill } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import PaymentDialog from '@/components/PaymentDialog';
+import UtilityModal from './UtilityModal';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
@@ -34,10 +35,11 @@ import clsx from 'clsx';
 
 export default function MonthlyDetailPage() {
   const { currentOrgId } = useAppSession();
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [allBills, setAllBills] = useState<Bill[]>([]);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [utilityOpen, setUtilityOpen] = useState(false);
+  const [utilityBillId, setUtilityBillId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -250,9 +252,10 @@ export default function MonthlyDetailPage() {
                     <Button
                       size="small"
                       icon={<ThunderboltOutlined />}
-                      onClick={() =>
-                        navigate(`/bills/utility?billId=${child.id}`)
-                      }
+                      onClick={() => {
+                        setUtilityBillId(child.id);
+                        setUtilityOpen(true);
+                      }}
                       className={styles.mdpBtnMt}
                     >
                       录入本期水电
@@ -300,6 +303,16 @@ export default function MonthlyDetailPage() {
         onClose={() => setPaymentOpen(false)}
         onSuccess={loadData}
         defaultLeaseId={group?.lease?.id}
+      />
+
+      <UtilityModal
+        open={utilityOpen}
+        billId={utilityBillId}
+        onClose={() => {
+          setUtilityBillId(null);
+          setUtilityOpen(false);
+        }}
+        onSuccess={loadData}
       />
     </div>
   );

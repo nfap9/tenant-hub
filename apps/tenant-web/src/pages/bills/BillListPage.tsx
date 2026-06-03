@@ -43,6 +43,9 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import PaymentDialog from '@/components/PaymentDialog';
+import UtilityExportModal from './UtilityExportModal';
+import UtilityModal from './UtilityModal';
+import ReadingDrawer from './ReadingDrawer';
 import type { Bill, BillStatus } from '@/types/domain';
 import styles from './BillListPage.module.scss';
 import clsx from 'clsx';
@@ -52,6 +55,10 @@ export default function BillListPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [utilityExportOpen, setUtilityExportOpen] = useState(false);
+  const [utilityOpen, setUtilityOpen] = useState(false);
+  const [utilityBillId, setUtilityBillId] = useState<string | null>(null);
+  const [readingOpen, setReadingOpen] = useState(false);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [, setRooms] = useState<import('@/types/domain').Room[]>([]);
@@ -239,7 +246,10 @@ export default function BillListPage() {
           <Button
             type="primary"
             size="small"
-            onClick={() => navigate(`/bills/utility?billId=${bill.id}`)}
+            onClick={() => {
+              setUtilityBillId(bill.id);
+              setUtilityOpen(true);
+            }}
           >
             录入本期水电
           </Button>
@@ -270,13 +280,13 @@ export default function BillListPage() {
               <>
                 <Button
                   icon={<ThunderboltOutlined />}
-                  onClick={() => navigate('/bills/reading')}
+                  onClick={() => setReadingOpen(true)}
                 >
                   录入读数
                 </Button>
                 <Button
                   icon={<DownloadOutlined />}
-                  onClick={() => navigate('/bills/utility-export')}
+                  onClick={() => setUtilityExportOpen(true)}
                 >
                   导出
                 </Button>
@@ -419,6 +429,27 @@ export default function BillListPage() {
       <PaymentDialog
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
+        onSuccess={loadData}
+      />
+
+      <UtilityExportModal
+        open={utilityExportOpen}
+        onClose={() => setUtilityExportOpen(false)}
+      />
+
+      <UtilityModal
+        open={utilityOpen}
+        billId={utilityBillId}
+        onClose={() => {
+          setUtilityBillId(null);
+          setUtilityOpen(false);
+        }}
+        onSuccess={loadData}
+      />
+
+      <ReadingDrawer
+        open={readingOpen}
+        onClose={() => setReadingOpen(false)}
         onSuccess={loadData}
       />
     </div>
