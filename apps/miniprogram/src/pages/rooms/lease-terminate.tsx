@@ -5,7 +5,8 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getRooms } from '../../api/rooms';
+import { getSettlementPreview, terminateLease } from '../../api/leases';
 import { Button, Card, Input, DateField } from '../../components/ui';
 import { terminationLabels } from './constants';
 import {
@@ -13,7 +14,7 @@ import {
   defaultTerminationType,
   terminationResultText,
 } from './utils';
-import { money, today, numberValue } from '../../utils/format';
+import { money, today, numberValue, optionalText } from '../../utils/format';
 import type { Room, Lease, TerminationType } from '../../types/domain';
 import './index.scss';
 
@@ -44,9 +45,7 @@ export default function LeaseTerminatePage() {
   const loadRooms = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Room[]>('/apartments/rooms', {
-        organizationId: currentOrgId,
-      });
+      const data = await getRooms(currentOrgId);
       setRooms(data);
     } catch (e) {
       // silent
@@ -81,13 +80,7 @@ export default function LeaseTerminatePage() {
         otherFeeAmount: '0',
         otherFeeReason: '',
       });
-      apiClient<{
-        previousWater: string | number;
-        previousPower: string | number;
-      }>(
-        `/leases/${lease.id}/settlement-preview?terminatedAt=${encodeURIComponent(today())}`,
-        { organizationId: currentOrgId }
-      )
+      getSettlementPreview(currentOrgId, lease.id, today())
         .then((data) =>
           setPreviousReadings({
             previousWater: Number(data.previousWater ?? 0),
@@ -129,26 +122,17 @@ export default function LeaseTerminatePage() {
     }
 
     try {
-      const settlement = await apiClient(`/leases/${lease.id}/terminate`, {
-        method: 'POST',
-        body: {
-          type: form.type,
-          reason: form.reason.trim() || terminationLabels[form.type],
-          terminatedAt: form.terminatedAt,
-          depositDeductionAmount: numberValue(form.depositDeductionAmount),
-          depositDeductionReason:
-            form.depositDeductionReason.trim() || undefined,
-          rentAdjustmentAmount: numberValue(form.rentAdjustmentAmount),
-          currentWater: numberValue(form.currentWater),
-          currentPower: numberValue(form.currentPower),
-          otherFeeAmount: numberValue(form.otherFeeAmount),
-          otherFeeReason: form.otherFeeReason.trim() || undefined,
-        },
-        organizationId: currentOrgId,
+      const settlement = await terminateLease(currentOrgId, lease.id, {
+        type: form.type,
+        reason: optionalText(form.reason),
+        terminatedAt: form.terminatedAt,
+        rentAdjustmentAmount: Number(form.rentAdjustmentAmount || 0),
+        currentWater: Number(form.currentWater || 0),
+        currentPower: Number(form.currentPower || 0),
+        otherFeeAmount: Number(form.otherFeeAmount || 0),
+        otherFeeReason: optionalText(form.otherFeeReason),
       });
-      const net = Number(
-        (settlement as { netAmount: string | number }).netAmount
-      );
+      const net = settlement.netAmount;
       Taro.showToast({ title: terminationResultText(net), icon: 'success' });
       Taro.navigateBack();
     } catch (e) {

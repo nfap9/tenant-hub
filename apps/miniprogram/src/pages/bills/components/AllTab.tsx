@@ -5,7 +5,7 @@ import { BillCard } from './BillCard';
 import { statusLabels } from '../constants';
 import { sortBillGroupsForList } from '../utils';
 import { useAppSession } from '../../../context/AppSessionContext';
-import { apiClient } from '../../../api/client';
+import { deleteBill } from '../../../api/bills';
 import type { BillGroup } from '../utils';
 import type { BillStatus } from '../../../types/domain';
 
@@ -37,14 +37,7 @@ export function AllTab({
     });
     if (!res.confirm) return;
     try {
-      await Promise.all(
-        group.bills.map((b) =>
-          apiClient(`/bills/${b.id}`, {
-            method: 'DELETE',
-            organizationId: currentOrgId,
-          })
-        )
-      );
+      await Promise.all(group.bills.map((b) => deleteBill(currentOrgId, b.id)));
       Taro.showToast({ title: '账单组已删除', icon: 'success' });
     } catch (e) {
       Taro.showToast({

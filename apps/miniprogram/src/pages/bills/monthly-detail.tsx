@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getBills, createBillPayment, deleteBill } from '../../api/bills';
 import { Button, Input, Badge } from '../../components/ui';
 import { money, day } from '../../utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
@@ -27,9 +27,7 @@ export default function MonthlyDetailPage() {
   const loadData = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Bill[]>('/bills', {
-        organizationId: currentOrgId,
-      });
+      const data = await getBills(currentOrgId);
       setAllBills(data);
     } catch (e) {
       Taro.showToast({
@@ -85,14 +83,10 @@ export default function MonthlyDetailPage() {
           Number(bill.totalAmount) - Number(bill.paidAmount);
         if (billRemaining <= 0) continue;
         const applyAmount = Math.min(unapplied, billRemaining);
-        await apiClient(`/bills/${bill.id}/payments`, {
-          method: 'POST',
-          body: {
-            amount: applyAmount,
-            method: paymentForm.method.trim() || '线下收款',
-            note: paymentForm.note.trim() || undefined,
-          },
-          organizationId: currentOrgId,
+        await createBillPayment(currentOrgId, bill.id, {
+          amount: applyAmount,
+          method: paymentForm.method.trim() || '线下收款',
+          note: paymentForm.note.trim() || undefined,
         });
         unapplied -= applyAmount;
       }
@@ -119,10 +113,7 @@ export default function MonthlyDetailPage() {
     });
     if (!res.confirm) return;
     try {
-      await apiClient(`/bills/${childId}`, {
-        method: 'DELETE',
-        organizationId: currentOrgId,
-      });
+      await deleteBill(currentOrgId, childId);
       Taro.showToast({ title: '账单已删除', icon: 'success' });
       await loadData();
     } catch (e) {
@@ -135,18 +126,6 @@ export default function MonthlyDetailPage() {
 
   const handleUtilityReading = (childBillId: string) => {
     Taro.navigateTo({ url: `/pages/bills/utility?billId=${childBillId}` });
-  };
-
-  const handleEditItem = (item: {
-    id: string;
-    billId: string;
-    name: string;
-    amount: number;
-    note: string;
-  }) => {
-    Taro.navigateTo({
-      url: `/pages/bills/edit-item?billId=${item.billId}&itemId=${item.id}&name=${encodeURIComponent(item.name)}&amount=${item.amount}&note=${encodeURIComponent(item.note)}`,
-    });
   };
 
   if (!group) {
@@ -249,27 +228,7 @@ export default function MonthlyDetailPage() {
                 {item.name}
                 {item.note ? ` · ${item.note}` : ''}
               </Text>
-              <View className="action-row-inline">
-                <Text className="text-muted">¥{money(item.amount)}</Text>
-                {child.status !== 'PAID' &&
-                child.status !== 'VOID' &&
-                child.status !== 'REFUNDED' ? (
-                  <Text
-                    className="link-text"
-                    onClick={() =>
-                      handleEditItem({
-                        id: item.id,
-                        billId: child.id,
-                        name: item.name,
-                        amount: Number(item.amount),
-                        note: item.note ?? '',
-                      })
-                    }
-                  >
-                    修改
-                  </Text>
-                ) : null}
-              </View>
+              <Text className="text-muted">¥{money(item.amount)}</Text>
             </View>
           ))}
           {child.mode === 'POSTPAID' ? (

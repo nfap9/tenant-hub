@@ -2,7 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { retryBilling } from '../../api/bills';
+import { getBills } from '../../api/bills';
+import { getRooms } from '../../api/rooms';
 import { Button, Card } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import { money } from '../../utils/format';
@@ -59,16 +61,10 @@ export default function BillsPage() {
     try {
       const [allBills, failedBills, billingBills, nextRooms] =
         await Promise.all([
-          apiClient<Bill[]>('/bills', { organizationId: currentOrgId }),
-          apiClient<Bill[]>('/bills?status=FAILED', {
-            organizationId: currentOrgId,
-          }),
-          apiClient<Bill[]>('/bills?status=BILLING', {
-            organizationId: currentOrgId,
-          }),
-          apiClient<Room[]>('/apartments/rooms', {
-            organizationId: currentOrgId,
-          }),
+          getBills(currentOrgId),
+          getBills(currentOrgId, 'FAILED'),
+          getBills(currentOrgId, 'BILLING'),
+          getRooms(currentOrgId),
         ]);
       const postpaidReviewBills = [...failedBills, ...billingBills].filter(
         (bill) => bill.mode === 'POSTPAID'
@@ -105,10 +101,7 @@ export default function BillsPage() {
   const retryBill = async (bill: Bill) => {
     if (!currentOrgId) return;
     try {
-      await apiClient(`/bills/${bill.id}/retry-billing`, {
-        method: 'POST',
-        organizationId: currentOrgId,
-      });
+      await retryBilling(currentOrgId, bill.id);
       Taro.showToast({ title: '已重新尝试出账', icon: 'success' });
       await loadData();
     } catch (e) {

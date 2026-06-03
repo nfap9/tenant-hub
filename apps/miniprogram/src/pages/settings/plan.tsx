@@ -2,7 +2,11 @@ import { useState, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import {
+  getSubscription,
+  getPlans,
+  subscribePlan as subscribePlanApi,
+} from '../../api/organization';
 import { Card, EmptyState, Badge, Button } from '../../components/ui';
 import { day, money } from '../../utils/format';
 import type { Plan, SubscriptionOverview } from '../../types/domain';
@@ -17,18 +21,11 @@ export default function PlanPage() {
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
     try {
-      const ov = await apiClient<{
-        subscription?: SubscriptionOverview['subscription'];
-        usage: SubscriptionOverview['usage'];
-        extraQuota: SubscriptionOverview['extraQuota'];
-        quotaLimitEnabled?: boolean;
-      }>(`/organizations/${currentOrgId}/subscription`, {
-        organizationId: currentOrgId,
-      });
+      const ov = await getSubscription(currentOrgId);
       const enabled = ov.quotaLimitEnabled ?? false;
       setOverview(ov);
       setQuotaLimitEnabled(enabled);
-      setPlans(enabled ? await apiClient<Plan[]>('/organizations/plans') : []);
+      setPlans(enabled ? await getPlans() : []);
     } catch (e) {
       Taro.showToast({
         title: e instanceof Error ? e.message : '加载失败',
@@ -48,11 +45,7 @@ export default function PlanPage() {
   const subscribePlan = async (planId: string) => {
     if (!currentOrgId) return;
     try {
-      await apiClient(`/organizations/${currentOrgId}/subscriptions`, {
-        method: 'POST',
-        body: { planId },
-        organizationId: currentOrgId,
-      });
+      await subscribePlanApi(currentOrgId, planId);
       Taro.showToast({ title: '订阅成功', icon: 'success' });
       await loadData();
     } catch (e) {

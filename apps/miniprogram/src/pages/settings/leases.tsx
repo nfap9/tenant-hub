@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getLeases } from '../../api/leases';
 import { Card, EmptyState, Badge, Input } from '../../components/ui';
 import { money, day } from '../../utils/format';
 import type { Lease, LeaseStatus } from '../../types/domain';
@@ -49,9 +49,7 @@ export default function LeasesPage() {
   const loadLeases = useCallback(async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Lease[]>('/leases', {
-        organizationId: currentOrgId,
-      });
+      const data = await getLeases(currentOrgId);
       setLeases(data);
     } catch (e) {
       Taro.showToast({

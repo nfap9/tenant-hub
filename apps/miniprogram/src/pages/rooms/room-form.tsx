@@ -5,7 +5,7 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getRooms, updateRoom } from '../../api/rooms';
 import { Button, Card, Input, FacilitySelector } from '../../components/ui';
 import { statusLabels, roomStatuses } from './constants';
 import type { Room, RoomStatus } from '../../types/domain';
@@ -15,7 +15,7 @@ export default function RoomFormPage() {
   const { currentOrgId } = useAppSession();
   const canManageRoom = useHasPermission('room:manage');
   const { params } = useRouter();
-  const roomId = params.roomId;
+  const roomId = params.roomId || params.id;
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [form, setForm] = useState({
@@ -31,9 +31,7 @@ export default function RoomFormPage() {
   const loadRooms = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Room[]>('/apartments/rooms', {
-        organizationId: currentOrgId,
-      });
+      const data = await getRooms(currentOrgId);
       setRooms(data);
     } catch (e) {
       // silent
@@ -82,19 +80,15 @@ export default function RoomFormPage() {
 
     setSaving(true);
     try {
-      await apiClient(`/apartments/rooms/${room.id}`, {
-        method: 'PUT',
-        body: {
-          roomNo: form.roomNo.trim(),
-          layout: form.layout.trim(),
-          area: form.area.trim() ? Number(form.area) : undefined,
-          facilities: form.facilities
-            .split(/[,，]/)
-            .map((item) => item.trim())
-            .filter(Boolean),
-          status: form.status,
-        },
-        organizationId: currentOrgId,
+      await updateRoom(currentOrgId, room.id, {
+        roomNo: form.roomNo.trim(),
+        layout: form.layout.trim(),
+        area: form.area.trim() ? Number(form.area) : undefined,
+        facilities: form.facilities
+          .split(/[,，]/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+        status: form.status,
       });
       Taro.showToast({ title: '房间信息已更新', icon: 'success' });
       Taro.navigateBack();

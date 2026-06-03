@@ -5,7 +5,7 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { createLease } from '../../api/leases';
 import { Button, Card, Input, DateField } from '../../components/ui';
 import { today, nextYear } from '../../utils/format';
 import {
@@ -102,24 +102,23 @@ export default function LeaseFormPage() {
 
     setSaving(true);
     try {
-      await apiClient('/leases', {
-        method: 'POST',
-        body: {
-          roomId,
-          tenantName: form.tenantName.trim(),
-          tenantPhone: form.tenantPhone.trim(),
-          startDate: form.startDate,
-          endDate: form.endDate,
-          cycle: form.cycle,
-          rentAmount: Number(form.rentAmount),
-          depositAmount: Number(form.depositAmount || 0),
-          waterUnitPrice: Number(form.waterUnitPrice || 0),
-          powerUnitPrice: Number(form.powerUnitPrice || 0),
-          autoRenew: form.autoRenew,
-          generateHistoricalBills: form.generateHistoricalBills,
-          fees: buildLeaseFeesPayload(fees),
-        },
-        organizationId: currentOrgId,
+      await createLease(currentOrgId, {
+        roomId,
+        tenantName: form.tenantName.trim(),
+        tenantPhone: form.tenantPhone.trim(),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        cycle: form.cycle,
+        rentAmount: Number(form.rentAmount),
+        depositAmount: form.depositAmount
+          ? Number(form.depositAmount)
+          : undefined,
+        waterUnitPrice: Number(form.waterUnitPrice),
+        powerUnitPrice: Number(form.powerUnitPrice),
+        autoRenew: form.autoRenew,
+        status: 'ACTIVE',
+        fees: buildLeaseFeesPayload(fees),
+        generateHistoricalBills: form.generateHistoricalBills,
       });
       Taro.showToast({ title: '签约完成', icon: 'success' });
       Taro.navigateBack();

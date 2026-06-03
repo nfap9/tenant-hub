@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { updatePassword } from '../../api/auth';
 import { Button, Card, Input } from '../../components/ui';
 import './index.scss';
 
@@ -18,13 +18,10 @@ export default function AccountPage() {
     if (newPassword !== confirmPassword)
       return Taro.showToast({ title: '两次密码不一致', icon: 'none' });
     try {
-      await apiClient('/auth/password', {
-        method: 'PUT',
-        body: {
-          currentPassword: oldPassword,
-          newPassword,
-          confirmPassword: newPassword,
-        },
+      await updatePassword({
+        currentPassword: oldPassword,
+        newPassword,
+        confirmPassword: newPassword,
       });
       Taro.showToast({ title: '密码已修改', icon: 'success' });
       setOldPassword('');

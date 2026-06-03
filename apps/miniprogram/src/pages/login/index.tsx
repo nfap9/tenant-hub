@@ -2,7 +2,12 @@ import { useState, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { Button, Input, Card } from '../../components/ui';
-import { apiClient } from '../../api/client';
+import {
+  sendOtp as sendOtpApi,
+  loginPassword,
+  loginOtp,
+  register,
+} from '../../api/auth';
 import { useAppSession } from '../../context/AppSessionContext';
 import { showToast } from '../../components/Toast';
 import { useEffect } from 'react';
@@ -65,12 +70,9 @@ export default function LoginPage() {
       return;
     }
     try {
-      await apiClient('/auth/otp', {
-        method: 'POST',
-        body: {
-          phone: phone.trim(),
-          purpose: isRegister ? 'REGISTER' : 'LOGIN',
-        },
+      await sendOtpApi({
+        phone: phone.trim(),
+        purpose: isRegister ? 'REGISTER' : 'LOGIN',
       });
       showToast('验证码已发送，请查看短信', 'success');
       startCountdown(60);
@@ -107,28 +109,26 @@ export default function LoginPage() {
 
     setBusy(true);
     try {
-      const path = isRegister
-        ? '/auth/register'
-        : mode === 'password'
-          ? '/auth/login/password'
-          : '/auth/login/otp';
-
-      const body = isRegister
-        ? {
-            phone: phone.trim(),
-            username: username.trim(),
-            password,
-            confirmPassword,
-            ...(smsEnabled ? { code } : {}),
-          }
-        : mode === 'password'
-          ? { phone: phone.trim(), password }
-          : { phone: phone.trim(), code };
-
-      const result = await apiClient<{
-        token: string;
-        user: { id: string; username: string; phone: string };
-      }>(path, { method: 'POST', body });
+      let result;
+      if (isRegister) {
+        result = await register({
+          phone: phone.trim(),
+          username: username.trim(),
+          password,
+          confirmPassword,
+          ...(smsEnabled ? { code } : {}),
+        });
+      } else if (mode === 'password') {
+        result = await loginPassword({
+          phone: phone.trim(),
+          password,
+        });
+      } else {
+        result = await loginOtp({
+          phone: phone.trim(),
+          code,
+        });
+      }
 
       await signIn(result);
       showToast(isRegister ? '注册成功' : '登录成功', 'success');

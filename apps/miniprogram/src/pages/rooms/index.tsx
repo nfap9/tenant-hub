@@ -5,7 +5,7 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getRooms, deleteRoom } from '../../api/rooms';
 import { NoOrganization } from '../../components/NoOrganization';
 import { RoomList } from './components/RoomList';
 import type { Room } from '../../types/domain';
@@ -30,9 +30,7 @@ export default function RoomsPage() {
   const loadRooms = useCallback(async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Room[]>('/apartments/rooms', {
-        organizationId: currentOrgId,
-      });
+      const data = await getRooms(currentOrgId);
       setRooms(data);
       setSelectedId((old) =>
         old && data.some((item) => item.id === old) ? old : undefined
@@ -61,7 +59,7 @@ export default function RoomsPage() {
   };
 
   const handleSelectRoom = (id: string) => {
-    setSelectedId(selectedId === id ? undefined : id);
+    Taro.navigateTo({ url: `/pages/rooms/detail?id=${id}` });
   };
 
   const handleDeleteRoom = (room: Room) => {
@@ -84,10 +82,7 @@ export default function RoomsPage() {
     }).then(async (res) => {
       if (!res.confirm) return;
       try {
-        await apiClient(`/apartments/rooms/${room.id}`, {
-          method: 'DELETE',
-          organizationId: currentOrgId,
-        });
+        await deleteRoom(currentOrgId, room.id);
         Taro.showToast({ title: '房间已删除', icon: 'success' });
         setSelectedId(undefined);
         await loadRooms();

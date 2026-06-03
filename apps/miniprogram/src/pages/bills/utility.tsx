@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getBill, createUtilityReading } from '../../api/bills';
 import { Button, Card, Input } from '../../components/ui';
 import './index.scss';
 
@@ -21,7 +21,7 @@ export default function UtilityPage() {
 
   useEffect(() => {
     if (!currentOrgId || !billId) return;
-    apiClient(`/bills/${billId}`, { organizationId: currentOrgId })
+    getBill(currentOrgId, billId)
       .then((bill: any) => {
         const water = bill.items?.find((item: any) => item.type === 'WATER');
         const power = bill.items?.find((item: any) => item.type === 'POWER');
@@ -52,15 +52,11 @@ export default function UtilityPage() {
     if (!currentOrgId || !billId) return;
     setSubmitting(true);
     try {
-      await apiClient(`/bills/${billId}/utility-reading`, {
-        method: 'POST',
-        body: {
-          previousWater: Number(form.previousWater || 0),
-          currentWater: Number(form.currentWater || 0),
-          previousPower: Number(form.previousPower || 0),
-          currentPower: Number(form.currentPower || 0),
-        },
-        organizationId: currentOrgId,
+      await createUtilityReading(currentOrgId, billId, {
+        previousWater: Number(form.previousWater || 0),
+        currentWater: Number(form.currentWater || 0),
+        previousPower: Number(form.previousPower || 0),
+        currentPower: Number(form.currentPower || 0),
       });
       Taro.showToast({ title: '水电读数已录入', icon: 'success' });
       Taro.navigateBack();

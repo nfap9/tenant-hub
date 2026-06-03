@@ -5,7 +5,7 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { batchCreateRooms } from '../../api/rooms';
 import { Button, Card, Input } from '../../components/ui';
 import {
   buildBatchRoomNos,
@@ -68,16 +68,12 @@ export default function RoomBatchPage() {
 
     setSaving(true);
     try {
-      await apiClient(`/apartments/${apartmentId}/rooms/batch`, {
-        method: 'POST',
-        body: {
-          rooms: selectedGeneratedBatchRoomNos.map((roomNo) => ({
-            roomNo,
-            layout: '未配置',
-            facilities: [],
-          })),
-        },
-        organizationId: currentOrgId,
+      await batchCreateRooms(currentOrgId, apartmentId, {
+        rooms: selectedGeneratedBatchRoomNos.map((roomNo) => ({
+          roomNo,
+          layout: '未配置',
+          facilities: [],
+        })),
       });
       Taro.showToast({
         title: `已提交 ${selectedGeneratedBatchRoomNos.length} 间房间，重复房间会自动跳过`,

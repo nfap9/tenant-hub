@@ -5,10 +5,10 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getApartments } from '../../api/apartments';
+import type { Apartment } from '../../types/domain';
 import { NoOrganization } from '../../components/NoOrganization';
 import { ApartmentList } from './components/ApartmentList';
-import type { Apartment } from '../../types/domain';
 import './index.scss';
 
 export default function ApartmentsPage() {
@@ -20,9 +20,7 @@ export default function ApartmentsPage() {
   const loadApartments = useCallback(async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Apartment[]>('/apartments', {
-        organizationId: currentOrgId,
-      });
+      const data = await getApartments(currentOrgId);
       setApartments(data);
     } catch (e) {
       Taro.showToast({

@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getRooms } from '../../api/rooms';
+import { getBills, createBillPayment } from '../../api/bills';
 import { Button, Card, Input, Badge } from '../../components/ui';
 import { money } from '../../utils/format';
 import { statusLabels, toneForBillStatus } from './constants';
@@ -33,12 +34,8 @@ export default function PaymentPage() {
     if (!currentOrgId) return;
     try {
       const [nextRooms, allBills] = await Promise.all([
-        apiClient<Room[]>('/apartments/rooms', {
-          organizationId: currentOrgId,
-        }),
-        apiClient<Bill[]>('/bills', {
-          organizationId: currentOrgId,
-        }),
+        getRooms(currentOrgId),
+        getBills(currentOrgId),
       ]);
       setRooms(nextRooms);
       setBills(allBills);
@@ -134,14 +131,10 @@ export default function PaymentPage() {
     }
     setSubmitting(true);
     try {
-      await apiClient(`/bills/${form.billId}/payments`, {
-        method: 'POST',
-        body: {
-          amount: Number(form.amount),
-          method: form.method.trim() || '线下收款',
-          note: form.note.trim() || undefined,
-        },
-        organizationId: currentOrgId,
+      await createBillPayment(currentOrgId, form.billId, {
+        amount: Number(form.amount),
+        method: form.method.trim() || '线下收款',
+        note: form.note.trim() || undefined,
       });
       Taro.showToast({ title: '收款已登记', icon: 'success' });
       Taro.navigateBack();

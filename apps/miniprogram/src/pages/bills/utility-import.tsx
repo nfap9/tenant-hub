@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { importUtilityReadings } from '../../api/bills';
 import { Button, Card, Input } from '../../components/ui';
 import './index.scss';
 
@@ -20,11 +20,7 @@ export default function UtilityImportPage() {
     if (!currentOrgId || !csv.trim()) return;
     setSubmitting(true);
     try {
-      await apiClient('/bills/utility/import', {
-        method: 'POST',
-        body: { csv },
-        organizationId: currentOrgId,
-      });
+      await importUtilityReadings(currentOrgId, { csv });
       Taro.showToast({ title: '水电读数已导入', icon: 'success' });
       Taro.navigateBack();
     } catch (e) {

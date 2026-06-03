@@ -5,7 +5,15 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import {
+  updateOrganization,
+  updateMemberRole as apiUpdateMemberRole,
+  removeMember as apiRemoveMember,
+  transferOwnership as apiTransferOwnership,
+  createOrganization as apiCreateOrganization,
+  joinOrganization as apiJoinOrganization,
+  refreshInviteCode,
+} from '../../api/organization';
 import { Button, Card, EmptyState, Badge, Input } from '../../components/ui';
 import { TaskSheet } from '../../components/TaskSheet';
 import type { OrgMember, OrgRole } from '../../types/domain';
@@ -41,11 +49,7 @@ export default function OrganizationPage() {
     if (!canManageOrg)
       return Taro.showToast({ title: '没有管理组织权限', icon: 'none' });
     try {
-      await apiClient(`/organizations/${currentOrgId}`, {
-        method: 'PUT',
-        body: { name: orgName.trim() },
-        organizationId: currentOrgId,
-      });
+      await updateOrganization(currentOrgId, { name: orgName.trim() });
       Taro.showToast({ title: '组织名称已更新', icon: 'success' });
     } catch (e) {
       Taro.showToast({
@@ -60,14 +64,7 @@ export default function OrganizationPage() {
     if (!canManageMember)
       return Taro.showToast({ title: '没有管理成员权限', icon: 'none' });
     try {
-      await apiClient(
-        `/organizations/${currentOrgId}/members/${memberId}/role`,
-        {
-          method: 'PUT',
-          body: { roleId: selectedRoleId },
-          organizationId: currentOrgId,
-        }
-      );
+      await apiUpdateMemberRole(currentOrgId, memberId, selectedRoleId);
       Taro.showToast({ title: '角色已更新', icon: 'success' });
       setEditingMemberId('');
     } catch (e) {
@@ -83,10 +80,7 @@ export default function OrganizationPage() {
     if (!canManageMember)
       return Taro.showToast({ title: '没有管理成员权限', icon: 'none' });
     try {
-      await apiClient(`/organizations/${currentOrgId}/members/${memberId}`, {
-        method: 'DELETE',
-        organizationId: currentOrgId,
-      });
+      await apiRemoveMember(currentOrgId, memberId);
       Taro.showToast({ title: '成员已移除', icon: 'success' });
     } catch (e) {
       Taro.showToast({
@@ -101,11 +95,7 @@ export default function OrganizationPage() {
     if (!canManageOrg)
       return Taro.showToast({ title: '没有管理组织权限', icon: 'none' });
     try {
-      await apiClient(`/organizations/${currentOrgId}/transfer-owner`, {
-        method: 'POST',
-        body: { userId },
-        organizationId: currentOrgId,
-      });
+      await apiTransferOwnership(currentOrgId, userId);
       Taro.showToast({ title: '所有权已转移', icon: 'success' });
       setShowTransferForm(false);
     } catch (e) {
@@ -122,12 +112,9 @@ export default function OrganizationPage() {
       return;
     }
     try {
-      await apiClient('/organizations', {
-        method: 'POST',
-        body: {
-          name: newOrgName.trim(),
-          description: newOrgDescription.trim() || undefined,
-        },
+      await apiCreateOrganization({
+        name: newOrgName.trim(),
+        description: newOrgDescription.trim() || undefined,
       });
       Taro.showToast({ title: '组织创建成功', icon: 'success' });
       setNewOrgName('');
@@ -147,10 +134,7 @@ export default function OrganizationPage() {
       return;
     }
     try {
-      await apiClient('/organizations/join', {
-        method: 'POST',
-        body: { inviteCode: inviteCode.trim() },
-      });
+      await apiJoinOrganization({ inviteCode: inviteCode.trim() });
       Taro.showToast({ title: '加入组织成功', icon: 'success' });
       setInviteCode('');
       await reload();

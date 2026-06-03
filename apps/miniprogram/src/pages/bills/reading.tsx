@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getRooms } from '../../api/rooms';
+import { createMeterReading } from '../../api/bills';
 import { Button, Card, Input, DateField } from '../../components/ui';
 import { today } from '../../utils/format';
 import type { MeterType, Room } from '../../types/domain';
@@ -24,9 +25,7 @@ export default function ReadingPage() {
   const loadRooms = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Room[]>('/apartments/rooms', {
-        organizationId: currentOrgId,
-      });
+      const data = await getRooms(currentOrgId);
       setRooms(data);
       if (data.length > 0) {
         setForm((old) => ({ ...old, roomId: data[0].id }));
@@ -51,16 +50,12 @@ export default function ReadingPage() {
     if (!currentOrgId || !form.roomId || !form.value.trim()) return;
     setSubmitting(true);
     try {
-      await apiClient('/bills/meter-readings', {
-        method: 'POST',
-        body: {
-          roomId: form.roomId,
-          meterType: form.meterType,
-          readingDate: form.readingDate,
-          value: Number(form.value),
-          note: form.note.trim() || undefined,
-        },
-        organizationId: currentOrgId,
+      await createMeterReading(currentOrgId, {
+        roomId: form.roomId,
+        meterType: form.meterType,
+        readingDate: form.readingDate,
+        value: Number(form.value),
+        note: form.note.trim() || undefined,
       });
       Taro.showToast({ title: '抄表记录已保存', icon: 'success' });
       Taro.navigateBack();

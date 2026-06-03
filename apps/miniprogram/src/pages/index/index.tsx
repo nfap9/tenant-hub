@@ -2,7 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getApartments } from '../../api/apartments';
+import { getRooms } from '../../api/rooms';
+import { getBills } from '../../api/bills';
 import { Button, Card, EmptyState, Badge, Icon } from '../../components/ui';
 import { NoOrganization } from '../../components/NoOrganization';
 import {
@@ -52,21 +54,11 @@ export default function Index() {
     try {
       const [nextApartments, nextRooms, allBills, failedBills, billingBills] =
         await Promise.all([
-          apiClient<Apartment[]>('/apartments', {
-            organizationId: currentOrgId,
-          }),
-          apiClient<Room[]>('/apartments/rooms', {
-            organizationId: currentOrgId,
-          }),
-          apiClient<Bill[]>('/bills', {
-            organizationId: currentOrgId,
-          }),
-          apiClient<Bill[]>('/bills?status=FAILED', {
-            organizationId: currentOrgId,
-          }),
-          apiClient<Bill[]>('/bills?status=BILLING', {
-            organizationId: currentOrgId,
-          }),
+          getApartments(currentOrgId),
+          getRooms(currentOrgId),
+          getBills(currentOrgId),
+          getBills(currentOrgId, 'FAILED'),
+          getBills(currentOrgId, 'BILLING'),
         ]);
       setApartments(nextApartments);
       setRooms(nextRooms);

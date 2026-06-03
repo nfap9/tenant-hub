@@ -5,7 +5,13 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import {
+  getApartments,
+  createApartment,
+  updateApartment,
+  createApartmentContract,
+  updateApartmentContract,
+} from '../../api/apartments';
 import { Button, Card, Input, DateField } from '../../components/ui';
 import { optionalNumber, optionalText } from '../../utils/format';
 import { emptyApartmentForm } from './constants';
@@ -26,9 +32,7 @@ export default function ApartmentFormPage() {
   const loadApartments = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Apartment[]>('/apartments', {
-        organizationId: currentOrgId,
-      });
+      const data = await getApartments(currentOrgId);
       setApartments(data);
     } catch (e) {
       // silent
@@ -43,21 +47,22 @@ export default function ApartmentFormPage() {
 
   useEffect(() => {
     if (editId && apartment && !initializedRef.current) {
+      const contract = apartment.contract;
       setForm({
         name: apartment.name,
         location: apartment.location,
-        floors: String(apartment.floors || 1),
-        landArea: apartment.landArea ? String(apartment.landArea) : '',
-        totalArea: apartment.totalArea ? String(apartment.totalArea) : '',
-        landlordName: apartment.landlordName ?? '',
-        landlordPhone: apartment.landlordPhone ?? '',
-        contractStart: apartment.contractStart
-          ? apartment.contractStart.slice(0, 10)
+        floors: String(contract?.floors || 1),
+        landArea: contract?.landArea ? String(contract.landArea) : '',
+        totalArea: contract?.totalArea ? String(contract.totalArea) : '',
+        landlordName: contract?.landlordName ?? '',
+        landlordPhone: contract?.landlordPhone ?? '',
+        contractStart: contract?.contractStart
+          ? contract.contractStart.slice(0, 10)
           : '',
-        contractEnd: apartment.contractEnd
-          ? apartment.contractEnd.slice(0, 10)
+        contractEnd: contract?.contractEnd
+          ? contract.contractEnd.slice(0, 10)
           : '',
-        rentAmount: apartment.rentAmount ? String(apartment.rentAmount) : '',
+        rentAmount: contract?.rentAmount ? String(contract.rentAmount) : '',
       });
       initializedRef.current = true;
     }
@@ -90,10 +95,25 @@ export default function ApartmentFormPage() {
 
     setSaving(true);
     try {
-      const payload = {
+      // 1. 保存公寓基本信息
+      const apartmentPayload = {
         name: form.name.trim(),
         location: form.location.trim(),
-        floors: Number(form.floors || 1),
+      };
+      let savedApartment: Apartment;
+      if (editId) {
+        savedApartment = await updateApartment(
+          currentOrgId,
+          editId,
+          apartmentPayload
+        );
+      } else {
+        savedApartment = await createApartment(currentOrgId, apartmentPayload);
+      }
+
+      // 2. 保存上游合同信息
+      const contractPayload = {
+        floors: Number(form.floors || 1) || undefined,
         landArea: optionalNumber(form.landArea),
         totalArea: optionalNumber(form.totalArea),
         landlordName: optionalText(form.landlordName),
@@ -102,13 +122,21 @@ export default function ApartmentFormPage() {
         contractEnd: optionalText(form.contractEnd),
         rentAmount: optionalNumber(form.rentAmount),
       };
-      const path = editId ? `/apartments/${editId}` : '/apartments';
-      const method = editId ? 'PUT' : 'POST';
-      const saved = await apiClient<Apartment>(path, {
-        method,
-        body: payload,
-        organizationId: currentOrgId,
-      });
+      const hasContractData = Object.values(contractPayload).some(
+        (v) => v !== undefined && v !== null && v !== ''
+      );
+      if (hasContractData) {
+        if (editId && apartment?.contract) {
+          await updateApartmentContract(currentOrgId, editId, contractPayload);
+        } else {
+          await createApartmentContract(
+            currentOrgId,
+            savedApartment.id,
+            contractPayload
+          );
+        }
+      }
+
       Taro.showToast({
         title: editId ? '公寓信息已更新' : '公寓已创建',
         icon: 'success',
@@ -117,7 +145,9 @@ export default function ApartmentFormPage() {
       if (editId) {
         Taro.navigateBack();
       } else {
-        Taro.redirectTo({ url: `/pages/apartments/detail?id=${saved.id}` });
+        Taro.redirectTo({
+          url: `/pages/apartments/detail?id=${savedApartment.id}`,
+        });
       }
     } catch (e) {
       Taro.showToast({

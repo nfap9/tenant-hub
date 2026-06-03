@@ -5,7 +5,8 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getRooms } from '../../api/rooms';
+import { updateLease } from '../../api/leases';
 import { Button, Card, Input } from '../../components/ui';
 import {
   selectableFeeTypes,
@@ -36,9 +37,7 @@ export default function LeaseEditPage() {
   const loadRooms = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Room[]>('/apartments/rooms', {
-        organizationId: currentOrgId,
-      });
+      const data = await getRooms(currentOrgId);
       setRooms(data);
     } catch (e) {
       // silent
@@ -133,20 +132,14 @@ export default function LeaseEditPage() {
 
     setSaving(true);
     try {
-      await apiClient(`/leases/${lease.id}`, {
-        method: 'PUT',
-        body: {
-          rentAmount: form.rentAmount.trim()
-            ? Number(form.rentAmount)
-            : undefined,
-          depositAmount: form.depositAmount.trim()
-            ? Number(form.depositAmount)
-            : undefined,
-          waterUnitPrice: Number(form.waterUnitPrice || 0),
-          powerUnitPrice: Number(form.powerUnitPrice || 0),
-          fees: buildLeaseFeesPayload(fees),
-        },
-        organizationId: currentOrgId,
+      await updateLease(currentOrgId, lease.id, {
+        rentAmount: Number(form.rentAmount),
+        depositAmount: form.depositAmount
+          ? Number(form.depositAmount)
+          : undefined,
+        waterUnitPrice: Number(form.waterUnitPrice),
+        powerUnitPrice: Number(form.powerUnitPrice),
+        fees: buildLeaseFeesPayload(fees),
       });
       Taro.showToast({ title: '租约信息已更新', icon: 'success' });
       Taro.navigateBack();

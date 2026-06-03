@@ -5,7 +5,8 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getApartments, deleteApartment } from '../../api/apartments';
+import { deleteRoom } from '../../api/rooms';
 import { Button, Card, Badge } from '../../components/ui';
 import { money, facilitiesText } from '../../utils/format';
 import { contractText } from './utils';
@@ -26,9 +27,7 @@ export default function ApartmentDetailPage() {
   const loadApartments = useCallback(async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Apartment[]>('/apartments', {
-        organizationId: currentOrgId,
-      });
+      const data = await getApartments(currentOrgId);
       setApartments(data);
     } catch (e) {
       Taro.showToast({
@@ -85,10 +84,7 @@ export default function ApartmentDetailPage() {
     if (!res.confirm) return;
 
     try {
-      await apiClient(`/apartments/${apartment.id}`, {
-        method: 'DELETE',
-        organizationId: currentOrgId,
-      });
+      await deleteApartment(currentOrgId, apartment.id);
       Taro.showToast({ title: '公寓已删除', icon: 'success' });
       Taro.navigateBack();
     } catch (e) {
@@ -146,10 +142,7 @@ export default function ApartmentDetailPage() {
     if (!res.confirm) return;
 
     try {
-      await apiClient(`/apartments/rooms/${room.id}`, {
-        method: 'DELETE',
-        organizationId: currentOrgId,
-      });
+      await deleteRoom(currentOrgId, room.id);
       Taro.showToast({ title: '房间已删除', icon: 'success' });
       await loadApartments();
     } catch (e) {
@@ -235,25 +228,28 @@ export default function ApartmentDetailPage() {
               <View className="detail-row">
                 <Text className="text-muted">楼层/面积</Text>
                 <Text className="card-title">
-                  {apartment.floors} 层 · 占地 {apartment.landArea ?? '未填'}㎡
-                  · 总 {apartment.totalArea ?? '未填'}㎡
+                  {apartment.contract?.floors || '未填'} 层 · 占地{' '}
+                  {apartment.contract?.landArea ?? '未填'}㎡ · 总{' '}
+                  {apartment.contract?.totalArea ?? '未填'}㎡
                 </Text>
               </View>
               <View className="detail-row">
                 <Text className="text-muted">上游房东</Text>
                 <Text className="card-title">
-                  {apartment.landlordName || '未维护'} ·{' '}
-                  {apartment.landlordPhone || '未维护'}
+                  {apartment.contract?.landlordName || '未维护'} ·{' '}
+                  {apartment.contract?.landlordPhone || '未维护'}
                 </Text>
               </View>
               <View className="detail-row">
                 <Text className="text-muted">合同期</Text>
-                <Text className="text-muted">{contractText(apartment)}</Text>
+                <Text className="text-muted">
+                  {contractText(apartment.contract)}
+                </Text>
               </View>
               <View className="detail-row">
                 <Text className="text-muted">上游租金</Text>
                 <Text className="card-stat">
-                  ¥{money(apartment.rentAmount)}
+                  ¥{money(apartment.contract?.rentAmount)}
                 </Text>
               </View>
               <View className="detail-row">

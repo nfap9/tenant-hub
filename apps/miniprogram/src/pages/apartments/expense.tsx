@@ -5,7 +5,7 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { createApartmentExpense } from '../../api/apartments';
 import { Button, Card, Input, DateField } from '../../components/ui';
 import { optionalText } from '../../utils/format';
 import './index.scss';
@@ -37,15 +37,11 @@ export default function ExpensePage() {
 
     setSaving(true);
     try {
-      await apiClient(`/apartments/${apartmentId}/expenses`, {
-        method: 'POST',
-        body: {
-          name: expense.name.trim(),
-          amount: Number(expense.amount),
-          spentAt: expense.spentAt,
-          note: optionalText(expense.note),
-        },
-        organizationId: currentOrgId,
+      await createApartmentExpense(currentOrgId, apartmentId, {
+        name: expense.name.trim(),
+        amount: Number(expense.amount),
+        spentAt: expense.spentAt,
+        note: optionalText(expense.note),
       });
       Taro.showToast({ title: '经营花费已记录', icon: 'success' });
       Taro.navigateBack();

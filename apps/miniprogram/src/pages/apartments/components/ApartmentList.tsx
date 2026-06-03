@@ -63,7 +63,8 @@ export function ApartmentList({
             </View>
             <View className="detail-row">
               <Text className="text-muted">
-                {item.floors} 层 · 总面积 {item.totalArea ?? '未填'}㎡
+                {item.contract?.floors || '未填'} 层 · 总面积{' '}
+                {item.contract?.totalArea ?? '未填'}㎡
               </Text>
               <Text className="text-muted">{rooms.length} 间房</Text>
             </View>

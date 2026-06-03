@@ -5,7 +5,8 @@ import {
   useAppSession,
   useHasPermission,
 } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getApartments } from '../../api/apartments';
+import { updateRoom, batchCreateRooms } from '../../api/rooms';
 import { Button, Card, Input, FacilitySelector } from '../../components/ui';
 import { optionalNumber, toFacilityArray } from '../../utils/format';
 import {
@@ -33,9 +34,7 @@ export default function RoomFormPage() {
   const loadApartments = async () => {
     if (!currentOrgId) return;
     try {
-      const data = await apiClient<Apartment[]>('/apartments', {
-        organizationId: currentOrgId,
-      });
+      const data = await getApartments(currentOrgId);
       setApartments(data);
     } catch (e) {
       // silent
@@ -92,37 +91,26 @@ export default function RoomFormPage() {
     setSaving(true);
     try {
       if (isEdit) {
-        await apiClient(`/apartments/rooms/${roomId}`, {
-          method: 'PUT',
-          body: {
-            roomNo: roomForm.roomNo.trim(),
-            layout: roomForm.layout.trim(),
-            area: optionalNumber(roomForm.area),
-            facilities: toFacilityArray(roomForm.facilities),
-            status: roomForm.status,
-          },
-          organizationId: currentOrgId,
+        await updateRoom(currentOrgId, roomId, {
+          roomNo: roomForm.roomNo.trim(),
+          layout: roomForm.layout.trim(),
+          area: optionalNumber(roomForm.area),
+          facilities: toFacilityArray(roomForm.facilities),
+          status: roomForm.status,
         });
         Taro.showToast({ title: '房间信息已更新', icon: 'success' });
       } else {
         if (!apartmentId) return;
-        await apiClient<{ count: number }>(
-          `/apartments/${apartmentId}/rooms/batch`,
-          {
-            method: 'POST',
-            body: {
-              rooms: [
-                {
-                  roomNo: roomForm.roomNo.trim(),
-                  layout: roomForm.layout.trim(),
-                  area: optionalNumber(roomForm.area),
-                  facilities: toFacilityArray(roomForm.facilities),
-                },
-              ],
+        await batchCreateRooms(currentOrgId, apartmentId, {
+          rooms: [
+            {
+              roomNo: roomForm.roomNo.trim(),
+              layout: roomForm.layout.trim(),
+              area: optionalNumber(roomForm.area),
+              facilities: toFacilityArray(roomForm.facilities),
             },
-            organizationId: currentOrgId,
-          }
-        );
+          ],
+        });
         Taro.showToast({ title: '房间已添加', icon: 'success' });
       }
       Taro.navigateBack();

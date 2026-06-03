@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { usePullDownRefresh } from '@tarojs/taro';
 import { useAppSession } from '../../context/AppSessionContext';
-import { apiClient } from '../../api/client';
+import { getDeposits } from '../../api/deposits';
 import { Card, EmptyState, Badge } from '../../components/ui';
 import { money } from '../../utils/format';
 import type { Deposit, DepositStatus } from '../../types/domain';
@@ -33,9 +33,7 @@ export default function DepositsPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const data = await apiClient<Deposit[]>('/deposits', {
-        organizationId: currentOrgId,
-      });
+      const data = await getDeposits(currentOrgId);
       setDeposits(data);
     } catch {
       Taro.showToast({ title: '加载失败', icon: 'none' });
@@ -64,7 +62,15 @@ export default function DepositsPage() {
         ) : (
           <View className="deposit-list">
             {deposits.map((deposit) => (
-              <View key={deposit.id} className="deposit-item">
+              <View
+                key={deposit.id}
+                className="deposit-item"
+                onClick={() =>
+                  Taro.navigateTo({
+                    url: `/pages/settings/deposit-detail?id=${deposit.id}`,
+                  })
+                }
+              >
                 <View className="deposit-header">
                   <Text className="deposit-room">
                     {deposit.lease?.room?.roomNo || '-'}

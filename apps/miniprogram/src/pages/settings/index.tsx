@@ -156,6 +156,15 @@ export default function SettingsPage() {
         </View>
         <View
           className="settings-link"
+          onClick={() => goTo('/pages/settings/transactions')}
+        >
+          <View>
+            <Text className="card-title">收支记录</Text>
+            <Text className="text-muted">查看全部收支明细和统计</Text>
+          </View>
+        </View>
+        <View
+          className="settings-link"
           onClick={() => goTo('/pages/settings/organization')}
         >
           <View>
