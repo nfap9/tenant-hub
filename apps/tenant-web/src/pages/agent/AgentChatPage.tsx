@@ -216,9 +216,7 @@ export default function AgentChatPage() {
                 <div style={{ width: 40 }} />
               )}
 
-              <div
-                className={`${styles.messageBubble} ${styles[msg.role]}`}
-              >
+              <div className={`${styles.messageBubble} ${styles[msg.role]}`}>
                 {msg.loading && msg.role === 'assistant' ? (
                   <div className={styles.typingIndicator}>
                     <span className={styles.dot} />

@@ -71,7 +71,7 @@ export async function* runAgent(
     modelName: env.LLM_MODEL,
     temperature: env.LLM_TEMPERATURE,
     maxTokens: env.LLM_MAX_TOKENS,
-    openAIApiKey: env.LLM_API_KEY,
+    apiKey: env.LLM_API_KEY,
     ...(env.LLM_BASE_URL
       ? { configuration: { baseURL: env.LLM_BASE_URL } }
       : {}),
@@ -117,7 +117,11 @@ export async function* runAgent(
         }
 
         try {
-          const result = await (tool as { invoke: (args: Record<string, unknown>) => Promise<unknown> }).invoke(toolArgs);
+          const result = await (
+            tool as {
+              invoke: (args: Record<string, unknown>) => Promise<unknown>;
+            }
+          ).invoke(toolArgs);
           messages.push(
             new ToolMessage({
               content: String(result),
