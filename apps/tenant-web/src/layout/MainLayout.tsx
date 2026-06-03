@@ -172,6 +172,8 @@ export default function MainLayout() {
         navigate('/ops/roles');
         break;
       case 'ops-sms':
+        navigate('/ops/sms');
+        break;
       case 'ops-settings':
         navigate('/ops');
         break;

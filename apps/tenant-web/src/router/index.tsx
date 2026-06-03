@@ -52,6 +52,7 @@ const OpsOrganizationsPage = lazy(
   () => import('@/pages/ops/OpsOrganizationsPage')
 );
 const OpsRolesPage = lazy(() => import('@/pages/ops/OpsRolesPage'));
+const OpsSmsConfigPage = lazy(() => import('@/pages/ops/OpsSmsConfigPage'));
 
 function PageLoading() {
   return (
@@ -293,6 +294,14 @@ export default function AppRouter() {
             element={
               <RequireSuperAdmin>
                 <OpsRolesPage />
+              </RequireSuperAdmin>
+            }
+          />
+          <Route
+            path="/ops/sms"
+            element={
+              <RequireSuperAdmin>
+                <OpsSmsConfigPage />
               </RequireSuperAdmin>
             }
           />

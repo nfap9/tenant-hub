@@ -24,7 +24,12 @@ pnpm dev:infra
 
 # 4. 生成 Prisma Client 并同步数据库结构
 pnpm db:generate
-pnpm db:push
+
+# 本地快速开发
+pnpm dev:push
+
+# 当模型改动确定后，生成正式迁移文件（提交前）
+pnpm db:migrate     # 按提示命名迁移，然后将生成的 migrations/ 目录一起提交
 
 # 5. 同时启动 API + tenant-web
 pnpm dev
