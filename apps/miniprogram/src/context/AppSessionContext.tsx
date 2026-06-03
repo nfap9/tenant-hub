@@ -14,7 +14,7 @@ import type { Membership, OrgMember, OrgRole } from '../types/domain';
 
 export type MobileSession = {
   token: string;
-  user: { id: string; phone: string; username: string };
+  user: { id: string; phone: string; username: string; platformRole?: string };
 };
 
 export type PlatformInfo = {
@@ -40,6 +40,7 @@ type AppSessionContextType = {
   loading: boolean;
   platformInfo: PlatformInfo;
   quotaLimitEnabled: boolean;
+  platformRole: string | undefined;
 };
 
 const AppSessionContext = createContext<AppSessionContextType | undefined>(
@@ -73,6 +74,9 @@ export function AppSessionProvider({ children }) {
     contactPhone: '',
   });
   const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
+  const [platformRole, setPlatformRole] = useState<string | undefined>(
+    undefined
+  );
 
   const token = session?.token;
   const currentMembership = useMemo(
@@ -92,6 +96,7 @@ export function AppSessionProvider({ children }) {
           memberships: Membership[];
         }>('/auth/me');
         setMemberships(me.memberships);
+        setPlatformRole(me.user.platformRole);
         setCurrentOrgIdState((old) =>
           old && me.memberships.some((item) => item.organization.id === old)
             ? old
@@ -162,6 +167,7 @@ export function AppSessionProvider({ children }) {
     setMembers([]);
     setRoles([]);
     setQuotaLimitEnabled(false);
+    setPlatformRole(undefined);
     Taro.removeStorageSync('tenantHubCurrentOrgId');
     Taro.reLaunch({ url: '/pages/login/index' });
   }, []);
@@ -240,6 +246,7 @@ export function AppSessionProvider({ children }) {
       loading,
       platformInfo,
       quotaLimitEnabled,
+      platformRole,
     }),
     [
       session,
@@ -252,6 +259,7 @@ export function AppSessionProvider({ children }) {
       loading,
       platformInfo,
       quotaLimitEnabled,
+      platformRole,
       setCurrentOrgId,
       signIn,
       signOut,

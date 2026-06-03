@@ -3,6 +3,7 @@ export type Membership = {
     id: string;
     name: string;
     code: string;
+    inviteCode?: string;
     description?: string;
     ownerId: string;
   };
@@ -65,6 +66,7 @@ export type SubscriptionOverview = {
     roomQuota: number;
     memberQuota: number;
   };
+  quotaLimitEnabled?: boolean;
 };
 
 export type RoomStatus = 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
@@ -105,19 +107,28 @@ export type ApartmentExpense = {
   note?: string;
 };
 
-export type Apartment = {
+export type ApartmentContract = {
   id: string;
   organizationId: string;
-  name: string;
-  location: string;
-  floors: number;
-  landArea?: string | number;
-  totalArea?: string | number;
+  apartmentId: string;
   landlordName?: string;
   landlordPhone?: string;
   contractStart?: string;
   contractEnd?: string;
   rentAmount?: string | number;
+  floors?: number;
+  landArea?: string | number;
+  totalArea?: string | number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type Apartment = {
+  id: string;
+  organizationId: string;
+  name: string;
+  location: string;
+  contract?: ApartmentContract;
   rooms?: Room[];
   expenses?: ApartmentExpense[];
 };
@@ -157,6 +168,19 @@ export type Lease = {
   deposit?: Deposit;
 };
 
+export type Reservation = {
+  id: string;
+  roomId: string;
+  name: string;
+  phone: string;
+  deposit: string | number;
+  paymentMethod?: string;
+  expectedMoveInDate: string;
+  createdAt: string;
+  updatedAt: string;
+  room?: Room;
+};
+
 export type Room = {
   id: string;
   apartmentId: string;
@@ -167,6 +191,7 @@ export type Room = {
   status: RoomStatus;
   apartment?: Apartment;
   leases?: Lease[];
+  reservation?: Reservation;
 };
 
 export type BillItem = {
@@ -234,7 +259,7 @@ export type Deposit = {
   note?: string;
   createdAt: string;
   updatedAt: string;
-  lease?: Lease & { room?: Room };
+  lease?: Lease & { room?: Room; bills?: Bill[] };
   bill?: Bill & { payments?: Payment[] };
 };
 
@@ -252,6 +277,18 @@ export type DepositPayment = {
 
 export type SettlementStatus = 'PENDING' | 'SETTLED';
 export type SettlementPaymentDirection = 'RECEIVE' | 'REFUND';
+
+export type SettlementPayment = {
+  id: string;
+  settlementId: string;
+  userId: string;
+  direction: SettlementPaymentDirection;
+  amount: string | number;
+  paidAt: string;
+  method: string;
+  note?: string;
+  user?: { id: string; username: string; phone: string };
+};
 
 export type LeaseSettlement = {
   id: string;
@@ -279,6 +316,58 @@ export type LeaseSettlement = {
   refundableAmount: string | number;
   netAmount: string | number;
   status: SettlementStatus;
+  lease?: Lease & { room?: Room; fees?: LeaseFee[] };
+  room?: Room;
+  billId?: string;
+  bill?: Bill;
+  payments?: SettlementPayment[];
+  createdAt?: string;
+};
+
+export type TransactionType = 'INCOME' | 'EXPENSE';
+export type TransactionStatus = 'COMPLETED' | 'PENDING' | 'CANCELLED';
+export type TransactionSourceType =
+  | 'BILL_PAYMENT'
+  | 'DEPOSIT_PAYMENT'
+  | 'SETTLEMENT_PAYMENT'
+  | 'APARTMENT_EXPENSE'
+  | 'RESERVATION'
+  | 'MANUAL';
+
+export type TransactionCategory = {
+  key: string;
+  label: string;
+  type: TransactionType;
+};
+
+export type Transaction = {
+  id: string;
+  organizationId: string;
+  type: TransactionType;
+  category: string;
+  amount: string | number;
+  method: string;
+  status: TransactionStatus;
+  occurredAt: string;
+  description?: string;
+  note?: string;
+  operatorId: string;
+  operator?: { id: string; username: string };
+  sourceType: TransactionSourceType;
+  sourceId: string;
+  billId?: string;
+  depositId?: string;
+  leaseId?: string;
+  apartmentId?: string;
+  bill?: { id: string; mode: string; periodStart: string; periodEnd: string };
+  lease?: {
+    id: string;
+    tenantName: string;
+    room?: { roomNo: string; apartment?: { name: string } };
+  };
+  apartment?: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type MonthlyBill = {
