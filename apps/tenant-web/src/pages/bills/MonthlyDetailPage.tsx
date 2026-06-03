@@ -10,6 +10,7 @@ import {
   Divider,
   Row,
   Col,
+  Popconfirm,
 } from 'antd';
 import {
   DeleteOutlined,
@@ -17,9 +18,11 @@ import {
   WalletOutlined,
   FileTextOutlined,
   HomeOutlined,
+  StopOutlined,
+  RollbackOutlined,
 } from '@ant-design/icons';
-import { useAppSession } from '@/context/AppSessionContext';
-import { getBills, deleteBill } from '@/api/bills';
+import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
+import { getBills, deleteBill, voidBill, refundBill } from '@/api/bills';
 import { money, day } from '@/utils/format';
 import { statusLabels, toneForBillStatus, billModeText } from './constants';
 import { groupBills, type BillGroup } from './utils';
@@ -35,6 +38,7 @@ import clsx from 'clsx';
 
 export default function MonthlyDetailPage() {
   const { currentOrgId } = useAppSession();
+  const canManageBill = useHasPermission('bill:manage');
   const { id } = useParams<{ id: string }>();
   const [allBills, setAllBills] = useState<Bill[]>([]);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -59,6 +63,49 @@ export default function MonthlyDetailPage() {
     loadData();
   }, [loadData]);
 
+  const handleVoid = async (billGroup: BillGroup) => {
+    if (!currentOrgId) return;
+    try {
+      for (const bill of billGroup.bills) {
+        await voidBill(currentOrgId, bill.id);
+      }
+      message.success('账单已作废');
+      loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '作废账单失败');
+    }
+  };
+
+  const handleRefund = async (billGroup: BillGroup) => {
+    if (!currentOrgId) return;
+    const netPaid = Number(billGroup.paidAmount) || 0;
+    const method = window.prompt(
+      `退款金额（已付 ¥${netPaid.toFixed(2)}）/ 退款方式：`,
+      `${netPaid.toFixed(2)} 现金`
+    );
+    if (!method) return;
+    const [amountStr, ...methodParts] = method.split(' ');
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount <= 0) {
+      message.warning('请输入有效退款金额');
+      return;
+    }
+    try {
+      for (const bill of billGroup.bills) {
+        if (bill.status === 'PAID') {
+          await refundBill(currentOrgId, bill.id, {
+            amount,
+            method: methodParts.join(' ') || '退款',
+          });
+        }
+      }
+      message.success('退款已登记');
+      loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '登记退款失败');
+    }
+  };
+
   const group = useMemo<BillGroup | undefined>(() => {
     if (!id) return undefined;
     const groups = groupBills(allBills);
@@ -66,7 +113,11 @@ export default function MonthlyDetailPage() {
   }, [allBills, id]);
 
   const canPay = useMemo(
-    () => group && group.status !== 'PAID' && group.status !== 'VOID',
+    () =>
+      group &&
+      group.status !== 'PAID' &&
+      group.status !== 'VOID' &&
+      group.status !== 'REFUNDED',
     [group]
   );
 
@@ -116,14 +167,43 @@ export default function MonthlyDetailPage() {
           { label: '账单详情' },
         ]}
         actions={
-          canPay ? (
-            <Button
-              type="primary"
-              icon={<WalletOutlined />}
-              onClick={() => setPaymentOpen(true)}
-            >
-              登记收款
-            </Button>
+          canPay || (canManageBill && group) ? (
+            <Space>
+              {canPay && (
+                <Button
+                  type="primary"
+                  icon={<WalletOutlined />}
+                  onClick={() => setPaymentOpen(true)}
+                >
+                  登记收款
+                </Button>
+              )}
+              {canManageBill &&
+                group.status !== 'PAID' &&
+                group.status !== 'VOID' &&
+                group.status !== 'REFUNDED' && (
+                  <Popconfirm
+                    title="作废账单"
+                    description="作废后账单将无法继续收款或恢复，确认作废？"
+                    onConfirm={() => handleVoid(group)}
+                    okText="确认作废"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button danger icon={<StopOutlined />}>
+                      作废
+                    </Button>
+                  </Popconfirm>
+                )}
+              {canManageBill && group.status === 'PAID' && (
+                <Button
+                  icon={<RollbackOutlined />}
+                  onClick={() => handleRefund(group)}
+                >
+                  退款
+                </Button>
+              )}
+            </Space>
           ) : undefined
         }
       />
@@ -214,17 +294,19 @@ export default function MonthlyDetailPage() {
                       >
                         ¥{money(child.totalAmount)}
                       </span>
-                      {child.status !== 'PAID' && (
-                        <Button
-                          type="text"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => handleDeleteChild(child.id)}
-                        >
-                          删除
-                        </Button>
-                      )}
+                      {child.status !== 'PAID' &&
+                        child.status !== 'VOID' &&
+                        child.status !== 'REFUNDED' && (
+                          <Button
+                            type="text"
+                            danger
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleDeleteChild(child.id)}
+                          >
+                            删除
+                          </Button>
+                        )}
                     </Space>
                   </div>
                   <div className={styles.mdpItemsWrap}>
@@ -248,19 +330,22 @@ export default function MonthlyDetailPage() {
                       </div>
                     ))}
                   </div>
-                  {child.mode === 'POSTPAID' && child.status !== 'PAID' && (
-                    <Button
-                      size="small"
-                      icon={<ThunderboltOutlined />}
-                      onClick={() => {
-                        setUtilityBillId(child.id);
-                        setUtilityOpen(true);
-                      }}
-                      className={styles.mdpBtnMt}
-                    >
-                      录入本期水电
-                    </Button>
-                  )}
+                  {child.mode === 'POSTPAID' &&
+                    child.status !== 'PAID' &&
+                    child.status !== 'VOID' &&
+                    child.status !== 'REFUNDED' && (
+                      <Button
+                        size="small"
+                        icon={<ThunderboltOutlined />}
+                        onClick={() => {
+                          setUtilityBillId(child.id);
+                          setUtilityOpen(true);
+                        }}
+                        className={styles.mdpBtnMt}
+                      >
+                        录入本期水电
+                      </Button>
+                    )}
                   {index < (group.bills ?? []).length - 1 && (
                     <Divider className={styles.mdpDivider} />
                   )}

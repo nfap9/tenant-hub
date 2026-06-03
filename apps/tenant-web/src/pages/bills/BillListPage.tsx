@@ -10,6 +10,7 @@ import {
   Spin,
   message,
   Modal,
+  Popconfirm,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,12 +23,16 @@ import {
   ThunderboltOutlined,
   ExclamationCircleOutlined,
   ThunderboltFilled,
+  StopOutlined,
+  RollbackOutlined,
 } from '@ant-design/icons';
-import { useAppSession } from '@/context/AppSessionContext';
+import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
   getBills,
   getBillsByStatus,
   deleteBill,
+  voidBill,
+  refundBill,
   retryBillBilling,
   generateBills,
 } from '@/api/bills';
@@ -52,6 +57,7 @@ import clsx from 'clsx';
 
 export default function BillListPage() {
   const { currentOrgId } = useAppSession();
+  const canManageBill = useHasPermission('bill:manage');
   const navigate = useNavigate();
   const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -148,6 +154,49 @@ export default function BillListPage() {
     }
   };
 
+  const handleVoidGroup = async (group: BillGroup) => {
+    if (!currentOrgId) return;
+    try {
+      await Promise.all(group.bills.map((b) => voidBill(currentOrgId, b.id)));
+      message.success('账单组已作废');
+      await loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '作废失败');
+    }
+  };
+
+  const handleRefundGroup = async (group: BillGroup) => {
+    if (!currentOrgId) return;
+    const netPaid = Number(group.paidAmount) || 0;
+    const method = window.prompt(
+      `退款金额（已付 ¥${netPaid.toFixed(2)}）/ 退款方式：`,
+      `${netPaid.toFixed(2)} 现金`
+    );
+    if (!method) return;
+    const [amountStr, ...methodParts] = method.split(' ');
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount <= 0) {
+      message.warning('请输入有效退款金额');
+      return;
+    }
+    try {
+      await Promise.all(
+        group.bills
+          .filter((b) => b.status === 'PAID')
+          .map((b) =>
+            refundBill(currentOrgId, b.id, {
+              amount,
+              method: methodParts.join(' ') || '退款',
+            })
+          )
+      );
+      message.success('退款已登记');
+      await loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '退款失败');
+    }
+  };
+
   const renderBillCard = (group: BillGroup, showDelete = false) => {
     const summary = getBillGroupCardSummary(group);
     return (
@@ -190,18 +239,59 @@ export default function BillListPage() {
             {summary.detailCountText}
           </span>
           <Space>
-            {showDelete && group.status !== 'PAID' && (
+            {showDelete &&
+              group.status !== 'PAID' &&
+              group.status !== 'VOID' &&
+              group.status !== 'REFUNDED' && (
+                <>
+                  {canManageBill && (
+                    <Popconfirm
+                      title="作废账单组"
+                      description="作废后所有账单将无法继续收款或恢复，确认作废？"
+                      onConfirm={(e) => {
+                        e?.stopPropagation();
+                        handleVoidGroup(group);
+                      }}
+                      okText="确认作废"
+                      cancelText="取消"
+                      okButtonProps={{ danger: true }}
+                      onPopupClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<StopOutlined />}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        作废
+                      </Button>
+                    </Popconfirm>
+                  )}
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteGroup(group);
+                    }}
+                  >
+                    删除
+                  </Button>
+                </>
+              )}
+            {showDelete && group.status === 'PAID' && canManageBill && (
               <Button
                 type="text"
-                danger
                 size="small"
-                icon={<DeleteOutlined />}
+                icon={<RollbackOutlined />}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteGroup(group);
+                  handleRefundGroup(group);
                 }}
               >
-                删除
+                退款
               </Button>
             )}
             <Button type="link" size="small" icon={<EyeOutlined />}>
@@ -399,6 +489,7 @@ export default function BillListPage() {
                         'PAID',
                         'FAILED',
                         'VOID',
+                        'REFUNDED',
                       ] as const
                     ).map((status) => (
                       <Button

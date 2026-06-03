@@ -1,16 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Card,
-  Row,
-  Col,
-  Progress,
-  Button,
-  Tag,
-  Space,
-  Spin,
-  message,
-} from 'antd';
+import { Card, Progress, Button, Tag, Space, Spin, message } from 'antd';
 import {
   FileTextOutlined,
   WalletOutlined,
@@ -268,127 +258,118 @@ export default function DashboardPage() {
           thisMonthExpense={thisMonthExpense}
         ></Overview>
 
-        {/* 出租率 */}
-        <Row gutter={[16, 16]} className={styles.statGrid}>
-          <Col xs={24} lg={12}>
-            <Card
-              title={
-                <span className={styles.dashboardCardTitle}>出租情况</span>
-              }
-            >
-              <Row gutter={16}>
-                <Col span={12} className="text-center">
-                  <div className={styles.statValueSuccess}>{vacantCount}</div>
-                  <div className="text-muted">空闲房间</div>
-                </Col>
-                <Col span={12} className="text-center">
-                  <div className={styles.statValuePrimary}>{occupiedCount}</div>
-                  <div className="text-muted">已租房间</div>
-                </Col>
-              </Row>
-              <div className="mt-20">
-                <div className={styles.progressHeader}>
-                  <span className={styles.progressLabel}>出租率</span>
-                  <span className={styles.progressValue}>{occupancyRate}%</span>
-                </div>
-                <Progress
-                  percent={occupancyRate}
-                  strokeColor="var(--th-primary)"
-                  trailColor="var(--th-border)"
-                  strokeWidth={12}
-                  showInfo={false}
-                />
+        {/* 出租率 + 待办 */}
+        <div className={styles.cardGrid}>
+          <Card
+            title={<span className={styles.dashboardCardTitle}>出租情况</span>}
+          >
+            <div className={styles.occupancyStats}>
+              <div className="text-center">
+                <div className={styles.statValueSuccess}>{vacantCount}</div>
+                <div className="text-muted">空闲房间</div>
               </div>
-              {vacantLayoutStats.length > 0 && (
-                <div className={styles.vacantLayouts}>
-                  <div className={styles.vacantLayoutsLabel}>空闲户型</div>
-                  <Space wrap>
-                    {vacantLayoutStats.map(([layout, count]) => (
-                      <Tag key={layout} color="default">
-                        {layout} {count}间
-                      </Tag>
-                    ))}
-                  </Space>
-                </div>
-              )}
-            </Card>
-          </Col>
+              <div className="text-center">
+                <div className={styles.statValuePrimary}>{occupiedCount}</div>
+                <div className="text-muted">已租房间</div>
+              </div>
+            </div>
+            <div className="mt-20">
+              <div className={styles.progressHeader}>
+                <span className={styles.progressLabel}>出租率</span>
+                <span className={styles.progressValue}>{occupancyRate}%</span>
+              </div>
+              <Progress
+                percent={occupancyRate}
+                strokeColor="var(--th-primary)"
+                trailColor="var(--th-border)"
+                strokeWidth={12}
+                showInfo={false}
+              />
+            </div>
+            {vacantLayoutStats.length > 0 && (
+              <div className={styles.vacantLayouts}>
+                <div className={styles.vacantLayoutsLabel}>空闲户型</div>
+                <Space wrap>
+                  {vacantLayoutStats.map(([layout, count]) => (
+                    <Tag key={layout} color="default">
+                      {layout} {count}间
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+          </Card>
 
-          {/* 待办事项 */}
-          <Col xs={24} lg={12}>
-            <Card
-              title={
-                <span className={styles.dashboardCardTitle}>
-                  待办事项 {todos.length > 0 ? `(${todos.length} 项)` : ''}
-                </span>
-              }
-            >
-              {todos.length === 0 ? (
-                <div className={styles.todoEmpty}>
-                  <CheckCircleOutlined className={styles.todoEmptyIcon} />
-                  <div className={styles.todoEmptyTitle}>暂无紧急待办</div>
-                  <div className={styles.todoEmptyDesc}>经营状态稳定</div>
-                </div>
-              ) : (
-                <Space direction="vertical" className="w-full" size="middle">
-                  {todos.map((todo) => {
-                    const tone = todoToneMap[todo.tone] ?? todoToneMap.green;
-                    return (
-                      <Card
-                        key={todo.key}
-                        size="small"
-                        className={styles.todoCard}
-                        style={{
-                          borderLeft: `4px solid ${tone.color}`,
-                        }}
-                        bodyStyle={{ padding: 16 }}
-                        onClick={todo.onClick}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.transform =
-                            'translateY(-2px)';
-                          (e.currentTarget as HTMLElement).style.boxShadow =
-                            '0 4px 12px rgba(0,0,0,0.08)';
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.transform =
-                            'translateY(0)';
-                          (e.currentTarget as HTMLElement).style.boxShadow =
-                            'none';
-                        }}
-                      >
-                        <div className={styles.todoItem}>
-                          <div className={styles.todoMain}>
-                            <div
-                              className={styles.todoIcon}
-                              style={{
-                                background: tone.bg,
-                                color: tone.color,
-                              }}
-                            >
-                              {tone.icon}
-                            </div>
-                            <div className={styles.todoText}>
-                              <div className={styles.todoTitle}>
-                                {todo.title}
-                              </div>
-                              <div className={styles.todoDetail}>
-                                {todo.detail}
-                              </div>
+          <Card
+            title={
+              <span className={styles.dashboardCardTitle}>
+                待办事项 {todos.length > 0 ? `(${todos.length} 项)` : ''}
+              </span>
+            }
+          >
+            {todos.length === 0 ? (
+              <div className={styles.todoEmpty}>
+                <CheckCircleOutlined className={styles.todoEmptyIcon} />
+                <div className={styles.todoEmptyTitle}>暂无紧急待办</div>
+                <div className={styles.todoEmptyDesc}>经营状态稳定</div>
+              </div>
+            ) : (
+              <Space direction="vertical" className="w-full" size="middle">
+                {todos.map((todo) => {
+                  const tone = todoToneMap[todo.tone] ?? todoToneMap.green;
+                  return (
+                    <Card
+                      key={todo.key}
+                      size="small"
+                      className={styles.todoCard}
+                      style={{
+                        borderLeft: `4px solid ${tone.color}`,
+                      }}
+                      bodyStyle={{ padding: 16 }}
+                      onClick={todo.onClick}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.transform =
+                          'translateY(-2px)';
+                        (e.currentTarget as HTMLElement).style.boxShadow =
+                          '0 4px 12px rgba(0,0,0,0.08)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.transform =
+                          'translateY(0)';
+                        (e.currentTarget as HTMLElement).style.boxShadow =
+                          'none';
+                      }}
+                    >
+                      <div className={styles.todoItem}>
+                        <div className={styles.todoMain}>
+                          <div
+                            className={styles.todoIcon}
+                            style={{
+                              background: tone.bg,
+                              color: tone.color,
+                            }}
+                          >
+                            {tone.icon}
+                          </div>
+                          <div className={styles.todoText}>
+                            <div className={styles.todoTitle}>{todo.title}</div>
+                            <div className={styles.todoDetail}>
+                              {todo.detail}
                             </div>
                           </div>
-                          <Space className={styles.todoMeta}>
-                            <Tag color={todo.tone}>{todo.badge}</Tag>
-                            <RightOutlined className="text-muted" />
-                          </Space>
                         </div>
-                      </Card>
-                    );
-                  })}
-                </Space>
-              )}
-            </Card>
-          </Col>
-        </Row>
+                        <Space className={styles.todoMeta}>
+                          <Tag color={todo.tone}>{todo.badge}</Tag>
+                          <RightOutlined className="text-muted" />
+                        </Space>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </Space>
+            )}
+          </Card>
+        </div>
       </Spin>
 
       <PaymentDialog

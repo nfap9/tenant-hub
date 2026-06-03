@@ -9,7 +9,6 @@ export async function createLease(
     tenantPhone: string;
     startDate: string;
     endDate: string;
-    graceDays?: number;
     cycle: string;
     rentAmount: number;
     depositAmount?: number;
@@ -87,6 +86,13 @@ export async function terminateLease(
   }>(`/leases/${leaseId}/terminate`, {
     method: 'POST',
     body: payload,
+    organizationId,
+  });
+}
+
+export async function activateLease(organizationId: string, leaseId: string) {
+  return apiClient<Lease>(`/leases/${leaseId}/activate`, {
+    method: 'POST',
     organizationId,
   });
 }

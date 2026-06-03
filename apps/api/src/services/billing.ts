@@ -165,6 +165,8 @@ export const assertBillPaymentAllowed = ({
 }: BillPaymentTarget) => {
   if (status === 'PAID' || status === 'VOID' || status === 'REFUNDED')
     throw new HttpError(400, '该账单已结清或作废，不能继续收款');
+  if (status === 'BILLING' || status === 'FAILED')
+    throw new HttpError(400, '该账单尚未出账完成，不能收款');
   const paymentAmount = new Prisma.Decimal(amount);
   if (paymentAmount.lessThanOrEqualTo(0))
     throw new HttpError(400, '收款金额必须大于 0');
@@ -174,6 +176,116 @@ export const assertBillPaymentAllowed = ({
       400,
       `收款金额不能超过剩余应收 ¥${remaining.toFixed(2)}`
     );
+};
+
+const BILL_OPERATION_GUARDS: Record<
+  string,
+  { allowVoid: boolean; allowRefund: boolean; allowDelete: boolean }
+> = {
+  UNPAID: { allowVoid: true, allowRefund: false, allowDelete: true },
+  PARTIAL_PAID: { allowVoid: true, allowRefund: false, allowDelete: true },
+  BILLING: { allowVoid: true, allowRefund: false, allowDelete: true },
+  FAILED: { allowVoid: true, allowRefund: false, allowDelete: true },
+  PAID: { allowVoid: false, allowRefund: true, allowDelete: false },
+  REFUNDED: { allowVoid: false, allowRefund: false, allowDelete: false },
+  VOID: { allowVoid: false, allowRefund: false, allowDelete: false },
+};
+
+export const assertBillOperation = (
+  status: string,
+  operation: 'void' | 'refund' | 'delete'
+) => {
+  const guard = BILL_OPERATION_GUARDS[status];
+  if (!guard) throw new HttpError(400, '未知账单状态');
+  if (
+    !guard[
+      `allow${operation.charAt(0).toUpperCase() + operation.slice(1)}` as keyof typeof guard
+    ]
+  )
+    throw new HttpError(400, `当前账单状态不允许此操作`);
+};
+
+export const voidBill = async (billId: string, organizationId: string) => {
+  const bill = await prisma.bill.findFirst({
+    where: { id: billId, organizationId },
+  });
+  if (!bill) throw new HttpError(404, '账单不存在');
+  if (bill.note === 'LEASE_SETTLEMENT')
+    throw new HttpError(400, '退租结算账单不能作废，请通过退租流程处理');
+  assertBillOperation(bill.status, 'void');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.billItem.updateMany({
+      where: { billId },
+      data: { status: 'VOID', amount: 0 },
+    });
+    await tx.bill.update({
+      where: { id: billId },
+      data: { status: 'VOID', totalAmount: 0, failureReason: null },
+    });
+
+    if (bill.mode === 'DEPOSIT') {
+      const deposit = await tx.deposit.findUnique({
+        where: { billId },
+      });
+      if (deposit && deposit.status === 'UNPAID') {
+        await tx.deposit.delete({ where: { id: deposit.id } });
+      }
+    }
+  });
+
+  return prisma.bill.findUnique({
+    where: { id: billId },
+    include: { items: true },
+  });
+};
+
+export const refundBill = async ({
+  billId,
+  organizationId,
+  userId,
+  amount,
+  method,
+  note,
+}: {
+  billId: string;
+  organizationId: string;
+  userId: string;
+  amount: Prisma.Decimal.Value;
+  method: string;
+  note?: string;
+}) => {
+  const bill = await prisma.bill.findFirst({
+    where: { id: billId, organizationId },
+  });
+  if (!bill) throw new HttpError(404, '账单不存在');
+  assertBillOperation(bill.status, 'refund');
+
+  const refundAmount = new Prisma.Decimal(amount);
+  if (refundAmount.lessThanOrEqualTo(0))
+    throw new HttpError(400, '退款金额必须大于 0');
+  const netPaid = new Prisma.Decimal(bill.paidAmount);
+  if (refundAmount.greaterThan(netPaid))
+    throw new HttpError(400, '退款金额不能超过已付金额');
+
+  await prisma.payment.create({
+    data: {
+      billId,
+      userId,
+      type: 'REFUND',
+      amount: refundAmount,
+      method,
+      note,
+      status: 'COMPLETED',
+    },
+  });
+
+  await refreshBillTotals(billId);
+
+  return prisma.bill.findUnique({
+    where: { id: billId },
+    include: { items: true, payments: true },
+  });
 };
 
 const classifyFeeItemType = (name: string) => {
@@ -197,23 +309,39 @@ export const refreshBillTotals = async (billId: string) => {
     (sum, item) => sum.plus(item.amount),
     new Prisma.Decimal(0)
   );
-  const paidAmount = bill.payments.reduce(
-    (sum, payment) => sum.plus(payment.amount),
+  const netPaidAmount = bill.payments.reduce(
+    (sum, payment) =>
+      payment.type === 'REFUND'
+        ? sum.minus(payment.amount)
+        : sum.plus(payment.amount),
     new Prisma.Decimal(0)
   );
-  const status = paidAmount.greaterThanOrEqualTo(totalAmount)
-    ? 'PAID'
-    : paidAmount.greaterThan(0)
-      ? 'PARTIAL_PAID'
-      : bill.items.some((item) => item.status === 'FAILED')
-        ? 'FAILED'
-        : bill.items.some((item) => item.status === 'BILLING')
-          ? 'BILLING'
-          : 'UNPAID';
+  const totalRefunded = bill.payments
+    .filter((p) => p.type === 'REFUND')
+    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
+
+  const status =
+    bill.status === 'VOID'
+      ? 'VOID'
+      : totalRefunded.greaterThanOrEqualTo(
+            bill.payments
+              .filter((p) => p.type === 'RECEIVE')
+              .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0))
+          ) && totalRefunded.greaterThan(0)
+        ? 'REFUNDED'
+        : netPaidAmount.greaterThanOrEqualTo(totalAmount)
+          ? 'PAID'
+          : netPaidAmount.greaterThan(0)
+            ? 'PARTIAL_PAID'
+            : bill.items.some((item) => item.status === 'FAILED')
+              ? 'FAILED'
+              : bill.items.some((item) => item.status === 'BILLING')
+                ? 'BILLING'
+                : 'UNPAID';
 
   await prisma.bill.update({
     where: { id: billId },
-    data: { totalAmount, paidAmount, status },
+    data: { totalAmount, paidAmount: netPaidAmount, status },
   });
 };
 
@@ -382,6 +510,7 @@ export const generateLeaseBills = async (
     },
   });
   if (!lease) return;
+  if (lease.status === 'DRAFT' || lease.status === 'EXPIRED') return;
 
   const billingEnd = getLeaseBillGenerationEnd(lease, today);
   const billingDates = getBillingDatesThrough({
@@ -403,9 +532,7 @@ export const generateLeaseBills = async (
       cycle: lease.cycle,
       billingDate,
     });
-    const dueDate = startOfDay(billingDate)
-      .add(lease.graceDays, 'day')
-      .toDate();
+    const dueDate = startOfDay(billingDate).toDate();
     const prepaid = await prisma.bill.upsert({
       where: {
         leaseId_billingDate_mode: {

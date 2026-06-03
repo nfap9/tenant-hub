@@ -57,6 +57,7 @@ apartmentRouter.get(
         contract: true,
         rooms: {
           include: {
+            reservation: true,
             leases: {
               where: { status: 'ACTIVE' },
               include: {
@@ -111,6 +112,7 @@ apartmentRouter.get(
       where: { apartment: { organizationId: req.organizationId! } },
       include: {
         apartment: true,
+        reservation: true,
         leases: {
           where: { status: 'ACTIVE' },
           include: {
@@ -295,6 +297,20 @@ apartmentRouter.put(
       })
       .parse(req.body);
     await ensureRoomInOrg(req.params.roomId, req.organizationId!);
+
+    if (input.status) {
+      const room = await prisma.room.findUnique({
+        where: { id: req.params.roomId },
+        select: { status: true },
+      });
+      if (room?.status === 'OCCUPIED' && input.status === 'VACANT') {
+        throw new HttpError(
+          400,
+          '不能将已出租房间直接设为空闲，请通过退租流程操作'
+        );
+      }
+    }
+
     ok(
       res,
       await prisma.room.update({
@@ -320,6 +336,7 @@ apartmentRouter.get(
       },
       include: {
         apartment: true,
+        reservation: true,
         leases: {
           where: { status: 'ACTIVE' },
           include: {

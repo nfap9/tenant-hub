@@ -184,8 +184,7 @@ export function RoomList({
                       <View className="detail-row">
                         <Text className="text-muted">交租周期</Text>
                         <Text className="text-muted">
-                          {cycleLabels[roomActiveLease.cycle]} · 宽限{' '}
-                          {roomActiveLease.graceDays ?? 0} 天
+                          {cycleLabels[roomActiveLease.cycle]}
                         </Text>
                       </View>
                       <View className="detail-row">

@@ -64,7 +64,15 @@ export function AllTab({
       />
       <View className="segment">
         {(
-          ['', 'UNPAID', 'PARTIAL_PAID', 'PAID', 'FAILED', 'VOID'] as const
+          [
+            '',
+            'UNPAID',
+            'PARTIAL_PAID',
+            'PAID',
+            'FAILED',
+            'VOID',
+            'REFUNDED',
+          ] as const
         ).map((status) => (
           <View
             key={status || 'all'}
@@ -95,7 +103,11 @@ export function AllTab({
               url: `/pages/bills/monthly-detail?id=${group.id}`,
             })
           }
-          showDelete={group.status !== 'PAID'}
+          showDelete={
+            group.status !== 'PAID' &&
+            group.status !== 'VOID' &&
+            group.status !== 'REFUNDED'
+          }
           onDelete={() => handleDelete(group)}
         />
       ))}

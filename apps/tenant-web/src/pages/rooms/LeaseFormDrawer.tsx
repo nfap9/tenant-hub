@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Drawer,
   Form,
@@ -11,6 +11,7 @@ import {
   message,
   Space,
   Divider,
+  Tag,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,6 +23,7 @@ import {
 import dayjs from 'dayjs';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { createLease } from '@/api/leases';
+import { getReservation } from '@/api/reservations';
 import { today, nextYear } from '@/utils/format';
 import {
   cycleLabels,
@@ -53,6 +55,24 @@ export default function LeaseFormDrawer({
   const [fees, setFees] = useState<LeaseFeeFormItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [showHistoricalBills, setShowHistoricalBills] = useState(false);
+  const [isReserved, setIsReserved] = useState(false);
+
+  useEffect(() => {
+    if (!open || !roomId || !currentOrgId) return;
+    setIsReserved(false);
+    getReservation(currentOrgId, roomId)
+      .then((reservation) => {
+        if (reservation && reservation.name) {
+          setIsReserved(true);
+          form.setFieldsValue({
+            tenantName: reservation.name,
+            tenantPhone: reservation.phone || '',
+            depositAmount: Number(reservation.deposit) || 0,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [open, roomId, currentOrgId, form]);
 
   const addFee = () => {
     const availableTypes = selectableFeeTypes.filter(
@@ -122,7 +142,6 @@ export default function LeaseFormDrawer({
         tenantPhone: String(values.tenantPhone).trim(),
         startDate: dayjs(values.startDate as string).format('YYYY-MM-DD'),
         endDate: dayjs(values.endDate as string).format('YYYY-MM-DD'),
-        graceDays: Number(values.graceDays || 0),
         cycle: String(values.cycle),
         rentAmount: Number(values.rentAmount),
         depositAmount: Number(values.depositAmount || 0),
@@ -182,13 +201,17 @@ export default function LeaseFormDrawer({
           startDate: dayjs(today()),
           endDate: dayjs(nextYear()),
           cycle: 'MONTHLY',
-          graceDays: 0,
           autoRenew: true,
           generateHistoricalBills: false,
           waterUnitPrice: 0,
           powerUnitPrice: 0,
         }}
       >
+        {isReserved && (
+          <Tag color="blue" className="mb-12">
+            预留人信息已锁定，如需修改请先取消预留
+          </Tag>
+        )}
         <Form.Item
           label="租客姓名"
           name="tenantName"
@@ -197,6 +220,7 @@ export default function LeaseFormDrawer({
           <Input
             placeholder="请输入姓名"
             prefix={<UserOutlined className="text-subtle" />}
+            disabled={isReserved}
           />
         </Form.Item>
         <Form.Item
@@ -207,6 +231,7 @@ export default function LeaseFormDrawer({
           <Input
             placeholder="请输入手机号"
             prefix={<PhoneOutlined className="text-subtle" />}
+            disabled={isReserved}
           />
         </Form.Item>
         <div className={styles.formGrid2}>
@@ -253,13 +278,6 @@ export default function LeaseFormDrawer({
             />
           </Form.Item>
         </div>
-        <Form.Item label="宽限天数" name="graceDays">
-          <InputNumber
-            min={0}
-            className="w-full"
-            placeholder="交租日后几日内"
-          />
-        </Form.Item>
         <Form.Item label="交租周期" name="cycle" rules={[{ required: true }]}>
           <Select
             options={(['MONTHLY', 'QUARTERLY', 'YEARLY'] as RentCycle[]).map(

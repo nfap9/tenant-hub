@@ -54,7 +54,11 @@ export default function MonthlyDetailPage() {
     [group]
   );
   const canPay = useMemo(
-    () => group && group.status !== 'PAID' && group.status !== 'VOID',
+    () =>
+      group &&
+      group.status !== 'PAID' &&
+      group.status !== 'VOID' &&
+      group.status !== 'REFUNDED',
     [group]
   );
 
@@ -227,7 +231,9 @@ export default function MonthlyDetailPage() {
             </Text>
             <View className="action-row-inline">
               <Text className="card-stat">¥{money(child.totalAmount)}</Text>
-              {child.status !== 'PAID' ? (
+              {child.status !== 'PAID' &&
+              child.status !== 'VOID' &&
+              child.status !== 'REFUNDED' ? (
                 <Text
                   className="danger-text"
                   onClick={() => handleDeleteChild(child.id)}
@@ -245,7 +251,9 @@ export default function MonthlyDetailPage() {
               </Text>
               <View className="action-row-inline">
                 <Text className="text-muted">¥{money(item.amount)}</Text>
-                {child.status !== 'PAID' ? (
+                {child.status !== 'PAID' &&
+                child.status !== 'VOID' &&
+                child.status !== 'REFUNDED' ? (
                   <Text
                     className="link-text"
                     onClick={() =>

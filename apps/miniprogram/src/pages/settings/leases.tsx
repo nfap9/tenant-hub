@@ -9,12 +9,17 @@ import type { Lease, LeaseStatus } from '../../types/domain';
 import './index.scss';
 
 const statusLabels: Record<LeaseStatus, string> = {
+  DRAFT: '草稿',
   ACTIVE: '生效中',
   TERMINATED: '已终止',
   EXPIRED: '已到期',
 };
 
-const toneForStatus: Record<LeaseStatus, 'success' | 'warning' | 'danger'> = {
+const toneForStatus: Record<
+  LeaseStatus,
+  'success' | 'warning' | 'danger' | 'neutral'
+> = {
+  DRAFT: 'neutral',
   ACTIVE: 'success',
   TERMINATED: 'warning',
   EXPIRED: 'danger',

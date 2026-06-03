@@ -105,3 +105,22 @@ export async function generateBills(
     }
   );
 }
+
+export async function voidBill(organizationId: string, billId: string) {
+  return apiClient<Bill>(`/bills/${billId}/void`, {
+    method: 'POST',
+    organizationId,
+  });
+}
+
+export async function refundBill(
+  organizationId: string,
+  billId: string,
+  payload: { amount: number; method: string; note?: string }
+) {
+  return apiClient<Bill>(`/bills/${billId}/refund`, {
+    method: 'POST',
+    body: payload,
+    organizationId,
+  });
+}

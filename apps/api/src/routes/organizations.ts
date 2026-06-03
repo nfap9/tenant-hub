@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { customAlphabet } from 'nanoid';
 import { z } from 'zod';
-import { env } from '../config/env.js';
 import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
@@ -16,8 +15,6 @@ import {
   isQuotaLimitEnabled,
 } from '../services/quotas.js';
 import {
-  assertInviteJoinable,
-  buildInviteExpiry,
   generateInviteCode,
   normalizeInviteCode,
 } from '../services/orgInvites.js';
@@ -32,7 +29,19 @@ orgRouter.get(
   asyncHandler(async (req, res) => {
     const memberships = await prisma.orgMember.findMany({
       where: { userId: req.user!.id, status: 'ACTIVE' },
-      include: { organization: true, role: true },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            inviteCode: true,
+            description: true,
+            ownerId: true,
+          },
+        },
+        role: true,
+      },
     });
     ok(res, memberships);
   })
@@ -52,6 +61,7 @@ orgRouter.post(
         name: input.name,
         description: input.description,
         code: orgCode(),
+        inviteCode: generateInviteCode(),
         ownerId: req.user!.id,
         members: { create: { userId: req.user!.id, roleId: role.id } },
       },
@@ -64,12 +74,12 @@ orgRouter.post(
   '/join',
   asyncHandler(async (req, res) => {
     const input = z.object({ inviteCode: z.string().min(6) }).parse(req.body);
-    const invite = await prisma.orgInvite.findUnique({
-      where: { code: normalizeInviteCode(input.inviteCode) },
-      include: { organization: true },
+    const organization = await prisma.organization.findUnique({
+      where: { inviteCode: normalizeInviteCode(input.inviteCode) },
     });
-    if (!invite) throw new HttpError(404, '邀请码不存在');
-    assertInviteJoinable({ invite });
+    if (!organization) throw new HttpError(404, '邀请码不存在');
+    if (organization.status !== 'ACTIVE')
+      throw new HttpError(403, '组织不可加入');
 
     const role = await prisma.role.findUniqueOrThrow({
       where: { code: 'readonly' },
@@ -78,98 +88,57 @@ orgRouter.post(
       const existingMember = await tx.orgMember.findUnique({
         where: {
           organizationId_userId: {
-            organizationId: invite.organizationId,
+            organizationId: organization.id,
             userId: req.user!.id,
           },
         },
       });
-      if (existingMember?.status === 'ACTIVE') return existingMember;
+      if (existingMember?.status === 'ACTIVE')
+        throw new HttpError(400, '不能重复加入同一个组织');
       await enforceOrganizationQuota(
         tx,
-        invite.organizationId,
+        organization.id,
         'member',
         async () => {
           const activeMemberCount = await tx.orgMember.count({
-            where: { organizationId: invite.organizationId, status: 'ACTIVE' },
+            where: { organizationId: organization.id, status: 'ACTIVE' },
           });
           return activeMemberCount + 1;
         }
       );
-      const consumed = await tx.orgInvite.updateMany({
-        where: { id: invite.id, usedCount: { lt: invite.maxUses } },
-        data: {
-          usedCount: { increment: 1 },
-          usedAt: new Date(),
-          usedById: req.user!.id,
-        },
-      });
-      if (consumed.count !== 1) throw new HttpError(400, '邀请码已被使用');
       return tx.orgMember.upsert({
         where: {
           organizationId_userId: {
-            organizationId: invite.organizationId,
+            organizationId: organization.id,
             userId: req.user!.id,
           },
         },
         create: {
-          organizationId: invite.organizationId,
+          organizationId: organization.id,
           userId: req.user!.id,
           roleId: role.id,
         },
         update: { status: 'ACTIVE' },
       });
     });
-    ok(res, { organization: invite.organization, member });
-  })
-);
-
-orgRouter.get(
-  '/:organizationId/invites',
-  requireOrg,
-  requirePermission(PERMISSIONS.MEMBER_MANAGE),
-  asyncHandler(async (req, res) => {
-    ok(
-      res,
-      await prisma.orgInvite.findMany({
-        where: { organizationId: req.organizationId! },
-        include: {
-          createdBy: { select: { id: true, username: true, phone: true } },
-          usedBy: { select: { id: true, username: true, phone: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      })
-    );
+    ok(res, { organization, member });
   })
 );
 
 orgRouter.post(
-  '/:organizationId/invites',
+  '/:organizationId/refresh-invite-code',
   requireOrg,
-  requirePermission(PERMISSIONS.MEMBER_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        expiresInHours: z.coerce
-          .number()
-          .int()
-          .min(1)
-          .max(env.INVITE_EXPIRES_MAX_HOURS)
-          .default(env.INVITE_EXPIRES_IN_HOURS),
-      })
-      .parse(req.body);
-    const invite = await prisma.orgInvite.create({
-      data: {
-        organizationId: req.organizationId!,
-        code: generateInviteCode(),
-        expiresAt: buildInviteExpiry(new Date(), input.expiresInHours),
-        createdById: req.user!.id,
-      },
-      include: {
-        createdBy: { select: { id: true, username: true, phone: true } },
-      },
+    const org = await prisma.organization.findUniqueOrThrow({
+      where: { id: req.organizationId! },
     });
-    ok(res, invite);
+    if (org.ownerId !== req.user!.id)
+      throw new HttpError(403, '仅所有者可刷新邀请码');
+    const updated = await prisma.organization.update({
+      where: { id: org.id },
+      data: { inviteCode: generateInviteCode() },
+    });
+    ok(res, { inviteCode: updated.inviteCode });
   })
 );
 

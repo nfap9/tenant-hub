@@ -2,8 +2,21 @@
 @use '@/styles/mixins' as *;
 
 .dashboard-page {
-  .stat-grid {
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
     margin-top: 16px;
+
+    @media (max-width: 991px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .occupancy-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 
   .dashboard-card-title {

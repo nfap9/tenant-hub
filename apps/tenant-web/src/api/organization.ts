@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { OrgInvite, OrgMember, OrgRole } from '@/types/domain';
+import type { OrgMember, OrgRole } from '@/types/domain';
 
 export type CreateOrganizationInput = {
   name: string;
@@ -8,10 +8,6 @@ export type CreateOrganizationInput = {
 
 export type JoinOrganizationInput = {
   inviteCode: string;
-};
-
-export type CreateInviteInput = {
-  expiresInHours?: number;
 };
 
 export type SubscriptionOverview = {
@@ -38,21 +34,14 @@ export async function joinOrganization(input: JoinOrganizationInput) {
   });
 }
 
-export async function getOrganizationInvites(organizationId: string) {
-  return apiClient<OrgInvite[]>(`/organizations/${organizationId}/invites`, {
-    organizationId,
-  });
-}
-
-export async function createOrganizationInvite(
-  organizationId: string,
-  input?: CreateInviteInput
-) {
-  return apiClient<OrgInvite>(`/organizations/${organizationId}/invites`, {
-    method: 'POST',
-    organizationId,
-    body: (input ?? {}) as Record<string, unknown>,
-  });
+export async function refreshOrganizationInviteCode(organizationId: string) {
+  return apiClient<{ inviteCode: string }>(
+    `/organizations/${organizationId}/refresh-invite-code`,
+    {
+      method: 'POST',
+      organizationId,
+    }
+  );
 }
 
 export async function getOrganizationMembers(organizationId: string) {

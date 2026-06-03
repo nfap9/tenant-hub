@@ -41,6 +41,8 @@ import ApartmentFormModal from './ApartmentFormModal';
 import ApartmentExpenseModal from './ApartmentExpenseModal';
 import RoomBatchDrawer from './RoomBatchDrawer';
 import RoomFormDrawer from '@/pages/rooms/RoomFormDrawer';
+import LeaseFormDrawer from '@/pages/rooms/LeaseFormDrawer';
+import ReservationDrawer from '@/pages/rooms/ReservationDrawer';
 import styles from './ApartmentDetailPage.module.scss';
 
 export default function ApartmentDetailPage() {
@@ -60,6 +62,10 @@ export default function ApartmentDetailPage() {
   const [batchDrawerOpen, setBatchDrawerOpen] = useState(false);
   const [formDrawerOpen, setFormDrawerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [leaseDrawerOpen, setLeaseDrawerOpen] = useState(false);
+  const [leaseRoomId, setLeaseRoomId] = useState<string>('');
+  const [reserveDrawerOpen, setReserveDrawerOpen] = useState(false);
+  const [reserveRoomId, setReserveRoomId] = useState<string>('');
 
   const loadApartments = useCallback(async () => {
     if (!currentOrgId) return;
@@ -449,6 +455,15 @@ export default function ApartmentDetailPage() {
                           key={room.id}
                           room={room}
                           apartmentName={apartment.name}
+                          onStatusChange={loadApartments}
+                          onSign={(roomId) => {
+                            setLeaseRoomId(roomId);
+                            setLeaseDrawerOpen(true);
+                          }}
+                          onReserve={(roomId) => {
+                            setReserveRoomId(roomId);
+                            setReserveDrawerOpen(true);
+                          }}
                         />
                       ))}
                     </div>
@@ -504,6 +519,26 @@ export default function ApartmentDetailPage() {
         onCancel={() => setFormDrawerOpen(false)}
         onSuccess={() => {
           setFormDrawerOpen(false);
+          loadApartments();
+        }}
+      />
+
+      <LeaseFormDrawer
+        open={leaseDrawerOpen}
+        roomId={leaseRoomId}
+        onCancel={() => setLeaseDrawerOpen(false)}
+        onSuccess={() => {
+          setLeaseDrawerOpen(false);
+          loadApartments();
+        }}
+      />
+
+      <ReservationDrawer
+        open={reserveDrawerOpen}
+        roomId={reserveRoomId}
+        onCancel={() => setReserveDrawerOpen(false)}
+        onSuccess={() => {
+          setReserveDrawerOpen(false);
           loadApartments();
         }}
       />

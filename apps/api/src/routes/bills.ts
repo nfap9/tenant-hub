@@ -7,12 +7,15 @@ import {
   requirePermission,
 } from '../middleware/auth.js';
 import {
+  assertBillOperation,
   calculateUtilityLineAmounts,
   generateCurrentLeaseBills,
   generateLeaseBills,
   recordBillPayment,
+  refundBill,
   refreshBillTotals,
   retryPostpaidBillAndMonthlyBill,
+  voidBill,
 } from '../services/billing.js';
 import { toCsv } from '../services/csv.js';
 import { PERMISSIONS } from '../services/roles.js';
@@ -463,7 +466,7 @@ billRouter.delete(
       include: { items: true, payments: true },
     });
     if (!bill) throw new HttpError(404, '账单不存在');
-    if (bill.status === 'PAID') throw new HttpError(400, '已结清账单不能删除');
+    assertBillOperation(bill.status, 'delete');
 
     await prisma.$transaction([
       prisma.payment.deleteMany({ where: { billId: bill.id } }),
@@ -471,5 +474,36 @@ billRouter.delete(
     ]);
 
     ok(res, { deleted: true });
+  })
+);
+
+billRouter.post(
+  '/:id/void',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    ok(res, await voidBill(req.params.id, req.organizationId!));
+  })
+);
+
+billRouter.post(
+  '/:id/refund',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        amount: z.coerce.number().positive(),
+        method: z.string().min(1),
+        note: z.string().optional(),
+      })
+      .parse(req.body);
+    ok(
+      res,
+      await refundBill({
+        billId: req.params.id,
+        organizationId: req.organizationId!,
+        userId: req.user!.id,
+        ...input,
+      })
+    );
   })
 );

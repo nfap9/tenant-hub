@@ -11,6 +11,7 @@ import { depositRouter } from './routes/deposits.js';
 import { leaseRouter } from './routes/leases.js';
 import { orgRouter } from './routes/organizations.js';
 import { platformRouter } from './routes/platform.js';
+import { reservationRouter } from './routes/reservations.js';
 import { errorHandler } from './middleware/error.js';
 
 export const app = express();
@@ -45,6 +46,7 @@ app.use('/api/apartments', apartmentContractRouter);
 app.use('/api/leases', leaseRouter);
 app.use('/api/bills', billRouter);
 app.use('/api/deposits', depositRouter);
+app.use('/api/reservations', reservationRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/platform', platformRouter);
 app.use(errorHandler);

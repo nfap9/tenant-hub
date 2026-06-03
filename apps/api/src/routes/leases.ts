@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
@@ -69,13 +70,13 @@ leaseRouter.post(
         tenantPhone: z.string().min(6),
         startDate: z.coerce.date(),
         endDate: z.coerce.date(),
-        graceDays: z.coerce.number().int().min(0).default(0),
         cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']),
         rentAmount: amountSchema,
         depositAmount: amountSchema.default(0),
         waterUnitPrice: amountSchema,
         powerUnitPrice: amountSchema,
         autoRenew: z.boolean().default(false),
+        status: z.enum(['DRAFT', 'ACTIVE']).default('ACTIVE'),
         fees: z
           .array(
             z.object({
@@ -99,8 +100,13 @@ leaseRouter.post(
       select: { id: true, status: true },
     });
     if (!room) throw new HttpError(404, '房间不存在');
-    if (room.status !== 'VACANT')
-      throw new HttpError(400, '仅空闲房间可以签约');
+
+    const isDraft = leaseData.status === 'DRAFT';
+
+    if (!isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
+      throw new HttpError(400, '仅空闲或已预留房间可以签约');
+    if (isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
+      throw new HttpError(400, '仅空闲或已预留房间可以保存草稿');
 
     let lease;
     if (leaseData.depositAmount > 0) {
@@ -110,45 +116,81 @@ leaseRouter.post(
             ...leaseData,
             organizationId: req.organizationId!,
             roomId,
+            status: leaseData.status,
             fees: { create: fees },
           },
           include: { room: { include: { apartment: true } }, fees: true },
         });
 
-        const bill = await tx.bill.create({
-          data: {
-            organizationId: req.organizationId!,
-            leaseId: created.id,
-            mode: 'DEPOSIT',
-            billingDate: startOfLeaseDay(leaseData.startDate).toDate(),
-            periodStart: startOfLeaseDay(leaseData.startDate).toDate(),
-            periodEnd: startOfLeaseDay(leaseData.endDate).toDate(),
-            dueDate: startOfLeaseDay(leaseData.startDate).toDate(),
-            status: 'UNPAID',
-            totalAmount: leaseData.depositAmount,
-            paidAmount: 0,
-            items: {
-              create: [
-                {
-                  type: 'DEPOSIT',
-                  name: '押金',
-                  amount: leaseData.depositAmount,
-                  status: 'UNPAID',
-                },
-              ],
-            },
-          },
-        });
+        if (!isDraft) {
+          const reservation = await tx.reservation.findUnique({
+            where: { roomId },
+          });
+          const offset =
+            reservation && reservation.deposit.greaterThan(0)
+              ? reservation.deposit
+              : new Prisma.Decimal(0);
+          const netDeposit = new Prisma.Decimal(leaseData.depositAmount).minus(
+            offset
+          );
 
-        await tx.deposit.create({
-          data: {
-            organizationId: req.organizationId!,
-            leaseId: created.id,
-            billId: bill.id,
-            amount: leaseData.depositAmount,
-            status: 'UNPAID',
-          },
-        });
+          const bill = await tx.bill.create({
+            data: {
+              organizationId: req.organizationId!,
+              leaseId: created.id,
+              mode: 'DEPOSIT',
+              billingDate: startOfLeaseDay(leaseData.startDate).toDate(),
+              periodStart: startOfLeaseDay(leaseData.startDate).toDate(),
+              periodEnd: startOfLeaseDay(leaseData.endDate).toDate(),
+              dueDate: startOfLeaseDay(leaseData.startDate).toDate(),
+              status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
+              totalAmount: netDeposit,
+              paidAmount: offset,
+              note: offset.greaterThan(0) ? '预留定金已抵扣' : undefined,
+              items: {
+                create: [
+                  {
+                    type: 'DEPOSIT',
+                    name: offset.greaterThan(0)
+                      ? '押金（预留定金已抵扣）'
+                      : '押金',
+                    amount: netDeposit,
+                    status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
+                  },
+                ],
+              },
+            },
+          });
+
+          if (offset.greaterThan(0)) {
+            await tx.payment.create({
+              data: {
+                billId: bill.id,
+                userId: req.user!.id,
+                type: 'DEDUCT',
+                amount: offset,
+                method: reservation?.paymentMethod || '预留定金抵扣',
+                note: '预留定金转押金',
+                status: 'COMPLETED',
+              },
+            });
+          }
+
+          await tx.deposit.create({
+            data: {
+              organizationId: req.organizationId!,
+              leaseId: created.id,
+              billId: bill.id,
+              amount: leaseData.depositAmount,
+              paidAmount: offset,
+              status: offset.greaterThan(0) ? 'PAID' : 'UNPAID',
+            },
+          });
+
+          if (reservation) {
+            await tx.reservation.delete({ where: { roomId } });
+          }
+        }
 
         return tx.lease.findUniqueOrThrow({
           where: { id: created.id },
@@ -161,22 +203,28 @@ leaseRouter.post(
           ...leaseData,
           organizationId: req.organizationId!,
           roomId,
+          status: leaseData.status,
           fees: { create: fees },
         },
         include: leaseInclude,
       });
     }
-    await prisma.room.update({
-      where: { id: roomId },
-      data: { status: 'OCCUPIED' },
-    });
-    const isHistorical = startOfLeaseDay(input.startDate).isBefore(
-      startOfLeaseDay(new Date()),
-      'day'
-    );
-    await generateLeaseBills(lease.id, new Date(), {
-      onlyCurrentPeriod: isHistorical && !generateHistoricalBills,
-    });
+
+    if (!isDraft) {
+      await prisma.room.update({
+        where: { id: roomId },
+        data: { status: 'OCCUPIED' },
+      });
+
+      const isHistorical = startOfLeaseDay(input.startDate).isBefore(
+        startOfLeaseDay(new Date()),
+        'day'
+      );
+      await generateLeaseBills(lease.id, new Date(), {
+        onlyCurrentPeriod: isHistorical && !generateHistoricalBills,
+      });
+    }
+
     ok(res, withLeaseLifecycle(lease));
   })
 );
@@ -238,6 +286,122 @@ leaseRouter.put(
     });
 
     ok(res, withLeaseLifecycle(updated));
+  })
+);
+
+leaseRouter.post(
+  '/:id/activate',
+  requirePermission(PERMISSIONS.LEASE_MANAGE),
+  asyncHandler(async (req, res) => {
+    const lease = await prisma.lease.findFirst({
+      where: { id: req.params.id, organizationId: req.organizationId! },
+      include: { fees: true },
+    });
+    if (!lease) throw new HttpError(404, '租约不存在');
+    if (lease.status !== 'DRAFT')
+      throw new HttpError(400, '仅草稿状态的租约可以激活');
+
+    const room = await prisma.room.findFirst({
+      where: { id: lease.roomId },
+      select: { id: true, status: true },
+    });
+    if (!room) throw new HttpError(404, '房间不存在');
+    if (room.status !== 'VACANT' && room.status !== 'RESERVED')
+      throw new HttpError(400, '房间已被占用，无法激活租约');
+
+    const activated = await prisma.$transaction(async (tx) => {
+      if (lease.depositAmount.greaterThan(0)) {
+        const reservation = await tx.reservation.findUnique({
+          where: { roomId: lease.roomId },
+        });
+        const offset =
+          reservation && reservation.deposit.greaterThan(0)
+            ? reservation.deposit
+            : new Prisma.Decimal(0);
+        const netDeposit = new Prisma.Decimal(lease.depositAmount).minus(
+          offset
+        );
+        const bill = await tx.bill.create({
+          data: {
+            organizationId: req.organizationId!,
+            leaseId: lease.id,
+            mode: 'DEPOSIT',
+            billingDate: startOfLeaseDay(lease.startDate).toDate(),
+            periodStart: startOfLeaseDay(lease.startDate).toDate(),
+            periodEnd: startOfLeaseDay(lease.endDate).toDate(),
+            dueDate: startOfLeaseDay(lease.startDate).toDate(),
+            status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
+            totalAmount: netDeposit,
+            paidAmount: offset,
+            note: offset.greaterThan(0) ? '预留定金已抵扣' : undefined,
+            items: {
+              create: [
+                {
+                  type: 'DEPOSIT',
+                  name: offset.greaterThan(0)
+                    ? '押金（预留定金已抵扣）'
+                    : '押金',
+                  amount: netDeposit,
+                  status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
+                },
+              ],
+            },
+          },
+        });
+
+        if (offset.greaterThan(0)) {
+          await tx.payment.create({
+            data: {
+              billId: bill.id,
+              userId: req.user!.id,
+              type: 'DEDUCT',
+              amount: offset,
+              method: reservation?.paymentMethod || '预留定金抵扣',
+              note: '预留定金转押金',
+              status: 'COMPLETED',
+            },
+          });
+        }
+
+        await tx.deposit.create({
+          data: {
+            organizationId: req.organizationId!,
+            leaseId: lease.id,
+            billId: bill.id,
+            amount: lease.depositAmount,
+            paidAmount: offset,
+            status: offset.greaterThan(0) ? 'PAID' : 'UNPAID',
+          },
+        });
+
+        if (reservation) {
+          await tx.reservation.delete({ where: { roomId: lease.roomId } });
+        }
+      }
+
+      const updated = await tx.lease.update({
+        where: { id: lease.id },
+        data: { status: 'ACTIVE' },
+        include: leaseInclude,
+      });
+
+      return updated;
+    });
+
+    await prisma.room.update({
+      where: { id: lease.roomId },
+      data: { status: 'OCCUPIED' },
+    });
+
+    const isHistorical = startOfLeaseDay(lease.startDate).isBefore(
+      startOfLeaseDay(new Date()),
+      'day'
+    );
+    await generateLeaseBills(lease.id, new Date(), {
+      onlyCurrentPeriod: isHistorical,
+    });
+
+    ok(res, withLeaseLifecycle(activated));
   })
 );
 

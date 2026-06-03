@@ -16,6 +16,7 @@ export const toneForBillStatus = (
 ): 'success' | 'warning' | 'error' | 'default' => {
   if (status === 'PAID') return 'success';
   if (status === 'FAILED' || status === 'VOID') return 'error';
+  if (status === 'REFUNDED') return 'default';
   if (status === 'BILLING') return 'default';
   return 'warning';
 };

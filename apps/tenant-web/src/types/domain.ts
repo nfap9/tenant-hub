@@ -3,6 +3,7 @@ export type Membership = {
     id: string;
     name: string;
     code: string;
+    inviteCode?: string;
     description?: string;
     ownerId: string;
   };
@@ -69,7 +70,7 @@ export type SubscriptionOverview = {
 
 export type RoomStatus = 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
 export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
-export type LeaseStatus = 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
+export type LeaseStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
 export type TerminationType = 'EXPIRED' | 'NEGOTIATED' | 'BREACH';
 export type BillStatus =
   | 'DRAFT'
@@ -147,7 +148,6 @@ export type Lease = {
   tenantPhone: string;
   startDate: string;
   endDate: string;
-  graceDays: number;
   cycle: RentCycle;
   rentAmount: string | number;
   depositAmount: string | number;
@@ -177,6 +177,20 @@ export type Room = {
   status: RoomStatus;
   apartment?: Apartment;
   leases?: Lease[];
+  reservation?: Reservation;
+};
+
+export type Reservation = {
+  id: string;
+  roomId: string;
+  name: string;
+  phone: string;
+  deposit: string | number;
+  paymentMethod?: string;
+  expectedMoveInDate: string;
+  createdAt: string;
+  updatedAt: string;
+  room?: Room;
 };
 
 export type BillItem = {

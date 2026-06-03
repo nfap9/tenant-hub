@@ -69,7 +69,7 @@ export type SubscriptionOverview = {
 
 export type RoomStatus = 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
 export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
-export type LeaseStatus = 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
+export type LeaseStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
 export type TerminationType = 'EXPIRED' | 'NEGOTIATED' | 'BREACH';
 export type BillStatus =
   | 'DRAFT'
@@ -138,7 +138,6 @@ export type Lease = {
   tenantPhone: string;
   startDate: string;
   endDate: string;
-  graceDays: number;
   cycle: RentCycle;
   rentAmount: string | number;
   depositAmount: string | number;

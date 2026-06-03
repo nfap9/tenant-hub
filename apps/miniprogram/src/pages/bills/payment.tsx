@@ -73,7 +73,10 @@ export default function PaymentPage() {
       const first = paymentBills[0];
       if (first) {
         setPaymentRoomId(roomKeyForBill(first));
-        const isPayable = first.status !== 'PAID' && first.status !== 'VOID';
+        const isPayable =
+          first.status !== 'PAID' &&
+          first.status !== 'VOID' &&
+          first.status !== 'REFUNDED';
         setForm({
           billId: isPayable ? first.id : '',
           amount: isPayable ? String(remainingAmount(first)) : '',

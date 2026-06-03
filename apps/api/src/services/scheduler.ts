@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { processAutoRenewLeases } from './autoRenew.js';
 import { generateCurrentLeaseBills } from './billing.js';
+import { expireLeases } from './leaseLifecycle.js';
 import { prisma } from '../config/prisma.js';
 
 let running = false;
@@ -16,11 +17,40 @@ export const runDailyTasks = async () => {
   try {
     console.info('[Scheduler] 开始执行每日任务');
 
-    // 1. Auto-renew leases that have expired with autoRenew=true
+    // 1. Expire non-auto-renew leases past their end date
+    const expireResult = await expireLeases();
+    console.info(
+      `[Scheduler] 租约过期处理完成: ${expireResult.expiredCount} 条`
+    );
+
+    // 2. Release reservations whose expected move-in date has passed
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiredReservations = await prisma.reservation.findMany({
+      where: { expectedMoveInDate: { lt: today } },
+      select: { roomId: true },
+    });
+    if (expiredReservations.length > 0) {
+      const roomIds = expiredReservations.map((r) => r.roomId);
+      await prisma.$transaction([
+        prisma.reservation.deleteMany({
+          where: { roomId: { in: roomIds } },
+        }),
+        prisma.room.updateMany({
+          where: { id: { in: roomIds }, status: 'RESERVED' },
+          data: { status: 'VACANT' },
+        }),
+      ]);
+      console.info(
+        `[Scheduler] 预订自动释放完成: ${expiredReservations.length} 间`
+      );
+    }
+
+    // 3. Auto-renew leases that have expired with autoRenew=true
     const renewResult = await processAutoRenewLeases();
     console.info(`[Scheduler] 自动续约完成: ${renewResult.processedCount} 条`);
 
-    // 2. Generate bills for all active organizations
+    // 4. Generate bills for all active organizations
     const activeOrgs = await prisma.organization.findMany({
       where: { status: 'ACTIVE' },
       select: { id: true },

@@ -28,7 +28,6 @@ export default function LeaseFormPage() {
     tenantPhone: '',
     startDate: today(),
     endDate: nextYear(),
-    graceDays: '0',
     cycle: 'MONTHLY' as RentCycle,
     rentAmount: '',
     depositAmount: '',
@@ -111,7 +110,6 @@ export default function LeaseFormPage() {
           tenantPhone: form.tenantPhone.trim(),
           startDate: form.startDate,
           endDate: form.endDate,
-          graceDays: Number(form.graceDays || 0),
           cycle: form.cycle,
           rentAmount: Number(form.rentAmount),
           depositAmount: Number(form.depositAmount || 0),
@@ -188,15 +186,6 @@ export default function LeaseFormPage() {
             type="number"
             value={form.depositAmount}
             onChange={(value) => updateForm('depositAmount', value)}
-          />
-        </View>
-        <View className="form-grid">
-          <Input
-            label="宽限天数"
-            placeholder="交租日后几日内"
-            type="number"
-            value={form.graceDays}
-            onChange={(value) => updateForm('graceDays', value)}
           />
         </View>
         <Text className="field-label">交租周期</Text>

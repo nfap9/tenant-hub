@@ -1,5 +1,5 @@
 import { compactMoney } from '@/utils/format';
-import { Card, Col, Row } from 'antd';
+import { Card } from 'antd';
 import styles from './OverviewCard.module.scss';
 
 interface Props {
@@ -21,26 +21,26 @@ export default function Overview({
     >
       <div className={styles.overviewLabel}>本月经营概览</div>
       <div className={styles.overviewTotal}>¥{compactMoney(monthlyIncome)}</div>
-      <Row gutter={16}>
-        <Col span={8}>
+      <div className={styles.overviewStats}>
+        <div>
           <div className={styles.overviewStatLabel}>已收</div>
           <div className={styles.overviewStatValue}>
             ¥{compactMoney(paidThisMonth)}
           </div>
-        </Col>
-        <Col span={8}>
+        </div>
+        <div>
           <div className={styles.overviewStatLabel}>待收</div>
           <div className={styles.overviewStatValue}>
             ¥{compactMoney(unpaidTotal)}
           </div>
-        </Col>
-        <Col span={8}>
+        </div>
+        <div>
           <div className={styles.overviewStatLabel}>支出</div>
           <div className={styles.overviewStatValue}>
             ¥{compactMoney(thisMonthExpense)}
           </div>
-        </Col>
-      </Row>
+        </div>
+      </div>
     </Card>
   );
 }

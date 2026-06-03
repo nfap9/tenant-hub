@@ -107,7 +107,6 @@ export default function LeaseFormPage() {
         tenantPhone: String(values.tenantPhone).trim(),
         startDate: dayjs(values.startDate as string).format('YYYY-MM-DD'),
         endDate: dayjs(values.endDate as string).format('YYYY-MM-DD'),
-        graceDays: Number(values.graceDays || 0),
         cycle: String(values.cycle),
         rentAmount: Number(values.rentAmount),
         depositAmount: Number(values.depositAmount || 0),
@@ -150,7 +149,6 @@ export default function LeaseFormPage() {
               startDate: dayjs(today()),
               endDate: dayjs(nextYear()),
               cycle: 'MONTHLY',
-              graceDays: 0,
               autoRenew: true,
               generateHistoricalBills: false,
               waterUnitPrice: 0,
@@ -221,13 +219,6 @@ export default function LeaseFormPage() {
                 />
               </Form.Item>
             </div>
-            <Form.Item label="宽限天数" name="graceDays">
-              <InputNumber
-                min={0}
-                className="w-full"
-                placeholder="交租日后几日内"
-              />
-            </Form.Item>
             <Form.Item
               label="交租周期"
               name="cycle"

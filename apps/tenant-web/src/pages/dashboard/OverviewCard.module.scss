@@ -22,6 +22,12 @@
     font-family: $th-font-heading;
   }
 
+  .overview-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
   .overview-stat-label {
     color: rgba(255, 255, 255, 0.75);
     font-size: 12px;

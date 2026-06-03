@@ -86,7 +86,6 @@ export const emptyLeaseForm = {
   tenantPhone: '',
   startDate: '',
   endDate: '',
-  graceDays: '0',
   cycle: 'MONTHLY' as RentCycle,
   rentAmount: '',
   depositAmount: '',

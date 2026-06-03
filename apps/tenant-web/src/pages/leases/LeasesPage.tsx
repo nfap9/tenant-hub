@@ -1,9 +1,19 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Tabs, Tag, Input, Button, message, Spin } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
-import { useAppSession } from '@/context/AppSessionContext';
-import { getLeases } from '@/api/leases';
+import {
+  Table,
+  Tabs,
+  Tag,
+  Input,
+  Button,
+  message,
+  Spin,
+  Popconfirm,
+  Space,
+} from 'antd';
+import { EyeOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
+import { getLeases, activateLease } from '@/api/leases';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Lease, LeaseStatus } from '@/types/domain';
@@ -12,20 +22,23 @@ import { cycleLabels } from '@/pages/rooms/constants';
 import styles from './LeasesPage.module.scss';
 
 const statusLabels: Record<LeaseStatus, string> = {
+  DRAFT: '草稿',
   ACTIVE: '生效中',
   TERMINATED: '已终止',
   EXPIRED: '已到期',
 };
 
 const statusColors: Record<LeaseStatus, string> = {
+  DRAFT: 'default',
   ACTIVE: 'success',
   TERMINATED: 'warning',
-  EXPIRED: 'default',
+  EXPIRED: 'error',
 };
 
 type LeaseFilter =
   | 'ALL'
   | 'ACTIVE'
+  | 'DRAFT'
   | 'AUTO_RENEW'
   | 'EXPIRING_SOON'
   | 'TERMINATED';
@@ -33,6 +46,7 @@ type LeaseFilter =
 const filterLabels: Record<LeaseFilter, string> = {
   ALL: '全部',
   ACTIVE: '有效',
+  DRAFT: '草稿',
   AUTO_RENEW: '自动续约',
   EXPIRING_SOON: '近到期',
   TERMINATED: '已终止',
@@ -41,6 +55,7 @@ const filterLabels: Record<LeaseFilter, string> = {
 const filters: LeaseFilter[] = [
   'ALL',
   'ACTIVE',
+  'DRAFT',
   'AUTO_RENEW',
   'EXPIRING_SOON',
   'TERMINATED',
@@ -49,6 +64,7 @@ const filters: LeaseFilter[] = [
 export default function LeasesPage() {
   const navigate = useNavigate();
   const { currentOrgId } = useAppSession();
+  const canManageLease = useHasPermission('lease:manage');
   const [leases, setLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<LeaseFilter>('ALL');
@@ -67,6 +83,17 @@ export default function LeasesPage() {
     }
   }, [currentOrgId]);
 
+  const handleActivate = async (leaseId: string) => {
+    if (!currentOrgId) return;
+    try {
+      await activateLease(currentOrgId, leaseId);
+      message.success('租约已激活');
+      loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '激活租约失败');
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -76,6 +103,8 @@ export default function LeasesPage() {
 
     if (filter === 'ACTIVE') {
       result = result.filter((l) => l.status === 'ACTIVE');
+    } else if (filter === 'DRAFT') {
+      result = result.filter((l) => l.status === 'DRAFT');
     } else if (filter === 'AUTO_RENEW') {
       result = result.filter((l) => l.status === 'ACTIVE' && l.autoRenew);
     } else if (filter === 'EXPIRING_SOON') {
@@ -108,6 +137,7 @@ export default function LeasesPage() {
     const counts: Record<LeaseFilter, number> = {
       ALL: leases.length,
       ACTIVE: leases.filter((l) => l.status === 'ACTIVE').length,
+      DRAFT: leases.filter((l) => l.status === 'DRAFT').length,
       AUTO_RENEW: leases.filter((l) => l.status === 'ACTIVE' && l.autoRenew)
         .length,
       EXPIRING_SOON: leases.filter((l) => {
@@ -222,14 +252,33 @@ export default function LeasesPage() {
                 title: '操作',
                 fixed: 'right',
                 render: (_: unknown, row: Lease) => (
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<EyeOutlined />}
-                    onClick={() => navigate(`/rooms/${row.roomId}`)}
-                  >
-                    查看房间
-                  </Button>
+                  <Space>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EyeOutlined />}
+                      onClick={() => navigate(`/rooms/${row.roomId}`)}
+                    >
+                      查看房间
+                    </Button>
+                    {row.status === 'DRAFT' && canManageLease && (
+                      <Popconfirm
+                        title="激活租约"
+                        description="确认激活草稿租约？激活后将开始生成账单。"
+                        onConfirm={() => handleActivate(row.id)}
+                        okText="确认激活"
+                        cancelText="取消"
+                      >
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<PlayCircleOutlined />}
+                        >
+                          激活
+                        </Button>
+                      </Popconfirm>
+                    )}
+                  </Space>
                 ),
               },
             ]}

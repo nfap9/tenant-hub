@@ -1,10 +1,15 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import { prisma } from '../config/prisma.js';
 
 dayjs.extend(utc);
 
 export type LeaseCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
-export type LifecycleLeaseStatus = 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
+export type LifecycleLeaseStatus =
+  | 'DRAFT'
+  | 'ACTIVE'
+  | 'TERMINATED'
+  | 'EXPIRED';
 
 export const cycleMonths: Record<LeaseCycle, number> = {
   MONTHLY: 1,
@@ -32,6 +37,11 @@ export const isAutoRenewalPeriod = (
 ) =>
   lease.autoRenew &&
   lease.status === 'ACTIVE' &&
+  startOfLeaseDay(today).isAfter(startOfLeaseDay(lease.endDate), 'day');
+
+export const hasExpired = (lease: RenewalStateLease, today = new Date()) =>
+  lease.status === 'ACTIVE' &&
+  !lease.autoRenew &&
   startOfLeaseDay(today).isAfter(startOfLeaseDay(lease.endDate), 'day');
 
 export const getLeaseBillGenerationEnd = (
@@ -74,4 +84,18 @@ export const withLeaseLifecycle = <T extends RenewalStateLease>(
 ) => ({
   ...lease,
   isAutoRenewalPeriod: isAutoRenewalPeriod(lease, today),
+  hasExpired: hasExpired(lease, today),
 });
+
+export const expireLeases = async (today = new Date()) => {
+  const expired = await prisma.lease.updateMany({
+    where: {
+      status: 'ACTIVE',
+      autoRenew: false,
+      endDate: { lt: startOfLeaseDay(today).toDate() },
+    },
+    data: { status: 'EXPIRED' },
+  });
+
+  return { expiredCount: expired.count };
+};
