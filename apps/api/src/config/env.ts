@@ -28,6 +28,12 @@ const envSchema = z
       .default('development'),
 
     SCHEDULER_ENABLED: z.enum(['true', 'false']).default('true'),
+
+    LLM_API_KEY: z.string().optional(),
+    LLM_BASE_URL: z.string().optional(),
+    LLM_MODEL: z.string().default('gpt-4o-mini'),
+    LLM_MAX_TOKENS: z.coerce.number().default(2048),
+    LLM_TEMPERATURE: z.coerce.number().default(0.2),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;

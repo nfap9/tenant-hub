@@ -12,6 +12,7 @@ import {
   SafetyCertificateOutlined,
   MailOutlined,
   ToolOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 
 export interface MenuItemConfig {
@@ -29,6 +30,13 @@ export const menuConfig: MenuItemConfig[] = [
     label: '首页',
     path: '/',
     icon: HomeOutlined,
+    requireOrg: true,
+  },
+  {
+    key: 'agent',
+    label: '智能助手',
+    path: '/agent',
+    icon: RobotOutlined,
     requireOrg: true,
   },
   {

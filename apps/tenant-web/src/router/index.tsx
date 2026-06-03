@@ -9,6 +9,7 @@ import styles from './router.module.scss';
 // 懒加载页面
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const DashboardPage = lazy(() => import('@/pages/dashboard/index.tsx'));
+const AgentChatPage = lazy(() => import('@/pages/agent/AgentChatPage'));
 
 // 公寓
 const ApartmentListPage = lazy(
@@ -154,6 +155,16 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <DashboardPage />
+              </RequireOrg>
+            }
+          />
+
+          {/* 智能助手 */}
+          <Route
+            path="/agent"
+            element={
+              <RequireOrg>
+                <AgentChatPage />
               </RequireOrg>
             }
           />
