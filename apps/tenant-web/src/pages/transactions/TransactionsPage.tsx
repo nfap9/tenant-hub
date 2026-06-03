@@ -380,6 +380,9 @@ export default function TransactionsPage() {
                 { label: '收入', value: 'INCOME' },
                 { label: '支出', value: 'EXPENSE' },
               ]}
+              onChange={() => {
+                form.setFieldValue('category', undefined);
+              }}
             />
           </Form.Item>
           <Form.Item
@@ -388,10 +391,16 @@ export default function TransactionsPage() {
             rules={[{ required: true, message: '请选择科目' }]}
           >
             <Select
-              options={categories.map((c) => ({
-                label: c.label,
-                value: c.key,
-              }))}
+              options={categories
+                .filter(
+                  (c) =>
+                    !form.getFieldValue('type') ||
+                    c.type === form.getFieldValue('type')
+                )
+                .map((c) => ({
+                  label: c.label,
+                  value: c.key,
+                }))}
             />
           </Form.Item>
           <Form.Item
