@@ -18,7 +18,7 @@ const getSmsConfigured = async (): Promise<boolean> => {
     where: { key: 'sms_config' },
   });
   const value = setting?.value as Record<string, unknown> | undefined;
-  return Boolean(value?.url);
+  return Boolean(value?.enabled && value?.url);
 };
 
 const verifyOtp = async (
@@ -69,6 +69,7 @@ authRouter.post(
 
     if (parsedConfig?.url) {
       const config = {
+        enabled: Boolean(parsedConfig.enabled),
         url: String(parsedConfig.url),
         method: (parsedConfig.method === 'GET' ||
         parsedConfig.method === 'POST' ||
@@ -80,17 +81,22 @@ authRouter.post(
           parsedConfig.headers !== null
             ? (parsedConfig.headers as Record<string, string>)
             : undefined,
-        params:
-          typeof parsedConfig.params === 'object' &&
-          parsedConfig.params !== null
-            ? (parsedConfig.params as Record<string, string>)
+        queryParams:
+          typeof parsedConfig.queryParams === 'object' &&
+          parsedConfig.queryParams !== null
+            ? (parsedConfig.queryParams as Record<string, string>)
+            : undefined,
+        bodyParams:
+          typeof parsedConfig.bodyParams === 'object' &&
+          parsedConfig.bodyParams !== null
+            ? (parsedConfig.bodyParams as Record<string, string>)
             : undefined,
       };
 
       await sendSms({
-        targets: input.phone,
+        phoneNumber: input.phone,
         code,
-        number: env.OTP_EXPIRES_IN_MINUTES,
+        expireMinutes: env.OTP_EXPIRES_IN_MINUTES,
         config,
       }).catch((err) => {
         console.error(`[SmsService] 发送验证码失败: ${err.message}`);

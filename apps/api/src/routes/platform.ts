@@ -20,7 +20,7 @@ platformRouter.get(
       name: value.name || defaults.name,
       logoUrl: value.logoUrl || defaults.logoUrl,
       contactPhone: value.contactPhone || defaults.contactPhone,
-      smsConfigured: Boolean(smsValue?.url),
+      smsConfigured: Boolean(smsValue?.enabled && smsValue?.url),
     });
   })
 );

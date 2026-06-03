@@ -127,20 +127,24 @@ export async function deleteAdminRole(roleId: string) {
 export async function getSmsConfig() {
   return apiClient<{
     value?: {
+      enabled?: boolean;
       url?: string;
       method?: 'GET' | 'POST' | 'PUT';
       headers?: Record<string, string>;
-      params?: Record<string, string>;
+      queryParams?: Record<string, string>;
+      bodyParams?: Record<string, string>;
     };
   }>('/admin/settings/sms_config');
 }
 
 export async function updateSmsConfig(payload: {
   value: {
+    enabled: boolean;
     url: string;
     method: 'GET' | 'POST' | 'PUT';
     headers: Record<string, string>;
-    params: Record<string, string>;
+    queryParams: Record<string, string>;
+    bodyParams: Record<string, string>;
   };
   description: string;
 }) {

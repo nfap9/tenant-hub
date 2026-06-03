@@ -6,6 +6,7 @@ import {
   Input,
   Select,
   Space,
+  Switch,
   Typography,
   message,
 } from 'antd';
@@ -24,23 +25,23 @@ const methodOptions = [
   { value: 'PUT', label: 'PUT' },
 ];
 
-const defaultParams = [
+const defaultBodyParams = [
   { key: 'code', value: '{{code}}' },
-  { key: 'targets', value: '{{targets}}' },
-  { key: 'name', value: '{{name}}' },
-  { key: 'number', value: '{{number}}' },
+  { key: 'phoneNumber', value: '{{phoneNumber}}' },
 ];
 
 export default function OpsSmsConfigPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [switchEnabled, setSwitchEnabled] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     getSmsConfig()
       .then((data) => {
         const value = data.value ?? {};
+        setSwitchEnabled(Boolean(value.enabled));
         form.setFieldsValue({
           url: value.url ?? '',
           method: value.method ?? 'POST',
@@ -48,18 +49,22 @@ export default function OpsSmsConfigPage() {
             key,
             value: val,
           })),
-          params: Object.entries(value.params ?? {}).map(([key, val]) => ({
-            key,
-            value: val,
-          })),
+          queryParams: Object.entries(value.queryParams ?? {}).map(
+            ([key, val]) => ({ key, value: val })
+          ),
+          bodyParams: Object.entries(value.bodyParams ?? {}).map(
+            ([key, val]) => ({ key, value: val })
+          ),
         });
       })
       .catch(() => {
+        setSwitchEnabled(false);
         form.setFieldsValue({
           url: '',
           method: 'POST',
           headers: [],
-          params: defaultParams.map((item) => ({ ...item })),
+          queryParams: [],
+          bodyParams: defaultBodyParams.map((item) => ({ ...item })),
         });
       })
       .finally(() => setLoading(false));
@@ -75,18 +80,33 @@ export default function OpsSmsConfigPage() {
     return record;
   };
 
+  const handleSwitchChange = (checked: boolean) => {
+    if (checked) {
+      const url = form.getFieldValue('url');
+      const method = form.getFieldValue('method');
+      if (!url || !method) {
+        message.warning('请先填写接口地址和请求方式后再开启短信功能');
+        return;
+      }
+    }
+    setSwitchEnabled(checked);
+  };
+
   const handleSave = async (values: {
     url: string;
     method: 'GET' | 'POST' | 'PUT';
     headers: Array<{ key: string; value: string }>;
-    params: Array<{ key: string; value: string }>;
+    queryParams: Array<{ key: string; value: string }>;
+    bodyParams: Array<{ key: string; value: string }>;
   }) => {
     const payload = {
       value: {
+        enabled: switchEnabled,
         url: values.url || '',
         method: values.method,
         headers: toRecord(values.headers),
-        params: toRecord(values.params),
+        queryParams: toRecord(values.queryParams),
+        bodyParams: toRecord(values.bodyParams),
       },
       description: '通用短信服务配置',
     };
@@ -167,6 +187,16 @@ export default function OpsSmsConfigPage() {
         className={styles.smsConfigCard}
       >
         <Form form={form} layout="vertical" onFinish={handleSave}>
+          <div className={styles.switchRow}>
+            <div>
+              <Typography.Text strong>启用短信服务</Typography.Text>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                开启后，验证码登录和注册验证码功能将可用
+              </Typography.Text>
+            </div>
+            <Switch checked={switchEnabled} onChange={handleSwitchChange} />
+          </div>
           <Form.Item
             name="url"
             label="接口地址"
@@ -188,14 +218,21 @@ export default function OpsSmsConfigPage() {
             {renderKeyValueList(
               'headers',
               'Header 名称',
-              'Header 值，可用 {{code}} {{targets}} {{name}} {{number}}'
+              'Header 值，可用 {{code}} {{phoneNumber}} {{expireMinutes}}'
             )}
           </Form.Item>
-          <Form.Item label="请求参数 (Params)">
+          <Form.Item label="查询参数 (Query)">
             {renderKeyValueList(
-              'params',
+              'queryParams',
               '参数名',
-              '参数值，可用 {{code}} {{targets}} {{name}} {{number}}'
+              '参数值，可用 {{code}} {{phoneNumber}} {{expireMinutes}}'
+            )}
+          </Form.Item>
+          <Form.Item label="请求体参数 (Body)">
+            {renderKeyValueList(
+              'bodyParams',
+              '参数名',
+              '参数值，可用 {{code}} {{phoneNumber}} {{expireMinutes}}'
             )}
           </Form.Item>
           <Form.Item>
@@ -222,33 +259,27 @@ export default function OpsSmsConfigPage() {
         className={styles.smsConfigCardBg}
       >
         <Typography.Paragraph className={styles.smsConfigText}>
-          在 URL、Headers、Params
-          中均可使用以下变量，发送时会被自动替换为实际值：
+          在接口地址、请求头、查询参数、请求体参数中均可使用变量，发送时双花括号内的变量会被自动替换为实际值，其他内容视为普通字符串：
         </Typography.Paragraph>
         <ul className={styles.smsConfigList}>
           <li>
-            <Typography.Text code>{'{{code}}'}</Typography.Text> — 验证码（6
+            <Typography.Text code>{'{{code}}'}</Typography.Text> — 短信验证码（6
             位数字）
           </li>
           <li>
-            <Typography.Text code>{'{{targets}}'}</Typography.Text> —
-            接收短信的手机号
+            <Typography.Text code>{'{{phoneNumber}}'}</Typography.Text> —
+            接收短信的用户手机号
           </li>
           <li>
-            <Typography.Text code>{'{{name}}'}</Typography.Text> —
-            应用名称（默认 TenantHub）
-          </li>
-          <li>
-            <Typography.Text code>{'{{number}}'}</Typography.Text> —
-            验证码过期时间（分钟），取自环境变量{' '}
-            <Typography.Text code>OTP_EXPIRES_IN_MINUTES</Typography.Text>（默认
-            5）
+            <Typography.Text code>{'{{expireMinutes}}'}</Typography.Text> —
+            验证码过期时间（分钟）
           </li>
         </ul>
         <Typography.Paragraph type="secondary">
-          GET 请求：参数自动拼接到 URL Query String。
+          查询参数 (Query)：所有请求方式均会拼接到 URL Query String。
           <br />
-          POST / PUT 请求：参数作为 JSON Body 发送。
+          请求体参数 (Body)：GET 请求时忽略；POST / PUT 请求时作为 JSON Body
+          发送。
         </Typography.Paragraph>
       </Card>
     </div>
