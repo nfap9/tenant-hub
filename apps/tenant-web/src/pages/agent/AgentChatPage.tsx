@@ -8,6 +8,7 @@ import {
   DeleteOutlined,
   PlusOutlined,
   MessageOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -66,6 +67,7 @@ interface Conversation {
   messages: DisplayMessage[];
   createdAt: number;
   updatedAt: number;
+  loading?: boolean;
 }
 
 const CHART_COLORS = [
@@ -82,10 +84,13 @@ function generateId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+// 模块级活跃流追踪（组件卸载后仍继续运行）
+const activeStreams = new Map<string, boolean>();
+
 function useConversations(orgId: string) {
   const storageKey = `agent_conv_${orgId}`;
 
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
+  const readStorage = useCallback((): Conversation[] => {
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
@@ -96,6 +101,32 @@ function useConversations(orgId: string) {
       // ignore
     }
     return [];
+  }, [storageKey]);
+
+  const writeStorage = useCallback(
+    (convs: Conversation[]) => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(convs));
+      } catch {
+        // ignore
+      }
+    },
+    [storageKey]
+  );
+
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    const convs = readStorage();
+    // 清除旧的 loading 标记
+    let changed = false;
+    const cleaned = convs.map((c) => {
+      if (c.loading) {
+        changed = true;
+        return { ...c, loading: false };
+      }
+      return c;
+    });
+    if (changed) writeStorage(cleaned);
+    return cleaned;
   });
 
   const [activeId, setActiveId] = useState<string | null>(() => {
@@ -105,40 +136,51 @@ function useConversations(orgId: string) {
 
   // persist to localStorage on change
   useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(conversations));
-    } catch {
-      // ignore
-    }
-  }, [conversations, storageKey]);
+    writeStorage(conversations);
+  }, [conversations, writeStorage]);
+
+  // sync from localStorage when remounting (background updates)
+  useEffect(() => {
+    const convs = readStorage();
+    // merge: if any conversation has more messages than in state, use the stored version
+    setConversations((prev) => {
+      let changed = false;
+      const next = prev.map((pc) => {
+        const sc = convs.find((c) => c.id === pc.id);
+        if (
+          sc &&
+          sc.messages.length > pc.messages.length &&
+          !activeStreams.has(pc.id)
+        ) {
+          changed = true;
+          return { ...sc, loading: false };
+        }
+        return pc;
+      });
+      return changed ? next : prev;
+    });
+  }, [readStorage]);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId]
   );
 
-  const updateMessages = useCallback(
-    (messages: DisplayMessage[]) => {
+  // 更新对话 localStorage + state
+  const persistConv = useCallback(
+    (convId: string, updater: (c: Conversation) => Conversation) => {
       setConversations((prev) => {
-        if (!activeId) return prev;
-        return prev.map((c) =>
-          c.id === activeId
-            ? {
-                ...c,
-                messages,
-                title:
-                  c.title ||
-                  messages
-                    .find((m) => m.role === 'user')
-                    ?.content.slice(0, 30) ||
-                  '新对话',
-                updatedAt: Date.now(),
-              }
-            : c
-        );
+        const next = prev.map((c) => (c.id === convId ? updater(c) : c));
+        // 直接写 localStorage 确保后台更新不丢失
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
       });
     },
-    [activeId]
+    [storageKey]
   );
 
   const createConversation = useCallback(() => {
@@ -151,22 +193,25 @@ function useConversations(orgId: string) {
     };
     setConversations((prev) => {
       const next = [newConv, ...prev].slice(0, MAX_CONVERSATION_LIMIT);
+      writeStorage(next);
       return next;
     });
     setActiveId(newConv.id);
-  }, []);
+  }, [writeStorage]);
 
   const deleteConversation = useCallback(
     (id: string) => {
+      activeStreams.delete(id);
       setConversations((prev) => {
         const remaining = prev.filter((c) => c.id !== id);
+        writeStorage(remaining);
         if (activeId === id) {
           setActiveId(remaining.length > 0 ? remaining[0].id : null);
         }
         return remaining;
       });
     },
-    [activeId]
+    [activeId, writeStorage]
   );
 
   const switchConversation = useCallback((id: string) => {
@@ -179,17 +224,239 @@ function useConversations(orgId: string) {
     }
   }, [activeId, deleteConversation]);
 
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return;
+
+      let convId = activeConversation?.id;
+      let initialMessages: DisplayMessage[];
+
+      const userMsg: DisplayMessage = {
+        id: generateId(),
+        role: 'user',
+        content: text.trim(),
+      };
+
+      const assistantMsg: DisplayMessage = {
+        id: generateId(),
+        role: 'assistant',
+        content: '',
+        loading: true,
+        thinking: [],
+      };
+
+      if (!convId) {
+        convId = generateId();
+        initialMessages = [];
+      } else {
+        initialMessages = activeConversation?.messages ?? [];
+      }
+
+      const currentMessages = [...initialMessages, userMsg, assistantMsg];
+
+      // 标记流活跃 + 初始化对话
+      activeStreams.set(convId, true);
+
+      persistConv(convId, (c) => ({
+        ...c,
+        messages: currentMessages,
+        title: c.title || text.trim().slice(0, 30),
+        updatedAt: Date.now(),
+        loading: true,
+      }));
+
+      // 确保非 auto-create 情况下 activeId 正确
+      if (!activeConversation?.id) {
+        setConversations((prev) => {
+          const exists = prev.find((c) => c.id === convId);
+          if (!exists) {
+            const newConv: Conversation = {
+              id: convId,
+              title: text.trim().slice(0, 30),
+              messages: currentMessages,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              loading: true,
+            };
+            const next = [newConv, ...prev].slice(0, MAX_CONVERSATION_LIMIT);
+            writeStorage(next);
+            return next;
+          }
+          return prev;
+        });
+        setActiveId(convId);
+      }
+
+      const history: ChatMessage[] = [];
+      for (const m of initialMessages.slice(-10)) {
+        if (m.role === 'user' || m.role === 'assistant') {
+          history.push({ role: m.role, content: m.content });
+        }
+      }
+
+      // 读取 localStorage 中的最新对话列表
+      const readConvList = (): Conversation[] => {
+        try {
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) return parsed;
+          }
+        } catch {
+          // ignore
+        }
+        return [];
+      };
+
+      // 直接写 localStorage，不依赖 React state（确保后台更新不丢失）
+      const syncToStorage = (
+        msgs: DisplayMessage[],
+        opts?: { final?: boolean }
+      ) => {
+        const convs = readConvList();
+        const idx = convs.findIndex((c) => c.id === convId);
+        const base: Conversation =
+          idx >= 0
+            ? convs[idx]
+            : {
+                id: convId,
+                title: '',
+                messages: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+
+        convs[idx >= 0 ? idx : convs.length] = {
+          ...base,
+          messages: msgs,
+          title: base.title || text.trim().slice(0, 30),
+          updatedAt: Date.now(),
+          loading: opts?.final ? false : true,
+        };
+
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(convs));
+        } catch {
+          // ignore
+        }
+      };
+
+      // 更新消息的辅助函数 — 从 localStorage 读取最新消息后应用 patch
+      const patchMsg = (patcher: (msg: DisplayMessage) => DisplayMessage) => {
+        // 1) React state 路径（挂载时）
+        persistConv(convId, (c) => {
+          const msgs = c.messages.map((m) =>
+            m.id === assistantMsg.id ? patcher(m) : m
+          );
+          return {
+            ...c,
+            messages: msgs,
+            title: c.title || text.trim().slice(0, 30),
+            updatedAt: Date.now(),
+            loading: true,
+          };
+        });
+
+        // 2) 直接 localStorage 路径（后台时）
+        const convs = readConvList();
+        const c = convs.find((x) => x.id === convId);
+        if (c) {
+          const msgs = c.messages.map((m) =>
+            m.id === assistantMsg.id ? patcher(m) : m
+          );
+          syncToStorage(msgs);
+        }
+      };
+
+      try {
+        const stream = chatWithAgent(text.trim(), history, orgId);
+        let fullContent = '';
+
+        for await (const chunk of stream) {
+          if (chunk.type === 'status') {
+            patchMsg((m) => ({
+              ...m,
+              thinking: [...(m.thinking || []), chunk.content],
+            }));
+          } else if (chunk.type === 'message') {
+            fullContent += chunk.content;
+            patchMsg((m) => ({
+              ...m,
+              content: fullContent,
+              loading: false,
+            }));
+          } else if (chunk.type === 'chart') {
+            try {
+              const chartData = JSON.parse(chunk.content) as ChartConfig;
+              patchMsg((m) => ({
+                ...m,
+                content: fullContent,
+                chartData,
+                loading: false,
+              }));
+            } catch {
+              // ignore
+            }
+          } else if (chunk.type === 'error') {
+            patchMsg((m) => ({
+              ...m,
+              role: 'error' as const,
+              content: chunk.content,
+              loading: false,
+            }));
+            break;
+          } else if (chunk.type === 'done') {
+            patchMsg((m) => ({
+              ...m,
+              content: fullContent,
+              loading: false,
+            }));
+            break;
+          }
+        }
+      } catch (error) {
+        const errorMsg =
+          error instanceof Error ? error.message : '请求失败，请重试';
+        patchMsg((m) => ({
+          ...m,
+          role: 'error' as const,
+          content: errorMsg,
+          loading: false,
+        }));
+        antMessage.error(errorMsg);
+      } finally {
+        activeStreams.delete(convId);
+        // 最终写入 localStorage（绕开 React state 确保后台完成）
+        const convs = readConvList();
+        const c = convs.find((x) => x.id === convId);
+        if (c) {
+          const finalMsgs = c.messages.map((m) =>
+            m.loading ? { ...m, loading: false } : m
+          );
+          syncToStorage(finalMsgs, { final: true });
+        }
+        persistConv(convId, (c) => ({
+          ...c,
+          loading: false,
+          messages: c.messages.map((m) =>
+            m.loading ? { ...m, loading: false } : m
+          ),
+        }));
+      }
+    },
+    [orgId, activeConversation, persistConv, writeStorage]
+  );
+
   return {
     conversations,
     activeConversation,
     activeId,
-    setConversations,
     setActiveId,
-    updateMessages,
     createConversation,
     deleteConversation,
     switchConversation,
     clearCurrent,
+    sendMessage,
   };
 }
 
@@ -327,12 +594,11 @@ export default function AgentChatPage() {
   const {
     conversations,
     activeConversation,
-    setConversations,
-    setActiveId,
     createConversation,
     deleteConversation,
     switchConversation,
     clearCurrent,
+    sendMessage,
   } = useConversations(orgId);
 
   const messages = activeConversation?.messages ?? [];
@@ -340,7 +606,6 @@ export default function AgentChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -350,167 +615,17 @@ export default function AgentChatPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || !orgId || isLoading) return;
-
-      const userMsg: DisplayMessage = {
-        id: generateId(),
-        role: 'user',
-        content: text.trim(),
-      };
-
-      const assistantMsg: DisplayMessage = {
-        id: generateId(),
-        role: 'assistant',
-        content: '',
-        loading: true,
-        thinking: [],
-      };
-
-      // auto-create conversation if none active
-      let convId = activeConversation?.id;
-      let initialMessages: DisplayMessage[];
-
-      if (!convId) {
-        convId = generateId();
-        initialMessages = [];
-        const newConv: Conversation = {
-          id: convId,
-          title: text.trim().slice(0, 30),
-          messages: initialMessages,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setConversations((prev) =>
-          [newConv, ...prev].slice(0, MAX_CONVERSATION_LIMIT)
-        );
-        setActiveId(convId);
-      } else {
-        initialMessages = messages;
-      }
-
-      const currentMessages = [...initialMessages, userMsg, assistantMsg];
-      setIsLoading(true);
-      setInput('');
-      abortRef.current = false;
-
-      // use a helper to update in the conversation list directly
-      const updateConv = (
-        updater: (msgs: DisplayMessage[]) => DisplayMessage[]
-      ) => {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === convId
-              ? {
-                  ...c,
-                  messages: updater(c.messages),
-                  title: c.title || text.trim().slice(0, 30),
-                  updatedAt: Date.now(),
-                }
-              : c
-          )
-        );
-      };
-      updateConv(() => currentMessages);
-
-      const history: ChatMessage[] = [];
-      for (const m of initialMessages.slice(-10)) {
-        if (m.role === 'user' || m.role === 'assistant') {
-          history.push({ role: m.role, content: m.content });
-        }
-      }
-
-      try {
-        const stream = chatWithAgent(text.trim(), history, orgId);
-        let fullContent = '';
-
-        for await (const chunk of stream) {
-          if (abortRef.current) break;
-
-          if (chunk.type === 'status') {
-            updateConv((msgs) =>
-              msgs.map((m) =>
-                m.id === assistantMsg.id
-                  ? { ...m, thinking: [...(m.thinking || []), chunk.content] }
-                  : m
-              )
-            );
-          } else if (chunk.type === 'message') {
-            fullContent += chunk.content;
-            updateConv((msgs) =>
-              msgs.map((m) =>
-                m.id === assistantMsg.id
-                  ? { ...m, content: fullContent, loading: false }
-                  : m
-              )
-            );
-          } else if (chunk.type === 'chart') {
-            try {
-              const chartData = JSON.parse(chunk.content) as ChartConfig;
-              updateConv((msgs) =>
-                msgs.map((m) =>
-                  m.id === assistantMsg.id
-                    ? { ...m, content: fullContent, chartData, loading: false }
-                    : m
-                )
-              );
-            } catch {
-              // ignore
-            }
-          } else if (chunk.type === 'error') {
-            updateConv((msgs) =>
-              msgs.map((m) =>
-                m.id === assistantMsg.id
-                  ? {
-                      ...m,
-                      role: 'error' as const,
-                      content: chunk.content,
-                      loading: false,
-                    }
-                  : m
-              )
-            );
-            break;
-          } else if (chunk.type === 'done') {
-            updateConv((msgs) =>
-              msgs.map((m) =>
-                m.id === assistantMsg.id
-                  ? { ...m, content: fullContent, loading: false }
-                  : m
-              )
-            );
-            break;
-          }
-        }
-      } catch (error) {
-        const errorMsg =
-          error instanceof Error ? error.message : '请求失败，请重试';
-        updateConv((msgs) =>
-          msgs.map((m) =>
-            m.id === assistantMsg.id
-              ? {
-                  ...m,
-                  role: 'error' as const,
-                  content: errorMsg,
-                  loading: false,
-                }
-              : m
-          )
-        );
-        antMessage.error(errorMsg);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [orgId, isLoading, messages, activeConversation, setConversations]
-  );
-
-  const handleSend = () => {
-    if (input.trim()) {
-      sendMessage(input);
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isLoading) return;
+    const text = input;
+    setInput('');
+    setIsLoading(true);
+    try {
+      await sendMessage(text);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [input, isLoading, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -519,15 +634,25 @@ export default function AgentChatPage() {
     }
   };
 
-  const handleQuickQuestion = (q: string) => {
-    sendMessage(q);
-  };
+  const handleQuickQuestion = useCallback(
+    async (q: string) => {
+      if (isLoading) return;
+      setIsLoading(true);
+      try {
+        await sendMessage(q);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isLoading, sendMessage]
+  );
 
   const handleNewChat = () => {
     createConversation();
   };
 
   const hasMessages = messages.length > 0;
+  const isConvLoading = activeConversation?.loading ?? false;
 
   return (
     <div className={styles.agentChatPage}>
@@ -556,16 +681,26 @@ export default function AgentChatPage() {
               }`}
               onClick={() => switchConversation(conv.id)}
             >
-              <MessageOutlined className={styles.conversationIcon} />
+              {conv.loading ? (
+                <LoadingOutlined className={styles.conversationIcon} spin />
+              ) : (
+                <MessageOutlined className={styles.conversationIcon} />
+              )}
               <div className={styles.conversationInfo}>
                 <div className={styles.conversationTitle}>
                   {conv.title || '新对话'}
                 </div>
                 <div className={styles.conversationMeta}>
-                  {formatTime(conv.updatedAt)} ·{' '}
-                  {conv.messages.length > 0
-                    ? `${Math.ceil(conv.messages.filter((m) => m.role === 'user').length)} 轮对话`
-                    : '空'}
+                  {conv.loading ? (
+                    '生成中...'
+                  ) : (
+                    <>
+                      {formatTime(conv.updatedAt)} ·{' '}
+                      {conv.messages.length > 0
+                        ? `${Math.ceil(conv.messages.filter((m) => m.role === 'user').length)} 轮对话`
+                        : '空'}
+                    </>
+                  )}
                 </div>
               </div>
               <Popconfirm
@@ -606,7 +741,7 @@ export default function AgentChatPage() {
 
       <div className={styles.chatArea}>
         <div className={styles.messagesArea}>
-          {!activeConversation || (!hasMessages && activeConversation) ? (
+          {!activeConversation || (!hasMessages && !isConvLoading) ? (
             <div className={styles.welcomeCard}>
               <RobotOutlined
                 style={{ fontSize: 48, color: '#2563eb', marginBottom: 16 }}
@@ -656,7 +791,7 @@ export default function AgentChatPage() {
               )}
 
               <div className={`${styles.messageBubble} ${styles[msg.role]}`}>
-                {msg.loading && msg.role === 'assistant' ? (
+                {msg.loading ? (
                   <div className={styles.typingIndicator}>
                     <span className={styles.dot} />
                     <span className={styles.dot} />
