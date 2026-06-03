@@ -27,6 +27,11 @@ export const queryBillsTool = (ctx: AgentContext) =>
               room: { select: { roomNo: true } },
             },
           },
+          items: true,
+          payments: {
+            include: { user: { select: { username: true } } },
+            orderBy: { id: 'desc' },
+          },
         },
         take: limit,
         orderBy: { billingDate: 'desc' },
@@ -43,9 +48,37 @@ export const queryBillsTool = (ctx: AgentContext) =>
           dueDate: bill.dueDate.toISOString().split('T')[0],
           totalAmount: Number(bill.totalAmount),
           paidAmount: Number(bill.paidAmount),
+          remainingAmount: Number(
+            (Number(bill.totalAmount) - Number(bill.paidAmount)).toFixed(2)
+          ),
           status: bill.status,
           mode: bill.mode,
           note: bill.note,
+          failureReason: bill.failureReason,
+          items: bill.items.map((item) => ({
+            type: item.type,
+            name: item.name,
+            amount: Number(item.amount),
+            status: item.status,
+            previousWater: item.previousWater
+              ? Number(item.previousWater)
+              : null,
+            currentWater: item.currentWater ? Number(item.currentWater) : null,
+            previousPower: item.previousPower
+              ? Number(item.previousPower)
+              : null,
+            currentPower: item.currentPower ? Number(item.currentPower) : null,
+          })),
+          payments: bill.payments.map((p) => ({
+            id: p.id,
+            type: p.type,
+            amount: Number(p.amount),
+            method: p.method,
+            status: p.status,
+            note: p.note,
+            recordedBy: p.user.username,
+            paidAt: p.paidAt.toISOString().split('T')[0],
+          })),
         }))
       );
     },

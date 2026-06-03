@@ -13,6 +13,20 @@ import { queryRoomsTool } from './tools/rooms.js';
 import { queryLeasesTool } from './tools/leases.js';
 import { queryBillsTool } from './tools/bills.js';
 import { analyticsSummaryTool } from './tools/analytics.js';
+import { queryRoomDetailTool } from './tools/room-detail.js';
+import { queryApartmentContractTool } from './tools/apartment-contract.js';
+import {
+  queryDepositsTool,
+  queryDepositSummaryTool,
+} from './tools/deposits.js';
+import {
+  queryTransactionsTool,
+  queryTransactionSummaryTool,
+} from './tools/transactions.js';
+import { queryMeterReadingsTool } from './tools/meter-readings.js';
+import { queryReservationTool } from './tools/reservations.js';
+import { querySettlementsTool } from './tools/settlements.js';
+import { generateChartTool } from './tools/chart.js';
 import type { AgentContext, ChatMessage } from './types.js';
 
 const MAX_ITERATIONS = 5;
@@ -24,6 +38,16 @@ function createTools(ctx: AgentContext) {
     queryLeasesTool(ctx),
     queryBillsTool(ctx),
     analyticsSummaryTool(ctx),
+    queryRoomDetailTool(ctx),
+    queryApartmentContractTool(ctx),
+    queryDepositsTool(ctx),
+    queryDepositSummaryTool(ctx),
+    queryTransactionsTool(ctx),
+    queryTransactionSummaryTool(ctx),
+    queryMeterReadingsTool(ctx),
+    queryReservationTool(ctx),
+    querySettlementsTool(ctx),
+    generateChartTool,
   ];
 }
 
@@ -48,7 +72,7 @@ function mapMessages(history: ChatMessage[]): BaseMessage[] {
 }
 
 export interface StreamChunk {
-  type: 'status' | 'message' | 'done' | 'error';
+  type: 'status' | 'message' | 'done' | 'error' | 'chart';
   content: string;
 }
 
@@ -100,9 +124,13 @@ export async function* runAgent(
         const toolName = toolCall.name;
         const toolArgs = toolCall.args as Record<string, unknown>;
 
+        const isChartTool = toolName === 'generate_chart';
+
         yield {
-          type: 'status',
-          content: `正在调用工具：${toolName}...`,
+          type: isChartTool ? 'chart' : 'status',
+          content: isChartTool
+            ? '正在生成图表...'
+            : `正在调用工具：${toolName}...`,
         };
 
         const tool = tools.find((t) => t.name === toolName);
@@ -122,9 +150,24 @@ export async function* runAgent(
               invoke: (args: Record<string, unknown>) => Promise<unknown>;
             }
           ).invoke(toolArgs);
+
+          const resultStr = String(result);
+
+          if (isChartTool) {
+            try {
+              const chartData = JSON.parse(resultStr);
+              yield {
+                type: 'chart',
+                content: JSON.stringify(chartData),
+              };
+            } catch {
+              // 解析失败，继续正常流程
+            }
+          }
+
           messages.push(
             new ToolMessage({
-              content: String(result),
+              content: resultStr,
               tool_call_id: toolCall.id || toolName,
             })
           );

@@ -8,7 +8,7 @@ export interface ChatMessage {
 }
 
 export interface StreamChunk {
-  type: 'status' | 'message' | 'done' | 'error';
+  type: 'status' | 'message' | 'done' | 'error' | 'chart';
   content: string;
 }
 

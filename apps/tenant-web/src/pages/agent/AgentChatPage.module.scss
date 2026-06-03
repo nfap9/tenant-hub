@@ -25,6 +25,13 @@
   padding: 8px;
 }
 
+.chatToolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
 .messageRow {
   display: flex;
   align-items: flex-start;
@@ -71,6 +78,112 @@
     color: #dc2626;
     border: 1px solid #fecaca;
   }
+}
+
+.markdownBody {
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 12px 0 6px;
+    line-height: 1.3;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+  h2 {
+    font-size: 16px;
+  }
+  h3 {
+    font-size: 15px;
+  }
+
+  p {
+    margin: 4px 0;
+  }
+
+  ul,
+  ol {
+    padding-left: 20px;
+    margin: 4px 0;
+  }
+
+  li {
+    margin: 2px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 13px;
+  }
+
+  th,
+  td {
+    border: 1px solid #e5e7eb;
+    padding: 6px 10px;
+    text-align: left;
+  }
+
+  th {
+    background: #f9fafb;
+    font-weight: 600;
+  }
+
+  strong {
+    color: #1f2937;
+    font-weight: 600;
+  }
+
+  code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  pre {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    font-size: 13px;
+
+    code {
+      background: none;
+      padding: 0;
+    }
+  }
+
+  blockquote {
+    border-left: 3px solid #2563eb;
+    padding-left: 12px;
+    margin: 8px 0;
+    color: #6b7280;
+  }
+}
+
+.chartWrapper {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #f3f4f6;
+}
+
+.chartTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 .avatar {
