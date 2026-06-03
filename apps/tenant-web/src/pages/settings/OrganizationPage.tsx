@@ -1,50 +1,36 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  Card,
-  Form,
-  Input,
-  Button,
-  List,
-  Tag,
-  message,
-  Table,
-  Modal,
-  Space,
-} from 'antd';
+import { Form, Input, Button, Tag, message, Table, Modal, Space } from 'antd';
 import {
   PlusOutlined,
   CopyOutlined,
   HomeOutlined,
   UserAddOutlined,
   BuildOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
   createOrganization,
   joinOrganization,
-  getOrganizationInvites,
-  createOrganizationInvite,
+  refreshOrganizationInviteCode,
 } from '@/api/organization';
-import type { OrgInvite, Membership } from '@/types/domain';
+import type { Membership } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import DetailSection from '@/components/ui/DetailSection';
 import styles from './OrganizationPage.module.scss';
-import clsx from 'clsx';
 
 export default function OrganizationPage() {
-  const { memberships, currentOrgId, reload } = useAppSession();
+  const { memberships, reload, session } = useAppSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const [createForm] = Form.useForm();
   const [joinForm] = Form.useForm();
   const [createLoading, setCreateLoading] = useState(false);
   const [joinLoading, setJoinLoading] = useState(false);
-  const [invites, setInvites] = useState<OrgInvite[]>([]);
-  const [inviteLoading, setInviteLoading] = useState(false);
+  const [refreshingOrgId, setRefreshingOrgId] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
-
-  const isInOrg = Boolean(currentOrgId);
 
   useEffect(() => {
     const action = searchParams.get('action');
@@ -53,27 +39,10 @@ export default function OrganizationPage() {
     } else if (action === 'join') {
       setJoinModalOpen(true);
     }
-    // 清除 query param 避免刷新后重复触发
     if (action) {
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);
-
-  useEffect(() => {
-    if (isInOrg && currentOrgId) {
-      loadInvites();
-    }
-  }, [isInOrg, currentOrgId]);
-
-  const loadInvites = async () => {
-    if (!currentOrgId) return;
-    try {
-      const data = await getOrganizationInvites(currentOrgId);
-      setInvites(data);
-    } catch {
-      // 无权限时静默失败
-    }
-  };
 
   const handleCreate = async (values: {
     name: string;
@@ -111,17 +80,16 @@ export default function OrganizationPage() {
     }
   };
 
-  const handleCreateInvite = async () => {
-    if (!currentOrgId) return;
-    setInviteLoading(true);
+  const handleRefreshInviteCode = async (organizationId: string) => {
+    setRefreshingOrgId(organizationId);
     try {
-      await createOrganizationInvite(currentOrgId);
-      message.success('邀请码已创建');
-      await loadInvites();
+      await refreshOrganizationInviteCode(organizationId);
+      message.success('邀请码已刷新');
+      await reload();
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '创建邀请码失败');
+      message.error(e instanceof Error ? e.message : '刷新失败');
     } finally {
-      setInviteLoading(false);
+      setRefreshingOrgId(null);
     }
   };
 
@@ -141,12 +109,56 @@ export default function OrganizationPage() {
       title: '角色',
       dataIndex: ['role', 'name'],
       key: 'role',
-      render: (text: string) => <Tag color="accent">{text}</Tag>,
+      render: (text: string) => <Tag>{text}</Tag>,
     },
     {
       title: '组织编码',
       dataIndex: ['organization', 'code'],
       key: 'code',
+    },
+    {
+      title: '邀请码',
+      key: 'inviteCode',
+      render: (_: unknown, record: Membership) => {
+        const isOrgOwner = record.organization.ownerId === session?.user.id;
+        if (!isOrgOwner) return '-';
+        const code = record.organization.inviteCode;
+        if (!code) {
+          return (
+            <Button
+              type="link"
+              size="small"
+              icon={<ReloadOutlined />}
+              loading={refreshingOrgId === record.organization.id}
+              onClick={() => handleRefreshInviteCode(record.organization.id)}
+            >
+              生成邀请码
+            </Button>
+          );
+        }
+        return (
+          <Space>
+            <span style={{ fontFamily: 'monospace' }}>{code}</span>
+            <Button
+              type="link"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => copyInviteCode(code)}
+            >
+              复制
+            </Button>
+            <Button
+              type="link"
+              size="small"
+              icon={<ReloadOutlined />}
+              loading={refreshingOrgId === record.organization.id}
+              onClick={() => handleRefreshInviteCode(record.organization.id)}
+            >
+              刷新
+            </Button>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -177,7 +189,7 @@ export default function OrganizationPage() {
         }
       />
 
-      <Card className={clsx(styles.settingsCard, styles.settingsCardSpaced)}>
+      <DetailSection>
         {memberships.length > 0 ? (
           <Table
             dataSource={memberships}
@@ -209,66 +221,7 @@ export default function OrganizationPage() {
             </Space>
           </div>
         )}
-      </Card>
-
-      {isInOrg && (
-        <Card
-          title={
-            <span className={styles.settingsCardTitle}>
-              <UserAddOutlined />
-              邀请码管理
-            </span>
-          }
-          className={styles.settingsCard}
-        >
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreateInvite}
-            loading={inviteLoading}
-            className="mb-16"
-          >
-            创建邀请码
-          </Button>
-          {invites.length > 0 ? (
-            <List
-              size="small"
-              dataSource={invites}
-              renderItem={(invite) => (
-                <List.Item
-                  actions={[
-                    <Button
-                      key="copy"
-                      type="link"
-                      icon={<CopyOutlined />}
-                      onClick={() => copyInviteCode(invite.code)}
-                    >
-                      复制
-                    </Button>,
-                  ]}
-                >
-                  <div className="page-content">
-                    <div className={styles.inviteCode}>{invite.code}</div>
-                    <div className={styles.inviteMeta}>
-                      有效期至 {invite.expiresAt.slice(0, 16).replace('T', ' ')}{' '}
-                      · 已用 {invite.usedCount}/{invite.maxUses}
-                    </div>
-                  </div>
-                </List.Item>
-              )}
-            />
-          ) : (
-            <EmptyState
-              title="暂无邀请码"
-              description="点击上方按钮创建邀请码"
-              action={{
-                label: '创建邀请码',
-                onClick: handleCreateInvite,
-              }}
-            />
-          )}
-        </Card>
-      )}
+      </DetailSection>
 
       <Modal
         title="创建组织"

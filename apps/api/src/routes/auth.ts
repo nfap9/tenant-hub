@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { prisma } from '../config/prisma.js';
 import { sendSms, type SmsConfig } from '../services/smsService.js';
+import { generateInviteCode } from '../services/orgInvites.js';
 import { requireAuth, signToken } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
@@ -203,6 +204,21 @@ authRouter.get(
       where: { userId: req.user!.id, status: 'ACTIVE' },
       include: { organization: true, role: true },
     });
+
+    // 为没有 inviteCode 的组织自动生成邀请码
+    await Promise.all(
+      memberships
+        .filter((m) => !m.organization.inviteCode)
+        .map(async (m) => {
+          const newCode = generateInviteCode();
+          await prisma.organization.update({
+            where: { id: m.organization.id },
+            data: { inviteCode: newCode },
+          });
+          m.organization.inviteCode = newCode;
+        })
+    );
+
     ok(res, { user, memberships });
   })
 );

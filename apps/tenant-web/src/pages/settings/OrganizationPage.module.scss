@@ -1,18 +1,4 @@
 @use '@/styles/variables' as *;
-@use '@/styles/mixins' as *;
-
-.settings-card {
-  @include card-elevated;
-}
-
-.settings-card--spaced {
-  margin-bottom: 24px;
-}
-
-.settings-card-title {
-  font-weight: 600;
-  color: $th-foreground;
-}
 
 .empty-org-state {
   text-align: center;
@@ -36,4 +22,24 @@
 .invite-meta {
   color: $th-foreground-muted;
   font-size: 12px;
+}
+
+.invite-card {
+  padding: 16px;
+  background: $th-bg-elevated;
+  border-radius: $th-radius;
+  border: 1px solid $th-border;
+}
+
+.invite-label {
+  font-size: 14px;
+  color: $th-foreground-muted;
+  margin-bottom: 8px;
+}
+
+.invite-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
