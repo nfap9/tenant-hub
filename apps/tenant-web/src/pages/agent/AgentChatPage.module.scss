@@ -1,19 +1,132 @@
 .agentChatPage {
   display: flex;
-  flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 64px);
+  margin: -28px -32px;
   background: #f8fafc;
 }
 
-.chatContainer {
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  overflow: hidden;
+
+  &.sidebarCollapsed {
+    width: 56px;
+    min-width: 56px;
+
+    .sidebarHeader {
+      padding: 12px 8px;
+    }
+
+    .conversationInfo,
+    .deleteConvBtn {
+      display: none;
+    }
+
+    .conversationItem {
+      justify-content: center;
+      padding: 10px;
+    }
+  }
+}
+
+.sidebarHeader {
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.conversationList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.conversationItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 2px;
+
+  &:hover {
+    background: #f3f4f6;
+
+    .deleteConvBtn {
+      opacity: 1;
+    }
+  }
+}
+
+.conversationActive {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+
+  &:hover {
+    background: #eff6ff;
+  }
+}
+
+.conversationIcon {
+  font-size: 16px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.conversationInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversationTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversationMeta {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.deleteConvBtn {
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.noConversations {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  padding: 40px 16px;
+}
+
+.sidebarFooter {
+  padding: 10px 0;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chatArea {
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 900px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 16px;
-  gap: 16px;
+  min-width: 0;
 }
 
 .messagesArea {
@@ -22,14 +135,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 8px;
-}
-
-.chatToolbar {
-  display: flex;
-  justify-content: flex-end;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 16px 24px;
 }
 
 .messageRow {
@@ -43,7 +149,7 @@
 }
 
 .messageBubble {
-  max-width: 80%;
+  max-width: 75%;
   padding: 12px 16px;
   border-radius: 12px;
   font-size: 14px;
@@ -190,12 +296,47 @@
   flex-shrink: 0;
 }
 
+.thinkingPanel {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.thinkingSummary {
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+
+  &::marker {
+    color: #9ca3af;
+  }
+}
+
+.thinkingList {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 12px;
+  color: #9ca3af;
+
+  li {
+    margin: 2px 0;
+  }
+}
+
 .inputArea {
   background: #fff;
-  border-radius: 12px;
-  padding: 12px 16px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-top: 1px solid #e5e7eb;
+  padding: 12px 24px 16px;
+  flex-shrink: 0;
+}
+
+.inputToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
 }
 
 .inputWrapper {
@@ -229,6 +370,7 @@
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #f3f4f6;
+  justify-content: center;
 }
 
 .quickBtn {
@@ -238,10 +380,12 @@
 
 .welcomeCard {
   text-align: center;
-  padding: 40px 24px;
+  padding: 60px 24px;
+  margin: auto;
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
+  max-width: 520px;
 
   h3 {
     margin-bottom: 8px;

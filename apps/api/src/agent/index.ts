@@ -2,6 +2,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import {
   HumanMessage,
   AIMessage,
+  AIMessageChunk,
   SystemMessage,
   ToolMessage,
 } from '@langchain/core/messages';
@@ -30,6 +31,24 @@ import { generateChartTool } from './tools/chart.js';
 import type { AgentContext, ChatMessage } from './types.js';
 
 const MAX_ITERATIONS = 5;
+
+const TOOL_LABELS: Record<string, string> = {
+  query_apartments: '公寓列表',
+  query_rooms: '房间列表',
+  query_leases: '租约列表',
+  query_bills: '账单列表',
+  analytics_summary: '经营汇总',
+  query_room_detail: '房间详情',
+  query_apartment_contract: '公寓合同',
+  query_deposits: '押金列表',
+  query_deposit_summary: '押金汇总',
+  query_transactions: '收支记录',
+  query_transaction_summary: '收支汇总',
+  query_meter_readings: '抄表记录',
+  query_reservation: '预留信息',
+  query_settlements: '退租结算',
+  generate_chart: '生成图表',
+};
 
 function createTools(ctx: AgentContext) {
   return [
@@ -111,18 +130,81 @@ export async function* runAgent(
 
   let iterations = 0;
 
+  yield {
+    type: 'status',
+    content: '正在分析您的问题...',
+  };
+
   while (iterations < MAX_ITERATIONS) {
     iterations++;
 
-    const response = await modelWithTools.invoke(messages);
+    const stream = await modelWithTools.stream(messages);
+    let accumulated: AIMessageChunk | null = null;
+    let fullContent = '';
 
-    // 处理工具调用
-    if (response.tool_calls && response.tool_calls.length > 0) {
-      messages.push(response);
+    for await (const chunk of stream) {
+      accumulated = accumulated ? accumulated.concat(chunk) : chunk;
 
-      for (const toolCall of response.tool_calls) {
+      const chunkContent =
+        typeof chunk.content === 'string'
+          ? chunk.content
+          : Array.isArray(chunk.content)
+            ? chunk.content
+                .filter(
+                  (c) => typeof c === 'object' && c !== null && 'text' in c
+                )
+                .map((c) => (c as { text: string }).text)
+                .join('')
+            : '';
+
+      if (chunkContent) {
+        fullContent += chunkContent;
+        yield { type: 'message', content: chunkContent };
+      }
+    }
+
+    const response = accumulated;
+
+    if (!response) {
+      yield { type: 'error', content: '模型未返回有效响应' };
+      return;
+    }
+
+    // 检查是否有工具调用（流式模式下检查 tool_calls 或 tool_call_chunks）
+    const hasToolCalls =
+      (response.tool_calls &&
+        response.tool_calls.length > 0 &&
+        response.tool_calls[0].name) ||
+      (response.tool_call_chunks &&
+        response.tool_call_chunks.length > 0 &&
+        response.tool_call_chunks[0].name);
+
+    if (hasToolCalls) {
+      // 将 AIMessageChunk 转为 AIMessage 以便存到消息历史
+      const aiMsg = new AIMessage(fullContent || '');
+      if (response.tool_calls) {
+        aiMsg.tool_calls = response.tool_calls;
+      }
+      messages.push(aiMsg);
+
+      // 从 tool_call_chunks 提取工具调用信息
+      const toolCalls =
+        response.tool_call_chunks?.filter((tc) => tc.name) ??
+        response.tool_calls ??
+        [];
+
+      for (const toolCall of toolCalls) {
         const toolName = toolCall.name;
-        const toolArgs = toolCall.args as Record<string, unknown>;
+        let toolArgs: Record<string, unknown>;
+        if (typeof toolCall.args === 'string') {
+          try {
+            toolArgs = JSON.parse(toolCall.args);
+          } catch {
+            toolArgs = {};
+          }
+        } else {
+          toolArgs = (toolCall.args || {}) as Record<string, unknown>;
+        }
 
         const isChartTool = toolName === 'generate_chart';
 
@@ -130,7 +212,7 @@ export async function* runAgent(
           type: isChartTool ? 'chart' : 'status',
           content: isChartTool
             ? '正在生成图表...'
-            : `正在调用工具：${toolName}...`,
+            : `正在查询${TOOL_LABELS[toolName as string] || toolName}...`,
         };
 
         const tool = tools.find((t) => t.name === toolName);
@@ -138,7 +220,7 @@ export async function* runAgent(
           messages.push(
             new ToolMessage({
               content: JSON.stringify({ error: `工具 ${toolName} 不存在` }),
-              tool_call_id: toolCall.id || toolName,
+              tool_call_id: (toolCall.id || toolName) as string,
             })
           );
           continue;
@@ -168,7 +250,7 @@ export async function* runAgent(
           messages.push(
             new ToolMessage({
               content: resultStr,
-              tool_call_id: toolCall.id || toolName,
+              tool_call_id: (toolCall.id || toolName) as string,
             })
           );
         } catch (error) {
@@ -177,7 +259,7 @@ export async function* runAgent(
               content: JSON.stringify({
                 error: error instanceof Error ? error.message : '工具执行失败',
               }),
-              tool_call_id: toolCall.id || toolName,
+              tool_call_id: (toolCall.id || toolName) as string,
             })
           );
         }
@@ -186,13 +268,7 @@ export async function* runAgent(
       continue;
     }
 
-    // 没有工具调用，返回最终回复
-    const content =
-      typeof response.content === 'string'
-        ? response.content
-        : JSON.stringify(response.content);
-
-    yield { type: 'message', content };
+    // 没有工具调用，流式输出已完成
     yield { type: 'done', content: '' };
     return;
   }

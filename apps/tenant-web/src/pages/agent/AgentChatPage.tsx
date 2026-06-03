@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Input, Button, Avatar, message as antMessage } from 'antd';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Input, Button, Avatar, message as antMessage, Popconfirm } from 'antd';
 import {
   SendOutlined,
   RobotOutlined,
   UserOutlined,
   BulbOutlined,
   DeleteOutlined,
+  PlusOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -38,6 +40,8 @@ const QUICK_QUESTIONS = [
   '即将到期的租约',
 ];
 
+const MAX_CONVERSATION_LIMIT = 50;
+
 interface ChartConfig {
   chartType: 'bar' | 'line' | 'pie' | 'area' | 'radar';
   title: string;
@@ -53,6 +57,15 @@ interface DisplayMessage {
   content: string;
   loading?: boolean;
   chartData?: ChartConfig;
+  thinking?: string[];
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  messages: DisplayMessage[];
+  createdAt: number;
+  updatedAt: number;
 }
 
 const CHART_COLORS = [
@@ -66,48 +79,118 @@ const CHART_COLORS = [
 ];
 
 function generateId() {
-  return Math.random().toString(36).slice(2, 9);
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function usePersistedMessages(orgId: string) {
-  const storageKey = `agent_chat_${orgId}`;
+function useConversations(orgId: string) {
+  const storageKey = `agent_conv_${orgId}`;
 
-  const [messages, setMessages] = useState<DisplayMessage[]>(() => {
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
     try {
-      const stored = sessionStorage.getItem(storageKey);
+      const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(
-            (m: DisplayMessage) => !m.loading
-          ) as DisplayMessage[];
-        }
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
-      // ignore parse errors
+      // ignore
     }
     return [];
   });
 
-  // persist whenever messages change
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    if (conversations.length > 0) return conversations[0].id;
+    return null;
+  });
+
+  // persist to localStorage on change
   useEffect(() => {
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify(messages));
-    } catch {
-      // ignore storage errors (e.g. quota exceeded)
-    }
-  }, [messages, storageKey]);
-
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-    try {
-      sessionStorage.removeItem(storageKey);
+      localStorage.setItem(storageKey, JSON.stringify(conversations));
     } catch {
       // ignore
     }
-  }, [storageKey]);
+  }, [conversations, storageKey]);
 
-  return { messages, setMessages, clearMessages };
+  const activeConversation = useMemo(
+    () => conversations.find((c) => c.id === activeId) ?? null,
+    [conversations, activeId]
+  );
+
+  const updateMessages = useCallback(
+    (messages: DisplayMessage[]) => {
+      setConversations((prev) => {
+        if (!activeId) return prev;
+        return prev.map((c) =>
+          c.id === activeId
+            ? {
+                ...c,
+                messages,
+                title:
+                  c.title ||
+                  messages
+                    .find((m) => m.role === 'user')
+                    ?.content.slice(0, 30) ||
+                  '新对话',
+                updatedAt: Date.now(),
+              }
+            : c
+        );
+      });
+    },
+    [activeId]
+  );
+
+  const createConversation = useCallback(() => {
+    const newConv: Conversation = {
+      id: generateId(),
+      title: '',
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setConversations((prev) => {
+      const next = [newConv, ...prev].slice(0, MAX_CONVERSATION_LIMIT);
+      return next;
+    });
+    setActiveId(newConv.id);
+  }, []);
+
+  const deleteConversation = useCallback(
+    (id: string) => {
+      setConversations((prev) => {
+        const remaining = prev.filter((c) => c.id !== id);
+        if (activeId === id) {
+          setActiveId(remaining.length > 0 ? remaining[0].id : null);
+        }
+        return remaining;
+      });
+    },
+    [activeId]
+  );
+
+  const switchConversation = useCallback((id: string) => {
+    setActiveId(id);
+  }, []);
+
+  const clearCurrent = useCallback(() => {
+    if (activeId) {
+      deleteConversation(activeId);
+    }
+  }, [activeId, deleteConversation]);
+
+  return {
+    conversations,
+    activeConversation,
+    activeId,
+    setConversations,
+    setActiveId,
+    updateMessages,
+    createConversation,
+    deleteConversation,
+    switchConversation,
+    clearCurrent,
+  };
 }
 
 const ChartRenderer: React.FC<{ config: ChartConfig }> = ({ config }) => {
@@ -226,13 +309,36 @@ const ChartRenderer: React.FC<{ config: ChartConfig }> = ({ config }) => {
   );
 };
 
+function formatTime(ts: number) {
+  const d = new Date(ts);
+  const now = new Date();
+  const diffDays = Math.floor(
+    (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (diffDays === 0) return '今天';
+  if (diffDays === 1) return '昨天';
+  if (diffDays < 7) return `${diffDays}天前`;
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 export default function AgentChatPage() {
   const { currentOrgId } = useAppSession();
+  const orgId = currentOrgId || 'default';
+  const {
+    conversations,
+    activeConversation,
+    setConversations,
+    setActiveId,
+    createConversation,
+    deleteConversation,
+    switchConversation,
+    clearCurrent,
+  } = useConversations(orgId);
+
+  const messages = activeConversation?.messages ?? [];
   const [input, setInput] = useState('');
-  const { messages, setMessages, clearMessages } = usePersistedMessages(
-    currentOrgId || 'default'
-  );
   const [isLoading, setIsLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
 
@@ -246,7 +352,7 @@ export default function AgentChatPage() {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || !currentOrgId || isLoading) return;
+      if (!text.trim() || !orgId || isLoading) return;
 
       const userMsg: DisplayMessage = {
         id: generateId(),
@@ -259,33 +365,81 @@ export default function AgentChatPage() {
         role: 'assistant',
         content: '',
         loading: true,
+        thinking: [],
       };
 
-      setMessages((prev) => [...prev, userMsg, assistantMsg]);
-      setInput('');
+      // auto-create conversation if none active
+      let convId = activeConversation?.id;
+      let initialMessages: DisplayMessage[];
+
+      if (!convId) {
+        convId = generateId();
+        initialMessages = [];
+        const newConv: Conversation = {
+          id: convId,
+          title: text.trim().slice(0, 30),
+          messages: initialMessages,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setConversations((prev) =>
+          [newConv, ...prev].slice(0, MAX_CONVERSATION_LIMIT)
+        );
+        setActiveId(convId);
+      } else {
+        initialMessages = messages;
+      }
+
+      const currentMessages = [...initialMessages, userMsg, assistantMsg];
       setIsLoading(true);
+      setInput('');
       abortRef.current = false;
 
+      // use a helper to update in the conversation list directly
+      const updateConv = (
+        updater: (msgs: DisplayMessage[]) => DisplayMessage[]
+      ) => {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: updater(c.messages),
+                  title: c.title || text.trim().slice(0, 30),
+                  updatedAt: Date.now(),
+                }
+              : c
+          )
+        );
+      };
+      updateConv(() => currentMessages);
+
       const history: ChatMessage[] = [];
-      for (const m of messages.slice(-10)) {
+      for (const m of initialMessages.slice(-10)) {
         if (m.role === 'user' || m.role === 'assistant') {
           history.push({ role: m.role, content: m.content });
         }
       }
 
       try {
-        const stream = chatWithAgent(text.trim(), history, currentOrgId);
+        const stream = chatWithAgent(text.trim(), history, orgId);
         let fullContent = '';
 
         for await (const chunk of stream) {
           if (abortRef.current) break;
 
           if (chunk.type === 'status') {
-            // 保持 loading 状态，可选更新 status 显示
+            updateConv((msgs) =>
+              msgs.map((m) =>
+                m.id === assistantMsg.id
+                  ? { ...m, thinking: [...(m.thinking || []), chunk.content] }
+                  : m
+              )
+            );
           } else if (chunk.type === 'message') {
             fullContent += chunk.content;
-            setMessages((prev) =>
-              prev.map((m) =>
+            updateConv((msgs) =>
+              msgs.map((m) =>
                 m.id === assistantMsg.id
                   ? { ...m, content: fullContent, loading: false }
                   : m
@@ -294,23 +448,23 @@ export default function AgentChatPage() {
           } else if (chunk.type === 'chart') {
             try {
               const chartData = JSON.parse(chunk.content) as ChartConfig;
-              setMessages((prev) =>
-                prev.map((m) =>
+              updateConv((msgs) =>
+                msgs.map((m) =>
                   m.id === assistantMsg.id
                     ? { ...m, content: fullContent, chartData, loading: false }
                     : m
                 )
               );
             } catch {
-              // 图表数据解析失败，忽略
+              // ignore
             }
           } else if (chunk.type === 'error') {
-            setMessages((prev) =>
-              prev.map((m) =>
+            updateConv((msgs) =>
+              msgs.map((m) =>
                 m.id === assistantMsg.id
                   ? {
                       ...m,
-                      role: 'error',
+                      role: 'error' as const,
                       content: chunk.content,
                       loading: false,
                     }
@@ -319,8 +473,8 @@ export default function AgentChatPage() {
             );
             break;
           } else if (chunk.type === 'done') {
-            setMessages((prev) =>
-              prev.map((m) =>
+            updateConv((msgs) =>
+              msgs.map((m) =>
                 m.id === assistantMsg.id
                   ? { ...m, content: fullContent, loading: false }
                   : m
@@ -332,10 +486,15 @@ export default function AgentChatPage() {
       } catch (error) {
         const errorMsg =
           error instanceof Error ? error.message : '请求失败，请重试';
-        setMessages((prev) =>
-          prev.map((m) =>
+        updateConv((msgs) =>
+          msgs.map((m) =>
             m.id === assistantMsg.id
-              ? { ...m, role: 'error', content: errorMsg, loading: false }
+              ? {
+                  ...m,
+                  role: 'error' as const,
+                  content: errorMsg,
+                  loading: false,
+                }
               : m
           )
         );
@@ -344,7 +503,7 @@ export default function AgentChatPage() {
         setIsLoading(false);
       }
     },
-    [currentOrgId, isLoading, messages]
+    [orgId, isLoading, messages, activeConversation, setConversations]
   );
 
   const handleSend = () => {
@@ -364,29 +523,93 @@ export default function AgentChatPage() {
     sendMessage(q);
   };
 
+  const handleNewChat = () => {
+    createConversation();
+  };
+
+  const hasMessages = messages.length > 0;
+
   return (
     <div className={styles.agentChatPage}>
-      <div className={styles.chatContainer}>
-        <div className={styles.messagesArea}>
-          {messages.length > 0 && (
-            <div className={styles.chatToolbar}>
-              <Button
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={clearMessages}
+      <div
+        className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}
+      >
+        <div className={styles.sidebarHeader}>
+          <Button
+            type="primary"
+            block={!sidebarCollapsed}
+            shape={sidebarCollapsed ? 'circle' : undefined}
+            icon={<PlusOutlined />}
+            onClick={handleNewChat}
+          >
+            {sidebarCollapsed ? '' : '新对话'}
+          </Button>
+        </div>
+        <div className={styles.conversationList}>
+          {conversations.map((conv) => (
+            <div
+              key={conv.id}
+              className={`${styles.conversationItem} ${
+                conv.id === activeConversation?.id
+                  ? styles.conversationActive
+                  : ''
+              }`}
+              onClick={() => switchConversation(conv.id)}
+            >
+              <MessageOutlined className={styles.conversationIcon} />
+              <div className={styles.conversationInfo}>
+                <div className={styles.conversationTitle}>
+                  {conv.title || '新对话'}
+                </div>
+                <div className={styles.conversationMeta}>
+                  {formatTime(conv.updatedAt)} ·{' '}
+                  {conv.messages.length > 0
+                    ? `${Math.ceil(conv.messages.filter((m) => m.role === 'user').length)} 轮对话`
+                    : '空'}
+                </div>
+              </div>
+              <Popconfirm
+                title="确定删除此对话？"
+                onConfirm={(e) => {
+                  e?.stopPropagation();
+                  deleteConversation(conv.id);
+                }}
+                onCancel={(e) => e?.stopPropagation()}
+                okText="删除"
+                cancelText="取消"
               >
-                清空对话
-              </Button>
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  className={styles.deleteConvBtn}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Popconfirm>
             </div>
+          ))}
+          {conversations.length === 0 && (
+            <div className={styles.noConversations}>暂无对话记录</div>
           )}
-          {messages.length === 0 && (
+        </div>
+        <div className={styles.sidebarFooter}>
+          <Button
+            type="text"
+            size="small"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          >
+            {sidebarCollapsed ? '展开' : '收起'}
+          </Button>
+        </div>
+      </div>
+
+      <div className={styles.chatArea}>
+        <div className={styles.messagesArea}>
+          {!activeConversation || (!hasMessages && activeConversation) ? (
             <div className={styles.welcomeCard}>
               <RobotOutlined
-                style={{
-                  fontSize: 48,
-                  color: '#2563eb',
-                  marginBottom: 16,
-                }}
+                style={{ fontSize: 48, color: '#2563eb', marginBottom: 16 }}
               />
               <h3>智能助手</h3>
               <p>
@@ -407,7 +630,7 @@ export default function AgentChatPage() {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
           {messages.map((msg) => (
             <div
@@ -441,6 +664,20 @@ export default function AgentChatPage() {
                   </div>
                 ) : (
                   <>
+                    {msg.thinking &&
+                      msg.thinking.length > 0 &&
+                      !msg.loading && (
+                        <details className={styles.thinkingPanel}>
+                          <summary className={styles.thinkingSummary}>
+                            思考过程 ({msg.thinking.length} 步)
+                          </summary>
+                          <ol className={styles.thinkingList}>
+                            {msg.thinking.map((step, i) => (
+                              <li key={i}>{step}</li>
+                            ))}
+                          </ol>
+                        </details>
+                      )}
                     {msg.content && (
                       <div className={styles.markdownBody}>
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -457,27 +694,39 @@ export default function AgentChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className={styles.inputArea}>
-          <div className={styles.inputWrapper}>
-            <Input.TextArea
-              className={styles.textInput}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="输入您的问题，按 Enter 发送，Shift+Enter 换行..."
-              autoSize={{ minRows: 1, maxRows: 4 }}
-              disabled={isLoading}
-            />
-            <Button
-              type="primary"
-              className={styles.sendBtn}
-              icon={<SendOutlined />}
-              onClick={handleSend}
-              loading={isLoading}
-              disabled={!input.trim() || !currentOrgId}
-            />
+        {activeConversation && (
+          <div className={styles.inputArea}>
+            <div className={styles.inputToolbar}>
+              <Button
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={clearCurrent}
+                disabled={isLoading}
+              >
+                清空对话
+              </Button>
+            </div>
+            <div className={styles.inputWrapper}>
+              <Input.TextArea
+                className={styles.textInput}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="输入您的问题，按 Enter 发送，Shift+Enter 换行..."
+                autoSize={{ minRows: 1, maxRows: 4 }}
+                disabled={isLoading}
+              />
+              <Button
+                type="primary"
+                className={styles.sendBtn}
+                icon={<SendOutlined />}
+                onClick={handleSend}
+                loading={isLoading}
+                disabled={!input.trim() || !orgId}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
