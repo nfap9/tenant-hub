@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { queryMeterReadingsForAgent } from '../../services/bill.js';
+import { queryMeterReadingsForAgent } from '../../services/forAgent/bill.js';
 import type { AgentContext } from '../types.js';
 
 export const queryMeterReadingsTool = (ctx: AgentContext) =>

@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { queryBillsForAgent } from '../../services/bill.js';
+import { queryBillsForAgent } from '../../services/forAgent/bill.js';
 import type { AgentContext } from '../types.js';
 
 export const queryBillsTool = (ctx: AgentContext) =>

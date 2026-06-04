@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { queryRoomDetailForAgent } from '../../services/apartment.js';
+import { queryRoomDetailForAgent } from '../../services/forAgent/apartment.js';
 import type { AgentContext } from '../types.js';
 
 export const queryRoomDetailTool = (ctx: AgentContext) =>

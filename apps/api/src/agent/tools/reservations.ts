@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { queryReservationForAgent } from '../../services/reservation.js';
+import { queryReservationForAgent } from '../../services/forAgent/reservation.js';
 import type { AgentContext } from '../types.js';
 
 export const queryReservationTool = (ctx: AgentContext) =>

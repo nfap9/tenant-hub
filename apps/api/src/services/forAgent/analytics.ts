@@ -1,4 +1,4 @@
-import { prisma } from '../config/prisma.js';
+import { prisma } from '../../config/prisma.js';
 
 /**
  * 获取经纪人分析汇总数据

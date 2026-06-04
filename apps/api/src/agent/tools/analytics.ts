@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { getAnalyticsSummaryForAgent } from '../../services/analytics.js';
+import { getAnalyticsSummaryForAgent } from '../../services/forAgent/analytics.js';
 import type { AgentContext } from '../types.js';
 
 export const analyticsSummaryTool = (ctx: AgentContext) =>

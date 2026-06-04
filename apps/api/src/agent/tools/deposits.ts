@@ -3,7 +3,7 @@ import { z } from 'zod';
 import {
   queryDepositsForAgent,
   queryDepositSummaryForAgent,
-} from '../../services/deposit.js';
+} from '../../services/forAgent/deposit.js';
 import type { AgentContext } from '../types.js';
 
 export const queryDepositsTool = (ctx: AgentContext) =>
