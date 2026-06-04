@@ -23,13 +23,27 @@ export const TRANSACTION_CATEGORIES = {
 
 export type TransactionCategory = keyof typeof TRANSACTION_CATEGORIES;
 
+/**
+ * 获取交易科目的中文标签
+ * @param category - 交易科目代码
+ * @returns 科目中文标签，若未找到则返回原代码
+ */
 export const getCategoryLabel = (category: string) =>
   TRANSACTION_CATEGORIES[category as TransactionCategory]?.label || category;
 
+/**
+ * 获取交易科目的收支类型
+ * @param category - 交易科目代码
+ * @returns 收支类型（INCOME 或 EXPENSE），若未找到则默认为 INCOME
+ */
 export const getCategoryType = (category: string) =>
   TRANSACTION_CATEGORIES[category as TransactionCategory]?.type || 'INCOME';
 
-// 根据账单明细类型推断科目
+/**
+ * 根据账单明细类型推断交易科目
+ * @param type - 账单明细类型
+ * @returns 对应的交易科目代码
+ */
 export const getCategoryFromBillItemType = (
   type: string
 ): TransactionCategory => {
@@ -69,6 +83,11 @@ type CreateTransactionInput = {
   apartmentId?: string;
 };
 
+/**
+ * 创建收支记录
+ * @param input - 创建收支记录所需的参数，包含组织ID、类型、科目、金额等
+ * @returns 新创建的收支记录
+ */
 export const createTransaction = async (input: CreateTransactionInput) => {
   return prisma.transaction.create({
     data: {
@@ -106,6 +125,11 @@ type ListTransactionsInput = {
   pageSize?: number;
 };
 
+/**
+ * 分页查询收支记录列表
+ * @param input - 查询条件，支持组织ID、类型、科目、日期范围、支付方式、房源、租约、来源类型及关键词筛选
+ * @returns 收支记录列表及分页信息
+ */
 export const listTransactions = async (input: ListTransactionsInput) => {
   const {
     organizationId,
@@ -183,6 +207,13 @@ export const listTransactions = async (input: ListTransactionsInput) => {
   return { items, total, page, pageSize };
 };
 
+/**
+ * 获取收支汇总统计
+ * @param organizationId - 组织ID
+ * @param startDate - 统计开始日期（可选）
+ * @param endDate - 统计结束日期（可选）
+ * @returns 收支汇总数据，包含总收入、总支出、净额及按科目、支付方式、日期的汇总
+ */
 export const getTransactionSummary = async ({
   organizationId,
   startDate,
@@ -344,6 +375,12 @@ export const getTransactionSummary = async ({
   };
 };
 
+/**
+ * 根据 ID 获取单笔收支记录详情
+ * @param id - 收支记录 ID
+ * @param organizationId - 组织 ID
+ * @returns 收支记录详情，包含关联的操作人、账单、租约及公寓信息
+ */
 export const getTransactionById = async (
   id: string,
   organizationId: string
@@ -375,6 +412,12 @@ export const getTransactionById = async (
   });
 };
 
+/**
+ * 删除手动创建的收支记录（软删除）
+ * @param id - 收支记录 ID
+ * @param organizationId - 组织 ID
+ * @returns 更新后的收支记录；若记录不存在或非手动创建则返回 null 或抛出错误
+ */
 export const deleteTransaction = async (id: string, organizationId: string) => {
   const transaction = await prisma.transaction.findFirst({
     where: { id, organizationId, deletedAt: null },
@@ -412,6 +455,19 @@ const AGENT_TRANSACTION_CATEGORIES: Record<
   OTHER_EXPENSE: { label: '其他支出', type: 'EXPENSE' },
 };
 
+/**
+ * Agent 查询收支记录列表
+ * @param organizationId - 组织 ID
+ * @param type - 收支类型筛选（可选）
+ * @param category - 科目筛选（可选）
+ * @param startDate - 开始日期筛选（可选）
+ * @param endDate - 结束日期筛选（可选）
+ * @param sourceType - 来源类型筛选（可选）
+ * @param keyword - 关键词搜索（可选）
+ * @param page - 页码，默认 1
+ * @param pageSize - 每页条数，默认 20
+ * @returns 格式化后的收支记录列表及分页信息
+ */
 export const queryTransactionsForAgent = async ({
   organizationId,
   type,
@@ -512,6 +568,13 @@ export const queryTransactionsForAgent = async ({
   };
 };
 
+/**
+ * Agent 查询收支汇总统计
+ * @param organizationId - 组织 ID
+ * @param startDate - 统计开始日期（可选）
+ * @param endDate - 统计结束日期（可选）
+ * @returns 收支汇总数据，包含总收入、总支出、净收入、交易笔数及按科目的汇总
+ */
 export const queryTransactionSummaryForAgent = async ({
   organizationId,
   startDate,

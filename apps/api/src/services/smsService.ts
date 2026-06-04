@@ -14,12 +14,24 @@ export interface SendSmsOptions {
   config: SmsConfig;
 }
 
+/**
+ * 替换模板字符串中的变量占位符
+ * @param template - 包含 {{key}} 占位符的模板字符串
+ * @param vars - 变量映射表，key 为占位符名称，value 为替换值
+ * @returns 替换变量后的字符串
+ */
 function replaceVars(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
     return vars[key] !== undefined ? vars[key] : match;
   });
 }
 
+/**
+ * 对 Record 对象的键和值进行变量替换
+ * @param record - 原始键值对对象，未定义时返回空对象
+ * @param vars - 变量映射表
+ * @returns 键和值均已替换变量的新 Record 对象
+ */
 function replaceRecordVars(
   record: Record<string, string> | undefined,
   vars: Record<string, string>
@@ -32,6 +44,11 @@ function replaceRecordVars(
   return result;
 }
 
+/**
+ * 根据配置发送短信
+ * @param options - 发送短信的选项，包含手机号、验证码、过期时间和短信配置
+ * @returns 无返回值，发送失败时抛出异常
+ */
 export async function sendSms(options: SendSmsOptions): Promise<void> {
   const { phoneNumber, code, expireMinutes, config } = options;
 

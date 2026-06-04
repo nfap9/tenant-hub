@@ -13,6 +13,11 @@ const leaseInclude = {
   deposit: true,
 } as const;
 
+/**
+ * 获取指定组织下的所有租约列表
+ * @param organizationId - 组织 ID
+ * @returns 带生命周期状态的租约列表
+ */
 export const listLeases = async (organizationId: string) => {
   const leases = await prisma.lease.findMany({
     where: { organizationId },
@@ -22,6 +27,12 @@ export const listLeases = async (organizationId: string) => {
   return leases.map((lease) => withLeaseLifecycle(lease));
 };
 
+/**
+ * 根据 ID 获取租约
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @returns 租约详情（包含费用信息）
+ */
 export const getLeaseById = async (leaseId: string, organizationId: string) => {
   const lease = await prisma.lease.findFirst({
     where: { id: leaseId, organizationId },
@@ -30,6 +41,12 @@ export const getLeaseById = async (leaseId: string, organizationId: string) => {
   return lease;
 };
 
+/**
+ * 根据 ID 查找房间
+ * @param roomId - 房间 ID
+ * @param organizationId - 组织 ID
+ * @returns 房间基本信息（ID 和状态）
+ */
 export const findRoomById = async (roomId: string, organizationId: string) => {
   return prisma.room.findFirst({
     where: { id: roomId, apartment: { organizationId } },
@@ -37,6 +54,11 @@ export const findRoomById = async (roomId: string, organizationId: string) => {
   });
 };
 
+/**
+ * 创建租约并生成押金账单（含预留定金抵扣逻辑）
+ * @param data - 租约创建数据，包含租约信息、房间 ID、组织 ID、用户 ID 及费用列表
+ * @returns 创建完成的租约详情（含房间、费用、押金信息）
+ */
 export const createLeaseWithDeposit = async (data: {
   leaseData: {
     tenantName: string;
@@ -154,6 +176,11 @@ export const createLeaseWithDeposit = async (data: {
   });
 };
 
+/**
+ * 创建租约但不生成押金账单
+ * @param data - 租约创建数据，包含租约信息、房间 ID、组织 ID 及费用列表
+ * @returns 创建完成的租约详情（含房间、费用、押金信息）
+ */
 export const createLeaseWithoutDeposit = async (data: {
   leaseData: {
     tenantName: string;
@@ -194,6 +221,12 @@ export const createLeaseWithoutDeposit = async (data: {
   });
 };
 
+/**
+ * 更新房间状态
+ * @param roomId - 房间 ID
+ * @param status - 新状态（空闲/已预订/已入住/维修中）
+ * @returns 更新后的房间信息
+ */
 export const updateRoomStatus = async (
   roomId: string,
   status: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE'
@@ -204,6 +237,12 @@ export const updateRoomStatus = async (
   });
 };
 
+/**
+ * 更新租约信息及费用
+ * @param leaseId - 租约 ID
+ * @param data - 更新的租约数据和费用列表
+ * @returns 更新后的租约详情（含房间、费用、押金信息）
+ */
 export const updateLease = async (
   leaseId: string,
   data: {
@@ -252,6 +291,12 @@ export const updateLease = async (
   });
 };
 
+/**
+ * 获取租约及其费用信息
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @returns 租约详情（包含费用信息）
+ */
 export const getLeaseWithFees = async (
   leaseId: string,
   organizationId: string
@@ -262,6 +307,11 @@ export const getLeaseWithFees = async (
   });
 };
 
+/**
+ * 激活草稿状态的租约
+ * @param data - 包含租约 ID、组织 ID 和用户 ID
+ * @returns 激活后的租约详情
+ */
 export const activateLease = async (data: {
   leaseId: string;
   organizationId: string;
@@ -351,6 +401,12 @@ export const activateLease = async (data: {
   });
 };
 
+/**
+ * 获取租约的结束日期
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @returns 租约的 ID 和结束日期
+ */
 export const getLeaseEndDate = async (
   leaseId: string,
   organizationId: string
@@ -362,6 +418,11 @@ export const getLeaseEndDate = async (
   return lease;
 };
 
+/**
+ * 获取指定组织下的所有租约退租结算列表
+ * @param organizationId - 组织 ID
+ * @returns 退租结算列表（含租约、房间、收款记录）
+ */
 export const listLeaseSettlements = async (organizationId: string) => {
   return prisma.leaseSettlement.findMany({
     where: { organizationId },
@@ -378,6 +439,11 @@ export const listLeaseSettlements = async (organizationId: string) => {
   });
 };
 
+/**
+ * 为经纪人查询租约列表（支持筛选和精简字段返回）
+ * @param params - 查询参数，包含组织 ID、租客姓名、房间 ID、状态及数量限制
+ * @returns 精简后的租约列表（含生命周期状态及押金信息）
+ */
 export const queryLeasesForAgent = async ({
   organizationId,
   tenantName,
@@ -449,6 +515,11 @@ export const queryLeasesForAgent = async ({
   });
 };
 
+/**
+ * 为经纪人查询退租结算列表（支持按租约筛选和精简字段返回）
+ * @param params - 查询参数，包含组织 ID、租约 ID 及数量限制
+ * @returns 精简后的退租结算列表（含账单、收款汇总信息）
+ */
 export const querySettlementsForAgent = async ({
   organizationId,
   leaseId,

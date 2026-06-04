@@ -10,6 +10,13 @@ const startOfDay = (date: Date) => dayjs.utc(date).startOf('day');
 
 const MAX_RENEWAL_PERIODS = 12;
 
+/**
+ * 处理自动续约租约
+ * 查找已到期的、开启自动续约的活跃租约，按租赁周期逐次延长结束日期，
+ * 并为新延长的周期生成账单。最大续约次数为 12 个周期。
+ * @param today - 指定处理日期，默认为当前日期
+ * @returns 返回处理结果，包含本次成功处理的租约数量 processedCount
+ */
 export const processAutoRenewLeases = async (today = new Date()) => {
   const todayStart = startOfDay(today);
 

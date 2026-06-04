@@ -1,5 +1,11 @@
 import { prisma } from '../config/prisma.js';
 
+/**
+ * 确保系统默认设置项已存在，若不存在则自动创建
+ * @param deps - 依赖注入对象
+ * @param deps.prisma - 可选的 Prisma 客户端实例，用于数据库操作
+ * @returns 无返回值
+ */
 export async function ensureSystemSettings(
   deps: {
     prisma?: typeof prisma;

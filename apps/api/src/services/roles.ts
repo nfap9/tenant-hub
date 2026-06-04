@@ -15,6 +15,13 @@ export const PERMISSIONS = {
   MEMBER_MANAGE: 'member:manage',
 } as const;
 
+/**
+ * 确保系统预设角色已创建或更新
+ * 检查数据库中是否已存在 owner、manager、readonly 三个系统角色，
+ * 不存在则创建，存在则更新名称、描述和权限列表
+ * @param db - Prisma 客户端实例（仅需包含 role 模型），默认使用全局 prisma
+ * @returns 无返回值
+ */
 export const ensureSystemRoles = async (
   db: Pick<typeof prisma, 'role'> = prisma
 ) => {

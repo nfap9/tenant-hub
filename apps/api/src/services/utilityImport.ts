@@ -49,6 +49,12 @@ const numeric = (value: string, label: string) => {
   return parsed;
 };
 
+/**
+ * 解析水电表导入 CSV，提取账单ID及上月/本月水、电表读数
+ * @param csv - CSV 字符串内容，首行为表头，后续每行为一条记录
+ * @returns 解析后的水电导入行数组
+ * @throws 当缺少必要列、表读数非数字或 billId 为空时抛出错误
+ */
 export const parseUtilityImportRows = (csv: string): UtilityImportRow[] => {
   const lines = csv.trim().split(/\r?\n/).filter(Boolean);
   if (lines.length <= 1) return [];

@@ -5,6 +5,11 @@ import { createTransaction } from './transaction.js';
 
 type DecimalValue = Prisma.Decimal.Value;
 
+/**
+ * 根据押金当前的已付、退款、抵扣金额重新计算并更新其状态
+ * @param depositId - 押金记录ID
+ * @returns 无返回值
+ */
 export const refreshDepositStatus = async (depositId: string) => {
   const deposit = await prisma.deposit.findUnique({
     where: { id: depositId },
@@ -32,6 +37,16 @@ export const refreshDepositStatus = async (depositId: string) => {
   });
 };
 
+/**
+ * 记录押金的收款、退款或扣款操作，创建支付记录与收支流水，并更新押金金额及状态
+ * @param depositId - 押金记录ID
+ * @param userId - 操作用户ID
+ * @param type - 操作类型：COLLECT(收款)、REFUND(退款)、DEDUCT(扣款)
+ * @param amount - 操作金额
+ * @param method - 支付方式
+ * @param note - 备注（可选）
+ * @returns 创建的支付记录
+ */
 export const recordDepositPayment = async ({
   depositId,
   userId,
@@ -145,6 +160,11 @@ export const recordDepositPayment = async ({
   return payment;
 };
 
+/**
+ * 获取组织下所有押金的汇总统计数据
+ * @param organizationId - 组织ID
+ * @returns 押金汇总信息，包括总金额、已付、已退、已扣、持有金额及记录数量
+ */
 export const getDepositSummary = async (organizationId: string) => {
   const deposits = await prisma.deposit.findMany({
     where: { organizationId },
@@ -178,6 +198,13 @@ export const getDepositSummary = async (organizationId: string) => {
   };
 };
 
+/**
+ * 为智能体/客服查询组织下的押金列表，包含租约、房间、公寓信息
+ * @param organizationId - 组织ID
+ * @param status - 押金状态筛选（可选）
+ * @param limit - 返回数量限制，默认30
+ * @returns 押金列表，包含租客姓名、房间号、公寓名、金额及状态等
+ */
 export const queryDepositsForAgent = async ({
   organizationId,
   status,
@@ -222,6 +249,11 @@ export const queryDepositsForAgent = async ({
   }));
 };
 
+/**
+ * 为智能体/客服查询组织下的押金汇总数据，包含各状态数量分布
+ * @param organizationId - 组织ID
+ * @returns 押金汇总数据，包括金额统计、总数及各状态分布
+ */
 export const queryDepositSummaryForAgent = async (organizationId: string) => {
   const deposits = await prisma.deposit.findMany({
     where: { organizationId },

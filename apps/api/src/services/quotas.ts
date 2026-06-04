@@ -30,6 +30,12 @@ const limitLabel: Record<QuotaKind, string> = {
 
 type PrismaLike = typeof prisma | Prisma.TransactionClient;
 
+/**
+ * 对指定组织的配额进行 PostgreSQL advisory lock 锁定，防止并发竞争
+ * @param db - Prisma 事务客户端
+ * @param organizationId - 组织 ID
+ * @returns 无返回值
+ */
 export const lockOrganizationQuota = async (
   db: Prisma.TransactionClient,
   organizationId: string
@@ -37,6 +43,11 @@ export const lockOrganizationQuota = async (
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`quota:${organizationId}`}))`;
 };
 
+/**
+ * 检查系统是否开启了配额限制功能
+ * @param db - Prisma 客户端（可选，默认使用全局 prisma 实例）
+ * @returns 是否开启配额限制
+ */
 export const isQuotaLimitEnabled = async (db: PrismaLike = prisma) => {
   const setting = await db.systemSetting.findUnique({
     where: { key: 'quota_limit_enabled' },
@@ -45,6 +56,12 @@ export const isQuotaLimitEnabled = async (db: PrismaLike = prisma) => {
   return !!((setting.value as any)?.enabled ?? false);
 };
 
+/**
+ * 获取指定组织的当前配额信息（含订阅套餐和额外购买配额）
+ * @param organizationId - 组织 ID
+ * @param db - Prisma 客户端（可选，默认使用全局 prisma 实例）
+ * @returns 配额信息对象（subscription + extraQuota），若未开启配额限制则返回无限额对象；若无有效订阅则返回 undefined
+ */
 export const getOrganizationQuota = async (
   organizationId: string,
   db: PrismaLike = prisma
@@ -100,6 +117,15 @@ export const getOrganizationQuota = async (
   return { subscription, extraQuota };
 };
 
+/**
+ * 校验组织在指定资源类型下的配额是否足够
+ * @param organizationId - 组织 ID
+ * @param kind - 配额类型（apartment / room / member）
+ * @param nextCount - 预期达到的数量
+ * @param db - Prisma 客户端（可选，默认使用全局 prisma 实例）
+ * @returns 无返回值
+ * @throws HttpError 402 未购买套餐 / 403 超出配额上限
+ */
 export const assertOrganizationQuota = async (
   organizationId: string,
   kind: QuotaKind,
@@ -124,6 +150,15 @@ export const assertOrganizationQuota = async (
   }
 };
 
+/**
+ * 强制执行组织配额检查（先加锁再校验）
+ * @param db - Prisma 事务客户端
+ * @param organizationId - 组织 ID
+ * @param kind - 配额类型（apartment / room / member）
+ * @param getNextCount - 异步函数，用于获取预期达到的数量
+ * @returns 无返回值
+ * @throws HttpError 402 未购买套餐 / 403 超出配额上限
+ */
 export const enforceOrganizationQuota = async (
   db: Prisma.TransactionClient,
   organizationId: string,

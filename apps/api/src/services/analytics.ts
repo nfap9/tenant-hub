@@ -1,5 +1,10 @@
 import { prisma } from '../config/prisma.js';
 
+/**
+ * 获取经纪人分析汇总数据
+ * @param organizationId - 组织ID
+ * @returns 包含公寓、房间、租约、账单及收租率等统计指标的对象
+ */
 export const getAnalyticsSummaryForAgent = async (organizationId: string) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);

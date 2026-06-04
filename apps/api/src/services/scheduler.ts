@@ -6,6 +6,10 @@ import { prisma } from '../config/prisma.js';
 
 let running = false;
 
+/**
+ * 执行每日定时任务，包括租约过期处理、预订自动释放、自动续约及账单生成
+ * @returns 无返回值
+ */
 export const runDailyTasks = async () => {
   if (running) {
     console.warn('[Scheduler] 上次任务仍在执行，跳过本次');
@@ -71,6 +75,10 @@ export const runDailyTasks = async () => {
   }
 };
 
+/**
+ * 启动每日定时调度器，每日 02:00 Asia/Shanghai 自动执行 runDailyTasks
+ * @returns 无返回值
+ */
 export const startScheduler = () => {
   // Run daily at 02:00 Asia/Shanghai
   cron.schedule('0 2 * * *', runDailyTasks, {

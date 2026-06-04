@@ -2,6 +2,12 @@ import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import { calculateUtilityLineAmounts, refreshBillTotals } from './billing.js';
 
+/**
+ * 查询账单列表
+ * @param organizationId - 组织ID
+ * @param status - 账单状态筛选（可选）
+ * @returns 账单列表，包含租约、房间、账单项目和付款信息
+ */
 export const listBills = async (
   organizationId: string,
   status?:
@@ -27,6 +33,12 @@ export const listBills = async (
   });
 };
 
+/**
+ * 根据ID获取账单详情
+ * @param billId - 账单ID
+ * @param organizationId - 组织ID
+ * @returns 账单详情，包含账单项目和付款记录
+ */
 export const getBillById = async (billId: string, organizationId: string) => {
   return prisma.bill.findFirst({
     where: { id: billId, organizationId },
@@ -34,6 +46,12 @@ export const getBillById = async (billId: string, organizationId: string) => {
   });
 };
 
+/**
+ * 根据ID查找租约
+ * @param leaseId - 租约ID
+ * @param organizationId - 组织ID
+ * @returns 租约基本信息（仅ID）
+ */
 export const findLeaseById = async (
   leaseId: string,
   organizationId: string
@@ -44,6 +62,12 @@ export const findLeaseById = async (
   });
 };
 
+/**
+ * 查询抄表记录列表
+ * @param organizationId - 组织ID
+ * @param roomId - 房间ID（可选）
+ * @returns 抄表记录列表，包含房间、租约和创建者信息
+ */
 export const listMeterReadings = async (
   organizationId: string,
   roomId?: string
@@ -62,6 +86,12 @@ export const listMeterReadings = async (
   });
 };
 
+/**
+ * 查找用于抄表的房间
+ * @param roomId - 房间ID
+ * @param organizationId - 组织ID
+ * @returns 房间信息，包含所属公寓
+ */
 export const findRoomForMeterReading = async (
   roomId: string,
   organizationId: string
@@ -75,6 +105,13 @@ export const findRoomForMeterReading = async (
   });
 };
 
+/**
+ * 查找用于抄表的租约
+ * @param roomId - 房间ID
+ * @param organizationId - 组织ID
+ * @param readingDate - 抄表日期
+ * @returns 在抄表日期范围内生效的租约
+ */
 export const findLeaseForMeterReading = async (
   roomId: string,
   organizationId: string,
@@ -91,6 +128,11 @@ export const findLeaseForMeterReading = async (
   });
 };
 
+/**
+ * 创建抄表记录
+ * @param data - 抄表记录数据，包含组织ID、公寓ID、房间ID、租约ID、表类型、抄表日期、读数、来源、状态和备注
+ * @returns 创建的抄表记录
+ */
 export const createMeterReading = async (data: {
   organizationId: string;
   apartmentId: string;
@@ -107,6 +149,11 @@ export const createMeterReading = async (data: {
   return prisma.meterReading.create({ data });
 };
 
+/**
+ * 查找房间待处理的后付费账单
+ * @param roomId - 房间ID
+ * @returns 待处理的后付费账单ID列表
+ */
 export const findPendingPostpaidBillsByRoom = async (roomId: string) => {
   return prisma.bill.findMany({
     where: {
@@ -118,6 +165,12 @@ export const findPendingPostpaidBillsByRoom = async (roomId: string) => {
   });
 };
 
+/**
+ * 获取账单及其项目和租约信息
+ * @param billId - 账单ID
+ * @param organizationId - 组织ID
+ * @returns 账单详情，包含租约、房间和账单项目
+ */
 export const getBillWithItemsAndLease = async (
   billId: string,
   organizationId: string
@@ -128,6 +181,17 @@ export const getBillWithItemsAndLease = async (
   });
 };
 
+/**
+ * 将水电读数应用到后付费账单
+ * @param billId - 账单ID
+ * @param organizationId - 组织ID
+ * @param userId - 操作用户ID
+ * @param previousWater - 上期水表读数
+ * @param currentWater - 本期水表读数
+ * @param previousPower - 上期电表读数
+ * @param currentPower - 本期电表读数
+ * @returns 更新后的账单（包含账单项目）
+ */
 export const applyUtilityReadingToBill = async ({
   billId,
   organizationId,
@@ -251,6 +315,11 @@ export const applyUtilityReadingToBill = async ({
   });
 };
 
+/**
+ * 查找待导出的后付费账单
+ * @param organizationId - 组织ID
+ * @returns 待处理的后付费账单列表，包含租约、房间和账单项目
+ */
 export const findPendingPostpaidBillsForExport = async (
   organizationId: string
 ) => {
@@ -265,6 +334,12 @@ export const findPendingPostpaidBillsForExport = async (
   });
 };
 
+/**
+ * 获取用于重试的账单
+ * @param billId - 账单ID
+ * @param organizationId - 组织ID
+ * @returns 账单基本信息
+ */
 export const getBillForRetry = async (
   billId: string,
   organizationId: string
@@ -274,6 +349,11 @@ export const getBillForRetry = async (
   });
 };
 
+/**
+ * 删除账单及其关联付款记录
+ * @param billId - 账单ID
+ * @returns 无返回值
+ */
 export const deleteBillWithPayments = async (billId: string) => {
   await prisma.$transaction([
     prisma.payment.deleteMany({ where: { billId } }),
@@ -281,6 +361,15 @@ export const deleteBillWithPayments = async (billId: string) => {
   ]);
 };
 
+/**
+ * 为智能助手查询账单列表
+ * @param organizationId - 组织ID
+ * @param status - 账单状态筛选（可选）
+ * @param tenantName - 租客姓名筛选（可选）
+ * @param mode - 账单模式筛选（可选）
+ * @param limit - 返回数量限制，默认30
+ * @returns 格式化后的账单列表，包含租约、房间、账单项目和付款信息
+ */
 export const queryBillsForAgent = async ({
   organizationId,
   status,
@@ -373,6 +462,14 @@ export const queryBillsForAgent = async ({
   }));
 };
 
+/**
+ * 为智能助手查询抄表记录列表
+ * @param organizationId - 组织ID
+ * @param roomId - 房间ID（可选）
+ * @param meterType - 表类型筛选，水表或电表（可选）
+ * @param limit - 返回数量限制，默认30
+ * @returns 格式化后的抄表记录列表，包含房间、公寓和创建者信息
+ */
 export const queryMeterReadingsForAgent = async ({
   organizationId,
   roomId,

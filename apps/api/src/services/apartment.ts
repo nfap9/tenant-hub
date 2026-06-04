@@ -3,6 +3,11 @@ import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import { enforceOrganizationQuota } from './quotas.js';
 
+/**
+ * 确保指定公寓属于当前组织，不存在则抛出 404 错误
+ * @param apartmentId - 公寓 ID
+ * @param organizationId - 组织 ID
+ */
 export const ensureApartmentInOrg = async (
   apartmentId: string,
   organizationId: string
@@ -14,6 +19,11 @@ export const ensureApartmentInOrg = async (
   if (!apartment) throw new HttpError(404, '公寓不存在');
 };
 
+/**
+ * 确保指定房间属于当前组织，不存在则抛出 404 错误
+ * @param roomId - 房间 ID
+ * @param organizationId - 组织 ID
+ */
 export const ensureRoomInOrg = async (
   roomId: string,
   organizationId: string
@@ -25,6 +35,11 @@ export const ensureRoomInOrg = async (
   if (!room) throw new HttpError(404, '房间不存在');
 };
 
+/**
+ * 列出组织下的所有公寓，包含房间、租约、账单等关联信息
+ * @param organizationId - 组织 ID
+ * @returns 公寓列表（含关联数据）
+ */
 export const listApartments = async (organizationId: string) => {
   return prisma.apartment.findMany({
     where: { organizationId },
@@ -51,6 +66,11 @@ export const listApartments = async (organizationId: string) => {
   });
 };
 
+/**
+ * 列出组织下的所有房间，包含所属公寓和活跃租约信息
+ * @param organizationId - 组织 ID
+ * @returns 房间列表（含关联数据）
+ */
 export const listRooms = async (organizationId: string) => {
   return prisma.room.findMany({
     where: { apartment: { organizationId } },
@@ -73,6 +93,12 @@ export const listRooms = async (organizationId: string) => {
   });
 };
 
+/**
+ * 根据 ID 获取指定房间的详细信息
+ * @param roomId - 房间 ID
+ * @param organizationId - 组织 ID
+ * @returns 房间详情（含关联数据），不存在返回 null
+ */
 export const getRoomById = async (roomId: string, organizationId: string) => {
   return prisma.room.findFirst({
     where: {
@@ -97,6 +123,14 @@ export const getRoomById = async (roomId: string, organizationId: string) => {
   });
 };
 
+/**
+ * 创建新公寓（先校验组织配额）
+ * @param data - 公寓数据
+ * @param data.name - 公寓名称
+ * @param data.location - 公寓地址
+ * @param data.organizationId - 所属组织 ID
+ * @returns 创建的公寓记录
+ */
 export const createApartment = async (data: {
   name: string;
   location: string;
@@ -124,6 +158,12 @@ export const createApartment = async (data: {
   });
 };
 
+/**
+ * 更新指定公寓的基本信息
+ * @param apartmentId - 公寓 ID
+ * @param data - 部分更新的字段（name / location）
+ * @returns 更新后的公寓记录
+ */
 export const updateApartment = async (
   apartmentId: string,
   data: Partial<Pick<Prisma.ApartmentCreateInput, 'name' | 'location'>>
@@ -134,10 +174,21 @@ export const updateApartment = async (
   });
 };
 
+/**
+ * 删除指定公寓
+ * @param apartmentId - 公寓 ID
+ * @returns 被删除的公寓记录
+ */
 export const deleteApartment = async (apartmentId: string) => {
   return prisma.apartment.delete({ where: { id: apartmentId } });
 };
 
+/**
+ * 统计指定公寓下的活跃租约数量
+ * @param apartmentId - 公寓 ID
+ * @param organizationId - 组织 ID
+ * @returns 活跃租约数量
+ */
 export const countActiveLeasesInApartment = async (
   apartmentId: string,
   organizationId: string
@@ -151,6 +202,16 @@ export const countActiveLeasesInApartment = async (
   });
 };
 
+/**
+ * 创建公寓支出记录
+ * @param data - 支出数据
+ * @param data.apartmentId - 公寓 ID
+ * @param data.name - 支出项目名
+ * @param data.amount - 支出金额
+ * @param data.spentAt - 支出日期
+ * @param data.note - 备注（可选）
+ * @returns 创建的支出记录
+ */
 export const createApartmentExpense = async (data: {
   apartmentId: string;
   name: string;
@@ -169,6 +230,11 @@ export const createApartmentExpense = async (data: {
   });
 };
 
+/**
+ * 根据 ID 获取公寓名称
+ * @param apartmentId - 公寓 ID
+ * @returns 公寓名称，不存在返回 undefined
+ */
 export const getApartmentName = async (apartmentId: string) => {
   const apartment = await prisma.apartment.findUnique({
     where: { id: apartmentId },
@@ -177,6 +243,13 @@ export const getApartmentName = async (apartmentId: string) => {
   return apartment?.name;
 };
 
+/**
+ * 批量创建房间（带配额校验与去重）
+ * @param apartmentId - 所属公寓 ID
+ * @param organizationId - 组织 ID
+ * @param rooms - 房间列表
+ * @returns Prisma createMany 结果
+ */
 export const batchCreateRooms = async (
   apartmentId: string,
   organizationId: string,
@@ -211,6 +284,12 @@ export const batchCreateRooms = async (
   });
 };
 
+/**
+ * 更新指定房间的信息
+ * @param roomId - 房间 ID
+ * @param data - 部分更新的字段（roomNo / layout / area / facilities / status）
+ * @returns 更新后的房间记录
+ */
 export const updateRoom = async (
   roomId: string,
   data: Partial<{
@@ -227,6 +306,11 @@ export const updateRoom = async (
   });
 };
 
+/**
+ * 获取指定房间的状态
+ * @param roomId - 房间 ID
+ * @returns 房间状态，不存在返回 undefined
+ */
 export const getRoomStatus = async (roomId: string) => {
   const room = await prisma.room.findUnique({
     where: { id: roomId },
@@ -235,6 +319,12 @@ export const getRoomStatus = async (roomId: string) => {
   return room?.status;
 };
 
+/**
+ * 统计指定房间下的活跃租约数量
+ * @param roomId - 房间 ID
+ * @param organizationId - 组织 ID
+ * @returns 活跃租约数量
+ */
 export const countActiveLeasesInRoom = async (
   roomId: string,
   organizationId: string
@@ -248,10 +338,22 @@ export const countActiveLeasesInRoom = async (
   });
 };
 
+/**
+ * 删除指定房间
+ * @param roomId - 房间 ID
+ * @returns 被删除的房间记录
+ */
 export const deleteRoom = async (roomId: string) => {
   return prisma.room.delete({ where: { id: roomId } });
 };
 
+/**
+ * 为 AI Agent 查询公寓列表，返回基础信息与房间统计
+ * @param organizationId - 组织 ID
+ * @param keyword - 搜索关键词（名称或地址）
+ * @param limit - 返回数量上限，默认 20
+ * @returns 精简后的公寓列表
+ */
 export const queryApartmentsForAgent = async ({
   organizationId,
   keyword,
@@ -295,6 +397,15 @@ export const queryApartmentsForAgent = async ({
   }));
 };
 
+/**
+ * 为 AI Agent 查询房间列表，支持按公寓、状态、关键词筛选
+ * @param organizationId - 组织 ID
+ * @param apartmentId - 所属公寓 ID（可选）
+ * @param status - 房间状态（可选）
+ * @param keyword - 搜索关键词（房号或户型）
+ * @param limit - 返回数量上限，默认 30
+ * @returns 精简后的房间列表
+ */
 export const queryRoomsForAgent = async ({
   organizationId,
   apartmentId,
@@ -339,6 +450,12 @@ export const queryRoomsForAgent = async ({
   }));
 };
 
+/**
+ * 为 AI Agent 查询房间详情，包含租约、账单与最近抄表记录
+ * @param organizationId - 组织 ID
+ * @param roomId - 房间 ID
+ * @returns 房间详情对象，不存在返回 null
+ */
 export const queryRoomDetailForAgent = async ({
   organizationId,
   roomId,
@@ -448,6 +565,12 @@ export const queryRoomDetailForAgent = async ({
   };
 };
 
+/**
+ * 为 AI Agent 查询公寓合同信息
+ * @param organizationId - 组织 ID
+ * @param apartmentId - 公寓 ID
+ * @returns 公寓合同信息，不存在返回 null
+ */
 export const queryApartmentContractForAgent = async ({
   organizationId,
   apartmentId,

@@ -24,6 +24,14 @@ type SettlementCalculationInput = {
   compensationAmount: DecimalValue;
 };
 
+/**
+ * 验证退租水电表读数合法性，确保当前读数不小于上次读数
+ * @param previousWater - 上次水表读数
+ * @param currentWater - 当前水表读数
+ * @param previousPower - 上次电表读数
+ * @param currentPower - 当前电表读数
+ * @returns 无返回值，验证失败时抛出 Error
+ */
 export const validateMoveOutReadings = ({
   previousWater,
   currentWater,
@@ -39,6 +47,11 @@ export const validateMoveOutReadings = ({
     throw new Error('退租电表读数不能小于上次读数');
 };
 
+/**
+ * 计算退租结算各项金额明细
+ * @param input - 退租结算计算输入参数
+ * @returns 包含水电费、押金退款、应收、应退及净额的对象
+ */
 export const calculateSettlementAmounts = (
   input: SettlementCalculationInput
 ) => {
@@ -76,6 +89,11 @@ export const calculateSettlementAmounts = (
   };
 };
 
+/**
+ * 根据净额判断退租结算方向
+ * @param netAmount - 结算净额
+ * @returns 'RECEIVE'（应收）| 'REFUND'（应退）| 'NONE'（已结清）
+ */
 export const getSettlementDirection = (netAmount: DecimalValue) => {
   const net = new Prisma.Decimal(netAmount);
   if (net.greaterThan(0)) return 'RECEIVE' as const;
@@ -102,6 +120,13 @@ const latestReadingValue = async (
   return reading?.value ?? new Prisma.Decimal(0);
 };
 
+/**
+ * 获取退租结算预览数据（上次水电表读数）
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @param terminatedAt - 退租日期
+ * @returns 包含上次水表读数和电表读数的对象
+ */
 export const getLeaseSettlementPreview = async ({
   leaseId,
   organizationId,
@@ -122,6 +147,14 @@ export const getLeaseSettlementPreview = async ({
   return { previousWater, previousPower };
 };
 
+/**
+ * 创建退租结算单，生成结算账单，更新租约及房间状态，并自动结清未付账单
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @param userId - 操作用户 ID
+ * @param input - 退租结算输入数据，包含类型、日期、水电读数、各项金额及原因
+ * @returns 包含 settlement（结算单）和 settlementBill（结算账单）的对象
+ */
 export const createLeaseSettlement = async ({
   leaseId,
   organizationId,
@@ -488,6 +521,17 @@ export const createLeaseSettlement = async ({
   });
 };
 
+/**
+ * 记录退租结算的收款或退款
+ * @param settlementId - 退租结算单 ID
+ * @param organizationId - 组织 ID
+ * @param userId - 操作用户 ID
+ * @param direction - 收退款方向（RECEIVE 收款 / REFUND 退款）
+ * @param amount - 收/退款金额
+ * @param method - 收/退款方式
+ * @param note - 备注
+ * @returns 创建的 settlementPayment 记录
+ */
 export const recordSettlementPayment = async ({
   settlementId,
   organizationId,

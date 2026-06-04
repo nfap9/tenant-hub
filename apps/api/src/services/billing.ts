@@ -48,6 +48,15 @@ type BillPaymentTarget = PaymentTarget & {
 
 const startOfDay = (date: Date) => dayjs.utc(date).startOf('day');
 
+/**
+ * 根据租约信息和计费日期计算预付和后付的计费周期
+ * @param params - 计费周期输入参数
+ * @param params.leaseStartDate - 租约开始日期
+ * @param params.leaseEndDate - 租约结束日期
+ * @param params.cycle - 计费周期
+ * @param params.billingDate - 计费日期
+ * @returns 包含预付和后付周期的对象
+ */
 export const calculateBillingPeriods = ({
   leaseStartDate,
   leaseEndDate,
@@ -78,12 +87,28 @@ export const calculateBillingPeriods = ({
   };
 };
 
+/**
+ * 判断是否需要生成后付账单
+ * @param params - 输入参数
+ * @param params.leaseStartDate - 租约开始日期
+ * @param params.billingDate - 计费日期
+ * @returns 若计费日期在租约开始日期之后则返回 true
+ */
 export const shouldGeneratePostpaidBill = ({
   leaseStartDate,
   billingDate,
 }: Pick<BillingPeriodInput, 'leaseStartDate' | 'billingDate'>) =>
   startOfDay(billingDate).isAfter(startOfDay(leaseStartDate), 'day');
 
+/**
+ * 获取从租约开始到指定日期之间的所有计费日期
+ * @param params - 输入参数
+ * @param params.leaseStartDate - 租约开始日期
+ * @param params.leaseEndDate - 租约结束日期
+ * @param params.cycle - 计费周期
+ * @param params.today - 截止日期，默认为当前日期
+ * @returns 计费日期数组
+ */
 export const getBillingDatesThrough = ({
   leaseStartDate,
   leaseEndDate,
@@ -105,16 +130,38 @@ export const getBillingDatesThrough = ({
   return dates;
 };
 
+/**
+ * 获取当前月份的账单窗口
+ * @param today - 当前日期，默认为系统当前日期
+ * @returns 包含窗口开始和结束日期的对象
+ */
 export const getCurrentMonthBillWindow = (today = new Date()) => ({
   start: startOfDay(today).startOf('month').toDate(),
   end: startOfDay(today).add(1, 'month').startOf('month').toDate(),
 });
 
+/**
+ * 根据计费日期生成账单月份标签
+ * @param billingDate - 计费日期
+ * @returns 格式为"YYYY年MM月"的字符串
+ */
 export const getBillMonthLabel = (billingDate: Date) => {
   const date = startOfDay(billingDate);
   return `${date.year()}年${date.month() + 1}月`;
 };
 
+/**
+ * 计算水电总费用
+ * @param params - 水电读数及单价参数
+ * @param params.previousWater - 上期水表读数
+ * @param params.currentWater - 本期水表读数
+ * @param params.waterUnitPrice - 水费单价
+ * @param params.previousPower - 上期电表读数
+ * @param params.currentPower - 本期电表读数
+ * @param params.powerUnitPrice - 电费单价
+ * @returns 水电总费用
+ * @throws 若读数小于上期读数则抛出错误
+ */
 export const calculateUtilityAmount = ({
   previousWater,
   currentWater,
@@ -132,6 +179,18 @@ export const calculateUtilityAmount = ({
   return waterUsage.mul(waterUnitPrice).plus(powerUsage.mul(powerUnitPrice));
 };
 
+/**
+ * 分别计算水费和电费金额
+ * @param params - 水电读数及单价参数
+ * @param params.previousWater - 上期水表读数
+ * @param params.currentWater - 本期水表读数
+ * @param params.waterUnitPrice - 水费单价
+ * @param params.previousPower - 上期电表读数
+ * @param params.currentPower - 本期电表读数
+ * @param params.powerUnitPrice - 电费单价
+ * @returns 包含水费金额和电费金额的对象
+ * @throws 若读数小于上期读数则抛出错误
+ */
 export const calculateUtilityLineAmounts = ({
   previousWater,
   currentWater,
@@ -161,6 +220,15 @@ export const calculateUtilityLineAmounts = ({
 const remainingAmountFor = ({ totalAmount, paidAmount }: PaymentTarget) =>
   new Prisma.Decimal(totalAmount).minus(paidAmount);
 
+/**
+ * 断言账单允许收款操作
+ * @param params - 账单收款目标参数
+ * @param params.status - 账单状态
+ * @param params.totalAmount - 账单总金额
+ * @param params.paidAmount - 已付金额
+ * @param params.amount - 本次收款金额
+ * @throws 若账单状态不允许收款或金额不合法则抛出 HttpError
+ */
 export const assertBillPaymentAllowed = ({
   status,
   totalAmount,
@@ -195,6 +263,12 @@ const BILL_OPERATION_GUARDS: Record<
   VOID: { allowVoid: false, allowRefund: false, allowDelete: false },
 };
 
+/**
+ * 断言账单允许指定的操作
+ * @param status - 账单状态
+ * @param operation - 操作类型：void（作废）、refund（退款）、delete（删除）
+ * @throws 若当前状态不允许该操作则抛出 HttpError
+ */
 export const assertBillOperation = (
   status: string,
   operation: 'void' | 'refund' | 'delete'
@@ -209,6 +283,13 @@ export const assertBillOperation = (
     throw new HttpError(400, `当前账单状态不允许此操作`);
 };
 
+/**
+ * 作废账单
+ * @param billId - 账单 ID
+ * @param organizationId - 组织 ID
+ * @returns 作废后的账单（包含明细项）
+ * @throws 若账单不存在或为退租结算账单则抛出 HttpError
+ */
 export const voidBill = async (billId: string, organizationId: string) => {
   const bill = await prisma.bill.findFirst({
     where: { id: billId, organizationId },
@@ -244,6 +325,18 @@ export const voidBill = async (billId: string, organizationId: string) => {
   });
 };
 
+/**
+ * 退款账单
+ * @param params - 退款参数
+ * @param params.billId - 账单 ID
+ * @param params.organizationId - 组织 ID
+ * @param params.userId - 操作用户 ID
+ * @param params.amount - 退款金额
+ * @param params.method - 退款方式
+ * @param params.note - 备注（可选）
+ * @returns 退款后的账单（包含明细项和支付记录）
+ * @throws 若账单不存在或退款金额不合法则抛出 HttpError
+ */
 export const refundBill = async ({
   billId,
   organizationId,
@@ -328,6 +421,11 @@ const classifyFeeItemType = (name: string) => {
   return 'OTHER' as const;
 };
 
+/**
+ * 刷新账单总金额、已付金额和状态
+ * @param billId - 账单 ID
+ * @returns 无返回值
+ */
 export const refreshBillTotals = async (billId: string) => {
   const bill = await prisma.bill.findUnique({
     where: { id: billId },
@@ -413,6 +511,11 @@ const failPostpaidBill = async (billId: string, failureReason: string) => {
   });
 };
 
+/**
+ * 根据水电表读数完成后付账单
+ * @param billId - 账单 ID
+ * @returns 完成后的账单（包含明细项）
+ */
 export const completePostpaidBillFromReadings = async (billId: string) => {
   const bill = await prisma.bill.findUnique({
     where: { id: billId },
@@ -529,6 +632,14 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
   });
 };
 
+/**
+ * 为租约生成账单
+ * @param leaseId - 租约 ID
+ * @param today - 当前日期，默认为系统当前日期
+ * @param options - 可选配置
+ * @param options.onlyCurrentPeriod - 是否仅生成当前周期账单
+ * @returns 生成的账单 ID 数组
+ */
 export const generateLeaseBills = async (
   leaseId: string,
   today = new Date(),
@@ -677,6 +788,13 @@ const defaultCurrentLeaseBillDependencies: CurrentLeaseBillDependencies = {
   generateLeaseBillsForLease: generateLeaseBills,
 };
 
+/**
+ * 为当前组织的所有活跃租约生成账单
+ * @param organizationId - 组织 ID
+ * @param today - 当前日期，默认为系统当前日期
+ * @param dependencies - 依赖注入配置
+ * @returns 包含租约数量和账单 ID 数组的对象
+ */
 export const generateCurrentLeaseBills = async (
   organizationId: string,
   today = new Date(),
@@ -695,14 +813,36 @@ export const generateCurrentLeaseBills = async (
   };
 };
 
+/**
+ * 为活跃自动续租租约生成账单
+ * @param organizationId - 组织 ID
+ * @returns 无返回值
+ */
 export const generateActiveAutoRenewBills = async (organizationId: string) => {
   await generateCurrentLeaseBills(organizationId);
 };
 
+/**
+ * 重试后付账单和月账单
+ * @param billId - 账单 ID
+ * @returns 重试后的账单（包含明细项）
+ */
 export const retryPostpaidBillAndMonthlyBill = async (billId: string) => {
   return completePostpaidBillFromReadings(billId);
 };
 
+/**
+ * 记录账单收款
+ * @param params - 收款参数
+ * @param params.billId - 账单 ID
+ * @param params.organizationId - 组织 ID
+ * @param params.userId - 操作用户 ID
+ * @param params.amount - 收款金额
+ * @param params.method - 收款方式
+ * @param params.note - 备注（可选）
+ * @returns 创建的支付记录
+ * @throws 若账单不存在或收款金额不合法则抛出 HttpError
+ */
 export const recordBillPayment = async ({
   billId,
   organizationId,
