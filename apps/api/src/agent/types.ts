@@ -4,6 +4,7 @@ export interface AgentContext {
   organizationId: string;
   userId: string;
   userName: string;
+  permissions: string[];
 }
 
 export interface ChatMessage {

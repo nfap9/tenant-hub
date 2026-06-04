@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
   requireOrg,
@@ -15,7 +14,24 @@ import {
 } from '../services/billing.js';
 import { createTransaction } from '../services/transaction.js';
 import { withLeaseLifecycle } from '../services/leaseLifecycle.js';
-import { enforceOrganizationQuota } from '../services/quotas.js';
+import {
+  ensureApartmentInOrg,
+  ensureRoomInOrg,
+  listApartments,
+  listRooms,
+  getRoomById,
+  createApartment,
+  updateApartment,
+  deleteApartment,
+  countActiveLeasesInApartment,
+  createApartmentExpense,
+  getApartmentName,
+  batchCreateRooms,
+  updateRoom,
+  getRoomStatus,
+  countActiveLeasesInRoom,
+  deleteRoom,
+} from '../services/apartment.js';
 
 export const apartmentRouter = Router();
 apartmentRouter.use(requireAuth, requireOrg);
@@ -25,25 +41,6 @@ const apartmentInput = z.object({
   location: z.string().min(1),
 });
 
-const ensureApartmentInOrg = async (
-  apartmentId: string,
-  organizationId: string
-) => {
-  const apartment = await prisma.apartment.findFirst({
-    where: { id: apartmentId, organizationId },
-    select: { id: true },
-  });
-  if (!apartment) throw new HttpError(404, '公寓不存在');
-};
-
-const ensureRoomInOrg = async (roomId: string, organizationId: string) => {
-  const room = await prisma.room.findFirst({
-    where: { id: roomId, apartment: { organizationId } },
-    select: { id: true },
-  });
-  if (!room) throw new HttpError(404, '房间不存在');
-};
-
 apartmentRouter.get(
   '/',
   requirePermission(PERMISSIONS.APARTMENT_VIEW),
@@ -52,35 +49,7 @@ apartmentRouter.get(
     const currentMonthBillLabel = getBillMonthLabel(
       currentMonthBillWindow.start
     );
-    const apartments = await prisma.apartment.findMany({
-      where: { organizationId: req.organizationId! },
-      include: {
-        contract: true,
-        rooms: {
-          include: {
-            reservation: true,
-            leases: {
-              where: { status: 'ACTIVE' },
-              include: {
-                fees: true,
-                bills: {
-                  where: {
-                    billingDate: {
-                      gte: currentMonthBillWindow.start,
-                      lt: currentMonthBillWindow.end,
-                    },
-                  },
-                  select: { id: true, status: true },
-                },
-              },
-              orderBy: { createdAt: 'desc' },
-            },
-          },
-        },
-        expenses: { orderBy: { spentAt: 'desc' } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const apartments = await listApartments(req.organizationId!);
     ok(
       res,
       apartments.map((apartment) => ({
@@ -109,31 +78,7 @@ apartmentRouter.get(
     const currentMonthBillLabel = getBillMonthLabel(
       currentMonthBillWindow.start
     );
-    const rooms = await prisma.room.findMany({
-      where: { apartment: { organizationId: req.organizationId! } },
-      include: {
-        apartment: true,
-        reservation: true,
-        leases: {
-          where: { status: 'ACTIVE' },
-          include: {
-            fees: true,
-            deposit: true,
-            bills: {
-              where: {
-                billingDate: {
-                  gte: currentMonthBillWindow.start,
-                  lt: currentMonthBillWindow.end,
-                },
-              },
-              select: { id: true, status: true },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-      orderBy: [{ apartment: { createdAt: 'desc' } }, { roomNo: 'asc' }],
-    });
+    const rooms = await listRooms(req.organizationId!);
     ok(
       res,
       rooms.map((room) => ({
@@ -156,21 +101,9 @@ apartmentRouter.post(
     const input = apartmentInput.parse(req.body);
     ok(
       res,
-      await prisma.$transaction(async (tx) => {
-        await enforceOrganizationQuota(
-          tx,
-          req.organizationId!,
-          'apartment',
-          async () => {
-            const apartmentCount = await tx.apartment.count({
-              where: { organizationId: req.organizationId! },
-            });
-            return apartmentCount + 1;
-          }
-        );
-        return tx.apartment.create({
-          data: { ...input, organizationId: req.organizationId! },
-        });
+      await createApartment({
+        ...input,
+        organizationId: req.organizationId!,
       })
     );
   })
@@ -182,13 +115,7 @@ apartmentRouter.put(
   asyncHandler(async (req, res) => {
     const input = apartmentInput.partial().parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
-    ok(
-      res,
-      await prisma.apartment.update({
-        where: { id: req.params.id },
-        data: input,
-      })
-    );
+    ok(res, await updateApartment(req.params.id, input));
   })
 );
 
@@ -197,16 +124,13 @@ apartmentRouter.delete(
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
-    const activeLeaseCount = await prisma.lease.count({
-      where: {
-        organizationId: req.organizationId!,
-        status: 'ACTIVE',
-        room: { apartmentId: req.params.id },
-      },
-    });
+    const activeLeaseCount = await countActiveLeasesInApartment(
+      req.params.id,
+      req.organizationId!
+    );
     if (activeLeaseCount > 0)
       throw new HttpError(400, '公寓存在活跃租约，无法删除');
-    ok(res, await prisma.apartment.delete({ where: { id: req.params.id } }));
+    ok(res, await deleteApartment(req.params.id));
   })
 );
 
@@ -224,22 +148,19 @@ apartmentRouter.post(
       .parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
 
-    const expense = await prisma.apartmentExpense.create({
-      data: { ...input, apartmentId: req.params.id },
+    const expense = await createApartmentExpense({
+      ...input,
+      apartmentId: req.params.id,
     });
 
-    // 创建收支记录
-    const apartment = await prisma.apartment.findUnique({
-      where: { id: req.params.id },
-      select: { name: true },
-    });
+    const apartmentName = await getApartmentName(req.params.id);
     await createTransaction({
       organizationId: req.organizationId!,
       type: 'EXPENSE',
       category: 'OTHER_EXPENSE',
       amount: input.amount,
       method: '现金',
-      description: `${apartment?.name || '公寓'} - ${input.name}`,
+      description: `${apartmentName || '公寓'} - ${input.name}`,
       note: input.note,
       operatorId: req.user!.id,
       sourceType: 'APARTMENT_EXPENSE',
@@ -270,33 +191,7 @@ apartmentRouter.post(
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
     ok(
       res,
-      await prisma.$transaction(async (tx) => {
-        await enforceOrganizationQuota(
-          tx,
-          req.organizationId!,
-          'room',
-          async () => {
-            const existingRooms = await tx.room.findMany({
-              where: { apartment: { organizationId: req.organizationId! } },
-              select: { apartmentId: true, roomNo: true },
-            });
-            const existingKeys = new Set(
-              existingRooms.map((room) => `${room.apartmentId}:${room.roomNo}`)
-            );
-            const newRoomCount = input.rooms.filter(
-              (room) => !existingKeys.has(`${req.params.id}:${room.roomNo}`)
-            ).length;
-            return existingRooms.length + newRoomCount;
-          }
-        );
-        return tx.room.createMany({
-          data: input.rooms.map((room) => ({
-            ...room,
-            apartmentId: req.params.id,
-          })),
-          skipDuplicates: true,
-        });
-      })
+      await batchCreateRooms(req.params.id, req.organizationId!, input.rooms)
     );
   })
 );
@@ -319,11 +214,8 @@ apartmentRouter.put(
     await ensureRoomInOrg(req.params.roomId, req.organizationId!);
 
     if (input.status) {
-      const room = await prisma.room.findUnique({
-        where: { id: req.params.roomId },
-        select: { status: true },
-      });
-      if (room?.status === 'OCCUPIED' && input.status === 'VACANT') {
+      const roomStatus = await getRoomStatus(req.params.roomId);
+      if (roomStatus === 'OCCUPIED' && input.status === 'VACANT') {
         throw new HttpError(
           400,
           '不能将已出租房间直接设为空闲，请通过退租流程操作'
@@ -331,13 +223,7 @@ apartmentRouter.put(
       }
     }
 
-    ok(
-      res,
-      await prisma.room.update({
-        where: { id: req.params.roomId },
-        data: input,
-      })
-    );
+    ok(res, await updateRoom(req.params.roomId, input));
   })
 );
 
@@ -349,33 +235,7 @@ apartmentRouter.get(
     const currentMonthBillLabel = getBillMonthLabel(
       currentMonthBillWindow.start
     );
-    const room = await prisma.room.findFirst({
-      where: {
-        id: req.params.roomId,
-        apartment: { organizationId: req.organizationId! },
-      },
-      include: {
-        apartment: true,
-        reservation: true,
-        leases: {
-          where: { status: 'ACTIVE' },
-          include: {
-            fees: true,
-            deposit: true,
-            bills: {
-              where: {
-                billingDate: {
-                  gte: currentMonthBillWindow.start,
-                  lt: currentMonthBillWindow.end,
-                },
-              },
-              select: { id: true, status: true },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
+    const room = await getRoomById(req.params.roomId, req.organizationId!);
     if (!room) throw new HttpError(404, '房间不存在');
     ok(res, {
       ...room,
@@ -394,15 +254,12 @@ apartmentRouter.delete(
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
     await ensureRoomInOrg(req.params.roomId, req.organizationId!);
-    const activeLeaseCount = await prisma.lease.count({
-      where: {
-        roomId: req.params.roomId,
-        organizationId: req.organizationId!,
-        status: 'ACTIVE',
-      },
-    });
+    const activeLeaseCount = await countActiveLeasesInRoom(
+      req.params.roomId,
+      req.organizationId!
+    );
     if (activeLeaseCount > 0)
       throw new HttpError(400, '房间存在活跃租约，无法删除');
-    ok(res, await prisma.room.delete({ where: { id: req.params.roomId } }));
+    ok(res, await deleteRoom(req.params.roomId));
   })
 );

@@ -1,48 +1,17 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { prisma } from '../../config/prisma.js';
+import { queryReservationForAgent } from '../../services/reservation.js';
 import type { AgentContext } from '../types.js';
 
 export const queryReservationTool = (ctx: AgentContext) =>
   tool(
     async ({ roomId }) => {
-      const reservation = await prisma.reservation.findUnique({
-        where: {
-          roomId,
-          room: {
-            apartment: { organizationId: ctx.organizationId },
-          },
-        },
-        include: {
-          room: {
-            select: {
-              roomNo: true,
-              status: true,
-              apartment: { select: { name: true } },
-            },
-          },
-        },
+      const reservation = await queryReservationForAgent({
+        organizationId: ctx.organizationId,
+        roomId,
       });
 
-      if (!reservation) {
-        return JSON.stringify({ exists: false });
-      }
-
-      return JSON.stringify({
-        exists: true,
-        id: reservation.id,
-        roomNo: reservation.room.roomNo,
-        apartmentName: reservation.room.apartment.name,
-        roomStatus: reservation.room.status,
-        customerName: reservation.name,
-        customerPhone: reservation.phone,
-        deposit: Number(reservation.deposit),
-        paymentMethod: reservation.paymentMethod,
-        expectedMoveInDate: reservation.expectedMoveInDate
-          .toISOString()
-          .split('T')[0],
-        createdAt: reservation.createdAt.toISOString().split('T')[0],
-      });
+      return JSON.stringify(reservation);
     },
     {
       name: 'query_reservation',

@@ -1,42 +1,20 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { prisma } from '../../config/prisma.js';
+import { queryRoomsForAgent } from '../../services/apartment.js';
 import type { AgentContext } from '../types.js';
 
 export const queryRoomsTool = (ctx: AgentContext) =>
   tool(
     async ({ apartmentId, status, keyword, limit = 30 }) => {
-      const rooms = await prisma.room.findMany({
-        where: {
-          apartment: { organizationId: ctx.organizationId },
-          deletedAt: null,
-          ...(apartmentId ? { apartmentId } : {}),
-          ...(status ? { status } : {}),
-          ...(keyword
-            ? {
-                OR: [
-                  { roomNo: { contains: keyword, mode: 'insensitive' } },
-                  { layout: { contains: keyword, mode: 'insensitive' } },
-                ],
-              }
-            : {}),
-        },
-        include: { apartment: { select: { name: true } } },
-        take: limit,
-        orderBy: [{ apartment: { createdAt: 'desc' } }, { roomNo: 'asc' }],
+      const rooms = await queryRoomsForAgent({
+        organizationId: ctx.organizationId,
+        apartmentId,
+        status,
+        keyword,
+        limit,
       });
 
-      return JSON.stringify(
-        rooms.map((room) => ({
-          id: room.id,
-          roomNo: room.roomNo,
-          apartmentName: room.apartment.name,
-          layout: room.layout,
-          status: room.status,
-          area: room.area ? Number(room.area) : null,
-          facilities: room.facilities,
-        }))
-      );
+      return JSON.stringify(rooms);
     },
     {
       name: 'query_rooms',

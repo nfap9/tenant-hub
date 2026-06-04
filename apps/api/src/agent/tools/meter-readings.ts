@@ -1,44 +1,19 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { prisma } from '../../config/prisma.js';
+import { queryMeterReadingsForAgent } from '../../services/bill.js';
 import type { AgentContext } from '../types.js';
 
 export const queryMeterReadingsTool = (ctx: AgentContext) =>
   tool(
     async ({ roomId, meterType, limit = 30 }) => {
-      const readings = await prisma.meterReading.findMany({
-        where: {
-          organizationId: ctx.organizationId,
-          ...(roomId ? { roomId } : {}),
-          ...(meterType ? { meterType } : {}),
-        },
-        include: {
-          room: {
-            select: {
-              roomNo: true,
-              apartment: { select: { name: true } },
-            },
-          },
-          createdBy: { select: { username: true } },
-        },
-        take: limit,
-        orderBy: { readingDate: 'desc' },
+      const readings = await queryMeterReadingsForAgent({
+        organizationId: ctx.organizationId,
+        roomId,
+        meterType,
+        limit,
       });
 
-      return JSON.stringify(
-        readings.map((r) => ({
-          id: r.id,
-          roomNo: r.room.roomNo,
-          apartmentName: r.room.apartment.name,
-          meterType: r.meterType,
-          readingDate: r.readingDate.toISOString().split('T')[0],
-          value: Number(r.value),
-          source: r.source,
-          status: r.status,
-          note: r.note,
-          createdBy: r.createdBy?.username ?? null,
-        }))
-      );
+      return JSON.stringify(readings);
     },
     {
       name: 'query_meter_readings',

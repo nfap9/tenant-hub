@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
   requireOrg,
@@ -8,12 +7,10 @@ import {
 } from '../middleware/auth.js';
 import {
   assertBillOperation,
-  calculateUtilityLineAmounts,
   generateCurrentLeaseBills,
   generateLeaseBills,
   recordBillPayment,
   refundBill,
-  refreshBillTotals,
   retryPostpaidBillAndMonthlyBill,
   voidBill,
 } from '../services/billing.js';
@@ -22,6 +19,20 @@ import { PERMISSIONS } from '../services/roles.js';
 import { parseUtilityImportRows } from '../services/utilityImport.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
+import {
+  listBills,
+  findLeaseById,
+  listMeterReadings,
+  findRoomForMeterReading,
+  findLeaseForMeterReading,
+  createMeterReading,
+  findPendingPostpaidBillsByRoom,
+  applyUtilityReadingToBill,
+  findPendingPostpaidBillsForExport,
+  getBillForRetry,
+  getBillById,
+  deleteBillWithPayments,
+} from '../services/bill.js';
 
 export const billRouter = Router();
 billRouter.use(requireAuth, requireOrg);
@@ -42,21 +53,7 @@ billRouter.get(
       ])
       .optional()
       .parse(req.query.status);
-    ok(
-      res,
-      await prisma.bill.findMany({
-        where: {
-          organizationId: req.organizationId!,
-          ...(status ? { status } : {}),
-        },
-        include: {
-          lease: { include: { room: true } },
-          items: true,
-          payments: true,
-        },
-        orderBy: { dueDate: 'asc' },
-      })
-    );
+    ok(res, await listBills(req.organizationId!, status));
   })
 );
 
@@ -80,10 +77,7 @@ billRouter.post(
       );
       return;
     }
-    const lease = await prisma.lease.findFirst({
-      where: { id: input.leaseId, organizationId: req.organizationId! },
-      select: { id: true },
-    });
+    const lease = await findLeaseById(input.leaseId, req.organizationId!);
     if (!lease) throw new HttpError(404, '租约不存在');
     ok(res, {
       billIds: await generateLeaseBills(
@@ -99,21 +93,7 @@ billRouter.get(
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
     const roomId = z.string().optional().parse(req.query.roomId);
-    ok(
-      res,
-      await prisma.meterReading.findMany({
-        where: {
-          organizationId: req.organizationId!,
-          ...(roomId ? { roomId } : {}),
-        },
-        include: {
-          room: true,
-          lease: true,
-          createdBy: { select: { id: true, username: true, phone: true } },
-        },
-        orderBy: { readingDate: 'desc' },
-      })
-    );
+    ok(res, await listMeterReadings(req.organizationId!, roomId));
   })
 );
 
@@ -134,49 +114,33 @@ billRouter.post(
         note: z.string().optional(),
       })
       .parse(req.body);
-    const room = await prisma.room.findFirst({
-      where: {
-        id: input.roomId,
-        apartment: { organizationId: req.organizationId! },
-      },
-      include: { apartment: true },
-    });
+    const room = await findRoomForMeterReading(
+      input.roomId,
+      req.organizationId!
+    );
     if (!room) throw new HttpError(404, '房间不存在');
-    const lease = await prisma.lease.findFirst({
-      where: {
-        roomId: room.id,
-        organizationId: req.organizationId!,
-        startDate: { lte: input.readingDate },
-        endDate: { gte: input.readingDate },
-      },
-      orderBy: { startDate: 'desc' },
-    });
+    const lease = await findLeaseForMeterReading(
+      room.id,
+      req.organizationId!,
+      input.readingDate
+    );
 
-    const reading = await prisma.meterReading.create({
-      data: {
-        organizationId: req.organizationId!,
-        apartmentId: room.apartmentId,
-        roomId: room.id,
-        leaseId: lease?.id,
-        meterType: input.meterType,
-        readingDate: input.readingDate,
-        value: input.value,
-        source: input.source,
-        status: input.status,
-        note: input.note,
-        createdById: req.user!.id,
-      },
+    const reading = await createMeterReading({
+      organizationId: req.organizationId!,
+      apartmentId: room.apartmentId,
+      roomId: room.id,
+      leaseId: lease?.id,
+      meterType: input.meterType,
+      readingDate: input.readingDate,
+      value: input.value,
+      source: input.source,
+      status: input.status,
+      note: input.note,
+      createdById: req.user!.id,
     });
 
     // 尝试自动完成该房间所有待出账的后付费账单
-    const pendingBills = await prisma.bill.findMany({
-      where: {
-        lease: { roomId: room.id },
-        mode: 'POSTPAID',
-        status: { in: ['BILLING', 'FAILED'] },
-      },
-      select: { id: true },
-    });
+    const pendingBills = await findPendingPostpaidBillsByRoom(room.id);
     await Promise.all(
       pendingBills.map((b) =>
         retryPostpaidBillAndMonthlyBill(b.id).catch(() => null)
@@ -186,131 +150,6 @@ billRouter.post(
     ok(res, reading);
   })
 );
-
-const applyUtilityReadingToBill = async ({
-  billId,
-  organizationId,
-  userId,
-  previousWater,
-  currentWater,
-  previousPower,
-  currentPower,
-}: {
-  billId: string;
-  organizationId: string;
-  userId: string;
-  previousWater: number;
-  currentWater: number;
-  previousPower: number;
-  currentPower: number;
-}) => {
-  const bill = await prisma.bill.findFirst({
-    where: { id: billId, organizationId },
-    include: { lease: { include: { room: true } }, items: true },
-  });
-  if (!bill) throw new HttpError(404, '账单不存在');
-  if (bill.mode !== 'POSTPAID')
-    throw new HttpError(400, '仅后付费水电账单可以录入读数');
-
-  const waterItem = bill.items.find((item) => item.type === 'WATER');
-  const powerItem = bill.items.find((item) => item.type === 'POWER');
-  if (!waterItem || !powerItem) throw new HttpError(400, '账单缺少水电项目');
-  if (currentWater < previousWater)
-    throw new HttpError(400, '水表本期读数不能小于上期读数');
-  if (currentPower < previousPower)
-    throw new HttpError(400, '电表本期读数不能小于上期读数');
-
-  const { waterAmount, powerAmount } = calculateUtilityLineAmounts({
-    previousWater,
-    currentWater,
-    waterUnitPrice: waterItem.waterUnitPrice ?? 0,
-    previousPower,
-    currentPower,
-    powerUnitPrice: powerItem.powerUnitPrice ?? 0,
-  });
-
-  await prisma.$transaction([
-    prisma.billItem.update({
-      where: { id: waterItem.id },
-      data: {
-        previousWater,
-        currentWater,
-        amount: waterAmount,
-        status: 'UNPAID',
-      },
-    }),
-    prisma.billItem.update({
-      where: { id: powerItem.id },
-      data: {
-        previousPower,
-        currentPower,
-        amount: powerAmount,
-        status: 'UNPAID',
-      },
-    }),
-    prisma.bill.update({
-      where: { id: bill.id },
-      data: { status: 'UNPAID', failureReason: null },
-    }),
-    prisma.meterReading.createMany({
-      data: [
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'WATER',
-          readingDate: bill.periodStart,
-          value: previousWater,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'WATER',
-          readingDate: bill.periodEnd,
-          value: currentWater,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'POWER',
-          readingDate: bill.periodStart,
-          value: previousPower,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'POWER',
-          readingDate: bill.periodEnd,
-          value: currentPower,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-      ],
-    }),
-  ]);
-  await refreshBillTotals(bill.id);
-  return prisma.bill.findUnique({
-    where: { id: bill.id },
-    include: { items: true },
-  });
-};
 
 billRouter.post(
   '/:id/utility-reading',
@@ -340,15 +179,7 @@ billRouter.get(
   '/utility/pending-export',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
-    const bills = await prisma.bill.findMany({
-      where: {
-        mode: 'POSTPAID',
-        status: { in: ['BILLING', 'FAILED'] },
-        organizationId: req.organizationId!,
-      },
-      include: { lease: { include: { room: true } }, items: true },
-      orderBy: { billingDate: 'asc' },
-    });
+    const bills = await findPendingPostpaidBillsForExport(req.organizationId!);
     res.setHeader('content-type', 'text/csv; charset=utf-8');
     res.send(
       toCsv([
@@ -424,9 +255,7 @@ billRouter.post(
   '/:id/retry-billing',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const bill = await prisma.bill.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
-    });
+    const bill = await getBillForRetry(req.params.id, req.organizationId!);
     if (!bill) throw new HttpError(404, '账单不存在');
     if (bill.mode !== 'POSTPAID')
       throw new HttpError(400, '仅后付费账单需要重新出账');
@@ -461,17 +290,11 @@ billRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const bill = await prisma.bill.findFirst({
-      where: { id: req.params.id, organizationId: req.organizationId! },
-      include: { items: true, payments: true },
-    });
+    const bill = await getBillById(req.params.id, req.organizationId!);
     if (!bill) throw new HttpError(404, '账单不存在');
     assertBillOperation(bill.status, 'delete');
 
-    await prisma.$transaction([
-      prisma.payment.deleteMany({ where: { billId: bill.id } }),
-      prisma.bill.delete({ where: { id: bill.id } }),
-    ]);
+    await deleteBillWithPayments(req.params.id);
 
     ok(res, { deleted: true });
   })

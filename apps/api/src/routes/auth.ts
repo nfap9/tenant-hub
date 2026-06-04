@@ -1,44 +1,26 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { env } from '../config/env.js';
-import { prisma } from '../config/prisma.js';
 import { sendSms, type SmsConfig } from '../services/smsService.js';
-import { generateInviteCode } from '../services/orgInvites.js';
 import { requireAuth, signToken } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
+import {
+  getSmsConfigured,
+  getSmsConfig,
+  createOtpCode,
+  verifyOtpCode,
+  findUserByPhone,
+  isFirstUser,
+  createUser,
+  verifyPassword,
+  updateUserPassword,
+  getUserWithMemberships,
+} from '../services/auth.js';
 
 export const authRouter = Router();
 
 const phoneSchema = z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确');
 const passwordSchema = z.string().min(8, '密码至少 8 位');
-
-const getSmsConfigured = async (): Promise<boolean> => {
-  const setting = await prisma.systemSetting.findUnique({
-    where: { key: 'sms_config' },
-  });
-  const value = setting?.value as Record<string, unknown> | undefined;
-  return Boolean(value?.enabled && value?.url);
-};
-
-const verifyOtp = async (
-  phone: string,
-  code: string,
-  purpose: 'REGISTER' | 'LOGIN'
-) => {
-  const otp = await prisma.otpCode.findFirst({
-    where: { phone, purpose, usedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: 'desc' },
-  });
-  if (!otp) throw new HttpError(400, '验证码已失效');
-  const matched = await bcrypt.compare(code, otp.codeHash);
-  if (!matched) throw new HttpError(400, '验证码不正确');
-  await prisma.otpCode.update({
-    where: { id: otp.id },
-    data: { usedAt: new Date() },
-  });
-};
 
 authRouter.post(
   '/otp',
@@ -51,62 +33,18 @@ authRouter.post(
       .object({ phone: phoneSchema, purpose: z.enum(['REGISTER', 'LOGIN']) })
       .parse(req.body);
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    await prisma.otpCode.create({
-      data: {
-        phone: input.phone,
-        purpose: input.purpose,
-        codeHash: await bcrypt.hash(code, env.BCRYPT_OTP_SALT_ROUNDS),
-        expiresAt: new Date(
-          Date.now() + env.OTP_EXPIRES_IN_MINUTES * 60 * 1000
-        ),
-      },
-    });
-    const smsConfig = await prisma.systemSetting.findUnique({
-      where: { key: 'sms_config' },
-    });
-    const parsedConfig = smsConfig?.value
-      ? (smsConfig.value as Record<string, unknown>)
-      : null;
+    await createOtpCode({ phone: input.phone, purpose: input.purpose, code });
 
-    if (parsedConfig?.url) {
-      const config = {
-        enabled: Boolean(parsedConfig.enabled),
-        url: String(parsedConfig.url),
-        method: (parsedConfig.method === 'GET' ||
-        parsedConfig.method === 'POST' ||
-        parsedConfig.method === 'PUT'
-          ? parsedConfig.method
-          : 'POST') as SmsConfig['method'],
-        headers:
-          typeof parsedConfig.headers === 'object' &&
-          parsedConfig.headers !== null
-            ? (parsedConfig.headers as Record<string, string>)
-            : undefined,
-        queryParams:
-          typeof parsedConfig.queryParams === 'object' &&
-          parsedConfig.queryParams !== null
-            ? (parsedConfig.queryParams as Record<string, string>)
-            : undefined,
-        bodyParams:
-          typeof parsedConfig.bodyParams === 'object' &&
-          parsedConfig.bodyParams !== null
-            ? (parsedConfig.bodyParams as Record<string, string>)
-            : undefined,
-      };
-
+    const config = await getSmsConfig();
+    if (config?.url) {
       await sendSms({
         phoneNumber: input.phone,
         code,
-        expireMinutes: env.OTP_EXPIRES_IN_MINUTES,
-        config,
+        expireMinutes: 5,
+        config: config as SmsConfig,
       }).catch((err) => {
         console.error(`[SmsService] 发送验证码失败: ${err.message}`);
       });
-    }
-    if (env.NODE_ENV !== 'production') {
-      console.info(
-        `[TenantHub] ${input.phone} ${input.purpose} 验证码：${code}`
-      );
     }
     ok(res, { message: '验证码已发送' });
   })
@@ -130,26 +68,18 @@ authRouter.post(
       )
       .parse(req.body);
 
-    const existed = await prisma.user.findUnique({
-      where: { phone: input.phone },
-    });
+    const existed = await findUserByPhone(input.phone);
     if (existed) throw new HttpError(409, '手机号已注册');
     if (smsConfigured) {
-      await verifyOtp(input.phone, input.code!, 'REGISTER');
+      await verifyOtpCode(input.phone, input.code!, 'REGISTER');
     }
 
-    const isFirstUser = (await prisma.user.count()) === 0;
-    const user = await prisma.user.create({
-      data: {
-        phone: input.phone,
-        username: input.username,
-        passwordHash: await bcrypt.hash(
-          input.password,
-          env.BCRYPT_PASSWORD_SALT_ROUNDS
-        ),
-        platformRole: isFirstUser ? 'SUPER_ADMIN' : 'USER',
-      },
-      select: { id: true, phone: true, username: true, platformRole: true },
+    const firstUser = await isFirstUser();
+    const user = await createUser({
+      phone: input.phone,
+      username: input.username,
+      password: input.password,
+      platformRole: firstUser ? 'SUPER_ADMIN' : 'USER',
     });
     ok(res, { user, token: signToken(user) });
   })
@@ -161,12 +91,10 @@ authRouter.post(
     const input = z
       .object({ phone: phoneSchema, password: z.string().min(1) })
       .parse(req.body);
-    const user = await prisma.user.findUnique({
-      where: { phone: input.phone },
-    });
-    if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
-      throw new HttpError(401, '手机号或密码不正确');
-    }
+    const user = await findUserByPhone(input.phone);
+    if (!user) throw new HttpError(401, '手机号或密码不正确');
+    const { matched } = await verifyPassword(user.id, input.password);
+    if (!matched) throw new HttpError(401, '手机号或密码不正确');
     const payload = { id: user.id, phone: user.phone, username: user.username };
     ok(res, { user: payload, token: signToken(payload) });
   })
@@ -182,11 +110,9 @@ authRouter.post(
     const input = z
       .object({ phone: phoneSchema, code: z.string().length(6) })
       .parse(req.body);
-    const user = await prisma.user.findUnique({
-      where: { phone: input.phone },
-    });
+    const user = await findUserByPhone(input.phone);
     if (!user) throw new HttpError(404, '用户不存在');
-    await verifyOtp(input.phone, input.code, 'LOGIN');
+    await verifyOtpCode(input.phone, input.code, 'LOGIN');
     const payload = { id: user.id, phone: user.phone, username: user.username };
     ok(res, { user: payload, token: signToken(payload) });
   })
@@ -196,30 +122,7 @@ authRouter.get(
   '/me',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const user = await prisma.user.findUniqueOrThrow({
-      where: { id: req.user!.id },
-      select: { id: true, phone: true, username: true, platformRole: true },
-    });
-    const memberships = await prisma.orgMember.findMany({
-      where: { userId: req.user!.id, status: 'ACTIVE' },
-      include: { organization: true, role: true },
-    });
-
-    // 为没有 inviteCode 的组织自动生成邀请码
-    await Promise.all(
-      memberships
-        .filter((m) => !m.organization.inviteCode)
-        .map(async (m) => {
-          const newCode = generateInviteCode();
-          await prisma.organization.update({
-            where: { id: m.organization.id },
-            data: { inviteCode: newCode },
-          });
-          m.organization.inviteCode = newCode;
-        })
-    );
-
-    ok(res, { user, memberships });
+    ok(res, await getUserWithMemberships(req.user!.id));
   })
 );
 
@@ -243,25 +146,13 @@ authRouter.put(
       throw new HttpError(400, '新密码不能与当前密码相同');
     }
 
-    const user = await prisma.user.findUniqueOrThrow({
-      where: { id: req.user!.id },
-    });
-    const matched = await bcrypt.compare(
-      input.currentPassword,
-      user.passwordHash
+    const { matched } = await verifyPassword(
+      req.user!.id,
+      input.currentPassword
     );
     if (!matched) throw new HttpError(400, '当前密码不正确');
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash: await bcrypt.hash(
-          input.newPassword,
-          env.BCRYPT_PASSWORD_SALT_ROUNDS
-        ),
-        passwordChangedAt: new Date(),
-      },
-    });
+    await updateUserPassword(req.user!.id, input.newPassword);
 
     ok(res, { message: '密码已更新' });
   })

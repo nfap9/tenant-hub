@@ -1,12 +1,20 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAuth, requireOrg } from '../middleware/auth.js';
+import {
+  requireAuth,
+  requireOrg,
+  requirePermission,
+} from '../middleware/auth.js';
+import { PERMISSIONS } from '../services/roles.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { runAgent, type StreamChunk } from '../agent/index.js';
 import type { ChatMessage } from '../agent/types.js';
 
 export const agentRouter = Router();
 agentRouter.use(requireAuth, requireOrg);
+
+// Agent 需要至少具备一个查看权限才能使用
+agentRouter.use(requirePermission(PERMISSIONS.APARTMENT_VIEW));
 
 const chatRequestSchema = z.object({
   message: z.string().min(1).max(2000),
@@ -36,6 +44,7 @@ agentRouter.post(
       organizationId: req.organizationId!,
       userId: req.user!.id,
       userName: req.user!.username,
+      permissions: req.permissions ?? [],
     };
 
     function sendChunk(chunk: StreamChunk) {

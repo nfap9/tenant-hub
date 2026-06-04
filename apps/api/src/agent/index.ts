@@ -28,9 +28,27 @@ import { queryMeterReadingsTool } from './tools/meter-readings.js';
 import { queryReservationTool } from './tools/reservations.js';
 import { querySettlementsTool } from './tools/settlements.js';
 import { generateChartTool } from './tools/chart.js';
+import { PERMISSIONS } from '../services/roles.js';
 import type { AgentContext, ChatMessage } from './types.js';
 
 const MAX_ITERATIONS = 5;
+
+const TOOL_PERMISSIONS: Record<string, string> = {
+  query_apartments: PERMISSIONS.APARTMENT_VIEW,
+  query_rooms: PERMISSIONS.ROOM_VIEW,
+  query_leases: PERMISSIONS.LEASE_VIEW,
+  query_bills: PERMISSIONS.BILL_VIEW,
+  query_deposits: PERMISSIONS.DEPOSIT_VIEW,
+  query_transactions: PERMISSIONS.BILL_VIEW,
+  query_transaction_summary: PERMISSIONS.BILL_VIEW,
+  query_meter_readings: PERMISSIONS.BILL_VIEW,
+  query_reservation: PERMISSIONS.ROOM_VIEW,
+  query_settlements: PERMISSIONS.LEASE_VIEW,
+  query_room_detail: PERMISSIONS.ROOM_VIEW,
+  query_apartment_contract: PERMISSIONS.APARTMENT_VIEW,
+  analytics_summary: PERMISSIONS.APARTMENT_VIEW,
+  generate_chart: PERMISSIONS.APARTMENT_VIEW,
+};
 
 const TOOL_LABELS: Record<string, string> = {
   query_apartments: '公寓列表',
@@ -220,6 +238,24 @@ export async function* runAgent(
           messages.push(
             new ToolMessage({
               content: JSON.stringify({ error: `工具 ${toolName} 不存在` }),
+              tool_call_id: (toolCall.id || toolName) as string,
+            })
+          );
+          continue;
+        }
+
+        // 权限检查
+        const requiredPermission = TOOL_PERMISSIONS[toolName as string];
+        if (
+          requiredPermission &&
+          !ctx.permissions.includes('*') &&
+          !ctx.permissions.includes(requiredPermission)
+        ) {
+          messages.push(
+            new ToolMessage({
+              content: JSON.stringify({
+                error: `无权限使用${TOOL_LABELS[toolName as string] || toolName}功能`,
+              }),
               tool_call_id: (toolCall.id || toolName) as string,
             })
           );

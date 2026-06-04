@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
   requireOrg,
@@ -9,6 +8,12 @@ import {
 import { PERMISSIONS } from '../services/roles.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
+import {
+  findRoomForReservation,
+  upsertReservation,
+  deleteReservation,
+  getReservationByRoomId,
+} from '../services/reservation.js';
 
 export const reservationRouter = Router();
 reservationRouter.use(requireAuth, requireOrg);
@@ -28,77 +33,27 @@ reservationRouter.post(
       })
       .parse(req.body);
 
-    const room = await prisma.room.findFirst({
-      where: {
-        id: input.roomId,
-        apartment: { organizationId: req.organizationId! },
-      },
-      select: {
-        id: true,
-        status: true,
-        apartmentId: true,
-        roomNo: true,
-        apartment: { select: { name: true } },
-      },
-    });
+    const room = await findRoomForReservation(
+      input.roomId,
+      req.organizationId!
+    );
     if (!room) throw new HttpError(404, '房间不存在');
     if (room.status !== 'VACANT' && room.status !== 'RESERVED')
       throw new HttpError(400, '仅空闲或已预留的房间可以预留');
 
-    const existing = await prisma.reservation.findUnique({
-      where: { roomId: input.roomId },
-    });
-
-    const reservation = await prisma.$transaction(async (tx) => {
-      const data = {
-        name: input.name,
-        phone: input.phone,
-        deposit: input.deposit,
-        paymentMethod: input.deposit > 0 ? input.paymentMethod || null : null,
-        expectedMoveInDate: input.expectedMoveInDate,
-      };
-
-      let reservationRecord;
-      if (existing) {
-        reservationRecord = await tx.reservation.update({
-          where: { roomId: input.roomId },
-          data,
-        });
-      } else {
-        reservationRecord = await tx.reservation.create({
-          data: { roomId: input.roomId, ...data },
-        });
-      }
-
-      if (room.status !== 'RESERVED') {
-        await tx.room.update({
-          where: { id: input.roomId },
-          data: { status: 'RESERVED' },
-        });
-      }
-
-      // 创建收支记录（定金收入）
-      if (input.deposit > 0) {
-        await tx.transaction.create({
-          data: {
-            organizationId: req.organizationId!,
-            type: 'INCOME',
-            category: 'RESERVATION_FEE',
-            amount: input.deposit,
-            method: input.paymentMethod || '现金',
-            description: `${room.apartment.name} - ${room.roomNo} 预订定金`,
-            operatorId: req.user!.id,
-            sourceType: 'RESERVATION',
-            sourceId: reservationRecord.id,
-            apartmentId: room.apartmentId,
-          },
-        });
-      }
-
-      return tx.reservation.findUniqueOrThrow({
-        where: { roomId: input.roomId },
-        include: { room: true },
-      });
+    const reservation = await upsertReservation({
+      roomId: input.roomId,
+      name: input.name,
+      phone: input.phone,
+      deposit: input.deposit,
+      paymentMethod: input.paymentMethod,
+      expectedMoveInDate: input.expectedMoveInDate,
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+      roomStatus: room.status,
+      apartmentId: room.apartmentId,
+      roomNo: room.roomNo,
+      apartmentName: room.apartment.name,
     });
 
     ok(res, reservation);
@@ -109,27 +64,16 @@ reservationRouter.delete(
   '/:roomId',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
-    const room = await prisma.room.findFirst({
-      where: {
-        id: req.params.roomId,
-        apartment: { organizationId: req.organizationId! },
-      },
-      select: { id: true, status: true },
-    });
+    const room = await findRoomForReservation(
+      req.params.roomId,
+      req.organizationId!
+    );
     if (!room) throw new HttpError(404, '房间不存在');
 
-    const reservation = await prisma.reservation.findUnique({
-      where: { roomId: req.params.roomId },
-    });
+    const reservation = await getReservationByRoomId(req.params.roomId);
     if (!reservation) throw new HttpError(404, '预留信息不存在');
 
-    await prisma.$transaction([
-      prisma.reservation.delete({ where: { roomId: req.params.roomId } }),
-      prisma.room.update({
-        where: { id: req.params.roomId },
-        data: { status: 'VACANT' },
-      }),
-    ]);
+    await deleteReservation(req.params.roomId);
 
     ok(res, { deleted: true });
   })
@@ -139,9 +83,7 @@ reservationRouter.get(
   '/:roomId',
   requirePermission(PERMISSIONS.ROOM_VIEW),
   asyncHandler(async (req, res) => {
-    const reservation = await prisma.reservation.findUnique({
-      where: { roomId: req.params.roomId },
-    });
+    const reservation = await getReservationByRoomId(req.params.roomId);
     ok(res, reservation ?? {});
   })
 );
