@@ -246,11 +246,29 @@
   min-width: 0;
 }
 
+.conv-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .conv-time {
   font-size: 11px;
   color: $th-foreground-subtle;
   white-space: nowrap;
-  flex-shrink: 0;
+}
+
+.archive-btn {
+  padding: 0 4px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  color: $th-foreground-subtle !important;
+
+  &:hover {
+    color: $th-primary !important;
+    background: transparent !important;
+  }
 }
 
 .more-menu-item {

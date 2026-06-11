@@ -23,6 +23,7 @@ import {
   LoadingOutlined,
   EllipsisOutlined,
   InboxOutlined,
+  FolderOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -39,6 +40,7 @@ const { Header, Sider, Content } = Layout;
 
 interface ConversationItem {
   id: string;
+  serverId?: string;
   title: string;
   updatedAt: number;
   loading?: boolean;
@@ -57,6 +59,7 @@ function useConversationList(orgId: string) {
         if (Array.isArray(parsed)) {
           return parsed.map((c: ConversationItem) => ({
             id: c.id,
+            serverId: c.serverId,
             title: c.title,
             updatedAt: c.updatedAt,
             loading: c.loading,
@@ -94,10 +97,11 @@ function useConversationList(orgId: string) {
   // 合并本地缓存和后端列表
   const merged = useMemo(() => {
     const localMap = new Map(conversations.map((c) => [c.id, c]));
-    const serverItems = serverList
+    const serverItems: ConversationItem[] = serverList
       .filter((s) => !localMap.has(s.id))
       .map((s) => ({
         id: s.id,
+        serverId: s.id,
         title: s.title,
         updatedAt: new Date(s.updatedAt).getTime(),
         loading: false,
@@ -207,6 +211,44 @@ export default function MainLayout() {
     [refresh]
   );
 
+  const handleArchive = useCallback(
+    async (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const conv = conversations.find((c) => c.id === id);
+      if (conv?.serverId) {
+        try {
+          await updateConversation(conv.serverId, { archived: true });
+        } catch {
+          message.error('操作失败');
+          return;
+        }
+      }
+      // 从本地缓存移除
+      try {
+        const cacheKey = `agent_conv_${orgId}_cache`;
+        const stored = localStorage.getItem(cacheKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const remaining = parsed.filter((c: { id: string }) => c.id !== id);
+            localStorage.setItem(cacheKey, JSON.stringify(remaining));
+            window.dispatchEvent(new Event('agent-conversations-change'));
+          }
+        }
+      } catch {
+        // ignore
+      }
+      message.success('已归档');
+      refresh();
+      const params = new URLSearchParams(location.search);
+      if (params.get('conv') === id) {
+        navigate('/agent');
+      }
+    },
+    [conversations, orgId, refresh, location.search, navigate]
+  );
+
   const orgOptions = useMemo(
     () =>
       memberships.map((m) => ({
@@ -291,9 +333,18 @@ export default function MainLayout() {
         label: (
           <div className={styles.convLabel}>
             <span className={styles.convTitle}>{conv.title || '新对话'}</span>
-            <span className={styles.convTime}>
-              {conv.loading ? '生成中...' : formatTime(conv.updatedAt)}
-            </span>
+            <div className={styles.convMeta}>
+              <span className={styles.convTime}>
+                {conv.loading ? '生成中...' : formatTime(conv.updatedAt)}
+              </span>
+              <Button
+                type="text"
+                size="small"
+                className={styles.archiveBtn}
+                icon={<FolderOutlined />}
+                onClick={(e) => handleArchive(conv.id, e)}
+              />
+            </div>
           </div>
         ),
         className: styles.convMenuItem,

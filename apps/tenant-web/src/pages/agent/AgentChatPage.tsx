@@ -6,8 +6,6 @@ import {
   RobotOutlined,
   UserOutlined,
   BulbOutlined,
-  DeleteOutlined,
-  FolderOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -237,14 +235,15 @@ function useConversations(orgId: string) {
   const archiveConversation = useCallback(
     async (id: string, archived: boolean) => {
       const conv = conversations.find((c) => c.id === id);
-      const serverId = conv?.serverId ?? id;
-      try {
-        await apiUpdateConversation(serverId, { archived });
-        antMessage.success(archived ? '已归档' : '已取消归档');
-      } catch {
-        antMessage.error('操作失败');
-        return;
+      if (conv?.serverId) {
+        try {
+          await apiUpdateConversation(conv.serverId, { archived });
+        } catch {
+          antMessage.error('操作失败');
+          return;
+        }
       }
+      antMessage.success(archived ? '已归档' : '已取消归档');
       if (archived) {
         setConversations((prev) => {
           const remaining = prev.filter((c) => c.id !== id);
@@ -266,11 +265,11 @@ function useConversations(orgId: string) {
   const switchConversation = useCallback(
     async (id: string) => {
       const localConv = conversations.find((c) => c.id === id);
-      if (localConv && localConv.messages.length > 0) {
+      if (localConv) {
         setActiveId(id);
         return;
       }
-      // 从后端拉取
+      // 本地没有，从后端拉取
       try {
         const detail = await getConversation(id);
         const conv: Conversation = {
@@ -723,9 +722,7 @@ export default function AgentChatPage() {
     activeConversation,
     createConversation,
     switchConversation,
-    clearCurrent,
     sendMessage,
-    archiveConversation,
   } = useConversations(orgId);
 
   // 响应 URL 参数（从主菜单进入）
@@ -739,8 +736,10 @@ export default function AgentChatPage() {
     const convId = params.get('conv');
 
     if (action === 'new') {
-      createConversation();
-      navigate('/agent', { replace: true });
+      (async () => {
+        const newId = await createConversation();
+        navigate(`/agent?conv=${newId}`, { replace: true });
+      })();
     } else if (convId && convId !== activeConversation?.id) {
       switchConversation(convId);
     }
@@ -790,11 +789,6 @@ export default function AgentChatPage() {
     },
     [isLoading, sendMessage]
   );
-
-  const handleArchive = useCallback(async () => {
-    if (!activeConversation?.id) return;
-    await archiveConversation(activeConversation.id, true);
-  }, [activeConversation, archiveConversation]);
 
   const hasMessages = messages.length > 0;
   const isConvLoading = activeConversation?.loading ?? false;
@@ -893,24 +887,6 @@ export default function AgentChatPage() {
 
         {activeConversation && (
           <div className={styles.inputArea}>
-            <div className={styles.inputToolbar}>
-              <Button
-                size="small"
-                icon={<FolderOutlined />}
-                onClick={handleArchive}
-                disabled={isLoading}
-              >
-                归档对话
-              </Button>
-              <Button
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={clearCurrent}
-                disabled={isLoading}
-              >
-                清空对话
-              </Button>
-            </div>
             <div className={styles.inputWrapper}>
               <Input.TextArea
                 className={styles.textInput}
