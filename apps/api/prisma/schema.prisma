@@ -649,3 +649,32 @@ model Transaction {
   @@index([organizationId, sourceType, sourceId])
   @@index([organizationId, status])
 }
+
+model AgentConversation {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  title          String
+  archived       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages AgentConversationMessage[]
+
+  @@index([userId, organizationId, archived, updatedAt])
+  @@index([updatedAt])
+}
+
+model AgentConversationMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String   @db.Text
+  chartData      Json?
+  thinking       String[] @default([])
+  createdAt      DateTime @default(now())
+
+  conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}

@@ -260,6 +260,13 @@
   }
 }
 
+.archived-menu-item {
+  :global(.ant-menu-title-content) {
+    color: $th-foreground-subtle;
+    font-size: 12px;
+  }
+}
+
 // 业务菜单项
 .biz-menu-item {
   :global(.ant-menu-title-content) {

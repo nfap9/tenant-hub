@@ -7,6 +7,7 @@ import {
   UserOutlined,
   BulbOutlined,
   DeleteOutlined,
+  FolderOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -28,7 +29,18 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useAppSession } from '@/context/AppSessionContext';
-import { chatWithAgent, type ChatMessage } from '@/api/agent';
+import {
+  chatWithAgent,
+  type ChatMessage,
+  type ChartConfig,
+  getConversations,
+  getConversation,
+  createConversation as apiCreateConversation,
+  updateConversation as apiUpdateConversation,
+  deleteConversation as apiDeleteConversation,
+  saveMessages,
+  type ServerConversation,
+} from '@/api/agent';
 import styles from './AgentChatPage.module.scss';
 
 const QUICK_QUESTIONS = [
@@ -39,16 +51,7 @@ const QUICK_QUESTIONS = [
   '即将到期的租约',
 ];
 
-const MAX_CONVERSATION_LIMIT = 50;
-
-interface ChartConfig {
-  chartType: 'bar' | 'line' | 'pie' | 'area' | 'radar';
-  title: string;
-  labels: string[];
-  datasets: { label: string; data: number[] }[];
-  unit?: string;
-  colors?: string[];
-}
+const MAX_LOCAL_CACHE = 10;
 
 interface DisplayMessage {
   id: string;
@@ -61,6 +64,7 @@ interface DisplayMessage {
 
 interface Conversation {
   id: string;
+  serverId?: string;
   title: string;
   messages: DisplayMessage[];
   createdAt: number;
@@ -86,7 +90,7 @@ function generateId() {
 const activeStreams = new Map<string, boolean>();
 
 function useConversations(orgId: string) {
-  const storageKey = `agent_conv_${orgId}`;
+  const storageKey = `agent_conv_${orgId}_cache`;
 
   const readStorage = useCallback((): Conversation[] => {
     try {
@@ -115,7 +119,6 @@ function useConversations(orgId: string) {
 
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     const convs = readStorage();
-    // 清除旧的 loading 标记
     let changed = false;
     const cleaned = convs.map((c) => {
       if (c.loading) {
@@ -133,44 +136,29 @@ function useConversations(orgId: string) {
     return null;
   });
 
+  const [serverList, setServerList] = useState<ServerConversation[]>([]);
+
+  // 加载后端列表
+  useEffect(() => {
+    getConversations({ limit: 20 })
+      .then((res) => setServerList(res.items))
+      .catch(() => {});
+  }, [orgId]);
+
   // persist to localStorage on change
   useEffect(() => {
     writeStorage(conversations);
   }, [conversations, writeStorage]);
-
-  // sync from localStorage when remounting (background updates)
-  useEffect(() => {
-    const convs = readStorage();
-    // merge: if any conversation has more messages than in state, use the stored version
-    setConversations((prev) => {
-      let changed = false;
-      const next = prev.map((pc) => {
-        const sc = convs.find((c) => c.id === pc.id);
-        if (
-          sc &&
-          sc.messages.length > pc.messages.length &&
-          !activeStreams.has(pc.id)
-        ) {
-          changed = true;
-          return { ...sc, loading: false };
-        }
-        return pc;
-      });
-      return changed ? next : prev;
-    });
-  }, [readStorage]);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId]
   );
 
-  // 更新对话 localStorage + state
   const persistConv = useCallback(
     (convId: string, updater: (c: Conversation) => Conversation) => {
       setConversations((prev) => {
         const next = prev.map((c) => (c.id === convId ? updater(c) : c));
-        // 直接写 localStorage 确保后台更新不丢失
         try {
           localStorage.setItem(storageKey, JSON.stringify(next));
           window.dispatchEvent(new Event('agent-conversations-change'));
@@ -183,25 +171,56 @@ function useConversations(orgId: string) {
     [storageKey]
   );
 
-  const createConversation = useCallback(() => {
-    const newConv: Conversation = {
-      id: generateId(),
-      title: '',
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setConversations((prev) => {
-      const next = [newConv, ...prev].slice(0, MAX_CONVERSATION_LIMIT);
-      writeStorage(next);
-      return next;
-    });
-    setActiveId(newConv.id);
+  const createConversation = useCallback(async () => {
+    try {
+      const serverConv = await apiCreateConversation('');
+      const newConv: Conversation = {
+        id: serverConv.id,
+        serverId: serverConv.id,
+        title: '',
+        messages: [],
+        createdAt: new Date(serverConv.createdAt).getTime(),
+        updatedAt: new Date(serverConv.updatedAt).getTime(),
+      };
+      setConversations((prev) => {
+        const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
+        writeStorage(next);
+        return next;
+      });
+      setActiveId(newConv.id);
+      // 刷新后端列表
+      getConversations({ limit: 20 })
+        .then((res) => setServerList(res.items))
+        .catch(() => {});
+    } catch {
+      // 降级到本地创建
+      const newConv: Conversation = {
+        id: generateId(),
+        title: '',
+        messages: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setConversations((prev) => {
+        const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
+        writeStorage(next);
+        return next;
+      });
+      setActiveId(newConv.id);
+    }
   }, [writeStorage]);
 
   const deleteConversation = useCallback(
-    (id: string) => {
+    async (id: string) => {
       activeStreams.delete(id);
+      const conv = conversations.find((c) => c.id === id);
+      if (conv?.serverId) {
+        try {
+          await apiDeleteConversation(conv.serverId);
+        } catch {
+          // ignore
+        }
+      }
       setConversations((prev) => {
         const remaining = prev.filter((c) => c.id !== id);
         writeStorage(remaining);
@@ -210,13 +229,77 @@ function useConversations(orgId: string) {
         }
         return remaining;
       });
+      setServerList((prev) => prev.filter((c) => c.id !== id));
     },
-    [activeId, writeStorage]
+    [activeId, conversations, writeStorage]
   );
 
-  const switchConversation = useCallback((id: string) => {
-    setActiveId(id);
-  }, []);
+  const archiveConversation = useCallback(
+    async (id: string, archived: boolean) => {
+      const conv = conversations.find((c) => c.id === id);
+      const serverId = conv?.serverId ?? id;
+      try {
+        await apiUpdateConversation(serverId, { archived });
+        antMessage.success(archived ? '已归档' : '已取消归档');
+      } catch {
+        antMessage.error('操作失败');
+        return;
+      }
+      if (archived) {
+        setConversations((prev) => {
+          const remaining = prev.filter((c) => c.id !== id);
+          writeStorage(remaining);
+          return remaining;
+        });
+        if (activeId === id) {
+          setActiveId(null);
+        }
+      }
+      // 刷新后端列表
+      getConversations({ limit: 20 })
+        .then((res) => setServerList(res.items))
+        .catch(() => {});
+    },
+    [activeId, conversations, writeStorage]
+  );
+
+  const switchConversation = useCallback(
+    async (id: string) => {
+      const localConv = conversations.find((c) => c.id === id);
+      if (localConv && localConv.messages.length > 0) {
+        setActiveId(id);
+        return;
+      }
+      // 从后端拉取
+      try {
+        const detail = await getConversation(id);
+        const conv: Conversation = {
+          id: detail.id,
+          serverId: detail.id,
+          title: detail.title,
+          messages: detail.messages.map((m) => ({
+            id: m.id,
+            role: m.role as DisplayMessage['role'],
+            content: m.content,
+            chartData: m.chartData,
+            thinking: m.thinking,
+          })),
+          createdAt: new Date(detail.createdAt).getTime(),
+          updatedAt: new Date(detail.updatedAt).getTime(),
+        };
+        setConversations((prev) => {
+          const filtered = prev.filter((c) => c.id !== id);
+          const next = [conv, ...filtered].slice(0, MAX_LOCAL_CACHE);
+          writeStorage(next);
+          return next;
+        });
+        setActiveId(id);
+      } catch {
+        antMessage.error('加载会话失败');
+      }
+    },
+    [conversations, writeStorage]
+  );
 
   const clearCurrent = useCallback(() => {
     if (activeId) {
@@ -229,6 +312,7 @@ function useConversations(orgId: string) {
       if (!text.trim()) return;
 
       let convId = activeConversation?.id;
+      let serverConvId = activeConversation?.serverId;
       let initialMessages: DisplayMessage[];
 
       const userMsg: DisplayMessage = {
@@ -246,15 +330,40 @@ function useConversations(orgId: string) {
       };
 
       if (!convId) {
-        convId = generateId();
-        initialMessages = [];
+        // 没有活跃会话，尝试创建后端会话
+        try {
+          const serverConv = await apiCreateConversation(
+            text.trim().slice(0, 30)
+          );
+          convId = serverConv.id;
+          serverConvId = serverConv.id;
+          initialMessages = [];
+          const newConv: Conversation = {
+            id: convId,
+            serverId: serverConvId,
+            title: text.trim().slice(0, 30),
+            messages: [],
+            createdAt: new Date(serverConv.createdAt).getTime(),
+            updatedAt: new Date(serverConv.updatedAt).getTime(),
+          };
+          setConversations((prev) => {
+            const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
+            writeStorage(next);
+            return next;
+          });
+          setActiveId(convId);
+        } catch {
+          // 降级到本地创建
+          convId = generateId();
+          serverConvId = undefined;
+          initialMessages = [];
+        }
       } else {
         initialMessages = activeConversation?.messages ?? [];
       }
 
       const currentMessages = [...initialMessages, userMsg, assistantMsg];
 
-      // 标记流活跃 + 初始化对话
       activeStreams.set(convId, true);
 
       persistConv(convId, (c) => ({
@@ -265,20 +374,20 @@ function useConversations(orgId: string) {
         loading: true,
       }));
 
-      // 确保非 auto-create 情况下 activeId 正确
       if (!activeConversation?.id) {
         setConversations((prev) => {
           const exists = prev.find((c) => c.id === convId);
           if (!exists) {
             const newConv: Conversation = {
               id: convId,
+              serverId: serverConvId,
               title: text.trim().slice(0, 30),
               messages: currentMessages,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               loading: true,
             };
-            const next = [newConv, ...prev].slice(0, MAX_CONVERSATION_LIMIT);
+            const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
             writeStorage(next);
             return next;
           }
@@ -294,7 +403,6 @@ function useConversations(orgId: string) {
         }
       }
 
-      // 读取 localStorage 中的最新对话列表
       const readConvList = (): Conversation[] => {
         try {
           const stored = localStorage.getItem(storageKey);
@@ -308,7 +416,6 @@ function useConversations(orgId: string) {
         return [];
       };
 
-      // 直接写 localStorage，不依赖 React state（确保后台更新不丢失）
       const syncToStorage = (
         msgs: DisplayMessage[],
         opts?: { final?: boolean }
@@ -320,6 +427,7 @@ function useConversations(orgId: string) {
             ? convs[idx]
             : {
                 id: convId,
+                serverId: serverConvId,
                 title: '',
                 messages: [],
                 createdAt: Date.now(),
@@ -342,9 +450,7 @@ function useConversations(orgId: string) {
         }
       };
 
-      // 更新消息的辅助函数 — 从 localStorage 读取最新消息后应用 patch
       const patchMsg = (patcher: (msg: DisplayMessage) => DisplayMessage) => {
-        // 1) React state 路径（挂载时）
         persistConv(convId, (c) => {
           const msgs = c.messages.map((m) =>
             m.id === assistantMsg.id ? patcher(m) : m
@@ -358,7 +464,6 @@ function useConversations(orgId: string) {
           };
         });
 
-        // 2) 直接 localStorage 路径（后台时）
         const convs = readConvList();
         const c = convs.find((x) => x.id === convId);
         if (c) {
@@ -370,7 +475,7 @@ function useConversations(orgId: string) {
       };
 
       try {
-        const stream = chatWithAgent(text.trim(), history, orgId);
+        const stream = chatWithAgent(text.trim(), history, orgId, serverConvId);
         let fullContent = '';
 
         for await (const chunk of stream) {
@@ -427,7 +532,6 @@ function useConversations(orgId: string) {
         antMessage.error(errorMsg);
       } finally {
         activeStreams.delete(convId);
-        // 最终写入 localStorage（绕开 React state 确保后台完成）
         const convs = readConvList();
         const c = convs.find((x) => x.id === convId);
         if (c) {
@@ -443,6 +547,35 @@ function useConversations(orgId: string) {
             m.loading ? { ...m, loading: false } : m
           ),
         }));
+
+        // 保存到后端
+        if (serverConvId) {
+          const allConvs = readConvList();
+          const currentConv = allConvs.find((x) => x.id === convId);
+          if (currentConv) {
+            const msgsToSave = currentConv.messages
+              .filter((m) => !m.loading && m.role !== 'status')
+              .map((m) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                chartData: m.chartData,
+                thinking: m.thinking,
+              }));
+            try {
+              await saveMessages(serverConvId, msgsToSave);
+              // 刷新后端列表
+              import('@/api/agent')
+                .then(({ getConversations: apiGetConversations }) =>
+                  apiGetConversations({ limit: 20 })
+                )
+                .then((res) => setServerList(res.items))
+                .catch(() => {});
+            } catch {
+              // 静默失败
+            }
+          }
+        }
       }
     },
     [orgId, activeConversation, persistConv, writeStorage]
@@ -450,11 +583,13 @@ function useConversations(orgId: string) {
 
   return {
     conversations,
+    serverList,
     activeConversation,
     activeId,
     setActiveId,
     createConversation,
     deleteConversation,
+    archiveConversation,
     switchConversation,
     clearCurrent,
     sendMessage,
@@ -590,6 +725,7 @@ export default function AgentChatPage() {
     switchConversation,
     clearCurrent,
     sendMessage,
+    archiveConversation,
   } = useConversations(orgId);
 
   // 响应 URL 参数（从主菜单进入）
@@ -654,6 +790,11 @@ export default function AgentChatPage() {
     },
     [isLoading, sendMessage]
   );
+
+  const handleArchive = useCallback(async () => {
+    if (!activeConversation?.id) return;
+    await archiveConversation(activeConversation.id, true);
+  }, [activeConversation, archiveConversation]);
 
   const hasMessages = messages.length > 0;
   const isConvLoading = activeConversation?.loading ?? false;
@@ -753,6 +894,14 @@ export default function AgentChatPage() {
         {activeConversation && (
           <div className={styles.inputArea}>
             <div className={styles.inputToolbar}>
+              <Button
+                size="small"
+                icon={<FolderOutlined />}
+                onClick={handleArchive}
+                disabled={isLoading}
+              >
+                归档对话
+              </Button>
               <Button
                 size="small"
                 icon={<DeleteOutlined />}

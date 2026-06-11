@@ -7,6 +7,8 @@ import {
   message,
   Modal,
   Avatar,
+  List,
+  Button,
   type MenuProps,
 } from 'antd';
 import {
@@ -20,11 +22,17 @@ import {
   PlusOutlined,
   LoadingOutlined,
   EllipsisOutlined,
+  InboxOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { agentNewConfig, bizMenuConfig, opsMenuConfig } from './menuConfig';
 import { getKeyFromPath, getLabelFromKey } from './menuUtils';
+import {
+  getConversations,
+  updateConversation,
+  type ServerConversation,
+} from '@/api/agent';
 import styles from './MainLayout.module.scss';
 
 const { Header, Sider, Content } = Layout;
@@ -33,50 +41,73 @@ interface ConversationItem {
   id: string;
   title: string;
   updatedAt: number;
-  messages: { role: string }[];
   loading?: boolean;
 }
 
 function useConversationList(orgId: string) {
-  const storageKey = `agent_conv_${orgId}`;
+  const storageKey = `agent_conv_${orgId}_cache`;
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [serverList, setServerList] = useState<ServerConversation[]>([]);
 
-  const read = useCallback(() => {
+  const readLocal = useCallback((): ConversationItem[] => {
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          setConversations(
-            parsed.map((c: ConversationItem) => ({
-              id: c.id,
-              title: c.title,
-              updatedAt: c.updatedAt,
-              messages: c.messages || [],
-              loading: c.loading,
-            }))
-          );
-          return;
+          return parsed.map((c: ConversationItem) => ({
+            id: c.id,
+            title: c.title,
+            updatedAt: c.updatedAt,
+            loading: c.loading,
+          }));
         }
       }
     } catch {
       // ignore
     }
-    setConversations([]);
+    return [];
   }, [storageKey]);
 
+  const loadServer = useCallback(async () => {
+    try {
+      const res = await getConversations({ limit: 20 });
+      setServerList(res.items);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
-    read();
-    const handler = () => read();
+    setConversations(readLocal());
+    loadServer();
+  }, [readLocal, loadServer, orgId]);
+
+  useEffect(() => {
+    const handler = () => setConversations(readLocal());
     window.addEventListener('agent-conversations-change', handler);
-    window.addEventListener('storage', handler);
     return () => {
       window.removeEventListener('agent-conversations-change', handler);
-      window.removeEventListener('storage', handler);
     };
-  }, [read]);
+  }, [readLocal]);
 
-  return conversations;
+  // 合并本地缓存和后端列表
+  const merged = useMemo(() => {
+    const localMap = new Map(conversations.map((c) => [c.id, c]));
+    const serverItems = serverList
+      .filter((s) => !localMap.has(s.id))
+      .map((s) => ({
+        id: s.id,
+        title: s.title,
+        updatedAt: new Date(s.updatedAt).getTime(),
+        loading: false,
+      }));
+    return [...conversations, ...serverItems].sort(
+      (a, b) => b.updatedAt - a.updatedAt
+    );
+  }, [conversations, serverList]);
+
+  return { conversations: merged, refresh: loadServer };
 }
 
 function formatTime(ts: number) {
@@ -108,8 +139,11 @@ export default function MainLayout() {
 
   const noOrg = memberships.length === 0;
   const orgId = currentOrgId || 'default';
-  const conversations = useConversationList(orgId);
+  const { conversations, refresh } = useConversationList(orgId);
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [archivedList, setArchivedList] = useState<ServerConversation[]>([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   const selectedKey = useMemo(
     () =>
@@ -130,6 +164,11 @@ export default function MainLayout() {
       setHistoryExpanded((v) => !v);
       return;
     }
+    if (key === 'archived') {
+      loadArchived();
+      setArchiveModalOpen(true);
+      return;
+    }
     if (key.startsWith('conv_')) {
       const convId = key.slice(5);
       navigate(`/agent?conv=${convId}`);
@@ -141,6 +180,32 @@ export default function MainLayout() {
       navigate(item.path);
     }
   };
+
+  const loadArchived = useCallback(async () => {
+    setArchiveLoading(true);
+    try {
+      const res = await getConversations({ archived: true, limit: 50 });
+      setArchivedList(res.items);
+    } catch {
+      message.error('加载归档失败');
+    } finally {
+      setArchiveLoading(false);
+    }
+  }, []);
+
+  const handleUnarchive = useCallback(
+    async (id: string) => {
+      try {
+        await updateConversation(id, { archived: false });
+        message.success('已取消归档');
+        setArchivedList((prev) => prev.filter((c) => c.id !== id));
+        refresh();
+      } catch {
+        message.error('操作失败');
+      }
+    },
+    [refresh]
+  );
 
   const orgOptions = useMemo(
     () =>
@@ -217,7 +282,7 @@ export default function MainLayout() {
     // 对话历史
     const displayConversations = historyExpanded
       ? conversations
-      : conversations.slice(0, 8);
+      : conversations.slice(0, 10);
 
     displayConversations.forEach((conv) => {
       items.push({
@@ -236,7 +301,7 @@ export default function MainLayout() {
     });
 
     // 更多
-    if (conversations.length > 8) {
+    if (conversations.length > 10) {
       items.push({
         key: 'more-history',
         icon: <EllipsisOutlined />,
@@ -244,6 +309,14 @@ export default function MainLayout() {
         className: styles.moreMenuItem,
       });
     }
+
+    // 归档入口
+    items.push({
+      key: 'archived',
+      icon: <InboxOutlined />,
+      label: '归档会话',
+      className: styles.archivedMenuItem,
+    });
 
     return items;
   }, [conversations, historyExpanded]);
@@ -378,6 +451,50 @@ export default function MainLayout() {
           )}
         </Content>
       </Layout>
+
+      {/* 归档会话 Modal */}
+      <Modal
+        title="归档会话"
+        open={archiveModalOpen}
+        onCancel={() => setArchiveModalOpen(false)}
+        footer={null}
+        width={480}
+      >
+        <List
+          loading={archiveLoading}
+          dataSource={archivedList}
+          locale={{ emptyText: '暂无归档会话' }}
+          renderItem={(item) => (
+            <List.Item
+              actions={[
+                <Button
+                  key="unarchive"
+                  size="small"
+                  onClick={() => handleUnarchive(item.id)}
+                >
+                  取消归档
+                </Button>,
+                <Button
+                  key="open"
+                  size="small"
+                  type="link"
+                  onClick={() => {
+                    setArchiveModalOpen(false);
+                    navigate(`/agent?conv=${item.id}`);
+                  }}
+                >
+                  打开
+                </Button>,
+              ]}
+            >
+              <List.Item.Meta
+                title={item.title || '新对话'}
+                description={formatTime(new Date(item.updatedAt).getTime())}
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
     </Layout>
   );
 }
