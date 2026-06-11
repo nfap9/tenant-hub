@@ -1,14 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Input, Button, Avatar, message as antMessage, Popconfirm } from 'antd';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Input, Button, Avatar, message as antMessage } from 'antd';
 import {
   SendOutlined,
   RobotOutlined,
   UserOutlined,
   BulbOutlined,
   DeleteOutlined,
-  PlusOutlined,
-  MessageOutlined,
-  LoadingOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -107,6 +105,7 @@ function useConversations(orgId: string) {
     (convs: Conversation[]) => {
       try {
         localStorage.setItem(storageKey, JSON.stringify(convs));
+        window.dispatchEvent(new Event('agent-conversations-change'));
       } catch {
         // ignore
       }
@@ -174,6 +173,7 @@ function useConversations(orgId: string) {
         // 直接写 localStorage 确保后台更新不丢失
         try {
           localStorage.setItem(storageKey, JSON.stringify(next));
+          window.dispatchEvent(new Event('agent-conversations-change'));
         } catch {
           // ignore
         }
@@ -336,6 +336,7 @@ function useConversations(orgId: string) {
 
         try {
           localStorage.setItem(storageKey, JSON.stringify(convs));
+          window.dispatchEvent(new Event('agent-conversations-change'));
         } catch {
           // ignore
         }
@@ -576,35 +577,42 @@ const ChartRenderer: React.FC<{ config: ChartConfig }> = ({ config }) => {
   );
 };
 
-function formatTime(ts: number) {
-  const d = new Date(ts);
-  const now = new Date();
-  const diffDays = Math.floor(
-    (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (diffDays === 0) return '今天';
-  if (diffDays === 1) return '昨天';
-  if (diffDays < 7) return `${diffDays}天前`;
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
 export default function AgentChatPage() {
   const { currentOrgId } = useAppSession();
   const orgId = currentOrgId || 'default';
+  const navigate = useNavigate();
+  const location = useLocation();
+  const processedSearchRef = useRef('');
+
   const {
-    conversations,
     activeConversation,
     createConversation,
-    deleteConversation,
     switchConversation,
     clearCurrent,
     sendMessage,
   } = useConversations(orgId);
 
+  // 响应 URL 参数（从主菜单进入）
+  useEffect(() => {
+    const search = location.search;
+    if (processedSearchRef.current === search) return;
+    processedSearchRef.current = search;
+
+    const params = new URLSearchParams(search);
+    const action = params.get('action');
+    const convId = params.get('conv');
+
+    if (action === 'new') {
+      createConversation();
+      navigate('/agent', { replace: true });
+    } else if (convId && convId !== activeConversation?.id) {
+      switchConversation(convId);
+    }
+  }, [location.search]);
+
   const messages = activeConversation?.messages ?? [];
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -647,98 +655,11 @@ export default function AgentChatPage() {
     [isLoading, sendMessage]
   );
 
-  const handleNewChat = () => {
-    createConversation();
-  };
-
   const hasMessages = messages.length > 0;
   const isConvLoading = activeConversation?.loading ?? false;
 
   return (
     <div className={styles.agentChatPage}>
-      <div
-        className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}
-      >
-        <div className={styles.sidebarHeader}>
-          <Button
-            type="primary"
-            block={!sidebarCollapsed}
-            shape={sidebarCollapsed ? 'circle' : undefined}
-            icon={<PlusOutlined />}
-            onClick={handleNewChat}
-          >
-            {sidebarCollapsed ? '' : '新对话'}
-          </Button>
-        </div>
-        <div className={styles.conversationList}>
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={`${styles.conversationItem} ${
-                conv.id === activeConversation?.id
-                  ? styles.conversationActive
-                  : ''
-              }`}
-              onClick={() => switchConversation(conv.id)}
-            >
-              {conv.loading ? (
-                <LoadingOutlined className={styles.conversationIcon} spin />
-              ) : (
-                <MessageOutlined className={styles.conversationIcon} />
-              )}
-              <div className={styles.conversationInfo}>
-                <div className={styles.conversationTitle}>
-                  {conv.title || '新对话'}
-                </div>
-                <div className={styles.conversationMeta}>
-                  {conv.loading ? (
-                    '生成中...'
-                  ) : (
-                    <>
-                      {formatTime(conv.updatedAt)} ·{' '}
-                      {conv.messages.length > 0
-                        ? `${Math.ceil(conv.messages.filter((m) => m.role === 'user').length)} 轮对话`
-                        : '空'}
-                    </>
-                  )}
-                </div>
-              </div>
-              <Popconfirm
-                title="确定删除此对话？"
-                onConfirm={(e) => {
-                  e?.stopPropagation();
-                  deleteConversation(conv.id);
-                }}
-                onCancel={(e) => e?.stopPropagation()}
-                okText="删除"
-                cancelText="取消"
-              >
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  className={styles.deleteConvBtn}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </Popconfirm>
-            </div>
-          ))}
-          {conversations.length === 0 && (
-            <div className={styles.noConversations}>暂无对话记录</div>
-          )}
-        </div>
-        <div className={styles.sidebarFooter}>
-          <Button
-            type="text"
-            size="small"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          >
-            {sidebarCollapsed ? '展开' : '收起'}
-          </Button>
-        </div>
-      </div>
-
       <div className={styles.chatArea}>
         <div className={styles.messagesArea}>
           {!activeConversation || (!hasMessages && !isConvLoading) ? (

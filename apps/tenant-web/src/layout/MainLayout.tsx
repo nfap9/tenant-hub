@@ -1,21 +1,95 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Layout, Menu, Dropdown, Spin, message, Modal, Avatar } from 'antd';
+import {
+  Layout,
+  Menu,
+  Dropdown,
+  Spin,
+  message,
+  Modal,
+  Avatar,
+  type MenuProps,
+} from 'antd';
 import {
   HomeTwoTone,
   SwapOutlined,
   LogoutOutlined,
   UserOutlined,
   DownOutlined,
-  DashboardOutlined,
   BellOutlined,
+  MessageOutlined,
+  PlusOutlined,
+  LoadingOutlined,
+  EllipsisOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { useMemo } from 'react';
-import { menuConfig, opsMenuConfig } from './menuConfig';
-import { getKeyFromPath, getPathFromKey, getLabelFromKey } from './menuUtils';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { agentNewConfig, bizMenuConfig, opsMenuConfig } from './menuConfig';
+import { getKeyFromPath, getLabelFromKey } from './menuUtils';
 import styles from './MainLayout.module.scss';
 
 const { Header, Sider, Content } = Layout;
+
+interface ConversationItem {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messages: { role: string }[];
+  loading?: boolean;
+}
+
+function useConversationList(orgId: string) {
+  const storageKey = `agent_conv_${orgId}`;
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+
+  const read = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setConversations(
+            parsed.map((c: ConversationItem) => ({
+              id: c.id,
+              title: c.title,
+              updatedAt: c.updatedAt,
+              messages: c.messages || [],
+              loading: c.loading,
+            }))
+          );
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    setConversations([]);
+  }, [storageKey]);
+
+  useEffect(() => {
+    read();
+    const handler = () => read();
+    window.addEventListener('agent-conversations-change', handler);
+    window.addEventListener('storage', handler);
+    return () => {
+      window.removeEventListener('agent-conversations-change', handler);
+      window.removeEventListener('storage', handler);
+    };
+  }, [read]);
+
+  return conversations;
+}
+
+function formatTime(ts: number) {
+  const d = new Date(ts);
+  const now = new Date();
+  const diffDays = Math.floor(
+    (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (diffDays === 0) return '今天';
+  if (diffDays === 1) return '昨天';
+  if (diffDays < 7) return `${diffDays}天前`;
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
 
 export default function MainLayout() {
   const location = useLocation();
@@ -33,44 +107,39 @@ export default function MainLayout() {
   } = useAppSession();
 
   const noOrg = memberships.length === 0;
-
-  const menuItems = useMemo(() => {
-    const baseItems = menuConfig
-      .filter((item) => {
-        if (item.requireOrg && noOrg) return false;
-        return true;
-      })
-      .map(({ key, label, icon: Icon }) => ({
-        key,
-        icon: <Icon />,
-        label,
-      }));
-
-    if (platformRole !== 'SUPER_ADMIN') return baseItems;
-
-    return [
-      ...baseItems,
-      {
-        key: 'ops',
-        icon: <DashboardOutlined />,
-        label: '运营配置',
-        children: opsMenuConfig.map(({ key, label, icon: Icon }) => ({
-          key,
-          icon: <Icon />,
-          label,
-        })),
-      },
-    ];
-  }, [noOrg, platformRole]);
+  const orgId = currentOrgId || 'default';
+  const conversations = useConversationList(orgId);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   const selectedKey = useMemo(
-    () => getKeyFromPath([...menuConfig, ...opsMenuConfig], location.pathname),
-    [location.pathname]
+    () =>
+      getKeyFromPath(
+        [agentNewConfig, ...bizMenuConfig, ...opsMenuConfig],
+        location.pathname,
+        location.search
+      ),
+    [location.pathname, location.search]
   );
 
   const handleMenuClick = (key: string) => {
-    const path = getPathFromKey([...menuConfig, ...opsMenuConfig], key);
-    if (path) navigate(path);
+    if (key === 'agent-new') {
+      navigate('/agent?action=new');
+      return;
+    }
+    if (key === 'more-history') {
+      setHistoryExpanded((v) => !v);
+      return;
+    }
+    if (key.startsWith('conv_')) {
+      const convId = key.slice(5);
+      navigate(`/agent?conv=${convId}`);
+      return;
+    }
+    const allStatic = [agentNewConfig, ...bizMenuConfig, ...opsMenuConfig];
+    const item = allStatic.find((i) => i.key === key);
+    if (item) {
+      navigate(item.path);
+    }
   };
 
   const orgOptions = useMemo(
@@ -94,6 +163,105 @@ export default function MainLayout() {
     });
   };
 
+  // 用户头像下拉菜单项
+  const userMenuItems = useMemo<MenuProps['items']>(() => {
+    const base: MenuProps['items'] = [
+      {
+        key: 'account',
+        icon: <UserOutlined />,
+        label: '账号设置',
+        onClick: () => navigate('/settings/account'),
+      },
+    ];
+
+    if (platformRole === 'SUPER_ADMIN') {
+      base.push({ type: 'divider' });
+      opsMenuConfig.forEach((item) => {
+        base.push({
+          key: item.key,
+          icon: <item.icon />,
+          label: item.label,
+          onClick: () => navigate(item.path),
+        });
+      });
+    }
+
+    base.push({ type: 'divider' });
+    base.push({
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: handleSignOut,
+    });
+
+    return base;
+  }, [navigate, platformRole]);
+
+  // 构建菜单 items
+  const menuItems = useMemo(() => {
+    const items: Array<{
+      key: string;
+      icon?: React.ReactNode;
+      label: React.ReactNode;
+      className?: string;
+      style?: React.CSSProperties;
+    }> = [];
+
+    // 新对话
+    items.push({
+      key: agentNewConfig.key,
+      icon: <PlusOutlined />,
+      label: agentNewConfig.label,
+    });
+
+    // 对话历史
+    const displayConversations = historyExpanded
+      ? conversations
+      : conversations.slice(0, 8);
+
+    displayConversations.forEach((conv) => {
+      items.push({
+        key: `conv_${conv.id}`,
+        icon: conv.loading ? <LoadingOutlined spin /> : <MessageOutlined />,
+        label: (
+          <div className={styles.convLabel}>
+            <span className={styles.convTitle}>{conv.title || '新对话'}</span>
+            <span className={styles.convTime}>
+              {conv.loading ? '生成中...' : formatTime(conv.updatedAt)}
+            </span>
+          </div>
+        ),
+        className: styles.convMenuItem,
+      });
+    });
+
+    // 更多
+    if (conversations.length > 8) {
+      items.push({
+        key: 'more-history',
+        icon: <EllipsisOutlined />,
+        label: historyExpanded ? '收起' : '更多',
+        className: styles.moreMenuItem,
+      });
+    }
+
+    return items;
+  }, [conversations, historyExpanded]);
+
+  const bizMenuItems = useMemo(() => {
+    return bizMenuConfig
+      .filter((item) => {
+        if (item.requireOrg && noOrg) return false;
+        return true;
+      })
+      .map(({ key, label, icon: Icon }) => ({
+        key,
+        icon: <Icon />,
+        label,
+        className: styles.bizMenuItem,
+      }));
+  }, [noOrg]);
+
   return (
     <Layout className={styles.mainLayout}>
       <Sider width={240} theme="light" className={styles.mainSider}>
@@ -110,22 +278,39 @@ export default function MainLayout() {
 
         {/* Navigation */}
         <div className={styles.siderMenuWrap}>
-          <div className={styles.menuLabel}>主菜单</div>
-          <Menu
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            className={styles.mainMenu}
-            items={menuItems}
-            onClick={({ key }) => handleMenuClick(key)}
-          />
+          {/* 智能助手区域 */}
+          <div className={styles.menuSection}>
+            <div className={styles.menuLabel}>智能助手</div>
+            <Menu
+              mode="inline"
+              selectedKeys={[selectedKey]}
+              className={styles.mainMenu}
+              items={menuItems}
+              onClick={({ key }) => handleMenuClick(key)}
+            />
+          </div>
+
+          {/* 业务功能区域 */}
+          <div className={styles.menuSection}>
+            <div className={styles.menuLabel}>业务功能</div>
+            <Menu
+              mode="inline"
+              selectedKeys={[selectedKey]}
+              className={`${styles.mainMenu} ${styles.bizMenu}`}
+              items={bizMenuItems}
+              onClick={({ key }) => handleMenuClick(key)}
+            />
+          </div>
         </div>
       </Sider>
 
       <Layout className={styles.mainContentLayout}>
         <Header className={styles.mainHeader}>
-          {/* Breadcrumb placeholder / page title could go here */}
           <div className={styles.headerPageTitle}>
-            {getLabelFromKey([...menuConfig, ...opsMenuConfig], selectedKey)}
+            {getLabelFromKey(
+              [agentNewConfig, ...bizMenuConfig, ...opsMenuConfig],
+              selectedKey.startsWith('conv_') ? 'agent-new' : selectedKey
+            )}
           </div>
 
           <div className={styles.headerRight}>
@@ -161,20 +346,7 @@ export default function MainLayout() {
             {/* User */}
             <Dropdown
               menu={{
-                items: [
-                  {
-                    key: 'account',
-                    icon: <UserOutlined />,
-                    label: '账号设置',
-                    onClick: () => navigate('/settings/account'),
-                  },
-                  {
-                    key: 'logout',
-                    icon: <LogoutOutlined />,
-                    label: '退出登录',
-                    onClick: handleSignOut,
-                  },
-                ],
+                items: userMenuItems,
               }}
             >
               <span className={styles.userTrigger}>

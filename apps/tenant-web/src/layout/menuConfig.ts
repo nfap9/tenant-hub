@@ -12,7 +12,7 @@ import {
   SafetyCertificateOutlined,
   MailOutlined,
   ToolOutlined,
-  RobotOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 
 export interface MenuItemConfig {
@@ -24,19 +24,22 @@ export interface MenuItemConfig {
   children?: MenuItemConfig[];
 }
 
-export const menuConfig: MenuItemConfig[] = [
+/** 智能助手 — 新对话 */
+export const agentNewConfig: MenuItemConfig = {
+  key: 'agent-new',
+  label: '新对话',
+  path: '/agent',
+  icon: PlusOutlined,
+  requireOrg: true,
+};
+
+/** 业务菜单 */
+export const bizMenuConfig: MenuItemConfig[] = [
   {
     key: 'dashboard',
     label: '首页',
     path: '/',
     icon: HomeOutlined,
-    requireOrg: true,
-  },
-  {
-    key: 'agent',
-    label: '智能助手',
-    path: '/agent',
-    icon: RobotOutlined,
     requireOrg: true,
   },
   {
@@ -89,6 +92,7 @@ export const menuConfig: MenuItemConfig[] = [
   },
 ];
 
+/** 运营配置（仅 SUPER_ADMIN） */
 export const opsMenuConfig: MenuItemConfig[] = [
   {
     key: 'ops-dashboard',

@@ -6,8 +6,17 @@ export function flattenMenu(configs: MenuItemConfig[]): MenuItemConfig[] {
 
 export function getKeyFromPath(
   configs: MenuItemConfig[],
-  pathname: string
+  pathname: string,
+  search = ''
 ): string {
+  // 智能助手路径特殊处理：根据 conv 参数选中对应的历史对话
+  if (pathname === '/agent') {
+    const params = new URLSearchParams(search);
+    const convId = params.get('conv');
+    if (convId) return `conv_${convId}`;
+    return 'agent-new';
+  }
+
   const all = flattenMenu(configs);
 
   const exact = all.find((item) => item.path === pathname);
