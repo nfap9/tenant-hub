@@ -169,44 +169,30 @@ function useConversations(orgId: string) {
     [storageKey]
   );
 
-  const createConversation = useCallback(async () => {
-    try {
-      const serverConv = await apiCreateConversation('');
-      const newConv: Conversation = {
-        id: serverConv.id,
-        serverId: serverConv.id,
-        title: '',
-        messages: [],
-        createdAt: new Date(serverConv.createdAt).getTime(),
-        updatedAt: new Date(serverConv.updatedAt).getTime(),
-      };
-      setConversations((prev) => {
-        const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
-        writeStorage(next);
-        return next;
-      });
-      setActiveId(newConv.id);
-      // 刷新后端列表
-      getConversations({ limit: 20 })
-        .then((res) => setServerList(res.items))
-        .catch(() => {});
-    } catch {
-      // 降级到本地创建
-      const newConv: Conversation = {
-        id: generateId(),
-        title: '',
-        messages: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      setConversations((prev) => {
-        const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
-        writeStorage(next);
-        return next;
-      });
-      setActiveId(newConv.id);
+  const createConversation = useCallback(() => {
+    // 复用已有的空本地会话
+    const emptyLocal = conversations.find(
+      (c) => !c.serverId && c.messages.length === 0
+    );
+    if (emptyLocal) {
+      setActiveId(emptyLocal.id);
+      return emptyLocal.id;
     }
-  }, [writeStorage]);
+    const newConv: Conversation = {
+      id: generateId(),
+      title: '',
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setConversations((prev) => {
+      const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
+      writeStorage(next);
+      return next;
+    });
+    setActiveId(newConv.id);
+    return newConv.id;
+  }, [conversations, writeStorage]);
 
   const deleteConversation = useCallback(
     async (id: string) => {
@@ -329,34 +315,23 @@ function useConversations(orgId: string) {
       };
 
       if (!convId) {
-        // 没有活跃会话，尝试创建后端会话
-        try {
-          const serverConv = await apiCreateConversation(
-            text.trim().slice(0, 30)
-          );
-          convId = serverConv.id;
-          serverConvId = serverConv.id;
-          initialMessages = [];
-          const newConv: Conversation = {
-            id: convId,
-            serverId: serverConvId,
-            title: text.trim().slice(0, 30),
-            messages: [],
-            createdAt: new Date(serverConv.createdAt).getTime(),
-            updatedAt: new Date(serverConv.updatedAt).getTime(),
-          };
-          setConversations((prev) => {
-            const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
-            writeStorage(next);
-            return next;
-          });
-          setActiveId(convId);
-        } catch {
-          // 降级到本地创建
-          convId = generateId();
-          serverConvId = undefined;
-          initialMessages = [];
-        }
+        // 没有活跃会话，创建本地会话
+        convId = generateId();
+        serverConvId = undefined;
+        initialMessages = [];
+        const newConv: Conversation = {
+          id: convId,
+          title: text.trim().slice(0, 30),
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setConversations((prev) => {
+          const next = [newConv, ...prev].slice(0, MAX_LOCAL_CACHE);
+          writeStorage(next);
+          return next;
+        });
+        setActiveId(convId);
       } else {
         initialMessages = activeConversation?.messages ?? [];
       }
@@ -472,6 +447,30 @@ function useConversations(orgId: string) {
           syncToStorage(msgs);
         }
       };
+
+      // 纯本地会话在发送第一条消息时创建后端会话
+      if (!serverConvId) {
+        try {
+          const serverConv = await apiCreateConversation(
+            text.trim().slice(0, 30)
+          );
+          serverConvId = serverConv.id;
+          persistConv(convId, (c) => ({
+            ...c,
+            serverId: serverConvId,
+            title: c.title || text.trim().slice(0, 30),
+          }));
+          setConversations((prev) => {
+            const next = prev.map((c) =>
+              c.id === convId ? { ...c, serverId: serverConvId } : c
+            );
+            writeStorage(next);
+            return next;
+          });
+        } catch {
+          // 降级：继续使用本地会话
+        }
+      }
 
       try {
         const stream = chatWithAgent(text.trim(), history, orgId, serverConvId);
@@ -736,10 +735,8 @@ export default function AgentChatPage() {
     const convId = params.get('conv');
 
     if (action === 'new') {
-      (async () => {
-        const newId = await createConversation();
-        navigate(`/agent?conv=${newId}`, { replace: true });
-      })();
+      const newId = createConversation();
+      navigate(`/agent?conv=${newId}`, { replace: true });
     } else if (convId && convId !== activeConversation?.id) {
       switchConversation(convId);
     }
