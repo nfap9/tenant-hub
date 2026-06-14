@@ -5,6 +5,29 @@
   background: #f8fafc;
 }
 
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.chatTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
 .chatArea {
   flex: 1;
   display: flex;

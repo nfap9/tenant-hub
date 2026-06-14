@@ -1,5 +1,10 @@
 import type { Prisma } from '@prisma/client';
 
+export interface StreamChunk {
+  type: 'status' | 'message' | 'done' | 'error' | 'chart';
+  content: string;
+}
+
 export interface AgentContext {
   organizationId: string;
   userId: string;

@@ -94,6 +94,22 @@ function useConversationList(orgId: string) {
     };
   }, [readLocal]);
 
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ id: string }>) => {
+      setServerList((prev) => prev.filter((c) => c.id !== e.detail.id));
+    };
+    window.addEventListener(
+      'agent-conversation-deleted',
+      handler as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        'agent-conversation-deleted',
+        handler as EventListener
+      );
+    };
+  }, []);
+
   // 合并本地缓存和后端列表
   const merged = useMemo(() => {
     const localMap = new Map(conversations.map((c) => [c.id, c]));

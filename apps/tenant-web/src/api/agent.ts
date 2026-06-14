@@ -42,11 +42,16 @@ export interface ServerConversationDetail extends ServerConversation {
   messages: SavedMessage[];
 }
 
+export interface ChatWithAgentOptions {
+  conversationId?: string;
+  signal?: AbortSignal;
+}
+
 export async function* chatWithAgent(
   message: string,
   history: ChatMessage[],
   organizationId: string,
-  conversationId?: string
+  options: ChatWithAgentOptions = {}
 ): AsyncGenerator<StreamChunk> {
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
@@ -60,14 +65,24 @@ export async function* chatWithAgent(
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       'x-organization-id': organizationId,
     },
-    body: JSON.stringify({ message, history, conversationId }),
+    body: JSON.stringify({
+      message,
+      history,
+      conversationId: options.conversationId,
+    }),
+    signal: options.signal,
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(
-      text ? JSON.parse(text).error || text : `请求失败 (${response.status})`
-    );
+    let errorText = text;
+    try {
+      const parsed = JSON.parse(text);
+      errorText = parsed.error || text;
+    } catch {
+      // keep raw text
+    }
+    throw new Error(errorText || `请求失败 (${response.status})`);
   }
 
   const reader = response.body?.getReader();
