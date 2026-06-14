@@ -9,6 +9,8 @@ import {
   Avatar,
   List,
   Button,
+  Form,
+  Input,
   type MenuProps,
 } from 'antd';
 import {
@@ -24,6 +26,8 @@ import {
   EllipsisOutlined,
   InboxOutlined,
   FolderOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -32,8 +36,13 @@ import { getKeyFromPath, getLabelFromKey } from './menuUtils';
 import {
   getConversations,
   updateConversation,
+  deleteConversation as deleteServerConversation,
   type ServerConversation,
 } from '@/api/agent';
+import {
+  removeConversation,
+  dispatchConversationsChange,
+} from '@/pages/agent/storage';
 import styles from './MainLayout.module.scss';
 
 const { Header, Sider, Content } = Layout;
@@ -164,6 +173,9 @@ export default function MainLayout() {
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   const [archivedList, setArchivedList] = useState<ServerConversation[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingConv, setEditingConv] = useState<ConversationItem | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const selectedKey = useMemo(
     () =>
@@ -265,6 +277,72 @@ export default function MainLayout() {
     [conversations, orgId, refresh, location.search, navigate]
   );
 
+  const handleDeleteConv = useCallback(
+    async (id: string) => {
+      const conv = conversations.find((c) => c.id === id);
+      if (!conv) return;
+
+      try {
+        if (conv.serverId) {
+          await deleteServerConversation(conv.serverId);
+        }
+        removeConversation(`agent_conv_${orgId}_cache`, conv.id);
+        dispatchConversationsChange();
+        window.dispatchEvent(
+          new CustomEvent('agent-conversation-deleted', {
+            detail: { id: conv.id },
+          })
+        );
+        const params = new URLSearchParams(location.search);
+        if (params.get('conv') === conv.id) {
+          navigate('/agent', { replace: true });
+        }
+        message.success('对话已删除');
+      } catch {
+        message.error('删除失败，请重试');
+      }
+    },
+    [conversations, orgId, location.search, navigate]
+  );
+
+  const handleEditClick = useCallback((conv: ConversationItem) => {
+    setEditingConv(conv);
+    setEditModalOpen(true);
+  }, []);
+
+  const handleSaveTitle = useCallback(
+    async (values: { title: string }) => {
+      if (!editingConv) return;
+
+      setEditLoading(true);
+      try {
+        const title = values.title.trim();
+        if (editingConv.serverId) {
+          await updateConversation(editingConv.serverId, { title });
+        }
+        const cacheKey = `agent_conv_${orgId}_cache`;
+        const stored = localStorage.getItem(cacheKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const updated = parsed.map((c: { id: string; title?: string }) =>
+              c.id === editingConv.id ? { ...c, title } : c
+            );
+            localStorage.setItem(cacheKey, JSON.stringify(updated));
+            window.dispatchEvent(new Event('agent-conversations-change'));
+          }
+        }
+        setEditModalOpen(false);
+        message.success('标题已更新');
+      } catch {
+        message.error('更新失败，请重试');
+      } finally {
+        setEditLoading(false);
+      }
+    },
+    [editingConv, orgId]
+  );
+
   const orgOptions = useMemo(
     () =>
       memberships.map((m) => ({
@@ -343,6 +421,44 @@ export default function MainLayout() {
       : conversations.slice(0, 10);
 
     displayConversations.forEach((conv) => {
+      const actionItems: MenuProps['items'] = [
+        {
+          key: 'edit',
+          icon: <EditOutlined />,
+          label: '编辑标题',
+          onClick: (e) => {
+            e.domEvent.stopPropagation();
+            handleEditClick(conv);
+          },
+        },
+        {
+          key: 'archive',
+          icon: <FolderOutlined />,
+          label: '归档',
+          onClick: (e) => {
+            e.domEvent.stopPropagation();
+            handleArchive(conv.id, e.domEvent as React.MouseEvent);
+          },
+        },
+        {
+          key: 'delete',
+          icon: <DeleteOutlined />,
+          label: '删除',
+          danger: true,
+          onClick: (e) => {
+            e.domEvent.stopPropagation();
+            Modal.confirm({
+              title: '删除对话',
+              content: '删除后将无法恢复，确定继续吗？',
+              okText: '删除',
+              cancelText: '取消',
+              okButtonProps: { danger: true },
+              onOk: () => handleDeleteConv(conv.id),
+            });
+          },
+        },
+      ];
+
       items.push({
         key: `conv_${conv.id}`,
         icon: conv.loading ? <LoadingOutlined spin /> : <MessageOutlined />,
@@ -353,13 +469,19 @@ export default function MainLayout() {
               <span className={styles.convTime}>
                 {conv.loading ? '生成中...' : formatTime(conv.updatedAt)}
               </span>
-              <Button
-                type="text"
-                size="small"
-                className={styles.archiveBtn}
-                icon={<FolderOutlined />}
-                onClick={(e) => handleArchive(conv.id, e)}
-              />
+              <Dropdown
+                menu={{ items: actionItems }}
+                placement="bottomRight"
+                trigger={['click']}
+              >
+                <Button
+                  type="text"
+                  size="small"
+                  className={styles.actionBtn}
+                  icon={<EllipsisOutlined />}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Dropdown>
             </div>
           </div>
         ),
@@ -386,7 +508,13 @@ export default function MainLayout() {
     });
 
     return items;
-  }, [conversations, historyExpanded]);
+  }, [
+    conversations,
+    historyExpanded,
+    handleArchive,
+    handleDeleteConv,
+    handleEditClick,
+  ]);
 
   const bizMenuItems = useMemo(() => {
     return bizMenuConfig
@@ -518,6 +646,36 @@ export default function MainLayout() {
           )}
         </Content>
       </Layout>
+
+      {/* 编辑标题 Modal */}
+      <Modal
+        title="编辑标题"
+        open={editModalOpen}
+        onCancel={() => setEditModalOpen(false)}
+        footer={null}
+        width={400}
+        destroyOnClose
+      >
+        <Form
+          layout="vertical"
+          initialValues={{ title: editingConv?.title || '' }}
+          onFinish={handleSaveTitle}
+        >
+          <Form.Item
+            label="会话标题"
+            name="title"
+            rules={[{ required: true, message: '请输入标题' }]}
+          >
+            <Input placeholder="请输入会话标题" maxLength={50} showCount />
+          </Form.Item>
+          <Form.Item className={styles.editTitleFooter}>
+            <Button onClick={() => setEditModalOpen(false)}>取消</Button>
+            <Button type="primary" htmlType="submit" loading={editLoading}>
+              保存
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* 归档会话 Modal */}
       <Modal

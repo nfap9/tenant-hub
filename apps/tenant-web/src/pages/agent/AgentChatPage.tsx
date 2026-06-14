@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Spin, message } from 'antd';
+import { Spin } from 'antd';
 import { useAppSession } from '@/context/AppSessionContext';
-import { deleteConversation as deleteServerConversation } from '@/api/agent';
+
 import styles from './AgentChatPage.module.scss';
 import { useAgentChat } from './hooks/useAgentChat';
 import { useSwitchConversation } from './hooks/useSwitchConversation';
@@ -11,7 +11,6 @@ import { MessageList } from './components/MessageList';
 import { ChatInput } from './components/ChatInput';
 import { WelcomeCard } from './components/WelcomeCard';
 import { ConversationHeader } from './components/ConversationHeader';
-import { removeConversation, dispatchConversationsChange } from './storage';
 
 export default function AgentChatPage() {
   const { currentOrgId } = useAppSession();
@@ -44,7 +43,6 @@ export default function AgentChatPage() {
   });
 
   const [input, setInput] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // 响应 URL 参数：新建对话或切换会话
   useEffect(() => {
@@ -92,31 +90,6 @@ export default function AgentChatPage() {
     [setInput]
   );
 
-  const handleDelete = useCallback(async () => {
-    if (!conversation) return;
-
-    setIsDeleting(true);
-    try {
-      if (conversation.serverId) {
-        await deleteServerConversation(conversation.serverId);
-      }
-      removeConversation(storageKey, conversation.id);
-      dispatchConversationsChange();
-      window.dispatchEvent(
-        new CustomEvent('agent-conversation-deleted', {
-          detail: { id: conversation.id },
-        })
-      );
-      setConversation(undefined);
-      navigate('/agent', { replace: true });
-      message.success('对话已删除');
-    } catch {
-      message.error('删除失败，请重试');
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [conversation, navigate, setConversation, storageKey]);
-
   if (!isReady) {
     return (
       <div className={styles.agentChatPage}>
@@ -131,11 +104,7 @@ export default function AgentChatPage() {
     <div className={styles.agentChatPage}>
       <div className={styles.chatArea}>
         {conversation && messages.length > 0 && (
-          <ConversationHeader
-            title={conversation.title}
-            onDelete={handleDelete}
-            deleting={isDeleting}
-          />
+          <ConversationHeader title={conversation.title} />
         )}
         {messages.length === 0 ? (
           <WelcomeCard onPromptClick={handlePromptClick} />

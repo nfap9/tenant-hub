@@ -259,7 +259,7 @@
   white-space: nowrap;
 }
 
-.archive-btn {
+.action-btn {
   padding: 0 4px !important;
   height: 20px !important;
   line-height: 20px !important;
@@ -269,6 +269,13 @@
     color: $th-primary !important;
     background: transparent !important;
   }
+}
+
+.edit-title-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 0;
 }
 
 .more-menu-item {
