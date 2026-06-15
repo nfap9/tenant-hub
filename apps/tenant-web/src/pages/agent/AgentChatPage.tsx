@@ -34,7 +34,15 @@ export default function AgentChatPage() {
     [navigate]
   );
 
-  const { sendMessage, isLoading, abort } = useSendMessage({
+  const {
+    sendMessage,
+    submitForm,
+    confirmAction,
+    cancelAction,
+    isLoading,
+    executingActionId,
+    abort,
+  } = useSendMessage({
     orgId,
     conversation,
     setConversation,
@@ -109,7 +117,13 @@ export default function AgentChatPage() {
         {messages.length === 0 ? (
           <WelcomeCard onPromptClick={handlePromptClick} />
         ) : (
-          <MessageList messages={messages} />
+          <MessageList
+            messages={messages}
+            onFormSubmit={submitForm}
+            onActionConfirm={confirmAction}
+            onActionCancel={cancelAction}
+            executingActionId={executingActionId}
+          />
         )}
         <ChatInput
           value={input}

@@ -1,4 +1,5 @@
-import { prisma } from '../../config/prisma.js';
+import { findReservationByRoomIdRaw } from '../reservation.js';
+import { toAgentReservation } from './mappers/index.js';
 
 /**
  * 为代理查询指定房间的预订信息
@@ -14,41 +15,11 @@ export const queryReservationForAgent = async ({
   organizationId: string;
   roomId: string;
 }) => {
-  const reservation = await prisma.reservation.findUnique({
-    where: {
-      roomId,
-      room: {
-        apartment: { organizationId },
-      },
-    },
-    include: {
-      room: {
-        select: {
-          roomNo: true,
-          status: true,
-          apartment: { select: { name: true } },
-        },
-      },
-    },
-  });
+  const reservation = await findReservationByRoomIdRaw(roomId, organizationId);
 
   if (!reservation) {
     return { exists: false };
   }
 
-  return {
-    exists: true,
-    id: reservation.id,
-    roomNo: reservation.room.roomNo,
-    apartmentName: reservation.room.apartment.name,
-    roomStatus: reservation.room.status,
-    customerName: reservation.name,
-    customerPhone: reservation.phone,
-    deposit: Number(reservation.deposit),
-    paymentMethod: reservation.paymentMethod,
-    expectedMoveInDate: reservation.expectedMoveInDate
-      .toISOString()
-      .split('T')[0],
-    createdAt: reservation.createdAt.toISOString().split('T')[0],
-  };
+  return toAgentReservation(reservation);
 };

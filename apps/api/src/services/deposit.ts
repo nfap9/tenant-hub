@@ -2,6 +2,7 @@ import { Prisma, DepositStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import { createTransaction } from './transaction.js';
+import { calculateDepositSummary } from './depositUtils.js';
 
 type DecimalValue = Prisma.Decimal.Value;
 
@@ -170,30 +171,14 @@ export const getDepositSummary = async (organizationId: string) => {
     where: { organizationId },
   });
 
-  const totalAmount = deposits.reduce(
-    (sum, d) => sum.plus(d.amount),
-    new Prisma.Decimal(0)
-  );
-  const paidAmount = deposits.reduce(
-    (sum, d) => sum.plus(d.paidAmount),
-    new Prisma.Decimal(0)
-  );
-  const refundedAmount = deposits.reduce(
-    (sum, d) => sum.plus(d.refundedAmount),
-    new Prisma.Decimal(0)
-  );
-  const deductedAmount = deposits.reduce(
-    (sum, d) => sum.plus(d.deductedAmount),
-    new Prisma.Decimal(0)
-  );
-  const heldAmount = paidAmount.minus(refundedAmount).minus(deductedAmount);
+  const summary = calculateDepositSummary(deposits);
 
   return {
-    totalAmount,
-    paidAmount,
-    refundedAmount,
-    deductedAmount,
-    heldAmount,
-    count: deposits.length,
+    totalAmount: new Prisma.Decimal(summary.totalAmount),
+    paidAmount: new Prisma.Decimal(summary.paidAmount),
+    refundedAmount: new Prisma.Decimal(summary.refundedAmount),
+    deductedAmount: new Prisma.Decimal(summary.deductedAmount),
+    heldAmount: new Prisma.Decimal(summary.heldAmount),
+    count: summary.count,
   };
 };

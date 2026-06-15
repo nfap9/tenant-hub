@@ -1,4 +1,5 @@
-import { prisma } from '../../config/prisma.js';
+import { listBillsRaw, listMeterReadingsRaw } from '../bill.js';
+import { toAgentBillSummary, toAgentMeterReading } from './mappers/index.js';
 
 /**
  * 为智能助手查询账单列表
@@ -30,75 +31,14 @@ export const queryBillsForAgent = async ({
   mode?: 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
   limit?: number;
 }) => {
-  const bills = await prisma.bill.findMany({
-    where: {
-      organizationId,
-      deletedAt: null,
-      ...(status ? { status } : {}),
-      ...(mode ? { mode } : {}),
-      ...(tenantName
-        ? {
-            lease: {
-              tenantName: { contains: tenantName, mode: 'insensitive' },
-            },
-          }
-        : {}),
-    },
-    include: {
-      lease: {
-        select: {
-          tenantName: true,
-          room: { select: { roomNo: true } },
-        },
-      },
-      items: true,
-      payments: {
-        include: { user: { select: { username: true } } },
-        orderBy: { id: 'desc' },
-      },
-    },
-    take: limit,
-    orderBy: { billingDate: 'desc' },
+  const bills = await listBillsRaw(organizationId, {
+    status,
+    tenantName,
+    mode,
+    limit,
   });
 
-  return bills.map((bill) => ({
-    id: bill.id,
-    tenantName: bill.lease.tenantName,
-    roomNo: bill.lease.room.roomNo,
-    billingDate: bill.billingDate.toISOString().split('T')[0],
-    periodStart: bill.periodStart.toISOString().split('T')[0],
-    periodEnd: bill.periodEnd.toISOString().split('T')[0],
-    dueDate: bill.dueDate.toISOString().split('T')[0],
-    totalAmount: Number(bill.totalAmount),
-    paidAmount: Number(bill.paidAmount),
-    remainingAmount: Number(
-      (Number(bill.totalAmount) - Number(bill.paidAmount)).toFixed(2)
-    ),
-    status: bill.status,
-    mode: bill.mode,
-    note: bill.note,
-    failureReason: bill.failureReason,
-    items: bill.items.map((item) => ({
-      type: item.type,
-      name: item.name,
-      amount: Number(item.amount),
-      status: item.status,
-      previousWater: item.previousWater ? Number(item.previousWater) : null,
-      currentWater: item.currentWater ? Number(item.currentWater) : null,
-      previousPower: item.previousPower ? Number(item.previousPower) : null,
-      currentPower: item.currentPower ? Number(item.currentPower) : null,
-    })),
-    payments: bill.payments.map((p) => ({
-      id: p.id,
-      type: p.type,
-      amount: Number(p.amount),
-      method: p.method,
-      status: p.status,
-      note: p.note,
-      recordedBy: p.user.username,
-      paidAt: p.paidAt.toISOString().split('T')[0],
-    })),
-  }));
+  return bills.map(toAgentBillSummary);
 };
 
 /**
@@ -120,35 +60,11 @@ export const queryMeterReadingsForAgent = async ({
   meterType?: 'WATER' | 'POWER';
   limit?: number;
 }) => {
-  const readings = await prisma.meterReading.findMany({
-    where: {
-      organizationId,
-      ...(roomId ? { roomId } : {}),
-      ...(meterType ? { meterType } : {}),
-    },
-    include: {
-      room: {
-        select: {
-          roomNo: true,
-          apartment: { select: { name: true } },
-        },
-      },
-      createdBy: { select: { username: true } },
-    },
-    take: limit,
-    orderBy: { readingDate: 'desc' },
+  const readings = await listMeterReadingsRaw(organizationId, {
+    roomId,
+    meterType,
+    limit,
   });
 
-  return readings.map((r) => ({
-    id: r.id,
-    roomNo: r.room.roomNo,
-    apartmentName: r.room.apartment.name,
-    meterType: r.meterType,
-    readingDate: r.readingDate.toISOString().split('T')[0],
-    value: Number(r.value),
-    source: r.source,
-    status: r.status,
-    note: r.note,
-    createdBy: r.createdBy?.username ?? null,
-  }));
+  return readings.map(toAgentMeterReading);
 };

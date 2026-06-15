@@ -90,6 +90,16 @@
     color: #dc2626;
     border: 1px solid #fecaca;
   }
+
+  &.form,
+  &.action {
+    background: #fff;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-bottom-left-radius: 4px;
+    max-width: 85%;
+    padding: 8px;
+  }
 }
 
 .markdownBody {
@@ -188,6 +198,20 @@
   background: #f9fafb;
   border-radius: 8px;
   border: 1px solid #f3f4f6;
+}
+
+.agentFormCard,
+.actionConfirmCard {
+  margin-top: 12px;
+  border-radius: 8px;
+}
+
+.actionImpact {
+  margin: 12px 0;
+}
+
+.actionMeta {
+  margin-bottom: 12px;
 }
 
 .chartTitle {

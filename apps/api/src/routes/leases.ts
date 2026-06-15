@@ -37,8 +37,8 @@ import {
 export const leaseRouter = Router();
 leaseRouter.use(requireAuth, requireOrg);
 
-const amountSchema = z.coerce.number().nonnegative();
-const feeItemTypeSchema = z
+export const amountSchema = z.coerce.number().nonnegative();
+export const feeItemTypeSchema = z
   .enum([
     'MANAGEMENT',
     'SANITATION',
@@ -48,6 +48,62 @@ const feeItemTypeSchema = z
     'OTHER',
   ])
   .default('OTHER');
+
+export const createLeaseInput = z
+  .object({
+    roomId: z.string().describe('房间ID'),
+    tenantName: z.string().min(1).describe('租户姓名'),
+    tenantPhone: z.string().min(6).describe('租户手机号'),
+    startDate: z.coerce.date().describe('租约开始日期'),
+    endDate: z.coerce.date().describe('租约结束日期'),
+    cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).describe('付款周期'),
+    rentAmount: amountSchema.describe('月租金'),
+    depositAmount: amountSchema.default(0).describe('押金'),
+    waterUnitPrice: amountSchema.describe('水费单价'),
+    powerUnitPrice: amountSchema.describe('电费单价'),
+    autoRenew: z.boolean().default(false).describe('是否自动续约'),
+    status: z.enum(['DRAFT', 'ACTIVE']).default('ACTIVE').describe('状态'),
+    fees: z
+      .array(
+        z.object({
+          type: feeItemTypeSchema.describe('费用类型'),
+          name: z.string().min(1).describe('费用名称'),
+          amount: amountSchema.describe('金额'),
+        })
+      )
+      .default([])
+      .describe('附加费用列表'),
+    generateHistoricalBills: z
+      .boolean()
+      .default(false)
+      .describe('是否补发生成历史账单'),
+  })
+  .refine((data) => data.endDate >= data.startDate, {
+    path: ['endDate'],
+    message: '租约结束日期不能早于开始日期',
+  });
+
+export const terminateLeaseInput = z.object({
+  type: z.enum(['EXPIRED', 'NEGOTIATED', 'BREACH']).describe('退租类型'),
+  reason: z.string().optional().describe('退租原因'),
+  terminatedAt: z.coerce.date().default(new Date()).describe('退租日期'),
+  rentAdjustmentAmount: z.coerce.number().default(0).describe('租金调整金额'),
+  currentWater: amountSchema.describe('退租时水表读数'),
+  currentPower: amountSchema.describe('退租时电表读数'),
+  otherFeeAmount: amountSchema.default(0).describe('其他费用金额'),
+  otherFeeReason: z.string().optional().describe('其他费用原因'),
+  penaltyAmount: amountSchema.default(0).describe('违约金'),
+  penaltyReason: z.string().optional().describe('违约金原因'),
+  compensationAmount: amountSchema.default(0).describe('赔偿金'),
+  compensationReason: z.string().optional().describe('赔偿金原因'),
+});
+
+export const settlementPaymentInput = z.object({
+  direction: z.enum(['RECEIVE', 'REFUND']).describe('收退方向'),
+  amount: z.coerce.number().positive().describe('金额'),
+  method: z.string().min(1).describe('方式'),
+  note: z.string().optional().describe('备注'),
+});
 
 leaseRouter.get(
   '/',
@@ -61,36 +117,7 @@ leaseRouter.post(
   '/',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        roomId: z.string(),
-        tenantName: z.string().min(1),
-        tenantPhone: z.string().min(6),
-        startDate: z.coerce.date(),
-        endDate: z.coerce.date(),
-        cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']),
-        rentAmount: amountSchema,
-        depositAmount: amountSchema.default(0),
-        waterUnitPrice: amountSchema,
-        powerUnitPrice: amountSchema,
-        autoRenew: z.boolean().default(false),
-        status: z.enum(['DRAFT', 'ACTIVE']).default('ACTIVE'),
-        fees: z
-          .array(
-            z.object({
-              type: feeItemTypeSchema,
-              name: z.string().min(1),
-              amount: amountSchema,
-            })
-          )
-          .default([]),
-        generateHistoricalBills: z.boolean().default(false),
-      })
-      .refine((data) => data.endDate >= data.startDate, {
-        path: ['endDate'],
-        message: '租约结束日期不能早于开始日期',
-      })
-      .parse(req.body);
+    const input = createLeaseInput.parse(req.body);
 
     const { fees, roomId, generateHistoricalBills, ...leaseData } = input;
     const room = await findRoomById(roomId, req.organizationId!);
@@ -246,22 +273,7 @@ leaseRouter.post(
   '/:id/terminate',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        type: z.enum(['EXPIRED', 'NEGOTIATED', 'BREACH']),
-        reason: z.string().optional(),
-        terminatedAt: z.coerce.date().default(new Date()),
-        rentAdjustmentAmount: z.coerce.number().default(0),
-        currentWater: amountSchema,
-        currentPower: amountSchema,
-        otherFeeAmount: amountSchema.default(0),
-        otherFeeReason: z.string().optional(),
-        penaltyAmount: amountSchema.default(0),
-        penaltyReason: z.string().optional(),
-        compensationAmount: amountSchema.default(0),
-        compensationReason: z.string().optional(),
-      })
-      .parse(req.body);
+    const input = terminateLeaseInput.parse(req.body);
     const current = await getLeaseEndDate(req.params.id, req.organizationId!);
     if (!current) throw new HttpError(404, '租约不存在');
     if (input.type === 'EXPIRED') {
@@ -317,14 +329,7 @@ leaseRouter.post(
   '/settlements/:id/payments',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        direction: z.enum(['RECEIVE', 'REFUND']),
-        amount: z.coerce.number().positive(),
-        method: z.string().min(1),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
+    const input = settlementPaymentInput.parse(req.body);
     ok(
       res,
       await recordSettlementPayment({

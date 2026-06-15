@@ -34,6 +34,61 @@ export const listBills = async (
 };
 
 /**
+ * 查询账单原始数据（供 Agent 复用）
+ * @param organizationId - 组织ID
+ * @param options - 可选筛选条件
+ * @returns 账单原始记录列表
+ */
+export const listBillsRaw = async (
+  organizationId: string,
+  options?: {
+    status?:
+      | 'DRAFT'
+      | 'BILLING'
+      | 'UNPAID'
+      | 'PARTIAL_PAID'
+      | 'PAID'
+      | 'REFUNDED'
+      | 'FAILED'
+      | 'VOID';
+    tenantName?: string;
+    mode?: 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
+    limit?: number;
+  }
+) => {
+  return prisma.bill.findMany({
+    where: {
+      organizationId,
+      deletedAt: null,
+      ...(options?.status ? { status: options.status } : {}),
+      ...(options?.mode ? { mode: options.mode } : {}),
+      ...(options?.tenantName
+        ? {
+            lease: {
+              tenantName: { contains: options.tenantName, mode: 'insensitive' },
+            },
+          }
+        : {}),
+    },
+    include: {
+      lease: {
+        select: {
+          tenantName: true,
+          room: { select: { roomNo: true } },
+        },
+      },
+      items: true,
+      payments: {
+        include: { user: { select: { username: true } } },
+        orderBy: { id: 'desc' },
+      },
+    },
+    take: options?.limit,
+    orderBy: { billingDate: 'desc' },
+  });
+};
+
+/**
  * 根据ID获取账单详情
  * @param billId - 账单ID
  * @param organizationId - 组织ID
@@ -82,6 +137,40 @@ export const listMeterReadings = async (
       lease: true,
       createdBy: { select: { id: true, username: true, phone: true } },
     },
+    orderBy: { readingDate: 'desc' },
+  });
+};
+
+/**
+ * 查询抄表记录原始数据（供 Agent 复用）
+ * @param organizationId - 组织ID
+ * @param options - 可选筛选条件
+ * @returns 抄表记录原始列表
+ */
+export const listMeterReadingsRaw = async (
+  organizationId: string,
+  options?: {
+    roomId?: string;
+    meterType?: 'WATER' | 'POWER';
+    limit?: number;
+  }
+) => {
+  return prisma.meterReading.findMany({
+    where: {
+      organizationId,
+      ...(options?.roomId ? { roomId: options.roomId } : {}),
+      ...(options?.meterType ? { meterType: options.meterType } : {}),
+    },
+    include: {
+      room: {
+        select: {
+          roomNo: true,
+          apartment: { select: { name: true } },
+        },
+      },
+      createdBy: { select: { username: true } },
+    },
+    take: options?.limit,
     orderBy: { readingDate: 'desc' },
   });
 };

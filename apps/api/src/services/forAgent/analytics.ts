@@ -1,4 +1,5 @@
 import { prisma } from '../../config/prisma.js';
+import { listApartmentsRaw, listRoomsRaw } from '../apartment.js';
 
 /**
  * 获取经纪人分析汇总数据
@@ -10,53 +11,33 @@ export const getAnalyticsSummaryForAgent = async (organizationId: string) => {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [
-    totalApartments,
-    totalRooms,
-    occupiedRooms,
-    vacantRooms,
-    activeLeases,
-    monthlyBills,
-    allBills,
-  ] = await Promise.all([
-    prisma.apartment.count({
-      where: { organizationId, deletedAt: null },
-    }),
-    prisma.room.count({
-      where: { apartment: { organizationId }, deletedAt: null },
-    }),
-    prisma.room.count({
-      where: {
-        apartment: { organizationId },
-        deletedAt: null,
-        status: 'OCCUPIED',
-      },
-    }),
-    prisma.room.count({
-      where: {
-        apartment: { organizationId },
-        deletedAt: null,
-        status: 'VACANT',
-      },
-    }),
-    prisma.lease.count({
-      where: { organizationId, deletedAt: null, status: 'ACTIVE' },
-    }),
-    prisma.bill.groupBy({
-      by: ['status'],
-      where: {
-        organizationId,
-        deletedAt: null,
-        billingDate: { gte: startOfMonth, lt: endOfMonth },
-      },
-      _sum: { totalAmount: true, paidAmount: true },
-    }),
-    prisma.bill.groupBy({
-      by: ['status'],
-      where: { organizationId, deletedAt: null },
-      _sum: { totalAmount: true, paidAmount: true },
-    }),
-  ]);
+  const [apartments, rooms, activeLeases, monthlyBills, allBills] =
+    await Promise.all([
+      listApartmentsRaw(organizationId),
+      listRoomsRaw(organizationId),
+      prisma.lease.count({
+        where: { organizationId, deletedAt: null, status: 'ACTIVE' },
+      }),
+      prisma.bill.groupBy({
+        by: ['status'],
+        where: {
+          organizationId,
+          deletedAt: null,
+          billingDate: { gte: startOfMonth, lt: endOfMonth },
+        },
+        _sum: { totalAmount: true, paidAmount: true },
+      }),
+      prisma.bill.groupBy({
+        by: ['status'],
+        where: { organizationId, deletedAt: null },
+        _sum: { totalAmount: true, paidAmount: true },
+      }),
+    ]);
+
+  const totalApartments = apartments.length;
+  const totalRooms = rooms.length;
+  const occupiedRooms = rooms.filter((r) => r.status === 'OCCUPIED').length;
+  const vacantRooms = rooms.filter((r) => r.status === 'VACANT').length;
 
   const monthlyRentIncome =
     monthlyBills

@@ -1,4 +1,14 @@
+import {
+  listApartmentsRaw,
+  listRoomsRaw,
+  getRoomByIdRaw,
+} from '../apartment.js';
 import { prisma } from '../../config/prisma.js';
+import {
+  toAgentApartmentSummary,
+  toAgentRoomSummary,
+  toAgentRoomDetail,
+} from './mappers/index.js';
 
 /**
  * 为 AI Agent 查询公寓列表，返回基础信息与房间统计
@@ -16,38 +26,13 @@ export const queryApartmentsForAgent = async ({
   keyword?: string;
   limit?: number;
 }) => {
-  const apartments = await prisma.apartment.findMany({
-    where: {
-      organizationId,
-      deletedAt: null,
-      ...(keyword
-        ? {
-            OR: [
-              { name: { contains: keyword, mode: 'insensitive' } },
-              { location: { contains: keyword, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
-    include: {
-      _count: { select: { rooms: { where: { deletedAt: null } } } },
-      rooms: {
-        where: { deletedAt: null },
-        select: { status: true },
-      },
-    },
-    take: limit,
-    orderBy: { createdAt: 'desc' },
+  const apartments = await listApartmentsRaw(organizationId, {
+    keyword,
+    limit,
+    includeRoomStats: true,
   });
 
-  return apartments.map((apt) => ({
-    id: apt.id,
-    name: apt.name,
-    location: apt.location,
-    roomCount: apt._count.rooms,
-    occupiedCount: apt.rooms.filter((r) => r.status === 'OCCUPIED').length,
-    vacantCount: apt.rooms.filter((r) => r.status === 'VACANT').length,
-  }));
+  return apartments.map(toAgentApartmentSummary);
 };
 
 /**
@@ -72,35 +57,14 @@ export const queryRoomsForAgent = async ({
   keyword?: string;
   limit?: number;
 }) => {
-  const rooms = await prisma.room.findMany({
-    where: {
-      apartment: { organizationId },
-      deletedAt: null,
-      ...(apartmentId ? { apartmentId } : {}),
-      ...(status ? { status } : {}),
-      ...(keyword
-        ? {
-            OR: [
-              { roomNo: { contains: keyword, mode: 'insensitive' } },
-              { layout: { contains: keyword, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
-    include: { apartment: { select: { name: true } } },
-    take: limit,
-    orderBy: [{ apartment: { createdAt: 'desc' } }, { roomNo: 'asc' }],
+  const rooms = await listRoomsRaw(organizationId, {
+    apartmentId,
+    status,
+    keyword,
+    limit,
   });
 
-  return rooms.map((room) => ({
-    id: room.id,
-    roomNo: room.roomNo,
-    apartmentName: room.apartment.name,
-    layout: room.layout,
-    status: room.status,
-    area: room.area ? Number(room.area) : null,
-    facilities: room.facilities,
-  }));
+  return rooms.map(toAgentRoomSummary);
 };
 
 /**
@@ -116,30 +80,7 @@ export const queryRoomDetailForAgent = async ({
   organizationId: string;
   roomId: string;
 }) => {
-  const room = await prisma.room.findFirst({
-    where: {
-      id: roomId,
-      apartment: { organizationId },
-      deletedAt: null,
-    },
-    include: {
-      apartment: { select: { id: true, name: true, location: true } },
-      reservation: true,
-      leases: {
-        where: { status: 'ACTIVE', deletedAt: null },
-        include: { fees: true, deposit: true },
-      },
-      meterReadings: {
-        orderBy: { readingDate: 'desc' },
-        take: 2,
-        select: {
-          meterType: true,
-          readingDate: true,
-          value: true,
-        },
-      },
-    },
-  });
+  const room = await getRoomByIdRaw(roomId, organizationId);
 
   if (!room) {
     return null;
@@ -159,63 +100,7 @@ export const queryRoomDetailForAgent = async ({
     select: { id: true, status: true, totalAmount: true, mode: true },
   });
 
-  const activeLease = room.leases[0];
-  const leaseInfo = activeLease
-    ? {
-        leaseId: activeLease.id,
-        tenantName: activeLease.tenantName,
-        tenantPhone: activeLease.tenantPhone,
-        startDate: activeLease.startDate.toISOString().split('T')[0],
-        endDate: activeLease.endDate.toISOString().split('T')[0],
-        rentAmount: Number(activeLease.rentAmount),
-        cycle: activeLease.cycle,
-        fees: activeLease.fees.map((f) => ({
-          type: f.type,
-          name: f.name,
-          amount: Number(f.amount),
-        })),
-        deposit: activeLease.deposit
-          ? {
-              amount: Number(activeLease.deposit.amount),
-              paidAmount: Number(activeLease.deposit.paidAmount),
-              status: activeLease.deposit.status,
-            }
-          : null,
-      }
-    : null;
-
-  return {
-    id: room.id,
-    roomNo: room.roomNo,
-    apartmentName: room.apartment.name,
-    apartmentLocation: room.apartment.location,
-    layout: room.layout,
-    status: room.status,
-    area: room.area ? Number(room.area) : null,
-    facilities: room.facilities,
-    reservation: room.reservation
-      ? {
-          name: room.reservation.name,
-          phone: room.reservation.phone,
-          deposit: Number(room.reservation.deposit),
-          expectedMoveInDate: room.reservation.expectedMoveInDate
-            .toISOString()
-            .split('T')[0],
-        }
-      : null,
-    activeLease: leaseInfo,
-    currentMonthBills: bills.map((b) => ({
-      id: b.id,
-      status: b.status,
-      totalAmount: Number(b.totalAmount),
-      mode: b.mode,
-    })),
-    recentReadings: room.meterReadings.map((r) => ({
-      meterType: r.meterType,
-      readingDate: r.readingDate.toISOString().split('T')[0],
-      value: Number(r.value),
-    })),
-  };
+  return toAgentRoomDetail(room, bills);
 };
 
 /**

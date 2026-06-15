@@ -23,6 +23,43 @@ export const listLeases = async (organizationId: string) => {
 };
 
 /**
+ * 查询租约原始数据（供 Agent 复用）
+ * @param organizationId - 组织 ID
+ * @param options - 可选筛选条件
+ * @returns 租约原始记录列表
+ */
+export const listLeasesRaw = async (
+  organizationId: string,
+  options?: {
+    tenantName?: string;
+    roomId?: string;
+    status?: 'ACTIVE' | 'TERMINATED' | 'EXPIRED' | 'DRAFT';
+    limit?: number;
+  }
+) => {
+  return prisma.lease.findMany({
+    where: {
+      organizationId,
+      deletedAt: null,
+      ...(options?.tenantName
+        ? {
+            tenantName: { contains: options.tenantName, mode: 'insensitive' },
+          }
+        : {}),
+      ...(options?.roomId ? { roomId: options.roomId } : {}),
+      ...(options?.status ? { status: options.status } : {}),
+    },
+    include: {
+      room: { include: { apartment: { select: { name: true } } } },
+      fees: true,
+      deposit: true,
+    },
+    take: options?.limit,
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+/**
  * 根据 ID 获取租约
  * @param leaseId - 租约 ID
  * @param organizationId - 组织 ID
@@ -430,6 +467,56 @@ export const listLeaseSettlements = async (organizationId: string) => {
         },
       },
     },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+/**
+ * 查询退租结算原始数据（供 Agent 复用）
+ * @param organizationId - 组织 ID
+ * @param options - 可选筛选条件
+ * @returns 退租结算原始记录列表
+ */
+export const listLeaseSettlementsRaw = async (
+  organizationId: string,
+  options?: {
+    leaseId?: string;
+    limit?: number;
+  }
+) => {
+  return prisma.leaseSettlement.findMany({
+    where: {
+      organizationId,
+      ...(options?.leaseId ? { leaseId: options.leaseId } : {}),
+    },
+    include: {
+      lease: {
+        select: {
+          tenantName: true,
+          tenantPhone: true,
+          room: {
+            select: {
+              roomNo: true,
+              apartment: { select: { name: true } },
+            },
+          },
+        },
+      },
+      room: { select: { roomNo: true } },
+      payments: {
+        include: {
+          user: { select: { username: true } },
+        },
+      },
+      bill: {
+        select: {
+          totalAmount: true,
+          paidAmount: true,
+          status: true,
+        },
+      },
+    },
+    take: options?.limit,
     orderBy: { createdAt: 'desc' },
   });
 };

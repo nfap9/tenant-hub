@@ -8,9 +8,51 @@ export interface ChatMessage {
   tool_call_id?: string;
 }
 
+export interface FormField {
+  name: string;
+  type:
+    | 'text'
+    | 'number'
+    | 'boolean'
+    | 'date'
+    | 'select'
+    | 'array'
+    | 'object'
+    | 'unknown';
+  label: string;
+  required: boolean;
+  description?: string;
+  defaultValue?: unknown;
+  options?: Array<{ label: string; value: string }>;
+  min?: number;
+  max?: number;
+  minLength?: number;
+  maxLength?: number;
+  itemType?: FormField['type'];
+  fields?: FormField[];
+}
+
+export interface FormChunkData {
+  tool: string;
+  reason: string;
+  fields: FormField[];
+}
+
+export interface ActionChunkData {
+  tool: string;
+  method: string;
+  path: string;
+  params: Record<string, unknown>;
+  summary: string;
+  impact: string[];
+  requiresConfirmation: boolean;
+}
+
 export interface StreamChunk {
-  type: 'status' | 'message' | 'done' | 'error' | 'chart';
+  type: 'status' | 'message' | 'done' | 'error' | 'chart' | 'form' | 'action';
   content: string;
+  form?: FormChunkData;
+  action?: ActionChunkData;
 }
 
 export interface ChartConfig {
@@ -24,10 +66,12 @@ export interface ChartConfig {
 
 export interface SavedMessage {
   id: string;
-  role: 'user' | 'assistant' | 'status' | 'error';
+  role: 'user' | 'assistant' | 'status' | 'error' | 'form' | 'action';
   content: string;
   chartData?: ChartConfig;
   thinking?: string[];
+  formData?: FormChunkData;
+  actionData?: ActionChunkData;
 }
 
 export interface ServerConversation {
@@ -47,30 +91,26 @@ export interface ChatWithAgentOptions {
   signal?: AbortSignal;
 }
 
-export async function* chatWithAgent(
-  message: string,
-  history: ChatMessage[],
+async function* streamAgent(
+  endpoint: string,
+  body: Record<string, unknown>,
   organizationId: string,
-  options: ChatWithAgentOptions = {}
+  signal?: AbortSignal
 ): AsyncGenerator<StreamChunk> {
   const API_BASE =
     import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
   const session = readSession();
   const token = session.token;
 
-  const response = await fetch(`${API_BASE}/agent/chat`, {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       'x-organization-id': organizationId,
     },
-    body: JSON.stringify({
-      message,
-      history,
-      conversationId: options.conversationId,
-    }),
-    signal: options.signal,
+    body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {
@@ -117,7 +157,50 @@ export async function* chatWithAgent(
   }
 }
 
-// --- 会话管理 REST API ---
+export async function* manifestChatWithAgent(
+  message: string,
+  history: ChatMessage[],
+  organizationId: string,
+  options: ChatWithAgentOptions = {}
+): AsyncGenerator<StreamChunk> {
+  yield* streamAgent(
+    '/agent/manifest-chat',
+    {
+      message,
+      history,
+      conversationId: options.conversationId,
+    },
+    organizationId,
+    options.signal
+  );
+}
+
+export function getAgentSchema(name: string) {
+  return apiClient<{
+    data: {
+      name: string;
+      method: string;
+      path: string;
+      description: string;
+      category: string;
+      requiresConfirmation: boolean;
+      fields: FormField[];
+    };
+  }>(`/agent/schema?name=${encodeURIComponent(name)}`);
+}
+
+export function executeAgentAction(data: {
+  tool: string;
+  path: string;
+  params: Record<string, unknown>;
+}) {
+  return apiClient<unknown>('/agent/execute', {
+    method: 'POST',
+    body: data,
+  });
+}
+
+// --- 会话管理 RESTful API ---
 
 export function getConversations(options?: {
   archived?: boolean;

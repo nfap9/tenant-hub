@@ -36,9 +36,40 @@ import {
 export const apartmentRouter = Router();
 apartmentRouter.use(requireAuth, requireOrg);
 
-const apartmentInput = z.object({
-  name: z.string().min(1),
-  location: z.string().min(1),
+export const apartmentInput = z.object({
+  name: z.string().min(1).describe('公寓名称'),
+  location: z.string().min(1).describe('公寓地址'),
+});
+
+export const apartmentExpenseInput = z.object({
+  name: z.string().min(1).describe('支出名称'),
+  amount: z.coerce.number().describe('支出金额'),
+  spentAt: z.coerce.date().describe('支出日期'),
+  note: z.string().optional().describe('备注'),
+});
+
+export const batchCreateRoomsInput = z.object({
+  rooms: z
+    .array(
+      z.object({
+        roomNo: z.string().min(1).describe('房号'),
+        layout: z.string().min(1).describe('户型'),
+        area: z.coerce.number().optional().describe('面积（平方米）'),
+        facilities: z.array(z.string()).default([]).describe('配套设施'),
+      })
+    )
+    .describe('房间列表'),
+});
+
+export const updateRoomInput = z.object({
+  roomNo: z.string().min(1).optional().describe('房号'),
+  layout: z.string().min(1).optional().describe('户型'),
+  area: z.coerce.number().optional().describe('面积（平方米）'),
+  facilities: z.array(z.string()).optional().describe('配套设施'),
+  status: z
+    .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE'])
+    .optional()
+    .describe('房间状态'),
 });
 
 apartmentRouter.get(
@@ -138,14 +169,7 @@ apartmentRouter.post(
   '/:id/expenses',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        name: z.string().min(1),
-        amount: z.coerce.number(),
-        spentAt: z.coerce.date(),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
+    const input = apartmentExpenseInput.parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
 
     const expense = await createApartmentExpense({
@@ -176,18 +200,7 @@ apartmentRouter.post(
   '/:id/rooms/batch',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        rooms: z.array(
-          z.object({
-            roomNo: z.string().min(1),
-            layout: z.string().min(1),
-            area: z.coerce.number().optional(),
-            facilities: z.array(z.string()).default([]),
-          })
-        ),
-      })
-      .parse(req.body);
+    const input = batchCreateRoomsInput.parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
     ok(
       res,
@@ -200,17 +213,7 @@ apartmentRouter.put(
   '/rooms/:roomId',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        roomNo: z.string().min(1).optional(),
-        layout: z.string().min(1).optional(),
-        area: z.coerce.number().optional(),
-        facilities: z.array(z.string()).optional(),
-        status: z
-          .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE'])
-          .optional(),
-      })
-      .parse(req.body);
+    const input = updateRoomInput.parse(req.body);
     await ensureRoomInOrg(req.params.roomId, req.organizationId!);
 
     if (input.status) {

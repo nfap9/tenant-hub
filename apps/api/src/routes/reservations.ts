@@ -18,20 +18,20 @@ import {
 export const reservationRouter = Router();
 reservationRouter.use(requireAuth, requireOrg);
 
+export const reservationInput = z.object({
+  roomId: z.string().describe('房间ID'),
+  name: z.string().min(1).describe('客户姓名'),
+  phone: z.string().min(6).describe('客户手机号'),
+  deposit: z.coerce.number().default(0).describe('定金'),
+  paymentMethod: z.string().optional().describe('支付方式'),
+  expectedMoveInDate: z.coerce.date().describe('预计入住日期'),
+});
+
 reservationRouter.post(
   '/',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        roomId: z.string(),
-        name: z.string().min(1),
-        phone: z.string().min(6),
-        deposit: z.coerce.number().default(0),
-        paymentMethod: z.string().optional(),
-        expectedMoveInDate: z.coerce.date(),
-      })
-      .parse(req.body);
+    const input = reservationInput.parse(req.body);
 
     const room = await findRoomForReservation(
       input.roomId,

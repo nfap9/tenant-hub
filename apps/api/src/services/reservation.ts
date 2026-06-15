@@ -37,6 +37,35 @@ export const findReservationByRoomId = async (roomId: string) => {
 };
 
 /**
+ * 根据房间ID和组织ID查询预订原始数据（供 Agent 复用）
+ * @param roomId - 房间唯一标识
+ * @param organizationId - 组织唯一标识
+ * @returns 预订记录对象，若不存在则返回null
+ */
+export const findReservationByRoomIdRaw = async (
+  roomId: string,
+  organizationId: string
+) => {
+  return prisma.reservation.findUnique({
+    where: {
+      roomId,
+      room: {
+        apartment: { organizationId },
+      },
+    },
+    include: {
+      room: {
+        select: {
+          roomNo: true,
+          status: true,
+          apartment: { select: { name: true } },
+        },
+      },
+    },
+  });
+};
+
+/**
  * 创建或更新预订记录
  * @param data - 预订数据对象
  * @param data.roomId - 房间唯一标识

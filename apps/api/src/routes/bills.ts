@@ -37,6 +37,59 @@ import {
 export const billRouter = Router();
 billRouter.use(requireAuth, requireOrg);
 
+export const generateBillsInput = z.object({
+  leaseId: z.string().optional().describe('租约ID（不填则为所有到期租约生成）'),
+  today: z.coerce.date().optional().describe('账单生成基准日期'),
+});
+
+export const meterReadingInput = z.object({
+  roomId: z.string().describe('房间ID'),
+  meterType: z.enum(['WATER', 'POWER']).describe('表类型：WATER水表/POWER电表'),
+  readingDate: z.coerce.date().describe('抄表日期'),
+  value: z.coerce.number().nonnegative().describe('读数'),
+  source: z.enum(['MANUAL', 'IMPORT']).default('MANUAL').describe('来源'),
+  status: z
+    .enum(['NORMAL', 'SUSPECTED', 'CONFIRMED', 'VOID'])
+    .default('NORMAL')
+    .describe('状态'),
+  note: z.string().optional().describe('备注'),
+});
+
+export const utilityReadingInput = z.object({
+  previousWater: z.coerce.number().describe('上期水表读数'),
+  currentWater: z.coerce.number().describe('本期水表读数'),
+  previousPower: z.coerce.number().describe('上期电表读数'),
+  currentPower: z.coerce.number().describe('本期电表读数'),
+});
+
+export const utilityImportInput = z.object({
+  csv: z.string().optional().describe('CSV内容（与rows二选一）'),
+  rows: z
+    .array(
+      z.object({
+        billId: z.string().describe('账单ID'),
+        previousWater: z.coerce.number().describe('上期水表读数'),
+        currentWater: z.coerce.number().describe('本期水表读数'),
+        previousPower: z.coerce.number().describe('上期电表读数'),
+        currentPower: z.coerce.number().describe('本期电表读数'),
+      })
+    )
+    .optional()
+    .describe('读数记录列表'),
+});
+
+export const billPaymentInput = z.object({
+  amount: z.coerce.number().positive().describe('收款金额'),
+  method: z.string().min(1).describe('收款方式'),
+  note: z.string().optional().describe('备注'),
+});
+
+export const billRefundInput = z.object({
+  amount: z.coerce.number().positive().describe('退款金额'),
+  method: z.string().min(1).describe('退款方式'),
+  note: z.string().optional().describe('备注'),
+});
+
 billRouter.get(
   '/',
   requirePermission(PERMISSIONS.BILL_VIEW),
@@ -61,12 +114,7 @@ billRouter.post(
   '/generate',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        leaseId: z.string().optional(),
-        today: z.coerce.date().optional(),
-      })
-      .parse(req.body);
+    const input = generateBillsInput.parse(req.body);
     if (!input.leaseId) {
       ok(
         res,
@@ -101,19 +149,7 @@ billRouter.post(
   '/meter-readings',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        roomId: z.string(),
-        meterType: z.enum(['WATER', 'POWER']),
-        readingDate: z.coerce.date(),
-        value: z.coerce.number().nonnegative(),
-        source: z.enum(['MANUAL', 'IMPORT']).default('MANUAL'),
-        status: z
-          .enum(['NORMAL', 'SUSPECTED', 'CONFIRMED', 'VOID'])
-          .default('NORMAL'),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
+    const input = meterReadingInput.parse(req.body);
     const room = await findRoomForMeterReading(
       input.roomId,
       req.organizationId!
@@ -155,14 +191,7 @@ billRouter.post(
   '/:id/utility-reading',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        previousWater: z.coerce.number(),
-        currentWater: z.coerce.number(),
-        previousPower: z.coerce.number(),
-        currentPower: z.coerce.number(),
-      })
-      .parse(req.body);
+    const input = utilityReadingInput.parse(req.body);
     ok(
       res,
       await applyUtilityReadingToBill({
@@ -218,22 +247,7 @@ billRouter.post(
   '/utility/import',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        csv: z.string().optional(),
-        rows: z
-          .array(
-            z.object({
-              billId: z.string(),
-              previousWater: z.coerce.number(),
-              currentWater: z.coerce.number(),
-              previousPower: z.coerce.number(),
-              currentPower: z.coerce.number(),
-            })
-          )
-          .optional(),
-      })
-      .parse(req.body);
+    const input = utilityImportInput.parse(req.body);
     const rows = input.csv
       ? parseUtilityImportRows(input.csv)
       : (input.rows ?? []);
@@ -267,13 +281,7 @@ billRouter.post(
   '/:id/payments',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        amount: z.coerce.number().positive(),
-        method: z.string().min(1),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
+    const input = billPaymentInput.parse(req.body);
     ok(
       res,
       await recordBillPayment({
@@ -312,13 +320,7 @@ billRouter.post(
   '/:id/refund',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        amount: z.coerce.number().positive(),
-        method: z.string().min(1),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
+    const input = billRefundInput.parse(req.body);
     ok(
       res,
       await refundBill({

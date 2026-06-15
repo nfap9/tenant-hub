@@ -1,25 +1,9 @@
-import { Prisma } from '@prisma/client';
-import { prisma } from '../../config/prisma.js';
-
-const AGENT_TRANSACTION_CATEGORIES: Record<
-  string,
-  { label: string; type: string }
-> = {
-  RENT: { label: '房租收入', type: 'INCOME' },
-  DEPOSIT_COLLECT: { label: '押金收入', type: 'INCOME' },
-  UTILITY: { label: '水电费收入', type: 'INCOME' },
-  MANAGEMENT_FEE: { label: '管理费收入', type: 'INCOME' },
-  PENALTY: { label: '违约金', type: 'INCOME' },
-  COMPENSATION: { label: '赔偿金收入', type: 'INCOME' },
-  RESERVATION_FEE: { label: '定金收入', type: 'INCOME' },
-  OTHER_INCOME: { label: '其他收入', type: 'INCOME' },
-  DEPOSIT_REFUND: { label: '押金退还', type: 'EXPENSE' },
-  BILL_REFUND: { label: '账单退款', type: 'EXPENSE' },
-  UTILITY_COST: { label: '水电成本', type: 'EXPENSE' },
-  MAINTENANCE: { label: '维修支出', type: 'EXPENSE' },
-  COMPENSATION_PAY: { label: '赔偿金支出', type: 'EXPENSE' },
-  OTHER_EXPENSE: { label: '其他支出', type: 'EXPENSE' },
-};
+import {
+  listTransactionsRaw,
+  getTransactionSummaryRaw,
+} from '../transaction.js';
+import { getCategoryLabel } from '../transactionCategories.js';
+import { toAgentTransactionSummary } from './mappers/index.js';
 
 /**
  * Agent 查询收支记录列表
@@ -61,76 +45,21 @@ export const queryTransactionsForAgent = async ({
   page?: number;
   pageSize?: number;
 }) => {
-  const where: Prisma.TransactionWhereInput = {
+  const result = await listTransactionsRaw({
     organizationId,
-    deletedAt: null,
-    ...(type && { type }),
-    ...(category && { category }),
-    ...(sourceType && { sourceType }),
-    ...(keyword
-      ? {
-          OR: [
-            { description: { contains: keyword, mode: 'insensitive' } },
-            { note: { contains: keyword, mode: 'insensitive' } },
-          ],
-        }
-      : {}),
-    ...(startDate || endDate
-      ? {
-          occurredAt: {
-            ...(startDate && { gte: startDate }),
-            ...(endDate && { lte: endDate }),
-          },
-        }
-      : {}),
-  };
-
-  const [items, total] = await Promise.all([
-    prisma.transaction.findMany({
-      where,
-      include: {
-        operator: { select: { username: true } },
-        apartment: { select: { name: true } },
-        lease: {
-          select: {
-            tenantName: true,
-            room: {
-              select: {
-                roomNo: true,
-                apartment: { select: { name: true } },
-              },
-            },
-          },
-        },
-      },
-      orderBy: { occurredAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.transaction.count({ where }),
-  ]);
-
-  return {
-    items: items.map((t) => ({
-      id: t.id,
-      type: t.type,
-      category: t.category,
-      categoryLabel:
-        AGENT_TRANSACTION_CATEGORIES[t.category]?.label ?? t.category,
-      amount: Number(t.amount),
-      method: t.method,
-      description: t.description,
-      sourceType: t.sourceType,
-      occurredAt: t.occurredAt.toISOString().split('T')[0],
-      note: t.note,
-      apartmentName: t.apartment?.name ?? null,
-      tenantName: t.lease?.tenantName ?? null,
-      roomNo: t.lease?.room?.roomNo ?? null,
-      operatorName: t.operator?.username ?? null,
-    })),
-    total,
+    type,
+    category,
+    startDate,
+    endDate,
+    sourceType,
+    keyword,
     page,
     pageSize,
+  });
+
+  return {
+    ...result,
+    items: result.items.map(toAgentTransactionSummary),
   };
 };
 
@@ -150,27 +79,10 @@ export const queryTransactionSummaryForAgent = async ({
   startDate?: Date;
   endDate?: Date;
 }) => {
-  const where: Prisma.TransactionWhereInput = {
+  const transactions = await getTransactionSummaryRaw({
     organizationId,
-    deletedAt: null,
-    status: 'COMPLETED',
-    ...(startDate || endDate
-      ? {
-          occurredAt: {
-            ...(startDate && { gte: startDate }),
-            ...(endDate && { lte: endDate }),
-          },
-        }
-      : {}),
-  };
-
-  const transactions = await prisma.transaction.findMany({
-    where,
-    select: {
-      type: true,
-      category: true,
-      amount: true,
-    },
+    startDate,
+    endDate,
   });
 
   let totalIncome = 0;
@@ -190,7 +102,7 @@ export const queryTransactionSummaryForAgent = async ({
 
     if (!byCategory[t.category]) {
       byCategory[t.category] = {
-        label: AGENT_TRANSACTION_CATEGORIES[t.category]?.label ?? t.category,
+        label: getCategoryLabel(t.category),
         income: 0,
         expense: 0,
       };

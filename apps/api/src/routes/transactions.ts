@@ -14,8 +14,8 @@ import {
   getTransactionById,
   getTransactionSummary,
   listTransactions,
-  TRANSACTION_CATEGORIES,
 } from '../services/transaction.js';
+import { TRANSACTION_CATEGORIES } from '../services/transactionCategories.js';
 
 export const transactionRouter = Router();
 transactionRouter.use(requireAuth, requireOrg);
@@ -88,8 +88,8 @@ transactionRouter.get(
       res,
       Object.entries(TRANSACTION_CATEGORIES).map(([key, value]) => ({
         key,
-        label: value.label,
-        type: value.type,
+        label: (value as { label: string; type: string }).label,
+        type: (value as { label: string; type: string }).type,
       }))
     );
   })
@@ -108,21 +108,21 @@ transactionRouter.get(
   })
 );
 
+export const createTransactionInput = z.object({
+  type: z.enum(['INCOME', 'EXPENSE']).describe('收支类型'),
+  category: z.string().min(1).describe('科目'),
+  amount: z.coerce.number().positive().describe('金额'),
+  method: z.string().min(1).describe('方式'),
+  occurredAt: z.coerce.date().optional().describe('发生日期'),
+  apartmentId: z.string().optional().describe('关联公寓ID'),
+  note: z.string().optional().describe('备注'),
+});
+
 transactionRouter.post(
   '/',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        type: z.enum(['INCOME', 'EXPENSE']),
-        category: z.string().min(1),
-        amount: z.coerce.number().positive(),
-        method: z.string().min(1),
-        occurredAt: z.coerce.date().optional(),
-        apartmentId: z.string().optional(),
-        note: z.string().optional(),
-      })
-      .parse(req.body);
+    const input = createTransactionInput.parse(req.body);
 
     const transaction = await createTransaction({
       organizationId: req.organizationId!,

@@ -66,6 +66,60 @@ export const listApartments = async (organizationId: string) => {
   });
 };
 
+type ApartmentWithRoomStats = Prisma.ApartmentGetPayload<{
+  include: {
+    _count: { select: { rooms: { where: { deletedAt: null } } } };
+    rooms: { where: { deletedAt: null }; select: { status: true } };
+  };
+}>;
+
+/**
+ * 查询公寓原始数据（供 Agent 复用）
+ * @param organizationId - 组织 ID
+ * @param options - 可选筛选与统计选项
+ * @returns 公寓原始记录列表
+ */
+export async function listApartmentsRaw(
+  organizationId: string,
+  options: { keyword?: string; limit?: number; includeRoomStats: true }
+): Promise<ApartmentWithRoomStats[]>;
+export async function listApartmentsRaw(
+  organizationId: string,
+  options?: { keyword?: string; limit?: number; includeRoomStats?: boolean }
+): Promise<import('@prisma/client').Apartment[]>;
+export async function listApartmentsRaw(
+  organizationId: string,
+  options?: { keyword?: string; limit?: number; includeRoomStats?: boolean }
+) {
+  const roomStatsInclude = options?.includeRoomStats
+    ? {
+        _count: { select: { rooms: { where: { deletedAt: null } } } },
+        rooms: {
+          where: { deletedAt: null },
+          select: { status: true },
+        },
+      }
+    : undefined;
+
+  return prisma.apartment.findMany({
+    where: {
+      organizationId,
+      deletedAt: null,
+      ...(options?.keyword
+        ? {
+            OR: [
+              { name: { contains: options.keyword, mode: 'insensitive' } },
+              { location: { contains: options.keyword, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    },
+    ...(roomStatsInclude ? { include: roomStatsInclude } : {}),
+    take: options?.limit,
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 /**
  * 列出组织下的所有房间，包含所属公寓和活跃租约信息
  * @param organizationId - 组织 ID
@@ -89,6 +143,42 @@ export const listRooms = async (organizationId: string) => {
         orderBy: { createdAt: 'desc' },
       },
     },
+    orderBy: [{ apartment: { createdAt: 'desc' } }, { roomNo: 'asc' }],
+  });
+};
+
+/**
+ * 查询房间原始数据（供 Agent 复用）
+ * @param organizationId - 组织 ID
+ * @param options - 可选筛选条件
+ * @returns 房间原始记录列表
+ */
+export const listRoomsRaw = async (
+  organizationId: string,
+  options?: {
+    apartmentId?: string;
+    status?: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
+    keyword?: string;
+    limit?: number;
+  }
+) => {
+  return prisma.room.findMany({
+    where: {
+      apartment: { organizationId },
+      deletedAt: null,
+      ...(options?.apartmentId ? { apartmentId: options.apartmentId } : {}),
+      ...(options?.status ? { status: options.status } : {}),
+      ...(options?.keyword
+        ? {
+            OR: [
+              { roomNo: { contains: options.keyword, mode: 'insensitive' } },
+              { layout: { contains: options.keyword, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    },
+    include: { apartment: { select: { name: true } } },
+    take: options?.limit,
     orderBy: [{ apartment: { createdAt: 'desc' } }, { roomNo: 'asc' }],
   });
 };
@@ -118,6 +208,42 @@ export const getRoomById = async (roomId: string, organizationId: string) => {
           },
         },
         orderBy: { createdAt: 'desc' },
+      },
+    },
+  });
+};
+
+/**
+ * 获取房间原始详情（供 Agent 复用）
+ * @param roomId - 房间 ID
+ * @param organizationId - 组织 ID
+ * @returns 房间原始详情，不存在返回 null
+ */
+export const getRoomByIdRaw = async (
+  roomId: string,
+  organizationId: string
+) => {
+  return prisma.room.findFirst({
+    where: {
+      id: roomId,
+      apartment: { organizationId },
+      deletedAt: null,
+    },
+    include: {
+      apartment: { select: { id: true, name: true, location: true } },
+      reservation: true,
+      leases: {
+        where: { status: 'ACTIVE', deletedAt: null },
+        include: { fees: true, deposit: true },
+      },
+      meterReadings: {
+        orderBy: { readingDate: 'desc' },
+        take: 2,
+        select: {
+          meterType: true,
+          readingDate: true,
+          value: true,
+        },
       },
     },
   });

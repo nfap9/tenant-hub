@@ -1,8 +1,23 @@
 import type { Prisma } from '@prisma/client';
+import type { FormField } from './schema-to-form.js';
 
 export interface StreamChunk {
-  type: 'status' | 'message' | 'done' | 'error' | 'chart';
+  type: 'status' | 'message' | 'done' | 'error' | 'chart' | 'form' | 'action';
   content: string;
+  form?: {
+    tool: string;
+    reason: string;
+    fields: FormField[];
+  };
+  action?: {
+    tool: string;
+    method: string;
+    path: string;
+    params: Record<string, unknown>;
+    summary: string;
+    impact: string[];
+    requiresConfirmation: boolean;
+  };
 }
 
 export interface AgentContext {

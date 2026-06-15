@@ -7,7 +7,14 @@ import {
 } from '../middleware/auth.js';
 import { PERMISSIONS } from '../services/roles.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { runAgent, type StreamChunk } from '../agent/index.js';
+import { HttpError } from '../utils/http.js';
+import {
+  runManifestAgent,
+  getApiManifestItem,
+  schemaToFormFields,
+  executeApiAction,
+  type StreamChunk,
+} from '../agent/index.js';
 import type { ChatMessage } from '../agent/types.js';
 import {
   listConversations,
@@ -41,7 +48,7 @@ const chatRequestSchema = z.object({
 });
 
 agentRouter.post(
-  '/chat',
+  '/manifest-chat',
   asyncHandler(async (req, res) => {
     const input = chatRequestSchema.parse(req.body);
 
@@ -62,7 +69,7 @@ agentRouter.post(
     }
 
     try {
-      const stream = runAgent(
+      const stream = runManifestAgent(
         input.message,
         input.history as ChatMessage[],
         ctx
@@ -83,6 +90,68 @@ agentRouter.post(
     } finally {
       res.end();
     }
+  })
+);
+
+agentRouter.get(
+  '/schema',
+  asyncHandler(async (req, res) => {
+    const name = z.string().min(1).parse(req.query.name);
+    const item = getApiManifestItem(name);
+    if (!item) {
+      throw new HttpError(404, '接口不存在');
+    }
+
+    if (
+      !req.permissions?.includes(item.permission) &&
+      !req.permissions?.includes('*')
+    ) {
+      throw new HttpError(403, '没有权限访问该接口');
+    }
+
+    res.json({
+      data: {
+        name: item.name,
+        method: item.method,
+        path: item.path,
+        description: item.description,
+        category: item.category,
+        requiresConfirmation:
+          item.requiresConfirmation ?? item.category === 'action',
+        fields: item.bodySchema ? schemaToFormFields(item.bodySchema) : [],
+      },
+    });
+  })
+);
+
+const executeRequestSchema = z.object({
+  tool: z.string().min(1),
+  path: z.string().min(1),
+  params: z.record(z.unknown()).default({}),
+});
+
+agentRouter.post(
+  '/execute',
+  asyncHandler(async (req, res) => {
+    const input = executeRequestSchema.parse(req.body);
+    const item = getApiManifestItem(input.tool);
+    if (!item) {
+      throw new HttpError(404, '接口不存在');
+    }
+
+    if (
+      !req.permissions?.includes(item.permission) &&
+      !req.permissions?.includes('*')
+    ) {
+      throw new HttpError(403, '没有权限执行该操作');
+    }
+
+    const result = await executeApiAction(item, input.path, input.params, {
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+    });
+
+    res.json({ data: result });
   })
 );
 

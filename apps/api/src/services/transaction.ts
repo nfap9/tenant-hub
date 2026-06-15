@@ -1,68 +1,17 @@
-import { Prisma, TransactionType, TransactionSourceType } from '@prisma/client';
+import { Prisma, TransactionSourceType, TransactionType } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
+import {
+  getCategoryLabel,
+  getCategoryType,
+  getCategoryFromBillItemType,
+  type TransactionCategory,
+} from './transactionCategories.js';
 
-export const TRANSACTION_CATEGORIES = {
-  // 收入科目
-  RENT: { label: '房租收入', type: 'INCOME' as TransactionType },
-  DEPOSIT_COLLECT: { label: '押金收入', type: 'INCOME' as TransactionType },
-  UTILITY: { label: '水电费收入', type: 'INCOME' as TransactionType },
-  MANAGEMENT_FEE: { label: '管理费收入', type: 'INCOME' as TransactionType },
-  PENALTY: { label: '违约金', type: 'INCOME' as TransactionType },
-  COMPENSATION: { label: '赔偿金收入', type: 'INCOME' as TransactionType },
-  RESERVATION_FEE: { label: '定金收入', type: 'INCOME' as TransactionType },
-  OTHER_INCOME: { label: '其他收入', type: 'INCOME' as TransactionType },
-
-  // 支出科目
-  DEPOSIT_REFUND: { label: '押金退还', type: 'EXPENSE' as TransactionType },
-  BILL_REFUND: { label: '账单退款', type: 'EXPENSE' as TransactionType },
-  UTILITY_COST: { label: '水电成本', type: 'EXPENSE' as TransactionType },
-  MAINTENANCE: { label: '维修支出', type: 'EXPENSE' as TransactionType },
-  COMPENSATION_PAY: { label: '赔偿金支出', type: 'EXPENSE' as TransactionType },
-  OTHER_EXPENSE: { label: '其他支出', type: 'EXPENSE' as TransactionType },
-} as const;
-
-export type TransactionCategory = keyof typeof TRANSACTION_CATEGORIES;
-
-/**
- * 获取交易科目的中文标签
- * @param category - 交易科目代码
- * @returns 科目中文标签，若未找到则返回原代码
- */
-export const getCategoryLabel = (category: string) =>
-  TRANSACTION_CATEGORIES[category as TransactionCategory]?.label || category;
-
-/**
- * 获取交易科目的收支类型
- * @param category - 交易科目代码
- * @returns 收支类型（INCOME 或 EXPENSE），若未找到则默认为 INCOME
- */
-export const getCategoryType = (category: string) =>
-  TRANSACTION_CATEGORIES[category as TransactionCategory]?.type || 'INCOME';
-
-/**
- * 根据账单明细类型推断交易科目
- * @param type - 账单明细类型
- * @returns 对应的交易科目代码
- */
-export const getCategoryFromBillItemType = (
-  type: string
-): TransactionCategory => {
-  const mapping: Record<string, TransactionCategory> = {
-    RENT: 'RENT',
-    UTILITY: 'UTILITY',
-    WATER: 'UTILITY',
-    POWER: 'UTILITY',
-    DEPOSIT: 'DEPOSIT_COLLECT',
-    MANAGEMENT: 'MANAGEMENT_FEE',
-    SANITATION: 'MANAGEMENT_FEE',
-    ELEVATOR: 'MANAGEMENT_FEE',
-    PROPERTY: 'MANAGEMENT_FEE',
-    NETWORK: 'MANAGEMENT_FEE',
-    PENALTY: 'PENALTY',
-    COMPENSATION: 'COMPENSATION',
-    OTHER: 'OTHER_INCOME',
-  };
-  return mapping[type] || 'OTHER_INCOME';
+export {
+  getCategoryLabel,
+  getCategoryType,
+  getCategoryFromBillItemType,
+  type TransactionCategory,
 };
 
 type CreateTransactionInput = {
@@ -123,6 +72,76 @@ type ListTransactionsInput = {
   keyword?: string;
   page?: number;
   pageSize?: number;
+};
+
+/**
+ * 查询收支记录原始数据（供 Agent 复用）
+ * @param input - 查询条件
+ * @returns 收支记录原始列表及总数
+ */
+export const listTransactionsRaw = async (input: ListTransactionsInput) => {
+  const {
+    organizationId,
+    type,
+    category,
+    startDate,
+    endDate,
+    sourceType,
+    keyword,
+    page = 1,
+    pageSize = 20,
+  } = input;
+
+  const where: Prisma.TransactionWhereInput = {
+    organizationId,
+    deletedAt: null,
+    ...(type && { type }),
+    ...(category && { category }),
+    ...(sourceType && { sourceType }),
+    ...(startDate || endDate
+      ? {
+          occurredAt: {
+            ...(startDate && { gte: startDate }),
+            ...(endDate && { lte: endDate }),
+          },
+        }
+      : {}),
+    ...(keyword
+      ? {
+          OR: [
+            { description: { contains: keyword, mode: 'insensitive' } },
+            { note: { contains: keyword, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      include: {
+        operator: { select: { username: true } },
+        apartment: { select: { name: true } },
+        lease: {
+          select: {
+            tenantName: true,
+            room: {
+              select: {
+                roomNo: true,
+                apartment: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { occurredAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.transaction.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize };
 };
 
 /**
@@ -208,13 +227,13 @@ export const listTransactions = async (input: ListTransactionsInput) => {
 };
 
 /**
- * 获取收支汇总统计
+ * 查询收支记录汇总原始数据（供 Agent 复用）
  * @param organizationId - 组织ID
  * @param startDate - 统计开始日期（可选）
  * @param endDate - 统计结束日期（可选）
- * @returns 收支汇总数据，包含总收入、总支出、净额及按科目、支付方式、日期的汇总
+ * @returns 符合条件的收支记录原始列表
  */
-export const getTransactionSummary = async ({
+export const getTransactionSummaryRaw = async ({
   organizationId,
   startDate,
   endDate,
@@ -238,7 +257,7 @@ export const getTransactionSummary = async ({
     ...(dateFilter && { occurredAt: dateFilter }),
   };
 
-  const transactions = await prisma.transaction.findMany({
+  return prisma.transaction.findMany({
     where,
     select: {
       type: true,
@@ -247,6 +266,29 @@ export const getTransactionSummary = async ({
       method: true,
       occurredAt: true,
     },
+  });
+};
+
+/**
+ * 获取收支汇总统计
+ * @param organizationId - 组织ID
+ * @param startDate - 统计开始日期（可选）
+ * @param endDate - 统计结束日期（可选）
+ * @returns 收支汇总数据，包含总收入、总支出、净额及按科目、支付方式、日期的汇总
+ */
+export const getTransactionSummary = async ({
+  organizationId,
+  startDate,
+  endDate,
+}: {
+  organizationId: string;
+  startDate?: Date;
+  endDate?: Date;
+}) => {
+  const transactions = await getTransactionSummaryRaw({
+    organizationId,
+    startDate,
+    endDate,
   });
 
   const totalIncome = transactions

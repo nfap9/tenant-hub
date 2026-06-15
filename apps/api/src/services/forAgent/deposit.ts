@@ -1,4 +1,6 @@
 import { prisma } from '../../config/prisma.js';
+import { calculateDepositSummary } from '../depositUtils.js';
+import { toAgentDepositSummary } from './mappers/index.js';
 
 /**
  * 为智能体/客服查询组织下的押金列表，包含租约、房间、公寓信息
@@ -37,18 +39,7 @@ export const queryDepositsForAgent = async ({
     orderBy: { createdAt: 'desc' },
   });
 
-  return deposits.map((d) => ({
-    id: d.id,
-    tenantName: d.lease.tenantName,
-    roomNo: d.lease.room.roomNo,
-    apartmentName: d.lease.room.apartment.name,
-    amount: Number(d.amount),
-    paidAmount: Number(d.paidAmount),
-    refundedAmount: Number(d.refundedAmount),
-    deductedAmount: Number(d.deductedAmount),
-    status: d.status,
-    createdAt: d.createdAt.toISOString().split('T')[0],
-  }));
+  return deposits.map(toAgentDepositSummary);
 };
 
 /**
@@ -61,17 +52,7 @@ export const queryDepositSummaryForAgent = async (organizationId: string) => {
     where: { organizationId },
   });
 
-  const totalAmount = deposits.reduce((sum, d) => sum + Number(d.amount), 0);
-  const paidAmount = deposits.reduce((sum, d) => sum + Number(d.paidAmount), 0);
-  const refundedAmount = deposits.reduce(
-    (sum, d) => sum + Number(d.refundedAmount),
-    0
-  );
-  const deductedAmount = deposits.reduce(
-    (sum, d) => sum + Number(d.deductedAmount),
-    0
-  );
-  const heldAmount = paidAmount - refundedAmount - deductedAmount;
+  const summary = calculateDepositSummary(deposits);
 
   const byStatus: Record<string, number> = {};
   for (const d of deposits) {
@@ -79,12 +60,12 @@ export const queryDepositSummaryForAgent = async (organizationId: string) => {
   }
 
   return {
-    totalAmount: Number(totalAmount.toFixed(2)),
-    paidAmount: Number(paidAmount.toFixed(2)),
-    refundedAmount: Number(refundedAmount.toFixed(2)),
-    deductedAmount: Number(deductedAmount.toFixed(2)),
-    heldAmount: Number(heldAmount.toFixed(2)),
-    totalCount: deposits.length,
+    totalAmount: Number(summary.totalAmount.toFixed(2)),
+    paidAmount: Number(summary.paidAmount.toFixed(2)),
+    refundedAmount: Number(summary.refundedAmount.toFixed(2)),
+    deductedAmount: Number(summary.deductedAmount.toFixed(2)),
+    heldAmount: Number(summary.heldAmount.toFixed(2)),
+    totalCount: summary.count,
     byStatus,
   };
 };
