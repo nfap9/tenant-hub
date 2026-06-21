@@ -22,7 +22,7 @@ type RoomDetail = Prisma.RoomGetPayload<{
     reservation: true;
     leases: {
       where: { status: 'ACTIVE'; deletedAt: null };
-      include: { fees: true; deposit: true };
+      include: { fees: true; deposits: true };
     };
     meterReadings: {
       take: 2;
@@ -55,13 +55,12 @@ export function toAgentRoomDetail(
           name: f.name,
           amount: Number(f.amount),
         })),
-        deposit: activeLease.deposit
-          ? {
-              amount: Number(activeLease.deposit.amount),
-              paidAmount: Number(activeLease.deposit.paidAmount),
-              status: activeLease.deposit.status,
-            }
-          : null,
+        deposits: activeLease.deposits.map((deposit) => ({
+          type: deposit.type,
+          amount: Number(deposit.amount),
+          paidAmount: Number(deposit.paidAmount),
+          status: deposit.status,
+        })),
       }
     : null;
 

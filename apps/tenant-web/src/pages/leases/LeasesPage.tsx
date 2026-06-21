@@ -10,6 +10,7 @@ import {
   Spin,
   Popconfirm,
   Space,
+  Tooltip,
 } from 'antd';
 import { EyeOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
@@ -236,9 +237,31 @@ export default function LeasesPage() {
               },
               {
                 title: '押金',
-                render: (_: unknown, row: Lease) => (
-                  <span>¥{money(row.depositAmount)}</span>
-                ),
+                render: (_: unknown, row: Lease) => {
+                  const roomDeposit = row.deposits?.find(
+                    (d) => d.type === 'ROOM'
+                  );
+                  const keyDeposit = row.deposits?.find(
+                    (d) => d.type === 'KEY'
+                  );
+                  return (
+                    <Tooltip
+                      title={
+                        <div>
+                          <div>
+                            房间押金：¥{money(roomDeposit?.amount ?? 0)}
+                          </div>
+                          <div>
+                            钥匙押金：¥{money(keyDeposit?.amount ?? 0)} (
+                            {row.keyQuantity}套)
+                          </div>
+                        </div>
+                      }
+                    >
+                      <span>¥{money(row.depositAmount)}</span>
+                    </Tooltip>
+                  );
+                },
               },
               {
                 title: '状态',

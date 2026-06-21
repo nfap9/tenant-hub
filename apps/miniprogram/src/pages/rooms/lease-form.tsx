@@ -30,7 +30,9 @@ export default function LeaseFormPage() {
     endDate: nextYear(),
     cycle: 'MONTHLY' as RentCycle,
     rentAmount: '',
-    depositAmount: '',
+    roomDepositAmount: '',
+    keyQuantity: '0',
+    keyUnitPrice: '0',
     waterUnitPrice: '0',
     powerUnitPrice: '0',
     autoRenew: true,
@@ -110,9 +112,11 @@ export default function LeaseFormPage() {
         endDate: form.endDate,
         cycle: form.cycle,
         rentAmount: Number(form.rentAmount),
-        depositAmount: form.depositAmount
-          ? Number(form.depositAmount)
+        roomDepositAmount: form.roomDepositAmount
+          ? Number(form.roomDepositAmount)
           : undefined,
+        keyQuantity: Number(form.keyQuantity || 0),
+        keyUnitPrice: Number(form.keyUnitPrice || 0),
         waterUnitPrice: Number(form.waterUnitPrice),
         powerUnitPrice: Number(form.powerUnitPrice),
         autoRenew: form.autoRenew,
@@ -180,11 +184,11 @@ export default function LeaseFormPage() {
             onChange={(value) => updateForm('rentAmount', value)}
           />
           <Input
-            label="押金"
-            placeholder="请输入押金"
+            label="房间押金"
+            placeholder="请输入房间押金"
             type="number"
-            value={form.depositAmount}
-            onChange={(value) => updateForm('depositAmount', value)}
+            value={form.roomDepositAmount}
+            onChange={(value) => updateForm('roomDepositAmount', value)}
           />
         </View>
         <Text className="field-label">交租周期</Text>
@@ -202,6 +206,22 @@ export default function LeaseFormPage() {
               </Text>
             </View>
           ))}
+        </View>
+        <View className="form-grid">
+          <Input
+            label="钥匙数量"
+            placeholder="套"
+            type="number"
+            value={form.keyQuantity}
+            onChange={(value) => updateForm('keyQuantity', value)}
+          />
+          <Input
+            label="钥匙单价"
+            placeholder="元/套"
+            type="number"
+            value={form.keyUnitPrice}
+            onChange={(value) => updateForm('keyUnitPrice', value)}
+          />
         </View>
         <View className="form-grid">
           <Input

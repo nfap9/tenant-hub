@@ -67,7 +67,7 @@ export default function LeaseFormDrawer({
           form.setFieldsValue({
             tenantName: reservation.name,
             tenantPhone: reservation.phone || '',
-            depositAmount: Number(reservation.deposit) || 0,
+            roomDepositAmount: Number(reservation.deposit) || 0,
           });
         }
       })
@@ -144,7 +144,9 @@ export default function LeaseFormDrawer({
         endDate: dayjs(values.endDate as string).format('YYYY-MM-DD'),
         cycle: String(values.cycle),
         rentAmount: Number(values.rentAmount),
-        depositAmount: Number(values.depositAmount || 0),
+        roomDepositAmount: Number(values.roomDepositAmount || 0),
+        keyQuantity: Number(values.keyQuantity || 0),
+        keyUnitPrice: Number(values.keyUnitPrice || 0),
         waterUnitPrice: Number(values.waterUnitPrice || 0),
         powerUnitPrice: Number(values.powerUnitPrice || 0),
         autoRenew: Boolean(values.autoRenew),
@@ -269,12 +271,25 @@ export default function LeaseFormDrawer({
               placeholder="每期金额"
             />
           </Form.Item>
-          <Form.Item label="押金" name="depositAmount">
+          <Form.Item label="房间押金" name="roomDepositAmount">
             <InputNumber
               min={0}
               className="w-full"
               prefix="¥"
-              placeholder="请输入押金"
+              placeholder="请输入房间押金"
+            />
+          </Form.Item>
+        </div>
+        <div className={styles.formGrid2}>
+          <Form.Item label="钥匙数量" name="keyQuantity">
+            <InputNumber min={0} className="w-full" placeholder="套" />
+          </Form.Item>
+          <Form.Item label="钥匙单价" name="keyUnitPrice">
+            <InputNumber
+              min={0}
+              className="w-full"
+              prefix="¥"
+              placeholder="每套金额"
             />
           </Form.Item>
         </div>

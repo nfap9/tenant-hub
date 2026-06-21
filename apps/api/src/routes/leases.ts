@@ -58,7 +58,9 @@ export const createLeaseInput = z
     endDate: z.coerce.date().describe('租约结束日期'),
     cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).describe('付款周期'),
     rentAmount: amountSchema.describe('月租金'),
-    depositAmount: amountSchema.default(0).describe('押金'),
+    roomDepositAmount: amountSchema.default(0).describe('房间押金'),
+    keyQuantity: z.coerce.number().int().min(0).default(0).describe('钥匙数量'),
+    keyUnitPrice: amountSchema.default(0).describe('钥匙单价'),
     waterUnitPrice: amountSchema.describe('水费单价'),
     powerUnitPrice: amountSchema.describe('电费单价'),
     autoRenew: z.boolean().default(false).describe('是否自动续约'),
@@ -96,6 +98,15 @@ export const terminateLeaseInput = z.object({
   penaltyReason: z.string().optional().describe('违约金原因'),
   compensationAmount: amountSchema.default(0).describe('赔偿金'),
   compensationReason: z.string().optional().describe('赔偿金原因'),
+  roomDepositRefundAmount: amountSchema.default(0).describe('房间押金退还金额'),
+  keyDepositRefundAmount: amountSchema.default(0).describe('钥匙押金退还金额'),
+  roomDepositDeductionAmount: amountSchema
+    .default(0)
+    .describe('房间押金扣款金额'),
+  keyDepositDeductionAmount: amountSchema
+    .default(0)
+    .describe('钥匙押金扣款金额'),
+  depositDeductionReason: z.string().optional().describe('押金扣款原因'),
 });
 
 export const settlementPaymentInput = z.object({
@@ -130,41 +141,35 @@ leaseRouter.post(
     if (isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
       throw new HttpError(400, '仅空闲或已预留房间可以保存草稿');
 
-    let lease;
-    if (leaseData.depositAmount > 0) {
-      lease = await createLeaseWithDeposit({
-        leaseData: {
-          ...leaseData,
-          rentAmount: new Prisma.Decimal(leaseData.rentAmount),
-          depositAmount: new Prisma.Decimal(leaseData.depositAmount),
-          waterUnitPrice: new Prisma.Decimal(leaseData.waterUnitPrice),
-          powerUnitPrice: new Prisma.Decimal(leaseData.powerUnitPrice),
-        },
-        roomId,
-        organizationId: req.organizationId!,
-        userId: req.user!.id,
-        fees: fees.map((fee) => ({
-          ...fee,
-          amount: new Prisma.Decimal(fee.amount),
-        })),
-      });
-    } else {
-      lease = await createLeaseWithoutDeposit({
-        leaseData: {
-          ...leaseData,
-          rentAmount: new Prisma.Decimal(leaseData.rentAmount),
-          depositAmount: new Prisma.Decimal(leaseData.depositAmount),
-          waterUnitPrice: new Prisma.Decimal(leaseData.waterUnitPrice),
-          powerUnitPrice: new Prisma.Decimal(leaseData.powerUnitPrice),
-        },
-        roomId,
-        organizationId: req.organizationId!,
-        fees: fees.map((fee) => ({
-          ...fee,
-          amount: new Prisma.Decimal(fee.amount),
-        })),
-      });
-    }
+    const roomDepositAmount = new Prisma.Decimal(leaseData.roomDepositAmount);
+    const keyDepositAmount = new Prisma.Decimal(leaseData.keyQuantity).mul(
+      new Prisma.Decimal(leaseData.keyUnitPrice)
+    );
+    const depositAmount = roomDepositAmount.plus(keyDepositAmount);
+
+    const createFn = depositAmount.greaterThan(0)
+      ? createLeaseWithDeposit
+      : createLeaseWithoutDeposit;
+
+    const lease = await createFn({
+      leaseData: {
+        ...leaseData,
+        rentAmount: new Prisma.Decimal(leaseData.rentAmount),
+        depositAmount,
+        roomDepositAmount,
+        keyQuantity: leaseData.keyQuantity,
+        keyUnitPrice: new Prisma.Decimal(leaseData.keyUnitPrice),
+        waterUnitPrice: new Prisma.Decimal(leaseData.waterUnitPrice),
+        powerUnitPrice: new Prisma.Decimal(leaseData.powerUnitPrice),
+      },
+      roomId,
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+      fees: fees.map((fee) => ({
+        ...fee,
+        amount: new Prisma.Decimal(fee.amount),
+      })),
+    });
 
     if (!isDraft) {
       await updateRoomStatus(roomId, 'OCCUPIED');
@@ -189,7 +194,9 @@ leaseRouter.put(
     const input = z
       .object({
         rentAmount: amountSchema.optional(),
-        depositAmount: amountSchema.optional(),
+        roomDepositAmount: amountSchema.optional(),
+        keyQuantity: z.coerce.number().int().min(0).optional(),
+        keyUnitPrice: amountSchema.optional(),
         waterUnitPrice: amountSchema.optional(),
         powerUnitPrice: amountSchema.optional(),
         fees: z
@@ -215,8 +222,14 @@ leaseRouter.put(
         ...(leaseData.rentAmount !== undefined && {
           rentAmount: new Prisma.Decimal(leaseData.rentAmount),
         }),
-        ...(leaseData.depositAmount !== undefined && {
-          depositAmount: new Prisma.Decimal(leaseData.depositAmount),
+        ...(leaseData.roomDepositAmount !== undefined && {
+          roomDepositAmount: new Prisma.Decimal(leaseData.roomDepositAmount),
+        }),
+        ...(leaseData.keyQuantity !== undefined && {
+          keyQuantity: leaseData.keyQuantity,
+        }),
+        ...(leaseData.keyUnitPrice !== undefined && {
+          keyUnitPrice: new Prisma.Decimal(leaseData.keyUnitPrice),
         }),
         ...(leaseData.waterUnitPrice !== undefined && {
           waterUnitPrice: new Prisma.Decimal(leaseData.waterUnitPrice),

@@ -149,6 +149,10 @@ export default function DepositDetailPage() {
                 </Text>
               </View>
               <View className="detail-row">
+                <Text className="text-muted">押金类型</Text>
+                <Text>{deposit.type === 'ROOM' ? '房间押金' : '钥匙押金'}</Text>
+              </View>
+              <View className="detail-row">
                 <Text className="text-muted">状态</Text>
                 <Badge tone={statusToneMap[deposit.status] as any}>
                   {statusLabels[deposit.status]}

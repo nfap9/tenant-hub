@@ -5,7 +5,7 @@ type LeaseWithRelations = Prisma.LeaseGetPayload<{
   include: {
     room: { include: { apartment: { select: { name: true } } } };
     fees: true;
-    deposit: true;
+    deposits: true;
   };
 }>;
 
@@ -20,6 +20,9 @@ export function toAgentLeaseSummary(lease: LeaseWithRelations) {
     endDate: lease.endDate.toISOString().split('T')[0],
     rentAmount: Number(lease.rentAmount),
     depositAmount: Number(lease.depositAmount),
+    roomDepositAmount: Number(lease.roomDepositAmount),
+    keyQuantity: lease.keyQuantity,
+    keyUnitPrice: Number(lease.keyUnitPrice),
     waterUnitPrice: Number(lease.waterUnitPrice),
     powerUnitPrice: Number(lease.powerUnitPrice),
     status: lease.status,
@@ -32,15 +35,14 @@ export function toAgentLeaseSummary(lease: LeaseWithRelations) {
       name: f.name,
       amount: Number(f.amount),
     })),
-    deposit: lease.deposit
-      ? {
-          id: lease.deposit.id,
-          amount: Number(lease.deposit.amount),
-          paidAmount: Number(lease.deposit.paidAmount),
-          refundedAmount: Number(lease.deposit.refundedAmount),
-          deductedAmount: Number(lease.deposit.deductedAmount),
-          status: lease.deposit.status,
-        }
-      : null,
+    deposits: lease.deposits.map((deposit) => ({
+      id: deposit.id,
+      type: deposit.type,
+      amount: Number(deposit.amount),
+      paidAmount: Number(deposit.paidAmount),
+      refundedAmount: Number(deposit.refundedAmount),
+      deductedAmount: Number(deposit.deductedAmount),
+      status: deposit.status,
+    })),
   };
 }

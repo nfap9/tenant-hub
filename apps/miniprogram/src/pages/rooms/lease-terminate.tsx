@@ -29,7 +29,10 @@ export default function LeaseTerminatePage() {
     type: 'NEGOTIATED' as TerminationType,
     terminatedAt: today(),
     reason: '',
-    depositDeductionAmount: '0',
+    roomDepositRefundAmount: '0',
+    keyDepositRefundAmount: '0',
+    roomDepositDeductionAmount: '0',
+    keyDepositDeductionAmount: '0',
     depositDeductionReason: '',
     rentAdjustmentAmount: '0',
     currentWater: '0',
@@ -72,7 +75,10 @@ export default function LeaseTerminatePage() {
         type: defaultType,
         terminatedAt: today(),
         reason: '',
-        depositDeductionAmount: '0',
+        roomDepositRefundAmount: '0',
+        keyDepositRefundAmount: '0',
+        roomDepositDeductionAmount: '0',
+        keyDepositDeductionAmount: '0',
         depositDeductionReason: '',
         rentAdjustmentAmount: '0',
         currentWater: '0',
@@ -103,6 +109,8 @@ export default function LeaseTerminatePage() {
         : {
             utility: 0,
             depositRefund: 0,
+            roomDepositRefund: 0,
+            keyDepositRefund: 0,
             receivable: 0,
             refundable: 0,
             net: 0,
@@ -126,6 +134,13 @@ export default function LeaseTerminatePage() {
         type: form.type,
         reason: optionalText(form.reason),
         terminatedAt: form.terminatedAt,
+        roomDepositRefundAmount: Number(form.roomDepositRefundAmount || 0),
+        keyDepositRefundAmount: Number(form.keyDepositRefundAmount || 0),
+        roomDepositDeductionAmount: Number(
+          form.roomDepositDeductionAmount || 0
+        ),
+        keyDepositDeductionAmount: Number(form.keyDepositDeductionAmount || 0),
+        depositDeductionReason: optionalText(form.depositDeductionReason),
         rentAdjustmentAmount: Number(form.rentAdjustmentAmount || 0),
         currentWater: Number(form.currentWater || 0),
         currentPower: Number(form.currentPower || 0),
@@ -185,7 +200,24 @@ export default function LeaseTerminatePage() {
             />
             <View className="detail-panel">
               <View className="detail-row">
-                <Text className="text-muted">原押金</Text>
+                <Text className="text-muted">房间押金</Text>
+                <Text className="card-stat">
+                  ¥{money(lease.roomDepositAmount)}
+                </Text>
+              </View>
+              <View className="detail-row">
+                <Text className="text-muted">钥匙押金</Text>
+                <Text className="card-stat">
+                  ¥
+                  {money(
+                    Number(lease.keyQuantity ?? 0) *
+                      Number(lease.keyUnitPrice ?? 0)
+                  )}{' '}
+                  ({lease.keyQuantity}套)
+                </Text>
+              </View>
+              <View className="detail-row">
+                <Text className="text-muted">押金合计</Text>
                 <Text className="card-stat">¥{money(lease.depositAmount)}</Text>
               </View>
               <View className="detail-row">
@@ -197,12 +229,47 @@ export default function LeaseTerminatePage() {
             </View>
             <View className="form-grid">
               <Input
-                label="押金扣款"
+                label="房间押金退还"
                 placeholder="请输入金额"
                 type="number"
-                value={form.depositDeductionAmount}
+                value={form.roomDepositRefundAmount}
                 onChange={(value) =>
-                  setForm((old) => ({ ...old, depositDeductionAmount: value }))
+                  setForm((old) => ({ ...old, roomDepositRefundAmount: value }))
+                }
+              />
+              <Input
+                label="钥匙押金退还"
+                placeholder="请输入金额"
+                type="number"
+                value={form.keyDepositRefundAmount}
+                onChange={(value) =>
+                  setForm((old) => ({ ...old, keyDepositRefundAmount: value }))
+                }
+              />
+            </View>
+            <View className="form-grid">
+              <Input
+                label="房间押金扣款"
+                placeholder="请输入金额"
+                type="number"
+                value={form.roomDepositDeductionAmount}
+                onChange={(value) =>
+                  setForm((old) => ({
+                    ...old,
+                    roomDepositDeductionAmount: value,
+                  }))
+                }
+              />
+              <Input
+                label="钥匙押金扣款"
+                placeholder="请输入金额"
+                type="number"
+                value={form.keyDepositDeductionAmount}
+                onChange={(value) =>
+                  setForm((old) => ({
+                    ...old,
+                    keyDepositDeductionAmount: value,
+                  }))
                 }
               />
               <Input

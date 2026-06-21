@@ -26,7 +26,13 @@ import { getSettlementPreview, terminateLease } from '@/api/leases';
 import type { Room } from '@/types/domain';
 import { money, today, numberValue } from '@/utils/format';
 import { terminationLabels } from './constants';
-import { computeSettlementPreview, defaultTerminationType } from './utils';
+import {
+  computeSettlementPreview,
+  defaultTerminationType,
+  getRoomDeposit,
+  getKeyDeposit,
+  getTotalDepositPaid,
+} from './utils';
 import DetailItem from '@/components/ui/DetailItem';
 import styles from './LeaseTerminatePage.module.scss';
 
@@ -95,6 +101,11 @@ export default function LeaseTerminateDrawer({
         penaltyReason: '',
         compensationAmount: 0,
         compensationReason: '',
+        roomDepositRefundAmount: 0,
+        keyDepositRefundAmount: 0,
+        roomDepositDeductionAmount: 0,
+        keyDepositDeductionAmount: 0,
+        depositDeductionReason: '',
       });
       getSettlementPreview(currentOrgId!, lease.id, today())
         .then((data) =>
@@ -161,6 +172,16 @@ export default function LeaseTerminateDrawer({
         compensationAmount: numberValue(values.compensationAmount),
         compensationReason:
           String(values.compensationReason || '').trim() || undefined,
+        roomDepositRefundAmount: numberValue(values.roomDepositRefundAmount),
+        keyDepositRefundAmount: numberValue(values.keyDepositRefundAmount),
+        roomDepositDeductionAmount: numberValue(
+          values.roomDepositDeductionAmount
+        ),
+        keyDepositDeductionAmount: numberValue(
+          values.keyDepositDeductionAmount
+        ),
+        depositDeductionReason:
+          String(values.depositDeductionReason || '').trim() || undefined,
       });
       message.success('退租成功，已生成结算账单');
       form.resetFields();
@@ -287,7 +308,7 @@ export default function LeaseTerminateDrawer({
             <Divider orientation="left" className={styles.sectionDivider}>
               押金处理
             </Divider>
-            {Number(lease.deposit?.paidAmount ?? 0) === 0 ? (
+            {getTotalDepositPaid(lease) === 0 ? (
               <Alert
                 message="押金未收取"
                 type="warning"
@@ -296,18 +317,71 @@ export default function LeaseTerminateDrawer({
               />
             ) : (
               <Row gutter={[24, 0]} className="mb-16">
-                <Col span={12}>
+                <Col span={8}>
                   <DetailItem label="约定押金">
                     ¥{money(lease.depositAmount)}
                   </DetailItem>
                 </Col>
-                <Col span={12}>
+                <Col span={8}>
+                  <DetailItem label="房间押金">
+                    ¥{money(getRoomDeposit(lease)?.amount ?? 0)}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="钥匙押金">
+                    ¥{money(getKeyDeposit(lease)?.amount ?? 0)}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
                   <DetailItem label="已收押金">
-                    ¥{money(lease.deposit?.paidAmount ?? 0)}
+                    ¥{money(getTotalDepositPaid(lease))}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="已收房间押金">
+                    ¥{money(getRoomDeposit(lease)?.paidAmount ?? 0)}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="已收钥匙押金">
+                    ¥{money(getKeyDeposit(lease)?.paidAmount ?? 0)}
                   </DetailItem>
                 </Col>
               </Row>
             )}
+            <Row gutter={[24, 0]} className="mb-16">
+              <Col span={12}>
+                <Form.Item label="房间押金退还" name="roomDepositRefundAmount">
+                  <InputNumber min={0} className="w-full" prefix="¥" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="钥匙押金退还" name="keyDepositRefundAmount">
+                  <InputNumber min={0} className="w-full" prefix="¥" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={[24, 0]} className="mb-16">
+              <Col span={12}>
+                <Form.Item
+                  label="房间押金扣款"
+                  name="roomDepositDeductionAmount"
+                >
+                  <InputNumber min={0} className="w-full" prefix="¥" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="钥匙押金扣款"
+                  name="keyDepositDeductionAmount"
+                >
+                  <InputNumber min={0} className="w-full" prefix="¥" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item label="押金扣款原因" name="depositDeductionReason">
+              <Input placeholder="可选" prefix={<InfoCircleOutlined />} />
+            </Form.Item>
 
             <Divider orientation="left" className={styles.sectionDivider}>
               违约与赔偿

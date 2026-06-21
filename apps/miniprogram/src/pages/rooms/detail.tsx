@@ -272,7 +272,17 @@ export default function RoomDetailPage() {
                 </View>
                 <View className="detail-row">
                   <Text className="text-muted">押金</Text>
-                  <Text>¥{money(activeLease.depositAmount)}</Text>
+                  <View style={{ textAlign: 'right' }}>
+                    <Text>¥{money(activeLease.depositAmount)}</Text>
+                    <Text className="text-muted" style={{ display: 'block' }}>
+                      房间¥{money(activeLease.roomDepositAmount)} · 钥匙¥
+                      {money(
+                        Number(activeLease.keyQuantity ?? 0) *
+                          Number(activeLease.keyUnitPrice ?? 0)
+                      )}
+                      ({activeLease.keyQuantity}套)
+                    </Text>
+                  </View>
                 </View>
                 <View className="detail-row">
                   <Text className="text-muted">租期</Text>

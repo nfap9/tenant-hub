@@ -151,6 +151,9 @@ export type Lease = {
   cycle: RentCycle;
   rentAmount: string | number;
   depositAmount: string | number;
+  roomDepositAmount: string | number;
+  keyQuantity: number;
+  keyUnitPrice: string | number;
   waterUnitPrice: string | number;
   powerUnitPrice: string | number;
   autoRenew: boolean;
@@ -164,7 +167,7 @@ export type Lease = {
   terminatedAt?: string;
   fees?: LeaseFee[];
   room?: Room;
-  deposit?: Deposit;
+  deposits?: Deposit[];
 };
 
 export type Room = {
@@ -244,12 +247,14 @@ export type DepositStatus =
   | 'PARTIAL_REFUNDED'
   | 'FULLY_REFUNDED'
   | 'DEDUCTED';
+export type DepositType = 'ROOM' | 'KEY';
 export type DepositPaymentType = 'COLLECT' | 'REFUND' | 'DEDUCT';
 
 export type Deposit = {
   id: string;
   organizationId: string;
   leaseId: string;
+  type: DepositType;
   amount: string | number;
   paidAmount: string | number;
   refundedAmount: string | number;
@@ -344,6 +349,13 @@ export type LeaseSettlement = {
   reason?: string;
   terminatedAt: string;
   depositAmount: string | number;
+  roomDepositAmount: string | number;
+  keyDepositAmount: string | number;
+  roomDepositRefundAmount: string | number;
+  keyDepositRefundAmount: string | number;
+  roomDepositDeductionAmount: string | number;
+  keyDepositDeductionAmount: string | number;
+  depositDeductionReason?: string;
   depositRefundAmount: string | number;
   rentAdjustmentAmount: string | number;
   previousWater: string | number;

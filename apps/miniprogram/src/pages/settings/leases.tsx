@@ -174,6 +174,16 @@ export default function LeasesPage() {
                 {lease.autoRenew ? '自动续约' : '不自动续约'}
               </Text>
             </View>
+            <View className="detail-row">
+              <Text className="text-muted">
+                房间¥{money(lease.roomDepositAmount)} · 钥匙¥
+                {money(
+                  Number(lease.keyQuantity ?? 0) *
+                    Number(lease.keyUnitPrice ?? 0)
+                )}
+                ({lease.keyQuantity}套)
+              </Text>
+            </View>
             {lease.status !== 'ACTIVE' ? (
               <Text className="text-muted">
                 {lease.terminationReason ||

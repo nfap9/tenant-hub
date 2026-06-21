@@ -1,6 +1,24 @@
 import { money, numberValue } from '@/utils/format';
-import type { Lease } from '@/types/domain';
+import type { Lease, Deposit } from '@/types/domain';
 import type { LeaseFeeFormItem, TerminationType } from './constants';
+
+export const getRoomDeposit = (lease?: Lease): Deposit | undefined =>
+  lease?.deposits?.find((d) => d.type === 'ROOM');
+
+export const getKeyDeposit = (lease?: Lease): Deposit | undefined =>
+  lease?.deposits?.find((d) => d.type === 'KEY');
+
+export const getTotalDepositPaid = (lease?: Lease): number => {
+  if (!lease?.deposits) return 0;
+  return lease.deposits.reduce((sum, d) => sum + Number(d.paidAmount ?? 0), 0);
+};
+
+export const calculateKeyDepositAmount = (
+  keyQuantity: number,
+  keyUnitPrice: number
+): number => {
+  return keyQuantity * keyUnitPrice;
+};
 
 export const computeSettlementPreview = (
   lease: Lease,
@@ -11,10 +29,37 @@ export const computeSettlementPreview = (
     otherFeeAmount: string;
     penaltyAmount: string;
     compensationAmount: string;
+    roomDepositRefundAmount?: string;
+    keyDepositRefundAmount?: string;
+    roomDepositDeductionAmount?: string;
+    keyDepositDeductionAmount?: string;
   },
   previousReadings: { previousWater: number; previousPower: number }
 ) => {
-  const depositPaid = Number(lease.deposit?.paidAmount ?? 0);
+  const roomDeposit = getRoomDeposit(lease);
+  const keyDeposit = getKeyDeposit(lease);
+
+  const roomDepositPaid = Number(roomDeposit?.paidAmount ?? 0);
+  const keyDepositPaid = Number(keyDeposit?.paidAmount ?? 0);
+
+  const roomRefund = Math.min(
+    numberValue(terminationForm.roomDepositRefundAmount ?? roomDepositPaid),
+    roomDepositPaid
+  );
+  const keyRefund = Math.min(
+    numberValue(terminationForm.keyDepositRefundAmount ?? keyDepositPaid),
+    keyDepositPaid
+  );
+  const roomDeduction = numberValue(
+    terminationForm.roomDepositDeductionAmount ?? 0
+  );
+  const keyDeduction = numberValue(
+    terminationForm.keyDepositDeductionAmount ?? 0
+  );
+
+  const depositRefund = roomRefund + keyRefund;
+  const depositDeduction = roomDeduction + keyDeduction;
+
   const rentAdjustment = numberValue(terminationForm.rentAdjustmentAmount);
   const water =
     Math.max(
@@ -32,14 +77,20 @@ export const computeSettlementPreview = (
   const otherFee = numberValue(terminationForm.otherFeeAmount);
   const penalty = numberValue(terminationForm.penaltyAmount);
   const compensation = numberValue(terminationForm.compensationAmount);
-  const rentReceivable = Math.max(rentAdjustment, 0);
-  const rentRefund = Math.max(-rentAdjustment, 0);
+
   const receivable =
-    rentReceivable + utility + otherFee + penalty + compensation;
-  const refundable = depositPaid + rentRefund;
+    Math.max(rentAdjustment, 0) +
+    utility +
+    otherFee +
+    penalty +
+    compensation +
+    depositDeduction;
+  const refundable = depositRefund + Math.max(-rentAdjustment, 0);
+
   return {
     utility,
-    depositRefund: depositPaid,
+    depositRefund,
+    depositDeduction,
     receivable,
     refundable,
     net: receivable - refundable,

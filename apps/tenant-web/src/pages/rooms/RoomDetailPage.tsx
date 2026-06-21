@@ -27,6 +27,7 @@ import { getRoomDetail, deleteRoom, updateRoom } from '@/api/rooms';
 import { activateLease } from '@/api/leases';
 import type { Room } from '@/types/domain';
 import { money, day } from '@/utils/format';
+import { getRoomDeposit, getKeyDeposit } from './utils';
 import { statusLabels, toneForStatus, cycleLabels } from './constants';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -278,8 +279,19 @@ export default function RoomDetailPage() {
                       </DetailItem>
                     </Col>
                     <Col span={8}>
-                      <DetailItem label="押金">
+                      <DetailItem label="总押金">
                         ¥{money(activeLease.depositAmount)}
+                      </DetailItem>
+                    </Col>
+                    <Col span={8}>
+                      <DetailItem label="房间押金">
+                        ¥{money(getRoomDeposit(activeLease)?.amount ?? 0)}
+                      </DetailItem>
+                    </Col>
+                    <Col span={8}>
+                      <DetailItem label="钥匙押金">
+                        ¥{money(getKeyDeposit(activeLease)?.amount ?? 0)} (
+                        {activeLease.keyQuantity}套)
                       </DetailItem>
                     </Col>
                     <Col span={8}>
@@ -364,8 +376,19 @@ export default function RoomDetailPage() {
                       </DetailItem>
                     </Col>
                     <Col span={8}>
-                      <DetailItem label="押金">
+                      <DetailItem label="总押金">
                         ¥{money(draftLease.depositAmount)}
+                      </DetailItem>
+                    </Col>
+                    <Col span={8}>
+                      <DetailItem label="房间押金">
+                        ¥{money(getRoomDeposit(draftLease)?.amount ?? 0)}
+                      </DetailItem>
+                    </Col>
+                    <Col span={8}>
+                      <DetailItem label="钥匙押金">
+                        ¥{money(getKeyDeposit(draftLease)?.amount ?? 0)} (
+                        {draftLease.keyQuantity}套)
                       </DetailItem>
                     </Col>
                     <Col span={8}>

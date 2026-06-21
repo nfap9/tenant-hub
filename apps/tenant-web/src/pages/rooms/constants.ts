@@ -88,7 +88,9 @@ export const emptyLeaseForm = {
   endDate: '',
   cycle: 'MONTHLY' as RentCycle,
   rentAmount: '',
-  depositAmount: '',
+  roomDepositAmount: '',
+  keyQuantity: 0,
+  keyUnitPrice: '',
   waterUnitPrice: '0',
   powerUnitPrice: '0',
   autoRenew: true,
@@ -97,7 +99,9 @@ export const emptyLeaseForm = {
 
 export const emptyEditLeaseForm = {
   rentAmount: '',
-  depositAmount: '',
+  roomDepositAmount: '',
+  keyQuantity: 0,
+  keyUnitPrice: '',
   waterUnitPrice: '0',
   powerUnitPrice: '0',
 };
@@ -111,4 +115,9 @@ export const emptyTerminationForm = {
   currentPower: '0',
   otherFeeAmount: '0',
   otherFeeReason: '',
+  roomDepositRefundAmount: '0',
+  keyDepositRefundAmount: '0',
+  roomDepositDeductionAmount: '0',
+  keyDepositDeductionAmount: '0',
+  depositDeductionReason: '',
 };

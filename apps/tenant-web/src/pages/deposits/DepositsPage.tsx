@@ -17,7 +17,7 @@ import { getDeposits, getDepositSummary } from '@/api/deposits';
 import { money } from '@/utils/format';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
-import type { Deposit, DepositStatus } from '@/types/domain';
+import type { Deposit, DepositStatus, DepositType } from '@/types/domain';
 import styles from './DepositsPage.module.scss';
 import clsx from 'clsx';
 
@@ -27,6 +27,11 @@ const statusLabels: Record<DepositStatus, string> = {
   PARTIAL_REFUNDED: '部分退还',
   FULLY_REFUNDED: '已全额退还',
   DEDUCTED: '已扣款',
+};
+
+const typeLabels: Record<DepositType, string> = {
+  ROOM: '房间押金',
+  KEY: '钥匙押金',
 };
 
 const statusColors: Record<DepositStatus, string> = {
@@ -164,6 +169,7 @@ export default function DepositsPage() {
                       <span className={styles.roomNo}>
                         {deposit.lease?.room?.roomNo || '-'}
                       </span>
+                      <Tag>{typeLabels[deposit.type]}</Tag>
                       <Tag color={statusColors[deposit.status]}>
                         {statusLabels[deposit.status]}
                       </Tag>

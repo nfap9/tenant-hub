@@ -36,6 +36,17 @@ export function toAgentSettlementSummary(settlement: SettlementWithRelations) {
     penaltyAmount: Number(settlement.penaltyAmount),
     compensationAmount: Number(settlement.compensationAmount),
     depositRefundAmount: Number(settlement.depositRefundAmount ?? 0),
+    roomDepositAmount: Number(settlement.roomDepositAmount ?? 0),
+    keyDepositAmount: Number(settlement.keyDepositAmount ?? 0),
+    roomDepositRefundAmount: Number(settlement.roomDepositRefundAmount ?? 0),
+    keyDepositRefundAmount: Number(settlement.keyDepositRefundAmount ?? 0),
+    roomDepositDeductionAmount: Number(
+      settlement.roomDepositDeductionAmount ?? 0
+    ),
+    keyDepositDeductionAmount: Number(
+      settlement.keyDepositDeductionAmount ?? 0
+    ),
+    depositDeductionReason: settlement.depositDeductionReason,
     netAmount: Number(settlement.netAmount ?? 0),
     status: settlement.status,
     billAmount: settlement.bill ? Number(settlement.bill.totalAmount) : null,

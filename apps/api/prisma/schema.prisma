@@ -185,6 +185,9 @@ model Lease {
   cycle             RentCycle
   rentAmount        Decimal          @db.Decimal(12, 2)
   depositAmount     Decimal          @default(0) @db.Decimal(12, 2)
+  roomDepositAmount Decimal          @default(0) @db.Decimal(12, 2)
+  keyQuantity       Int              @default(0)
+  keyUnitPrice      Decimal          @default(0) @db.Decimal(12, 2)
   waterUnitPrice    Decimal          @db.Decimal(10, 2)
   powerUnitPrice    Decimal          @db.Decimal(10, 2)
   autoRenew         Boolean          @default(false)
@@ -196,7 +199,7 @@ model Lease {
   updatedAt         DateTime         @updatedAt
   deletedAt         DateTime?
   bills             Bill[]
-  deposit           Deposit?
+  deposits          Deposit[]
   organization      Organization     @relation(fields: [organizationId], references: [id])
   room              Room             @relation(fields: [roomId], references: [id])
   fees              LeaseFee[]
@@ -214,10 +217,15 @@ model LeaseSettlement {
   type                   TerminationType
   reason                 String?
   terminatedAt           DateTime
-  depositAmount          Decimal             @db.Decimal(12, 2)
-  depositDeductionAmount Decimal             @default(0) @db.Decimal(12, 2)
-  depositDeductionReason String?
-  depositRefundAmount    Decimal             @default(0) @db.Decimal(12, 2)
+  depositAmount              Decimal             @db.Decimal(12, 2)
+  roomDepositAmount          Decimal             @default(0) @db.Decimal(12, 2)
+  keyDepositAmount           Decimal             @default(0) @db.Decimal(12, 2)
+  roomDepositRefundAmount    Decimal             @default(0) @db.Decimal(12, 2)
+  keyDepositRefundAmount     Decimal             @default(0) @db.Decimal(12, 2)
+  roomDepositDeductionAmount Decimal             @default(0) @db.Decimal(12, 2)
+  keyDepositDeductionAmount  Decimal             @default(0) @db.Decimal(12, 2)
+  depositDeductionReason     String?
+  depositRefundAmount        Decimal             @default(0) @db.Decimal(12, 2)
   rentAdjustmentAmount   Decimal             @default(0) @db.Decimal(12, 2)
   previousWater          Decimal             @default(0) @db.Decimal(12, 2)
   currentWater           Decimal             @default(0) @db.Decimal(12, 2)
@@ -268,8 +276,9 @@ model SettlementPayment {
 model Deposit {
   id             String        @id @default(cuid())
   organizationId String
-  leaseId        String        @unique
+  leaseId        String
   billId         String?       @unique
+  type           DepositType   @default(ROOM)
   amount         Decimal       @db.Decimal(12, 2)
   paidAmount     Decimal       @default(0) @db.Decimal(12, 2)
   refundedAmount Decimal       @default(0) @db.Decimal(12, 2)
@@ -283,6 +292,7 @@ model Deposit {
   lease          Lease         @relation(fields: [leaseId], references: [id])
   organization   Organization  @relation(fields: [organizationId], references: [id])
 
+  @@unique([leaseId, type])
   @@index([organizationId, status])
 }
 
@@ -578,6 +588,11 @@ enum DepositStatus {
   PARTIAL_REFUNDED
   FULLY_REFUNDED
   DEDUCTED
+}
+
+enum DepositType {
+  ROOM
+  KEY
 }
 
 enum PaymentType {

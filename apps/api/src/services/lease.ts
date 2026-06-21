@@ -5,8 +5,132 @@ import { startOfLeaseDay, withLeaseLifecycle } from './leaseLifecycle.js';
 const leaseInclude = {
   room: { include: { apartment: true } },
   fees: true,
-  deposit: true,
+  deposits: true,
 } as const;
+
+export type DepositAllocation = {
+  roomOffset: Prisma.Decimal;
+  keyOffset: Prisma.Decimal;
+};
+
+/**
+ * 将预留定金优先抵扣房间押金，剩余部分抵扣钥匙押金
+ * @param reservationDeposit - 预留定金金额
+ * @param roomDepositAmount - 房间押金金额
+ * @param keyDepositAmount - 钥匙押金金额
+ * @returns 房间押金抵扣额与钥匙押金抵扣额
+ */
+export const allocateReservationOffset = (
+  reservationDeposit: Prisma.Decimal.Value,
+  roomDepositAmount: Prisma.Decimal.Value,
+  keyDepositAmount: Prisma.Decimal.Value
+): DepositAllocation => {
+  const total = new Prisma.Decimal(reservationDeposit);
+  const room = new Prisma.Decimal(roomDepositAmount);
+  const key = new Prisma.Decimal(keyDepositAmount);
+
+  const roomOffset = total.lessThanOrEqualTo(room) ? total : room;
+  const remaining = total.minus(roomOffset);
+  const keyOffset = remaining.lessThanOrEqualTo(key) ? remaining : key;
+
+  return { roomOffset, keyOffset };
+};
+
+type DepositType = 'ROOM' | 'KEY';
+
+/**
+ * 为指定类型的押金生成押金账单、支付记录及 Deposit 记录
+ * @param tx - Prisma 事务客户端
+ * @param data - 押金账单创建数据
+ * @returns 创建的押金记录
+ */
+async function createDepositBillAndRecord(
+  tx: Prisma.TransactionClient,
+  data: {
+    lease: {
+      id: string;
+      roomId: string;
+      startDate: Date;
+      endDate: Date;
+      room: { apartmentId: string };
+    };
+    organizationId: string;
+    userId: string;
+    depositType: DepositType;
+    amount: Prisma.Decimal;
+    offset: Prisma.Decimal;
+    reservationPaymentMethod?: string | null;
+  }
+) {
+  const {
+    lease,
+    organizationId,
+    userId,
+    depositType,
+    amount,
+    offset,
+    reservationPaymentMethod,
+  } = data;
+
+  if (amount.lessThanOrEqualTo(0)) return null;
+
+  const netAmount = amount.minus(offset);
+  const typeLabel = depositType === 'ROOM' ? '房间押金' : '钥匙押金';
+
+  const bill = await tx.bill.create({
+    data: {
+      organizationId,
+      leaseId: lease.id,
+      mode: 'DEPOSIT',
+      billingDate: startOfLeaseDay(lease.startDate).toDate(),
+      periodStart: startOfLeaseDay(lease.startDate).toDate(),
+      periodEnd: startOfLeaseDay(lease.endDate).toDate(),
+      dueDate: startOfLeaseDay(lease.startDate).toDate(),
+      status: netAmount.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
+      totalAmount: netAmount,
+      paidAmount: offset,
+      note: offset.greaterThan(0) ? '预留定金已抵扣' : undefined,
+      items: {
+        create: [
+          {
+            type: 'DEPOSIT',
+            name: offset.greaterThan(0)
+              ? `${typeLabel}（预留定金已抵扣）`
+              : typeLabel,
+            amount: netAmount,
+            status: netAmount.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
+          },
+        ],
+      },
+    },
+  });
+
+  if (offset.greaterThan(0)) {
+    await tx.payment.create({
+      data: {
+        billId: bill.id,
+        userId,
+        type: 'DEDUCT',
+        amount: offset,
+        method: reservationPaymentMethod || '预留定金抵扣',
+        note: '预留定金转押金',
+        status: 'COMPLETED',
+      },
+    });
+  }
+
+  return tx.deposit.create({
+    data: {
+      organizationId,
+      leaseId: lease.id,
+      billId: bill.id,
+      type: depositType,
+      amount,
+      paidAmount: offset,
+      status: offset.greaterThan(0) ? 'PAID' : 'UNPAID',
+    },
+  });
+}
 
 /**
  * 获取指定组织下的所有租约列表
@@ -52,7 +176,7 @@ export const listLeasesRaw = async (
     include: {
       room: { include: { apartment: { select: { name: true } } } },
       fees: true,
-      deposit: true,
+      deposits: true,
     },
     take: options?.limit,
     orderBy: { createdAt: 'desc' },
@@ -87,6 +211,36 @@ export const findRoomById = async (roomId: string, organizationId: string) => {
 };
 
 /**
+ * 计算钥匙押金金额
+ * @param keyQuantity - 钥匙数量
+ * @param keyUnitPrice - 钥匙单价
+ * @returns 钥匙押金金额
+ */
+export const calculateKeyDepositAmount = (
+  keyQuantity: Prisma.Decimal.Value,
+  keyUnitPrice: Prisma.Decimal.Value
+) => {
+  return new Prisma.Decimal(keyQuantity).mul(new Prisma.Decimal(keyUnitPrice));
+};
+
+/**
+ * 计算总押金金额
+ * @param roomDepositAmount - 房间押金
+ * @param keyQuantity - 钥匙数量
+ * @param keyUnitPrice - 钥匙单价
+ * @returns 总押金金额
+ */
+export const calculateTotalDepositAmount = (
+  roomDepositAmount: Prisma.Decimal.Value,
+  keyQuantity: Prisma.Decimal.Value,
+  keyUnitPrice: Prisma.Decimal.Value
+) => {
+  return new Prisma.Decimal(roomDepositAmount).plus(
+    calculateKeyDepositAmount(keyQuantity, keyUnitPrice)
+  );
+};
+
+/**
  * 创建租约并生成押金账单（含预留定金抵扣逻辑）
  * @param data - 租约创建数据，包含租约信息、房间 ID、组织 ID、用户 ID 及费用列表
  * @returns 创建完成的租约详情（含房间、费用、押金信息）
@@ -100,6 +254,9 @@ export const createLeaseWithDeposit = async (data: {
     cycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
     rentAmount: Prisma.Decimal.Value;
     depositAmount: Prisma.Decimal.Value;
+    roomDepositAmount: Prisma.Decimal.Value;
+    keyQuantity: number;
+    keyUnitPrice: Prisma.Decimal.Value;
     waterUnitPrice: Prisma.Decimal.Value;
     powerUnitPrice: Prisma.Decimal.Value;
     autoRenew: boolean;
@@ -137,63 +294,41 @@ export const createLeaseWithDeposit = async (data: {
       const reservation = await tx.reservation.findUnique({
         where: { roomId },
       });
-      const offset =
+      const reservationDeposit =
         reservation && reservation.deposit.greaterThan(0)
           ? reservation.deposit
           : new Prisma.Decimal(0);
-      const netDeposit = new Prisma.Decimal(leaseData.depositAmount).minus(
-        offset
+
+      const roomDepositAmount = new Prisma.Decimal(leaseData.roomDepositAmount);
+      const keyDepositAmount = calculateKeyDepositAmount(
+        leaseData.keyQuantity,
+        leaseData.keyUnitPrice
       );
 
-      const bill = await tx.bill.create({
-        data: {
-          organizationId,
-          leaseId: created.id,
-          mode: 'DEPOSIT',
-          billingDate: startOfLeaseDay(leaseData.startDate).toDate(),
-          periodStart: startOfLeaseDay(leaseData.startDate).toDate(),
-          periodEnd: startOfLeaseDay(leaseData.endDate).toDate(),
-          dueDate: startOfLeaseDay(leaseData.startDate).toDate(),
-          status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
-          totalAmount: netDeposit,
-          paidAmount: offset,
-          note: offset.greaterThan(0) ? '预留定金已抵扣' : undefined,
-          items: {
-            create: [
-              {
-                type: 'DEPOSIT',
-                name: offset.greaterThan(0) ? '押金（预留定金已抵扣）' : '押金',
-                amount: netDeposit,
-                status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
-              },
-            ],
-          },
-        },
+      const { roomOffset, keyOffset } = allocateReservationOffset(
+        reservationDeposit,
+        roomDepositAmount,
+        keyDepositAmount
+      );
+
+      await createDepositBillAndRecord(tx, {
+        lease: created,
+        organizationId,
+        userId,
+        depositType: 'ROOM',
+        amount: roomDepositAmount,
+        offset: roomOffset,
+        reservationPaymentMethod: reservation?.paymentMethod,
       });
 
-      if (offset.greaterThan(0)) {
-        await tx.payment.create({
-          data: {
-            billId: bill.id,
-            userId,
-            type: 'DEDUCT',
-            amount: offset,
-            method: reservation?.paymentMethod || '预留定金抵扣',
-            note: '预留定金转押金',
-            status: 'COMPLETED',
-          },
-        });
-      }
-
-      await tx.deposit.create({
-        data: {
-          organizationId,
-          leaseId: created.id,
-          billId: bill.id,
-          amount: leaseData.depositAmount,
-          paidAmount: offset,
-          status: offset.greaterThan(0) ? 'PAID' : 'UNPAID',
-        },
+      await createDepositBillAndRecord(tx, {
+        lease: created,
+        organizationId,
+        userId,
+        depositType: 'KEY',
+        amount: keyDepositAmount,
+        offset: keyOffset,
+        reservationPaymentMethod: reservation?.paymentMethod,
       });
 
       if (reservation) {
@@ -222,6 +357,9 @@ export const createLeaseWithoutDeposit = async (data: {
     cycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
     rentAmount: Prisma.Decimal.Value;
     depositAmount: Prisma.Decimal.Value;
+    roomDepositAmount: Prisma.Decimal.Value;
+    keyQuantity: number;
+    keyUnitPrice: Prisma.Decimal.Value;
     waterUnitPrice: Prisma.Decimal.Value;
     powerUnitPrice: Prisma.Decimal.Value;
     autoRenew: boolean;
@@ -281,6 +419,9 @@ export const updateLease = async (
     leaseData: Partial<{
       rentAmount: Prisma.Decimal.Value;
       depositAmount: Prisma.Decimal.Value;
+      roomDepositAmount: Prisma.Decimal.Value;
+      keyQuantity: number;
+      keyUnitPrice: Prisma.Decimal.Value;
       waterUnitPrice: Prisma.Decimal.Value;
       powerUnitPrice: Prisma.Decimal.Value;
     }>;
@@ -304,17 +445,68 @@ export const updateLease = async (
         data: data.fees.map((fee) => ({ ...fee, leaseId })),
       });
     }
-    if (data.leaseData.depositAmount !== undefined) {
-      const deposit = await tx.deposit.findUnique({
-        where: { leaseId },
-      });
-      if (deposit && deposit.status === 'UNPAID') {
+
+    const currentLease = await tx.lease.findUnique({
+      where: { id: leaseId },
+      select: {
+        keyQuantity: true,
+        keyUnitPrice: true,
+      },
+    });
+    if (!currentLease) throw new Error('租约不存在');
+
+    const currentDeposits = await tx.deposit.findMany({ where: { leaseId } });
+    const roomDeposit = currentDeposits.find((d) => d.type === 'ROOM');
+    const keyDeposit = currentDeposits.find((d) => d.type === 'KEY');
+
+    if (data.leaseData.roomDepositAmount !== undefined) {
+      const newRoomAmount = new Prisma.Decimal(
+        data.leaseData.roomDepositAmount
+      );
+      if (
+        roomDeposit &&
+        roomDeposit.status === 'UNPAID' &&
+        roomDeposit.billId
+      ) {
         await tx.deposit.update({
-          where: { leaseId },
-          data: { amount: data.leaseData.depositAmount },
+          where: { id: roomDeposit.id },
+          data: { amount: newRoomAmount },
+        });
+        await tx.billItem.updateMany({
+          where: { billId: roomDeposit.billId },
+          data: { amount: newRoomAmount, status: 'UNPAID' },
+        });
+        await tx.bill.update({
+          where: { id: roomDeposit.billId },
+          data: { totalAmount: newRoomAmount, paidAmount: 0, status: 'UNPAID' },
         });
       }
     }
+
+    if (
+      data.leaseData.keyQuantity !== undefined ||
+      data.leaseData.keyUnitPrice !== undefined
+    ) {
+      const newKeyAmount = calculateKeyDepositAmount(
+        data.leaseData.keyQuantity ?? currentLease.keyQuantity,
+        data.leaseData.keyUnitPrice ?? currentLease.keyUnitPrice
+      );
+      if (keyDeposit && keyDeposit.status === 'UNPAID' && keyDeposit.billId) {
+        await tx.deposit.update({
+          where: { id: keyDeposit.id },
+          data: { amount: newKeyAmount },
+        });
+        await tx.billItem.updateMany({
+          where: { billId: keyDeposit.billId },
+          data: { amount: newKeyAmount, status: 'UNPAID' },
+        });
+        await tx.bill.update({
+          where: { id: keyDeposit.billId },
+          data: { totalAmount: newKeyAmount, paidAmount: 0, status: 'UNPAID' },
+        });
+      }
+    }
+
     return tx.lease.update({
       where: { id: leaseId },
       data: data.leaseData,
@@ -354,68 +546,48 @@ export const activateLease = async (data: {
   return prisma.$transaction(async (tx) => {
     const lease = await tx.lease.findUniqueOrThrow({
       where: { id: leaseId },
-      include: { fees: true },
+      include: { fees: true, room: { include: { apartment: true } } },
     });
 
-    if (lease.depositAmount.greaterThan(0)) {
+    const roomDepositAmount = new Prisma.Decimal(lease.roomDepositAmount);
+    const keyDepositAmount = calculateKeyDepositAmount(
+      lease.keyQuantity,
+      lease.keyUnitPrice
+    );
+
+    if (roomDepositAmount.greaterThan(0) || keyDepositAmount.greaterThan(0)) {
       const reservation = await tx.reservation.findUnique({
         where: { roomId: lease.roomId },
       });
-      const offset =
+      const reservationDeposit =
         reservation && reservation.deposit.greaterThan(0)
           ? reservation.deposit
           : new Prisma.Decimal(0);
-      const netDeposit = new Prisma.Decimal(lease.depositAmount).minus(offset);
 
-      const bill = await tx.bill.create({
-        data: {
-          organizationId,
-          leaseId: lease.id,
-          mode: 'DEPOSIT',
-          billingDate: startOfLeaseDay(lease.startDate).toDate(),
-          periodStart: startOfLeaseDay(lease.startDate).toDate(),
-          periodEnd: startOfLeaseDay(lease.endDate).toDate(),
-          dueDate: startOfLeaseDay(lease.startDate).toDate(),
-          status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
-          totalAmount: netDeposit,
-          paidAmount: offset,
-          note: offset.greaterThan(0) ? '预留定金已抵扣' : undefined,
-          items: {
-            create: [
-              {
-                type: 'DEPOSIT',
-                name: offset.greaterThan(0) ? '押金（预留定金已抵扣）' : '押金',
-                amount: netDeposit,
-                status: netDeposit.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
-              },
-            ],
-          },
-        },
+      const { roomOffset, keyOffset } = allocateReservationOffset(
+        reservationDeposit,
+        roomDepositAmount,
+        keyDepositAmount
+      );
+
+      await createDepositBillAndRecord(tx, {
+        lease,
+        organizationId,
+        userId,
+        depositType: 'ROOM',
+        amount: roomDepositAmount,
+        offset: roomOffset,
+        reservationPaymentMethod: reservation?.paymentMethod,
       });
 
-      if (offset.greaterThan(0)) {
-        await tx.payment.create({
-          data: {
-            billId: bill.id,
-            userId,
-            type: 'DEDUCT',
-            amount: offset,
-            method: reservation?.paymentMethod || '预留定金抵扣',
-            note: '预留定金转押金',
-            status: 'COMPLETED',
-          },
-        });
-      }
-
-      await tx.deposit.create({
-        data: {
-          organizationId,
-          leaseId: lease.id,
-          billId: bill.id,
-          amount: lease.depositAmount,
-          paidAmount: offset,
-          status: offset.greaterThan(0) ? 'PAID' : 'UNPAID',
-        },
+      await createDepositBillAndRecord(tx, {
+        lease,
+        organizationId,
+        userId,
+        depositType: 'KEY',
+        amount: keyDepositAmount,
+        offset: keyOffset,
+        reservationPaymentMethod: reservation?.paymentMethod,
       });
 
       if (reservation) {

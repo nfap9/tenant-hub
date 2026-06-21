@@ -135,7 +135,7 @@ export const listRooms = async (organizationId: string) => {
         where: { status: 'ACTIVE' },
         include: {
           fees: true,
-          deposit: true,
+          deposits: true,
           bills: {
             select: { id: true, status: true, billingDate: true },
           },
@@ -202,7 +202,7 @@ export const getRoomById = async (roomId: string, organizationId: string) => {
         where: { status: 'ACTIVE' },
         include: {
           fees: true,
-          deposit: true,
+          deposits: true,
           bills: {
             select: { id: true, status: true, billingDate: true },
           },
@@ -234,7 +234,7 @@ export const getRoomByIdRaw = async (
       reservation: true,
       leases: {
         where: { status: 'ACTIVE', deletedAt: null },
-        include: { fees: true, deposit: true },
+        include: { fees: true, deposits: true },
       },
       meterReadings: {
         orderBy: { readingDate: 'desc' },

@@ -10,7 +10,12 @@ import EmptyState from '@/components/ui/EmptyState';
 import PaymentDialog from '@/components/PaymentDialog';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
-import type { Deposit, DepositStatus, Payment } from '@/types/domain';
+import type {
+  Deposit,
+  DepositStatus,
+  DepositType,
+  Payment,
+} from '@/types/domain';
 import styles from './DepositDetailPage.module.scss';
 
 const statusLabels: Record<DepositStatus, string> = {
@@ -19,6 +24,11 @@ const statusLabels: Record<DepositStatus, string> = {
   PARTIAL_REFUNDED: '部分退还',
   FULLY_REFUNDED: '已全额退还',
   DEDUCTED: '已扣款',
+};
+
+const typeLabels: Record<DepositType, string> = {
+  ROOM: '房间押金',
+  KEY: '钥匙押金',
 };
 
 const statusColors: Record<DepositStatus, string> = {
@@ -125,6 +135,11 @@ export default function DepositDetailPage() {
               }
             >
               <Row gutter={[24, 0]}>
+                <Col span={8}>
+                  <DetailItem label="类型">
+                    {typeLabels[deposit.type]}
+                  </DetailItem>
+                </Col>
                 <Col span={8}>
                   <DetailItem label="租客">
                     {deposit.lease?.tenantName}

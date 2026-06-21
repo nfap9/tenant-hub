@@ -426,6 +426,18 @@ export async function executeApiAction(
         ...f,
         amount: new Prisma.Decimal(f.amount),
       }));
+      const roomDepositAmount = new Prisma.Decimal(
+        Number(validatedBody.roomDepositAmount ?? 0)
+      );
+      const keyQuantity = Number(validatedBody.keyQuantity ?? 0);
+      const keyUnitPrice = new Prisma.Decimal(
+        Number(validatedBody.keyUnitPrice ?? 0)
+      );
+      const keyDepositAmount = new Prisma.Decimal(keyQuantity).mul(
+        keyUnitPrice
+      );
+      const depositAmount = roomDepositAmount.plus(keyDepositAmount);
+
       const leaseData = {
         tenantName: validatedBody.tenantName as string,
         tenantPhone: validatedBody.tenantPhone as string,
@@ -433,9 +445,10 @@ export async function executeApiAction(
         endDate: new Date(validatedBody.endDate as string),
         cycle: validatedBody.cycle as 'MONTHLY' | 'QUARTERLY' | 'YEARLY',
         rentAmount: new Prisma.Decimal(Number(validatedBody.rentAmount)),
-        depositAmount: new Prisma.Decimal(
-          Number(validatedBody.depositAmount ?? 0)
-        ),
+        depositAmount,
+        roomDepositAmount,
+        keyQuantity,
+        keyUnitPrice,
         waterUnitPrice: new Prisma.Decimal(
           Number(validatedBody.waterUnitPrice)
         ),
@@ -446,20 +459,15 @@ export async function executeApiAction(
         status: (validatedBody.status as 'DRAFT' | 'ACTIVE') ?? 'ACTIVE',
       };
 
-      if (Number(validatedBody.depositAmount ?? 0) > 0) {
-        return createLeaseWithDeposit({
-          leaseData,
-          roomId: validatedBody.roomId as string,
-          organizationId: ctx.organizationId,
-          userId: ctx.userId,
-          fees,
-        });
-      }
+      const createFn = depositAmount.greaterThan(0)
+        ? createLeaseWithDeposit
+        : createLeaseWithoutDeposit;
 
-      return createLeaseWithoutDeposit({
+      return createFn({
         leaseData,
         roomId: validatedBody.roomId as string,
         organizationId: ctx.organizationId,
+        userId: ctx.userId,
         fees,
       });
     }
@@ -608,6 +616,21 @@ export async function executeApiAction(
           penaltyReason: validatedBody.penaltyReason as string | undefined,
           compensationAmount: Number(validatedBody.compensationAmount ?? 0),
           compensationReason: validatedBody.compensationReason as
+            | string
+            | undefined,
+          roomDepositRefundAmount: Number(
+            validatedBody.roomDepositRefundAmount ?? 0
+          ),
+          keyDepositRefundAmount: Number(
+            validatedBody.keyDepositRefundAmount ?? 0
+          ),
+          roomDepositDeductionAmount: Number(
+            validatedBody.roomDepositDeductionAmount ?? 0
+          ),
+          keyDepositDeductionAmount: Number(
+            validatedBody.keyDepositDeductionAmount ?? 0
+          ),
+          depositDeductionReason: validatedBody.depositDeductionReason as
             | string
             | undefined,
         },

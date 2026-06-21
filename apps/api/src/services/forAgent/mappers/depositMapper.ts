@@ -16,6 +16,7 @@ export function toAgentDepositSummary(deposit: DepositWithRelations) {
     tenantName: deposit.lease.tenantName,
     roomNo: deposit.lease.room.roomNo,
     apartmentName: deposit.lease.room.apartment.name,
+    type: deposit.type,
     amount: Number(deposit.amount),
     paidAmount: Number(deposit.paidAmount),
     refundedAmount: Number(deposit.refundedAmount),

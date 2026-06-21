@@ -75,9 +75,20 @@ export default function DepositsPage() {
                   <Text className="deposit-room">
                     {deposit.lease?.room?.roomNo || '-'}
                   </Text>
-                  <Badge tone={statusToneMap[deposit.status] as any}>
-                    {statusLabels[deposit.status]}
-                  </Badge>
+                  <View
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Text className="text-muted">
+                      {deposit.type === 'ROOM' ? '房间押金' : '钥匙押金'}
+                    </Text>
+                    <Badge tone={statusToneMap[deposit.status] as any}>
+                      {statusLabels[deposit.status]}
+                    </Badge>
+                  </View>
                 </View>
                 <View className="deposit-body">
                   <View className="deposit-row">

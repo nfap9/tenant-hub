@@ -15,7 +15,9 @@ export async function createLease(
     endDate: string;
     cycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
     rentAmount: number;
-    depositAmount?: number;
+    roomDepositAmount?: number;
+    keyQuantity?: number;
+    keyUnitPrice?: number;
     waterUnitPrice: number;
     powerUnitPrice: number;
     autoRenew?: boolean;
@@ -40,7 +42,9 @@ export async function updateLease(
   leaseId: string,
   payload: {
     rentAmount?: number;
-    depositAmount?: number;
+    roomDepositAmount?: number;
+    keyQuantity?: number;
+    keyUnitPrice?: number;
     waterUnitPrice?: number;
     powerUnitPrice?: number;
     fees?: Array<{
@@ -80,6 +84,11 @@ export async function terminateLease(
     penaltyReason?: string;
     compensationAmount?: number;
     compensationReason?: string;
+    roomDepositRefundAmount?: number;
+    keyDepositRefundAmount?: number;
+    roomDepositDeductionAmount?: number;
+    keyDepositDeductionAmount?: number;
+    depositDeductionReason?: string;
   }
 ) {
   return apiClient<{ netAmount: number }>(`/leases/${leaseId}/terminate`, {

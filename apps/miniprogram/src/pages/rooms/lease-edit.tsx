@@ -26,7 +26,9 @@ export default function LeaseEditPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [form, setForm] = useState({
     rentAmount: '',
-    depositAmount: '',
+    roomDepositAmount: '',
+    keyQuantity: '0',
+    keyUnitPrice: '0',
     waterUnitPrice: '0',
     powerUnitPrice: '0',
   });
@@ -61,7 +63,9 @@ export default function LeaseEditPage() {
     if (lease && !initializedRef.current) {
       setForm({
         rentAmount: String(lease.rentAmount ?? ''),
-        depositAmount: String(lease.depositAmount ?? ''),
+        roomDepositAmount: String(lease.roomDepositAmount ?? ''),
+        keyQuantity: String(lease.keyQuantity ?? 0),
+        keyUnitPrice: String(lease.keyUnitPrice ?? 0),
         waterUnitPrice: String(lease.waterUnitPrice ?? 0),
         powerUnitPrice: String(lease.powerUnitPrice ?? 0),
       });
@@ -134,9 +138,11 @@ export default function LeaseEditPage() {
     try {
       await updateLease(currentOrgId, lease.id, {
         rentAmount: Number(form.rentAmount),
-        depositAmount: form.depositAmount
-          ? Number(form.depositAmount)
+        roomDepositAmount: form.roomDepositAmount
+          ? Number(form.roomDepositAmount)
           : undefined,
+        keyQuantity: Number(form.keyQuantity || 0),
+        keyUnitPrice: Number(form.keyUnitPrice || 0),
         waterUnitPrice: Number(form.waterUnitPrice),
         powerUnitPrice: Number(form.powerUnitPrice),
         fees: buildLeaseFeesPayload(fees),
@@ -175,11 +181,27 @@ export default function LeaseEditPage() {
             onChange={(value) => updateForm('rentAmount', value)}
           />
           <Input
-            label="押金"
-            placeholder="请输入押金"
+            label="房间押金"
+            placeholder="请输入房间押金"
             type="number"
-            value={form.depositAmount}
-            onChange={(value) => updateForm('depositAmount', value)}
+            value={form.roomDepositAmount}
+            onChange={(value) => updateForm('roomDepositAmount', value)}
+          />
+        </View>
+        <View className="form-grid">
+          <Input
+            label="钥匙数量"
+            placeholder="套"
+            type="number"
+            value={form.keyQuantity}
+            onChange={(value) => updateForm('keyQuantity', value)}
+          />
+          <Input
+            label="钥匙单价"
+            placeholder="元/套"
+            type="number"
+            value={form.keyUnitPrice}
+            onChange={(value) => updateForm('keyUnitPrice', value)}
           />
         </View>
         <View className="form-grid">

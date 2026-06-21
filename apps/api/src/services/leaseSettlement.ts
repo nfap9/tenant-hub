@@ -11,7 +11,12 @@ import {
 type DecimalValue = Prisma.Decimal.Value;
 
 type SettlementCalculationInput = {
-  depositPaidAmount: DecimalValue;
+  roomDepositPaidAmount: DecimalValue;
+  keyDepositPaidAmount: DecimalValue;
+  roomDepositRefundAmount: DecimalValue;
+  keyDepositRefundAmount: DecimalValue;
+  roomDepositDeductionAmount: DecimalValue;
+  keyDepositDeductionAmount: DecimalValue;
   rentAdjustmentAmount: DecimalValue;
   previousWater: DecimalValue;
   currentWater: DecimalValue;
@@ -57,7 +62,37 @@ export const calculateSettlementAmounts = (
 ) => {
   validateMoveOutReadings(input);
 
-  const depositPaidAmount = new Prisma.Decimal(input.depositPaidAmount);
+  const roomDepositPaidAmount = new Prisma.Decimal(input.roomDepositPaidAmount);
+  const keyDepositPaidAmount = new Prisma.Decimal(input.keyDepositPaidAmount);
+
+  const roomDepositRefundAmount = new Prisma.Decimal(
+    input.roomDepositRefundAmount
+  );
+  const keyDepositRefundAmount = new Prisma.Decimal(
+    input.keyDepositRefundAmount
+  );
+  const roomDepositDeductionAmount = new Prisma.Decimal(
+    input.roomDepositDeductionAmount
+  );
+  const keyDepositDeductionAmount = new Prisma.Decimal(
+    input.keyDepositDeductionAmount
+  );
+
+  const roomRefund = roomDepositRefundAmount.lessThanOrEqualTo(
+    roomDepositPaidAmount
+  )
+    ? roomDepositRefundAmount
+    : roomDepositPaidAmount;
+  const keyRefund = keyDepositRefundAmount.lessThanOrEqualTo(
+    keyDepositPaidAmount
+  )
+    ? keyDepositRefundAmount
+    : keyDepositPaidAmount;
+
+  const depositRefundAmount = roomRefund.plus(keyRefund);
+  const depositDeductionAmount = roomDepositDeductionAmount.plus(
+    keyDepositDeductionAmount
+  );
 
   const rentAdjustmentAmount = new Prisma.Decimal(input.rentAdjustmentAmount);
   const utilityAmount = calculateUtilityAmount(input);
@@ -65,7 +100,6 @@ export const calculateSettlementAmounts = (
   const penaltyAmount = new Prisma.Decimal(input.penaltyAmount ?? 0);
   const compensationAmount = new Prisma.Decimal(input.compensationAmount ?? 0);
 
-  const depositRefundAmount = depositPaidAmount;
   const rentReceivable = rentAdjustmentAmount.greaterThan(0)
     ? rentAdjustmentAmount
     : new Prisma.Decimal(0);
@@ -76,13 +110,17 @@ export const calculateSettlementAmounts = (
     .plus(utilityAmount)
     .plus(otherFeeAmount)
     .plus(penaltyAmount)
-    .plus(compensationAmount);
-  const refundableAmount = depositPaidAmount.plus(rentRefund);
+    .plus(compensationAmount)
+    .plus(depositDeductionAmount);
+  const refundableAmount = depositRefundAmount.plus(rentRefund);
   const netAmount = receivableAmount.minus(refundableAmount);
 
   return {
     utilityAmount,
     depositRefundAmount,
+    depositDeductionAmount,
+    roomDepositRefundAmount: roomRefund,
+    keyDepositRefundAmount: keyRefund,
     receivableAmount,
     refundableAmount,
     netAmount,
@@ -177,11 +215,16 @@ export const createLeaseSettlement = async ({
     penaltyReason?: string;
     compensationAmount: DecimalValue;
     compensationReason?: string;
+    roomDepositRefundAmount?: DecimalValue;
+    keyDepositRefundAmount?: DecimalValue;
+    roomDepositDeductionAmount?: DecimalValue;
+    keyDepositDeductionAmount?: DecimalValue;
+    depositDeductionReason?: string;
   };
 }) => {
   const lease = await prisma.lease.findFirst({
     where: { id: leaseId, organizationId },
-    include: { room: { include: { apartment: true } }, deposit: true },
+    include: { room: { include: { apartment: true } }, deposits: true },
   });
   if (!lease) throw new HttpError(404, '租约不存在');
   if (lease.status !== 'ACTIVE')
@@ -207,12 +250,59 @@ export const createLeaseSettlement = async ({
     ),
   ]);
 
-  const depositPaidAmount = lease.deposit?.paidAmount ?? new Prisma.Decimal(0);
+  const roomDeposit =
+    lease.deposits.find((d) => d.type === 'ROOM') ??
+    ({ paidAmount: new Prisma.Decimal(0) } as const);
+  const keyDeposit =
+    lease.deposits.find((d) => d.type === 'KEY') ??
+    ({ paidAmount: new Prisma.Decimal(0) } as const);
+
+  const roomDepositPaidAmount = roomDeposit.paidAmount;
+  const keyDepositPaidAmount = keyDeposit.paidAmount;
+
+  const roomDepositRefundAmount = new Prisma.Decimal(
+    input.roomDepositRefundAmount ?? roomDepositPaidAmount
+  );
+  const keyDepositRefundAmount = new Prisma.Decimal(
+    input.keyDepositRefundAmount ?? keyDepositPaidAmount
+  );
+  const roomDepositDeductionAmount = new Prisma.Decimal(
+    input.roomDepositDeductionAmount ?? 0
+  );
+  const keyDepositDeductionAmount = new Prisma.Decimal(
+    input.keyDepositDeductionAmount ?? 0
+  );
+
+  if (roomDepositRefundAmount.greaterThan(roomDepositPaidAmount)) {
+    throw new HttpError(400, '房间押金退还金额不能超过已收房间押金');
+  }
+  if (keyDepositRefundAmount.greaterThan(keyDepositPaidAmount)) {
+    throw new HttpError(400, '钥匙押金退还金额不能超过已收钥匙押金');
+  }
+  if (
+    roomDepositDeductionAmount.greaterThan(
+      roomDepositPaidAmount.minus(roomDepositRefundAmount)
+    )
+  ) {
+    throw new HttpError(400, '房间押金扣款金额不能超过可扣余额');
+  }
+  if (
+    keyDepositDeductionAmount.greaterThan(
+      keyDepositPaidAmount.minus(keyDepositRefundAmount)
+    )
+  ) {
+    throw new HttpError(400, '钥匙押金扣款金额不能超过可扣余额');
+  }
 
   let amounts;
   try {
     amounts = calculateSettlementAmounts({
-      depositPaidAmount,
+      roomDepositPaidAmount,
+      keyDepositPaidAmount,
+      roomDepositRefundAmount,
+      keyDepositRefundAmount,
+      roomDepositDeductionAmount,
+      keyDepositDeductionAmount,
       rentAdjustmentAmount: input.rentAdjustmentAmount,
       previousWater,
       currentWater: input.currentWater,
@@ -264,7 +354,9 @@ export const createLeaseSettlement = async ({
     )
       ? new Prisma.Decimal(input.rentAdjustmentAmount).abs()
       : new Prisma.Decimal(0);
-    const depositRefund = amounts.depositRefundAmount;
+    const roomDepositRefund = amounts.roomDepositRefundAmount;
+    const keyDepositRefund = amounts.keyDepositRefundAmount;
+    const depositDeduction = amounts.depositDeductionAmount;
     const utilityAmount = amounts.utilityAmount;
     const otherFeeAmount = new Prisma.Decimal(input.otherFeeAmount);
     const penaltyAmount = new Prisma.Decimal(input.penaltyAmount);
@@ -303,11 +395,25 @@ export const createLeaseSettlement = async ({
         amount: rentRefund,
       });
     }
-    if (depositRefund.greaterThan(0)) {
+    if (roomDepositRefund.greaterThan(0)) {
       billItems.push({
         type: 'DEPOSIT',
-        name: '退租押金退款',
-        amount: depositRefund,
+        name: '房间押金退款',
+        amount: roomDepositRefund,
+      });
+    }
+    if (keyDepositRefund.greaterThan(0)) {
+      billItems.push({
+        type: 'DEPOSIT',
+        name: '钥匙押金退款',
+        amount: keyDepositRefund,
+      });
+    }
+    if (depositDeduction.greaterThan(0)) {
+      billItems.push({
+        type: 'DEPOSIT',
+        name: '押金扣款',
+        amount: depositDeduction,
       });
     }
     if (penaltyAmount.greaterThan(0)) {
@@ -356,6 +462,11 @@ export const createLeaseSettlement = async ({
       },
     });
 
+    const roomDepositAmount = new Prisma.Decimal(lease.roomDepositAmount);
+    const keyDepositAmount = new Prisma.Decimal(lease.keyQuantity).mul(
+      new Prisma.Decimal(lease.keyUnitPrice)
+    );
+
     const settlement = await tx.leaseSettlement.create({
       data: {
         organizationId,
@@ -365,8 +476,15 @@ export const createLeaseSettlement = async ({
         type: input.type,
         reason: input.reason,
         terminatedAt: input.terminatedAt,
-        depositAmount: lease.depositAmount,
+        depositAmount: roomDepositAmount.plus(keyDepositAmount),
+        roomDepositAmount,
+        keyDepositAmount,
+        roomDepositRefundAmount,
+        keyDepositRefundAmount,
+        roomDepositDeductionAmount,
+        keyDepositDeductionAmount,
         depositRefundAmount: amounts.depositRefundAmount,
+        depositDeductionReason: input.depositDeductionReason,
         rentAdjustmentAmount: input.rentAdjustmentAmount,
         previousWater,
         currentWater: input.currentWater,
@@ -389,25 +507,59 @@ export const createLeaseSettlement = async ({
     });
 
     // 更新押金记录
-    if (lease.deposit) {
-      const newRefunded = new Prisma.Decimal(lease.deposit.refundedAmount).plus(
-        amounts.depositRefundAmount
-      );
-      let depositStatus: DepositStatus = 'PAID';
-      if (
-        newRefunded.greaterThan(0) &&
-        newRefunded.lessThan(lease.deposit.paidAmount)
-      ) {
-        depositStatus = 'PARTIAL_REFUNDED';
-      } else if (newRefunded.greaterThanOrEqualTo(lease.deposit.paidAmount)) {
-        depositStatus = 'FULLY_REFUNDED';
-      }
+    const updateDepositStatus = (
+      paid: Prisma.Decimal,
+      refunded: Prisma.Decimal,
+      deducted: Prisma.Decimal
+    ): DepositStatus => {
+      if (paid.equals(0)) return 'UNPAID';
+      const used = refunded.plus(deducted);
+      if (used.greaterThan(0) && used.lessThan(paid)) return 'PARTIAL_REFUNDED';
+      if (refunded.greaterThan(0) && refunded.greaterThanOrEqualTo(paid))
+        return 'FULLY_REFUNDED';
+      if (deducted.greaterThan(0) && deducted.greaterThanOrEqualTo(paid))
+        return 'DEDUCTED';
+      return 'PAID';
+    };
 
+    if (roomDeposit && 'id' in roomDeposit) {
+      const newRefunded = new Prisma.Decimal(roomDeposit.refundedAmount).plus(
+        roomDepositRefundAmount
+      );
+      const newDeducted = new Prisma.Decimal(roomDeposit.deductedAmount).plus(
+        roomDepositDeductionAmount
+      );
       await tx.deposit.update({
-        where: { id: lease.deposit.id },
+        where: { id: roomDeposit.id },
         data: {
           refundedAmount: newRefunded,
-          status: depositStatus,
+          deductedAmount: newDeducted,
+          status: updateDepositStatus(
+            roomDeposit.paidAmount,
+            newRefunded,
+            newDeducted
+          ),
+        },
+      });
+    }
+
+    if (keyDeposit && 'id' in keyDeposit) {
+      const newRefunded = new Prisma.Decimal(keyDeposit.refundedAmount).plus(
+        keyDepositRefundAmount
+      );
+      const newDeducted = new Prisma.Decimal(keyDeposit.deductedAmount).plus(
+        keyDepositDeductionAmount
+      );
+      await tx.deposit.update({
+        where: { id: keyDeposit.id },
+        data: {
+          refundedAmount: newRefunded,
+          deductedAmount: newDeducted,
+          status: updateDepositStatus(
+            keyDeposit.paidAmount,
+            newRefunded,
+            newDeducted
+          ),
         },
       });
     }
