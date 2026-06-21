@@ -12,6 +12,7 @@ import {
 } from 'antd';
 import LeaseEditDrawer from './LeaseEditDrawer';
 import LeaseFormDrawer from './LeaseFormDrawer';
+import RoomFormDrawer from './RoomFormDrawer';
 import {
   EditOutlined,
   DeleteOutlined,
@@ -55,6 +56,7 @@ export default function RoomDetailPage() {
   const [terminateDrawerOpen, setTerminateDrawerOpen] = useState(false);
   const [leaseDrawerOpen, setLeaseDrawerOpen] = useState(false);
   const [leaseEditDrawerOpen, setLeaseEditDrawerOpen] = useState(false);
+  const [roomFormOpen, setRoomFormOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId || !id) return;
@@ -179,7 +181,7 @@ export default function RoomDetailPage() {
                     )}
                     <Button
                       icon={<EditOutlined />}
-                      onClick={() => navigate(`/rooms/${room.id}/edit`)}
+                      onClick={() => setRoomFormOpen(true)}
                     >
                       编辑
                     </Button>
@@ -433,6 +435,15 @@ export default function RoomDetailPage() {
         )}
       </Spin>
 
+      <RoomFormDrawer
+        open={roomFormOpen}
+        roomId={room?.id ?? ''}
+        onCancel={() => setRoomFormOpen(false)}
+        onSuccess={() => {
+          setRoomFormOpen(false);
+          loadData();
+        }}
+      />
       <LeaseFormDrawer
         open={leaseDrawerOpen}
         roomId={room?.id ?? ''}
