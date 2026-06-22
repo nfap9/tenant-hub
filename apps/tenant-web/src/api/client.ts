@@ -6,6 +6,7 @@ export type ApiOptions = {
   body?: Record<string, unknown>;
   headers?: Record<string, string>;
   organizationId?: string;
+  responseType?: 'json' | 'text';
 };
 
 export type Session = {
@@ -64,7 +65,8 @@ export async function apiClient<T>(
   });
 
   const text = await response.text();
-  const body = text ? JSON.parse(text) : {};
+  const isText = options.responseType === 'text';
+  const body = isText ? text : text ? JSON.parse(text) : {};
 
   if (response.status === 401) {
     clearSession();
@@ -82,5 +84,5 @@ export async function apiClient<T>(
     throw new Error(body.error || `请求失败 (${response.status})`);
   }
 
-  return body.data as T;
+  return (isText ? body : body.data) as T;
 }

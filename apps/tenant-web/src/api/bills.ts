@@ -59,7 +59,10 @@ export async function recordUtilityReading(
 }
 
 export async function exportUtilityPendingCsv(organizationId: string) {
-  return apiClient<string>('/bills/utility/pending-export', { organizationId });
+  return apiClient<string>('/bills/utility/pending-export', {
+    organizationId,
+    responseType: 'text',
+  });
 }
 
 export async function importUtilityCsv(
