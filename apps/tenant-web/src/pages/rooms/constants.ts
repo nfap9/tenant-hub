@@ -98,7 +98,15 @@ export const emptyLeaseForm = {
   waterUnitPrice: '0',
   powerUnitPrice: '0',
   autoRenew: true,
-  generateHistoricalBills: false,
+  historicalBills: [] as {
+    billingDate: string;
+    currentWater: number;
+    currentPower: number;
+    settled: boolean;
+  }[],
+  historicalBaseWater: 0,
+  historicalBasePower: 0,
+  depositSettled: false,
 };
 
 export const emptyEditLeaseForm = {

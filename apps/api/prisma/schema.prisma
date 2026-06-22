@@ -335,6 +335,7 @@ model Bill {
   totalAmount    Decimal          @default(0) @db.Decimal(12, 2)
   paidAmount     Decimal          @default(0) @db.Decimal(12, 2)
   note           String?
+  depositType    String           @default("NONE")
   failureReason  String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -347,7 +348,7 @@ model Bill {
   payments       Payment[]
   transactions   Transaction[]
 
-  @@unique([leaseId, billingDate, mode])
+  @@unique([leaseId, billingDate, mode, depositType])
   @@index([organizationId, status])
   @@index([leaseId, billingDate])
 }

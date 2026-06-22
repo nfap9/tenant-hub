@@ -17,7 +17,15 @@ export async function createLease(
     waterUnitPrice?: number;
     powerUnitPrice?: number;
     autoRenew?: boolean;
-    generateHistoricalBills?: boolean;
+    historicalBills?: Array<{
+      billingDate: string;
+      currentWater: number;
+      currentPower: number;
+      settled: boolean;
+    }>;
+    historicalBaseWater?: number;
+    historicalBasePower?: number;
+    depositSettled?: boolean;
     fees?: Array<{ type: string; name: string; amount: number }>;
   }
 ) {

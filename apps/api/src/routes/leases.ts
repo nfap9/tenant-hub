@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
   requireOrg,
   requirePermission,
 } from '../middleware/auth.js';
-import { generateLeaseBills } from '../services/billing.js';
+import {
+  generateLeaseBills,
+  generateHistoricalLeaseBills,
+  recordBillPayment,
+} from '../services/billing.js';
 import {
   assertExpiredTerminationAllowed,
   startOfLeaseDay,
@@ -75,10 +80,36 @@ export const createLeaseInput = z
       )
       .default([])
       .describe('附加费用列表'),
-    generateHistoricalBills: z
-      .boolean()
-      .default(false)
-      .describe('是否补发生成历史账单'),
+    historicalBills: z
+      .array(
+        z.object({
+          billingDate: z.coerce.date().describe('历史账单计费日'),
+          currentWater: z.coerce
+            .number()
+            .min(0)
+            .default(0)
+            .describe('期末水表读数'),
+          currentPower: z.coerce
+            .number()
+            .min(0)
+            .default(0)
+            .describe('期末电表读数'),
+          settled: z.boolean().default(false).describe('该期是否已结清'),
+        })
+      )
+      .default([])
+      .describe('历史账单列表'),
+    historicalBaseWater: z.coerce
+      .number()
+      .min(0)
+      .default(0)
+      .describe('历史水表底数'),
+    historicalBasePower: z.coerce
+      .number()
+      .min(0)
+      .default(0)
+      .describe('历史电表底数'),
+    depositSettled: z.boolean().default(false).describe('押金是否已结清'),
   })
   .refine((data) => data.endDate >= data.startDate, {
     path: ['endDate'],
@@ -130,7 +161,15 @@ leaseRouter.post(
   asyncHandler(async (req, res) => {
     const input = createLeaseInput.parse(req.body);
 
-    const { fees, roomId, generateHistoricalBills, ...leaseData } = input;
+    const {
+      fees,
+      roomId,
+      historicalBills,
+      historicalBaseWater,
+      historicalBasePower,
+      depositSettled,
+      ...leaseData
+    } = input;
     const room = await findRoomById(roomId, req.organizationId!);
     if (!room) throw new HttpError(404, '房间不存在');
 
@@ -180,9 +219,46 @@ leaseRouter.post(
         startOfLeaseDay(new Date()),
         'day'
       );
+
       await generateLeaseBills(lease.id, new Date(), {
-        onlyCurrentPeriod: isHistorical && !generateHistoricalBills,
+        onlyCurrentPeriod: true,
       });
+
+      if (isHistorical && historicalBills.length > 0) {
+        await generateHistoricalLeaseBills(
+          lease.id,
+          historicalBills.map((row) => ({
+            ...row,
+            currentWater: Number(row.currentWater),
+            currentPower: Number(row.currentPower),
+          })),
+          {
+            baseWater: Number(historicalBaseWater),
+            basePower: Number(historicalBasePower),
+          },
+          req.user!.id
+        );
+      }
+
+      if (depositSettled && lease.deposits) {
+        const method = '历史结清';
+        const note = '签约时押金已结清';
+        for (const deposit of lease.deposits) {
+          if (!deposit.billId) continue;
+          const bill = await prisma.bill.findUnique({
+            where: { id: deposit.billId },
+          });
+          if (!bill || bill.status === 'PAID') continue;
+          await recordBillPayment({
+            billId: bill.id,
+            organizationId: req.organizationId!,
+            userId: req.user!.id,
+            amount: bill.totalAmount,
+            method,
+            note,
+          });
+        }
+      }
     }
 
     ok(res, withLeaseLifecycle(lease));

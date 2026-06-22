@@ -82,6 +82,7 @@ async function createDepositBillAndRecord(
       organizationId,
       leaseId: lease.id,
       mode: 'DEPOSIT',
+      depositType,
       billingDate: startOfLeaseDay(lease.startDate).toDate(),
       periodStart: startOfLeaseDay(lease.startDate).toDate(),
       periodEnd: startOfLeaseDay(lease.endDate).toDate(),

@@ -632,6 +632,123 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
   });
 };
 
+type LeaseWithRoomAndFees = Prisma.LeaseGetPayload<{
+  include: { fees: true; room: { include: { apartment: true } } };
+}>;
+
+/**
+ * 为指定计费日生成预付账单，必要时生成后付费账单
+ * @param lease - 租约对象（含费用、房间、公寓）
+ * @param billingDate - 计费日
+ * @param billingEnd - 账单生成截止日期
+ * @returns 生成的预付账单与可选的后付费账单
+ */
+const generateBillForBillingDate = async (
+  lease: LeaseWithRoomAndFees,
+  billingDate: Date,
+  billingEnd: Date
+) => {
+  const periods = calculateBillingPeriods({
+    leaseStartDate: lease.startDate,
+    leaseEndDate: billingEnd,
+    cycle: lease.cycle,
+    billingDate,
+  });
+  const dueDate = startOfDay(billingDate).toDate();
+  const prepaid = await prisma.bill.upsert({
+    where: {
+      leaseId_billingDate_mode_depositType: {
+        leaseId: lease.id,
+        billingDate: startOfDay(billingDate).toDate(),
+        mode: 'PREPAID',
+        depositType: 'NONE',
+      },
+    },
+    create: {
+      organizationId: lease.organizationId,
+      leaseId: lease.id,
+      mode: 'PREPAID',
+      billingDate: startOfDay(billingDate).toDate(),
+      periodStart: periods.prepaid.start,
+      periodEnd: periods.prepaid.end,
+      dueDate,
+      status: 'UNPAID',
+      items: {
+        create: [
+          {
+            type: 'RENT',
+            name: '房租',
+            amount: lease.rentAmount,
+            status: 'UNPAID',
+          },
+          ...lease.fees.map((fee) => ({
+            type:
+              fee.type === 'OTHER' ? classifyFeeItemType(fee.name) : fee.type,
+            name: fee.name,
+            amount: fee.amount,
+            status: 'UNPAID' as const,
+          })),
+        ],
+      },
+    },
+    update: {},
+  });
+  await refreshBillTotals(prepaid.id);
+
+  let postpaid: Awaited<ReturnType<typeof prisma.bill.upsert>> | undefined;
+  if (
+    shouldGeneratePostpaidBill({
+      leaseStartDate: lease.startDate,
+      billingDate,
+    })
+  ) {
+    postpaid = await prisma.bill.upsert({
+      where: {
+        leaseId_billingDate_mode_depositType: {
+          leaseId: lease.id,
+          billingDate: startOfDay(billingDate).toDate(),
+          mode: 'POSTPAID',
+          depositType: 'NONE',
+        },
+      },
+      create: {
+        organizationId: lease.organizationId,
+        leaseId: lease.id,
+        mode: 'POSTPAID',
+        billingDate: startOfDay(billingDate).toDate(),
+        periodStart: periods.postpaid.start,
+        periodEnd: periods.postpaid.end,
+        dueDate,
+        status: 'BILLING',
+        items: {
+          create: [
+            {
+              type: 'WATER',
+              name: '水费',
+              amount: 0,
+              status: 'BILLING',
+              waterUnitPrice: lease.waterUnitPrice,
+            },
+            {
+              type: 'POWER',
+              name: '电费',
+              amount: 0,
+              status: 'BILLING',
+              powerUnitPrice: lease.powerUnitPrice,
+            },
+          ],
+        },
+      },
+      update: {},
+    });
+    if (postpaid.status === 'BILLING' || postpaid.status === 'FAILED') {
+      await completePostpaidBillFromReadings(postpaid.id);
+    }
+  }
+
+  return { prepaid, postpaid };
+};
+
 /**
  * 为租约生成账单
  * @param leaseId - 租约 ID
@@ -670,105 +787,195 @@ export const generateLeaseBills = async (
   const generatedIds: string[] = [];
 
   for (const billingDate of datesToGenerate) {
+    const { prepaid, postpaid } = await generateBillForBillingDate(
+      lease,
+      billingDate,
+      billingEnd
+    );
+    generatedIds.push(prepaid.id);
+    if (postpaid) {
+      generatedIds.push(postpaid.id);
+    }
+  }
+
+  return generatedIds;
+};
+
+export type HistoricalBillRow = {
+  billingDate: Date;
+  currentWater: number;
+  currentPower: number;
+  settled: boolean;
+};
+
+/**
+ * 根据用户填写的历史账单记录生成历史账单，并自动处理结清
+ * @param leaseId - 租约 ID
+ * @param rows - 历史账单行
+ * @param userId - 操作人 ID
+ * @returns 无返回值
+ */
+export const generateHistoricalLeaseBills = async (
+  leaseId: string,
+  rows: HistoricalBillRow[],
+  base: { baseWater: number; basePower: number },
+  userId: string
+) => {
+  const lease = await prisma.lease.findUnique({
+    where: { id: leaseId },
+    include: {
+      fees: true,
+      bills: true,
+      room: { include: { apartment: true } },
+    },
+  });
+  if (!lease) return;
+  if (lease.status === 'DRAFT' || lease.status === 'EXPIRED') return;
+
+  const billingEnd = getLeaseBillGenerationEnd(lease, new Date());
+  const sortedRows = [...rows].sort(
+    (a, b) =>
+      startOfDay(a.billingDate).valueOf() - startOfDay(b.billingDate).valueOf()
+  );
+
+  const leaseStart = startOfDay(lease.startDate).toDate();
+  let previousWater = base.baseWater;
+  let previousPower = base.basePower;
+
+  await prisma.meterReading.createMany({
+    data: [
+      {
+        organizationId: lease.organizationId,
+        apartmentId: lease.room.apartmentId,
+        roomId: lease.roomId,
+        leaseId: lease.id,
+        meterType: 'WATER',
+        readingDate: leaseStart,
+        value: base.baseWater,
+        source: 'MANUAL',
+        status: 'NORMAL',
+        createdById: userId,
+      },
+      {
+        organizationId: lease.organizationId,
+        apartmentId: lease.room.apartmentId,
+        roomId: lease.roomId,
+        leaseId: lease.id,
+        meterType: 'POWER',
+        readingDate: leaseStart,
+        value: base.basePower,
+        source: 'MANUAL',
+        status: 'NORMAL',
+        createdById: userId,
+      },
+    ],
+  });
+
+  for (const row of sortedRows) {
+    const billingDate = startOfDay(row.billingDate).toDate();
     const periods = calculateBillingPeriods({
       leaseStartDate: lease.startDate,
       leaseEndDate: billingEnd,
       cycle: lease.cycle,
       billingDate,
     });
-    const dueDate = startOfDay(billingDate).toDate();
-    const prepaid = await prisma.bill.upsert({
-      where: {
-        leaseId_billingDate_mode: {
-          leaseId: lease.id,
-          billingDate: startOfDay(billingDate).toDate(),
-          mode: 'PREPAID',
-        },
-      },
-      create: {
-        organizationId: lease.organizationId,
-        leaseId: lease.id,
-        mode: 'PREPAID',
-        billingDate: startOfDay(billingDate).toDate(),
-        periodStart: periods.prepaid.start,
-        periodEnd: periods.prepaid.end,
-        dueDate,
-        status: 'UNPAID',
-        items: {
-          create: [
-            {
-              type: 'RENT',
-              name: '房租',
-              amount: lease.rentAmount,
-              status: 'UNPAID',
-            },
-            ...lease.fees.map((fee) => ({
-              type:
-                fee.type === 'OTHER' ? classifyFeeItemType(fee.name) : fee.type,
-              name: fee.name,
-              amount: fee.amount,
-              status: 'UNPAID' as const,
-            })),
-          ],
-        },
-      },
-      update: {},
-    });
-    await refreshBillTotals(prepaid.id);
-    generatedIds.push(prepaid.id);
 
+    const readings: Prisma.MeterReadingCreateManyInput[] = [];
     if (
-      shouldGeneratePostpaidBill({
-        leaseStartDate: lease.startDate,
-        billingDate,
-      })
+      !startOfDay(periods.postpaid.start).isSame(
+        startOfDay(lease.startDate),
+        'day'
+      )
     ) {
-      const postpaid = await prisma.bill.upsert({
-        where: {
-          leaseId_billingDate_mode: {
-            leaseId: lease.id,
-            billingDate: startOfDay(billingDate).toDate(),
-            mode: 'POSTPAID',
-          },
-        },
-        create: {
+      readings.push(
+        {
           organizationId: lease.organizationId,
+          apartmentId: lease.room.apartmentId,
+          roomId: lease.roomId,
           leaseId: lease.id,
-          mode: 'POSTPAID',
-          billingDate: startOfDay(billingDate).toDate(),
-          periodStart: periods.postpaid.start,
-          periodEnd: periods.postpaid.end,
-          dueDate,
-          status: 'BILLING',
-          items: {
-            create: [
-              {
-                type: 'WATER',
-                name: '水费',
-                amount: 0,
-                status: 'BILLING',
-                waterUnitPrice: lease.waterUnitPrice,
-              },
-              {
-                type: 'POWER',
-                name: '电费',
-                amount: 0,
-                status: 'BILLING',
-                powerUnitPrice: lease.powerUnitPrice,
-              },
-            ],
-          },
+          meterType: 'WATER',
+          readingDate: periods.postpaid.start,
+          value: previousWater,
+          source: 'MANUAL',
+          status: 'NORMAL',
+          createdById: userId,
         },
-        update: {},
-      });
-      generatedIds.push(postpaid.id);
-      if (postpaid.status === 'BILLING' || postpaid.status === 'FAILED') {
-        await completePostpaidBillFromReadings(postpaid.id);
+        {
+          organizationId: lease.organizationId,
+          apartmentId: lease.room.apartmentId,
+          roomId: lease.roomId,
+          leaseId: lease.id,
+          meterType: 'POWER',
+          readingDate: periods.postpaid.start,
+          value: previousPower,
+          source: 'MANUAL',
+          status: 'NORMAL',
+          createdById: userId,
+        }
+      );
+    }
+    readings.push(
+      {
+        organizationId: lease.organizationId,
+        apartmentId: lease.room.apartmentId,
+        roomId: lease.roomId,
+        leaseId: lease.id,
+        meterType: 'WATER',
+        readingDate: periods.postpaid.end,
+        value: row.currentWater,
+        source: 'MANUAL',
+        status: 'NORMAL',
+        createdById: userId,
+      },
+      {
+        organizationId: lease.organizationId,
+        apartmentId: lease.room.apartmentId,
+        roomId: lease.roomId,
+        leaseId: lease.id,
+        meterType: 'POWER',
+        readingDate: periods.postpaid.end,
+        value: row.currentPower,
+        source: 'MANUAL',
+        status: 'NORMAL',
+        createdById: userId,
+      }
+    );
+    await prisma.meterReading.createMany({ data: readings });
+
+    const { prepaid, postpaid } = await generateBillForBillingDate(
+      lease,
+      billingDate,
+      billingEnd
+    );
+
+    if (row.settled) {
+      const method = '历史结清';
+      const note = '签约时历史账单已结清';
+      if (new Prisma.Decimal(prepaid.totalAmount).greaterThan(0)) {
+        await recordBillPayment({
+          billId: prepaid.id,
+          organizationId: lease.organizationId,
+          userId,
+          amount: prepaid.totalAmount,
+          method,
+          note,
+        });
+      }
+      if (postpaid && new Prisma.Decimal(postpaid.totalAmount).greaterThan(0)) {
+        await recordBillPayment({
+          billId: postpaid.id,
+          organizationId: lease.organizationId,
+          userId,
+          amount: postpaid.totalAmount,
+          method,
+          note,
+        });
       }
     }
-  }
 
-  return generatedIds;
+    previousWater = row.currentWater;
+    previousPower = row.currentPower;
+  }
 };
 
 type CurrentLeaseBillDependencies = {

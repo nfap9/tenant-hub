@@ -1,6 +1,45 @@
+import dayjs from 'dayjs';
 import { money, numberValue } from '@/utils/format';
 import type { Lease, Deposit } from '@/types/domain';
-import type { LeaseFeeFormItem, TerminationType } from './constants';
+import type { LeaseFeeFormItem, TerminationType, RentCycle } from './constants';
+
+const cycleMonths: Record<RentCycle, number> = {
+  MONTHLY: 1,
+  QUARTERLY: 3,
+  YEARLY: 12,
+};
+
+export const getHistoricalBillingDates = (
+  startDate: string,
+  endDate: string,
+  cycle: RentCycle,
+  autoRenew = false
+): string[] => {
+  const months = cycleMonths[cycle];
+  const today = dayjs().startOf('day');
+  const leaseEnd = dayjs(endDate).startOf('day');
+  const limit = autoRenew ? today : today.isBefore(leaseEnd) ? today : leaseEnd;
+  const dates: string[] = [];
+  let cursor = dayjs(startDate).startOf('day');
+
+  while (cursor.isBefore(limit) || cursor.isSame(limit, 'day')) {
+    dates.push(cursor.format('YYYY-MM-DD'));
+    cursor = cursor.add(months, 'month');
+  }
+
+  dates.pop();
+  return dates;
+};
+
+export const formatHistoricalBillPeriodLabel = (
+  billingDate: string,
+  cycle: RentCycle
+): string => {
+  const months = cycleMonths[cycle];
+  const start = dayjs(billingDate);
+  const end = start.add(months, 'month').subtract(1, 'day');
+  return `${start.format('YYYY-MM-DD')} ~ ${end.format('YYYY-MM-DD')}`;
+};
 
 export const getRoomDeposit = (lease?: Lease): Deposit | undefined =>
   lease?.deposits?.find((d) => d.type === 'ROOM');

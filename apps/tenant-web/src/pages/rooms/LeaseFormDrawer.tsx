@@ -12,6 +12,8 @@ import {
   Space,
   Divider,
   Tag,
+  Checkbox,
+  Table,
 } from 'antd';
 import {
   PlusOutlined,
@@ -31,7 +33,11 @@ import {
   type LeaseFeeFormItem,
   type RentCycle,
 } from './constants';
-import { buildLeaseFeesPayload } from './utils';
+import {
+  buildLeaseFeesPayload,
+  getHistoricalBillingDates,
+  formatHistoricalBillPeriodLabel,
+} from './utils';
 import styles from './LeaseFormPage.module.scss';
 import clsx from 'clsx';
 
@@ -40,6 +46,14 @@ interface LeaseFormDrawerProps {
   roomId: string;
   onCancel: () => void;
   onSuccess: () => void;
+}
+
+interface HistoricalBillRow {
+  id: string;
+  billingDate: string;
+  currentWater: number;
+  currentPower: number;
+  settled: boolean;
 }
 
 export default function LeaseFormDrawer({
@@ -54,8 +68,18 @@ export default function LeaseFormDrawer({
 
   const [fees, setFees] = useState<LeaseFeeFormItem[]>([]);
   const [saving, setSaving] = useState(false);
-  const [showHistoricalBills, setShowHistoricalBills] = useState(false);
   const [isReserved, setIsReserved] = useState(false);
+  const [isHistorical, setIsHistorical] = useState(false);
+  const [historicalDates, setHistoricalDates] = useState<string[]>([]);
+  const [historicalRows, setHistoricalRows] = useState<HistoricalBillRow[]>([]);
+
+  const startDateValue = Form.useWatch('startDate', form);
+  const endDateValue = Form.useWatch('endDate', form);
+  const cycleValue = Form.useWatch('cycle', form);
+  const autoRenewValue = Form.useWatch('autoRenew', form);
+  const roomDepositAmount = Form.useWatch('roomDepositAmount', form) ?? 0;
+  const keyQuantity = Form.useWatch('keyQuantity', form) ?? 0;
+  const keyUnitPrice = Form.useWatch('keyUnitPrice', form) ?? 0;
 
   useEffect(() => {
     if (!open || !roomId || !currentOrgId) return;
@@ -73,6 +97,32 @@ export default function LeaseFormDrawer({
       })
       .catch(() => {});
   }, [open, roomId, currentOrgId, form]);
+
+  useEffect(() => {
+    const start = startDateValue ? dayjs(startDateValue as string) : null;
+    const end = endDateValue ? dayjs(endDateValue as string) : null;
+    const historical = start ? start.isBefore(dayjs(), 'day') : false;
+    setIsHistorical(historical);
+    setHistoricalRows([]);
+
+    if (historical && start && end && cycleValue) {
+      const dates = getHistoricalBillingDates(
+        start.format('YYYY-MM-DD'),
+        end.format('YYYY-MM-DD'),
+        cycleValue as RentCycle,
+        Boolean(autoRenewValue)
+      );
+      setHistoricalDates(dates);
+    } else {
+      setHistoricalDates([]);
+    }
+  }, [startDateValue, endDateValue, cycleValue, autoRenewValue]);
+
+  const hasDeposit =
+    Number(roomDepositAmount || 0) +
+      Number(keyQuantity || 0) * Number(keyUnitPrice || 0) >
+    0;
+  const showDepositSettled = isHistorical && hasDeposit;
 
   const addFee = () => {
     const availableTypes = selectableFeeTypes.filter(
@@ -116,10 +166,46 @@ export default function LeaseFormDrawer({
     setFees((old) => old.filter((item) => item.id !== id));
   };
 
+  const addHistoricalRow = () => {
+    const nextDate = historicalDates
+      .slice()
+      .reverse()
+      .find((date) => !historicalRows.some((row) => row.billingDate === date));
+    if (!nextDate) return;
+    setHistoricalRows((old) => {
+      const next: HistoricalBillRow = {
+        id: `${nextDate}-${Date.now()}`,
+        billingDate: nextDate,
+        currentWater: 0,
+        currentPower: 0,
+        settled: false,
+      };
+      return [...old, next].sort((a, b) =>
+        b.billingDate.localeCompare(a.billingDate)
+      );
+    });
+  };
+
+  const removeHistoricalRow = (id: string) => {
+    setHistoricalRows((old) => old.filter((row) => row.id !== id));
+  };
+
+  const updateHistoricalRow = (
+    id: string,
+    field: keyof Omit<HistoricalBillRow, 'id' | 'billingDate'>,
+    value: number | boolean
+  ) => {
+    setHistoricalRows((old) =>
+      old.map((row) => (row.id === id ? { ...row, [field]: value } : row))
+    );
+  };
+
   const handleCancel = () => {
     form.resetFields();
     setFees([]);
-    setShowHistoricalBills(false);
+    setHistoricalRows([]);
+    setIsHistorical(false);
+    setHistoricalDates([]);
     onCancel();
   };
 
@@ -154,13 +240,23 @@ export default function LeaseFormDrawer({
         waterUnitPrice: Number(values.waterUnitPrice || 0),
         powerUnitPrice: Number(values.powerUnitPrice || 0),
         autoRenew: Boolean(values.autoRenew),
-        generateHistoricalBills: Boolean(values.generateHistoricalBills),
+        historicalBills: historicalRows.map((row) => ({
+          billingDate: row.billingDate,
+          currentWater: Number(row.currentWater || 0),
+          currentPower: Number(row.currentPower || 0),
+          settled: Boolean(row.settled),
+        })),
+        historicalBaseWater: Number(values.historicalBaseWater || 0),
+        historicalBasePower: Number(values.historicalBasePower || 0),
+        depositSettled: showDepositSettled && Boolean(values.depositSettled),
         fees: buildLeaseFeesPayload(fees),
       });
       message.success('签约完成');
       form.resetFields();
       setFees([]);
-      setShowHistoricalBills(false);
+      setHistoricalRows([]);
+      setIsHistorical(false);
+      setHistoricalDates([]);
       onSuccess();
     } catch (e) {
       message.error(e instanceof Error ? e.message : '签约失败');
@@ -169,21 +265,84 @@ export default function LeaseFormDrawer({
     }
   };
 
-  const handleValuesChange = (changed: Record<string, unknown>) => {
-    if ('startDate' in changed) {
-      const startDate = changed.startDate;
-      setShowHistoricalBills(
-        startDate ? dayjs(startDate as string).isBefore(dayjs(), 'day') : false
-      );
-    }
-  };
+  const remainingHistoricalDates = historicalDates.filter(
+    (date) => !historicalRows.some((row) => row.billingDate === date)
+  );
+
+  const historicalColumns = [
+    {
+      title: '账单周期',
+      dataIndex: 'billingDate',
+      render: (date: string) =>
+        formatHistoricalBillPeriodLabel(date, cycleValue as RentCycle),
+    },
+    {
+      title: '期末水表读数',
+      dataIndex: 'currentWater',
+      width: 160,
+      render: (_value: number, row: HistoricalBillRow) => (
+        <InputNumber
+          min={0}
+          className="w-full"
+          value={row.currentWater}
+          onChange={(v) =>
+            updateHistoricalRow(row.id, 'currentWater', Number(v ?? 0))
+          }
+        />
+      ),
+    },
+    {
+      title: '期末电表读数',
+      dataIndex: 'currentPower',
+      width: 160,
+      render: (_value: number, row: HistoricalBillRow) => (
+        <InputNumber
+          min={0}
+          className="w-full"
+          value={row.currentPower}
+          onChange={(v) =>
+            updateHistoricalRow(row.id, 'currentPower', Number(v ?? 0))
+          }
+        />
+      ),
+    },
+    {
+      title: '已结清',
+      dataIndex: 'settled',
+      width: 100,
+      render: (_value: boolean, row: HistoricalBillRow) => (
+        <Checkbox
+          checked={row.settled}
+          onChange={(e) =>
+            updateHistoricalRow(row.id, 'settled', e.target.checked)
+          }
+        />
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_: unknown, row: HistoricalBillRow) => (
+        <Button
+          type="link"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => removeHistoricalRow(row.id)}
+        >
+          删除
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <Drawer
       title="签约入住"
       open={open}
       onClose={handleCancel}
-      width={640}
+      width={760}
       footer={
         <div style={{ textAlign: 'right' }}>
           <Button onClick={handleCancel}>取消</Button>
@@ -202,13 +361,15 @@ export default function LeaseFormDrawer({
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        onValuesChange={handleValuesChange}
         initialValues={{
           startDate: dayjs(today()),
           endDate: dayjs(nextYear()),
           cycle: 'MONTHLY',
           autoRenew: true,
-          generateHistoricalBills: false,
+          historicalBills: [],
+          historicalBaseWater: 0,
+          historicalBasePower: 0,
+          depositSettled: false,
           waterUnitPrice: 0,
           powerUnitPrice: 0,
         }}
@@ -308,13 +469,49 @@ export default function LeaseFormDrawer({
           <Switch />
         </Form.Item>
 
-        {showHistoricalBills && (
+        {isHistorical && historicalDates.length > 0 && (
+          <>
+            <Divider orientation="left" className={styles.sectionDivider}>
+              历史账单
+            </Divider>
+            <div className={clsx(styles.formGrid2, 'mb-16')}>
+              <Form.Item label="水表底数" name="historicalBaseWater">
+                <InputNumber min={0} className="w-full" />
+              </Form.Item>
+              <Form.Item label="电表底数" name="historicalBasePower">
+                <InputNumber min={0} className="w-full" />
+              </Form.Item>
+            </div>
+            <div className="mb-16">
+              <Table
+                dataSource={historicalRows}
+                columns={historicalColumns}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                className="mb-16"
+              />
+              {remainingHistoricalDates.length > 0 && (
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={addHistoricalRow}
+                  className="w-full"
+                >
+                  添加历史账单
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+
+        {showDepositSettled && (
           <Form.Item
-            label="历史账单"
-            name="generateHistoricalBills"
+            label="押金已结清"
+            name="depositSettled"
             valuePropName="checked"
           >
-            <Switch checkedChildren="生成全部" unCheckedChildren="仅当前期" />
+            <Checkbox>签约时押金已收齐</Checkbox>
           </Form.Item>
         )}
 
