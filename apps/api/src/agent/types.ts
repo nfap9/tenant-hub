@@ -58,8 +58,8 @@ export interface RoomSummary {
 
 export interface LeaseSummary {
   id: string;
-  tenantName: string;
-  tenantPhone: string;
+  tenantName?: string;
+  tenantPhone?: string;
   roomNo: string;
   apartmentName: string;
   startDate: string;
@@ -71,7 +71,7 @@ export interface LeaseSummary {
 
 export interface BillSummary {
   id: string;
-  tenantName: string;
+  tenantName?: string;
   roomNo: string;
   billingDate: string;
   totalAmount: number;

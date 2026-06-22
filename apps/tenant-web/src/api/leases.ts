@@ -5,8 +5,8 @@ export async function createLease(
   organizationId: string,
   payload: {
     roomId: string;
-    tenantName: string;
-    tenantPhone: string;
+    tenantName?: string;
+    tenantPhone?: string;
     startDate: string;
     endDate: string;
     cycle: string;

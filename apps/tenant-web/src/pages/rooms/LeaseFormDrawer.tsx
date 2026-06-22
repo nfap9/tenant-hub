@@ -129,8 +129,8 @@ export default function LeaseFormDrawer({
       message.warning('当前角色没有管理租约权限');
       return;
     }
-    if (!values.tenantName || !values.tenantPhone || !values.rentAmount) {
-      message.warning('请填写租客、电话和租金');
+    if (!values.rentAmount) {
+      message.warning('请填写租金');
       return;
     }
 
@@ -138,8 +138,12 @@ export default function LeaseFormDrawer({
     try {
       await createLease(currentOrgId, {
         roomId,
-        tenantName: String(values.tenantName).trim(),
-        tenantPhone: String(values.tenantPhone).trim(),
+        tenantName: values.tenantName
+          ? String(values.tenantName).trim()
+          : undefined,
+        tenantPhone: values.tenantPhone
+          ? String(values.tenantPhone).trim()
+          : undefined,
         startDate: dayjs(values.startDate as string).format('YYYY-MM-DD'),
         endDate: dayjs(values.endDate as string).format('YYYY-MM-DD'),
         cycle: String(values.cycle),
@@ -214,22 +218,14 @@ export default function LeaseFormDrawer({
             预留人信息已锁定，如需修改请先取消预留
           </Tag>
         )}
-        <Form.Item
-          label="租客姓名"
-          name="tenantName"
-          rules={[{ required: true, message: '请输入租客姓名' }]}
-        >
+        <Form.Item label="租客姓名" name="tenantName">
           <Input
             placeholder="请输入姓名"
             prefix={<UserOutlined className="text-subtle" />}
             disabled={isReserved}
           />
         </Form.Item>
-        <Form.Item
-          label="租客电话"
-          name="tenantPhone"
-          rules={[{ required: true, message: '请输入租客电话' }]}
-        >
+        <Form.Item label="租客电话" name="tenantPhone">
           <Input
             placeholder="请输入手机号"
             prefix={<PhoneOutlined className="text-subtle" />}

@@ -52,8 +52,8 @@ export const feeItemTypeSchema = z
 export const createLeaseInput = z
   .object({
     roomId: z.string().describe('房间ID'),
-    tenantName: z.string().min(1).describe('租户姓名'),
-    tenantPhone: z.string().min(6).describe('租户手机号'),
+    tenantName: z.string().optional().describe('租户姓名'),
+    tenantPhone: z.string().optional().describe('租户手机号'),
     startDate: z.coerce.date().describe('租约开始日期'),
     endDate: z.coerce.date().describe('租约结束日期'),
     cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).describe('付款周期'),

@@ -247,8 +247,8 @@ export const calculateTotalDepositAmount = (
  */
 export const createLeaseWithDeposit = async (data: {
   leaseData: {
-    tenantName: string;
-    tenantPhone: string;
+    tenantName?: string;
+    tenantPhone?: string;
     startDate: Date;
     endDate: Date;
     cycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
@@ -350,8 +350,8 @@ export const createLeaseWithDeposit = async (data: {
  */
 export const createLeaseWithoutDeposit = async (data: {
   leaseData: {
-    tenantName: string;
-    tenantPhone: string;
+    tenantName?: string;
+    tenantPhone?: string;
     startDate: Date;
     endDate: Date;
     cycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';

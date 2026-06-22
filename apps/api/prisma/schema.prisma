@@ -178,8 +178,8 @@ model Lease {
   id                String           @id @default(cuid())
   organizationId    String
   roomId            String
-  tenantName        String
-  tenantPhone       String
+  tenantName        String?
+  tenantPhone       String?
   startDate         DateTime
   endDate           DateTime
   cycle             RentCycle

@@ -149,8 +149,8 @@ export type Lease = {
   id: string;
   organizationId: string;
   roomId: string;
-  tenantName: string;
-  tenantPhone: string;
+  tenantName?: string;
+  tenantPhone?: string;
   startDate: string;
   endDate: string;
   cycle: RentCycle;
@@ -337,7 +337,7 @@ export type Transaction = {
   bill?: { id: string; mode: string; periodStart: string; periodEnd: string };
   lease?: {
     id: string;
-    tenantName: string;
+    tenantName?: string;
     room?: { roomNo: string; apartment?: { name: string } };
   };
   apartment?: { id: string; name: string };
@@ -392,8 +392,8 @@ export type MonthlyBill = {
   id: string;
   organizationId: string;
   leaseId: string;
-  tenantName: string;
-  tenantPhone: string;
+  tenantName?: string;
+  tenantPhone?: string;
   billingDate: string;
   dueDate: string;
   status: BillStatus;

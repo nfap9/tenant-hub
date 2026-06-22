@@ -446,8 +446,8 @@ export async function executeApiAction(
       const depositAmount = roomDepositAmount.plus(keyDepositAmount);
 
       const leaseData = {
-        tenantName: validatedBody.tenantName as string,
-        tenantPhone: validatedBody.tenantPhone as string,
+        tenantName: validatedBody.tenantName as string | undefined,
+        tenantPhone: validatedBody.tenantPhone as string | undefined,
         startDate: new Date(validatedBody.startDate as string),
         endDate: new Date(validatedBody.endDate as string),
         cycle: validatedBody.cycle as 'MONTHLY' | 'QUARTERLY' | 'YEARLY',

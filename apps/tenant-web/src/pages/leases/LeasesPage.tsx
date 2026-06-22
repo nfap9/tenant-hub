@@ -124,7 +124,7 @@ export default function LeasesPage() {
     if (q) {
       result = result.filter(
         (l) =>
-          l.tenantName.toLowerCase().includes(q) ||
+          l.tenantName?.toLowerCase().includes(q) ||
           l.tenantPhone?.toLowerCase().includes(q) ||
           l.room?.roomNo?.toLowerCase().includes(q) ||
           l.room?.apartment?.name?.toLowerCase().includes(q)
