@@ -65,7 +65,7 @@ const queryApartmentsInput = z.object({
 const queryRoomsInput = z.object({
   apartmentId: z.string().optional().describe('按公寓ID筛选（可选）'),
   status: z
-    .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE'])
+    .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE', 'SELF_USE'])
     .optional()
     .describe('按状态筛选'),
   keyword: z.string().optional().describe('按房号或户型关键词筛选（可选）'),

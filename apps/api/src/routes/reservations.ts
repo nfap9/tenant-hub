@@ -38,6 +38,8 @@ reservationRouter.post(
       req.organizationId!
     );
     if (!room) throw new HttpError(404, '房间不存在');
+    if (room.status === 'SELF_USE')
+      throw new HttpError(400, '自用房间不可预留');
     if (room.status !== 'VACANT' && room.status !== 'RESERVED')
       throw new HttpError(400, '仅空闲或已预留的房间可以预留');
 

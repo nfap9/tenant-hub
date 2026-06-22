@@ -117,12 +117,15 @@ export default function DashboardPage() {
         .filter((lease) => lease.status === 'ACTIVE'),
     [rooms]
   );
-  const occupiedCount = rooms.filter(
+  const rentableRooms = rooms.filter((room) => room.status !== 'SELF_USE');
+  const occupiedCount = rentableRooms.filter(
     (room) => room.status === 'OCCUPIED'
   ).length;
-  const vacantCount = rooms.filter((room) => room.status === 'VACANT').length;
-  const occupancyRate = rooms.length
-    ? Math.round((occupiedCount / rooms.length) * 100)
+  const vacantCount = rentableRooms.filter(
+    (room) => room.status === 'VACANT'
+  ).length;
+  const occupancyRate = rentableRooms.length
+    ? Math.round((occupiedCount / rentableRooms.length) * 100)
     : 0;
 
   const vacantLayoutStats = useMemo(() => {

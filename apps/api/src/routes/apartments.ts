@@ -67,7 +67,7 @@ export const updateRoomInput = z.object({
   area: z.coerce.number().optional().describe('面积（平方米）'),
   facilities: z.array(z.string()).optional().describe('配套设施'),
   status: z
-    .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE'])
+    .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE', 'SELF_USE'])
     .optional()
     .describe('房间状态'),
 });

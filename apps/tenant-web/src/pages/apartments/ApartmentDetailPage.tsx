@@ -121,6 +121,10 @@ export default function ApartmentDetailPage() {
     () => apartmentRooms.filter((room) => room.status === 'OCCUPIED').length,
     [apartmentRooms]
   );
+  const apartmentSelfUseRooms = useMemo(
+    () => apartmentRooms.filter((room) => room.status === 'SELF_USE').length,
+    [apartmentRooms]
+  );
 
   const handleDeleteApartment = async () => {
     if (!apartment || !currentOrgId) return;
@@ -415,6 +419,10 @@ export default function ApartmentDetailPage() {
                         <span>·</span>
                         <span className="text-warning">
                           已租 {apartmentOccupiedRooms} 间
+                        </span>
+                        <span>·</span>
+                        <span className="text-primary">
+                          自用 {apartmentSelfUseRooms} 间
                         </span>
                       </div>
                     </div>

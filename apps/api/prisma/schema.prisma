@@ -496,6 +496,7 @@ enum RoomStatus {
   RESERVED
   OCCUPIED
   MAINTENANCE
+  SELF_USE
 }
 
 enum LeaseStatus {

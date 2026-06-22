@@ -29,6 +29,7 @@ const statusColorMap: Record<string, string> = {
   neutral: 'default',
   warning: 'warning',
   danger: 'error',
+  primary: 'blue',
 };
 
 export default function RoomCard({
@@ -86,6 +87,7 @@ export default function RoomCard({
   const isVacant = room.status === 'VACANT';
   const isReserved = room.status === 'RESERVED';
   const isMaintenance = room.status === 'MAINTENANCE';
+  const isSelfUse = room.status === 'SELF_USE';
 
   return (
     <Card
@@ -115,6 +117,18 @@ export default function RoomCard({
         <div className={styles.roomActions}>
           <Button type="link" size="small" icon={<UserAddOutlined />}>
             查看详情
+          </Button>
+        </div>
+      )}
+
+      {hasActions && isSelfUse && canManageRoom && (
+        <div className={styles.roomActions}>
+          <Button
+            size="small"
+            icon={<CheckCircleOutlined />}
+            onClick={(e) => handleStatusChange(e, 'VACANT', '改为空闲')}
+          >
+            改为空闲
           </Button>
         </div>
       )}

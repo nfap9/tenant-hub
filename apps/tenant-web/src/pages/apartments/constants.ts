@@ -26,16 +26,18 @@ export const statusLabels: Record<RoomStatus, string> = {
   RESERVED: '预留',
   OCCUPIED: '已租',
   MAINTENANCE: '维修',
+  SELF_USE: '自用',
 };
 
 export const toneForStatus: Record<
   RoomStatus,
-  'success' | 'neutral' | 'warning' | 'danger'
+  'success' | 'neutral' | 'warning' | 'danger' | 'primary'
 > = {
   VACANT: 'success',
   RESERVED: 'neutral',
   OCCUPIED: 'warning',
   MAINTENANCE: 'danger',
+  SELF_USE: 'primary',
 };
 
 export const roomStatuses: RoomStatus[] = [
@@ -43,6 +45,7 @@ export const roomStatuses: RoomStatus[] = [
   'RESERVED',
   'OCCUPIED',
   'MAINTENANCE',
+  'SELF_USE',
 ];
 export const roomLayoutOptions = [
   '开间',

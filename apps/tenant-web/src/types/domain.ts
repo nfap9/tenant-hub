@@ -68,7 +68,12 @@ export type SubscriptionOverview = {
   };
 };
 
-export type RoomStatus = 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
+export type RoomStatus =
+  | 'VACANT'
+  | 'RESERVED'
+  | 'OCCUPIED'
+  | 'MAINTENANCE'
+  | 'SELF_USE';
 export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type LeaseStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
 export type TerminationType = 'EXPIRED' | 'NEGOTIATED' | 'BREACH';

@@ -22,6 +22,8 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined,
   ToolOutlined,
+  HomeOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getRoomDetail, deleteRoom, updateRoom } from '@/api/rooms';
@@ -42,6 +44,7 @@ const statusColorMap: Record<string, string> = {
   neutral: 'default',
   warning: 'warning',
   danger: 'error',
+  primary: 'blue',
 };
 
 export default function RoomDetailPage() {
@@ -161,7 +164,21 @@ export default function RoomDetailPage() {
                         >
                           报修
                         </Button>
+                        <Button
+                          icon={<HomeOutlined />}
+                          onClick={() => handleRoomStatus('SELF_USE')}
+                        >
+                          设为自用
+                        </Button>
                       </>
+                    )}
+                    {room.status === 'SELF_USE' && (
+                      <Button
+                        icon={<CheckCircleOutlined />}
+                        onClick={() => handleRoomStatus('VACANT')}
+                      >
+                        改为空闲
+                      </Button>
                     )}
                     {room.status === 'RESERVED' && (
                       <Button

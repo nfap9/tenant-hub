@@ -53,7 +53,7 @@ export const queryRoomsForAgent = async ({
 }: {
   organizationId: string;
   apartmentId?: string;
-  status?: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
+  status?: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
   keyword?: string;
   limit?: number;
 }) => {

@@ -136,6 +136,8 @@ leaseRouter.post(
 
     const isDraft = leaseData.status === 'DRAFT';
 
+    if (room.status === 'SELF_USE')
+      throw new HttpError(400, '自用房间不可签约');
     if (!isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
       throw new HttpError(400, '仅空闲或已预留房间可以签约');
     if (isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')

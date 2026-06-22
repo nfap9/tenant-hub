@@ -93,6 +93,7 @@ const ENUM_LABEL_MAP: Record<string, string> = {
   RESERVED: '已预留',
   OCCUPIED: '已出租',
   MAINTENANCE: '维修中',
+  SELF_USE: '自用',
   // 租约状态
   ACTIVE: '生效中',
   TERMINATED: '已退租',

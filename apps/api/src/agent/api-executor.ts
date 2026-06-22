@@ -150,6 +150,7 @@ export async function executeApiAction(
           | 'RESERVED'
           | 'OCCUPIED'
           | 'MAINTENANCE'
+          | 'SELF_USE'
           | undefined,
         keyword: validatedBody.keyword as string | undefined,
         limit: validatedBody.limit as number | undefined,
@@ -344,7 +345,12 @@ export async function executeApiAction(
         layout?: string;
         area?: number;
         facilities?: string[];
-        status?: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE';
+        status?:
+          | 'VACANT'
+          | 'RESERVED'
+          | 'OCCUPIED'
+          | 'MAINTENANCE'
+          | 'SELF_USE';
       } = {};
       if (validatedBody.roomNo !== undefined) {
         updateData.roomNo = validatedBody.roomNo as string;
@@ -363,7 +369,8 @@ export async function executeApiAction(
           | 'VACANT'
           | 'RESERVED'
           | 'OCCUPIED'
-          | 'MAINTENANCE';
+          | 'MAINTENANCE'
+          | 'SELF_USE';
       }
       return updateRoom(pathParams.roomId, updateData);
     }
