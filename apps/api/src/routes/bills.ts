@@ -265,6 +265,16 @@ billRouter.post(
   })
 );
 
+billRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    const bill = await getBillById(req.params.id, req.organizationId!);
+    if (!bill) throw new HttpError(404, '账单不存在');
+    ok(res, bill);
+  })
+);
+
 billRouter.post(
   '/:id/retry-billing',
   requirePermission(PERMISSIONS.BILL_MANAGE),

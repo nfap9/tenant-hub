@@ -97,7 +97,11 @@ export const listBillsRaw = async (
 export const getBillById = async (billId: string, organizationId: string) => {
   return prisma.bill.findFirst({
     where: { id: billId, organizationId },
-    include: { items: true, payments: true },
+    include: {
+      lease: { include: { room: true } },
+      items: true,
+      payments: true,
+    },
   });
 };
 
