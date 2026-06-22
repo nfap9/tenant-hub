@@ -2,13 +2,12 @@
 
 ## 项目概述
 
-Tenant Hub（租务通）是一个轻量化的公寓租赁管理系统，采用 **pnpm monorepo** 架构。项目包含三个应用：
+Tenant Hub（租务通）是一个轻量化的公寓租赁管理系统，采用 **pnpm monorepo** 架构。项目包含两个应用：
 
 - **`apps/api`** — 后端 API 服务（Node.js 22 + Express 4 + Prisma 5 + PostgreSQL 16）
 - **`apps/tenant-web`** — Web 管理后台（React 18 + Vite 6 + Ant Design 5）
-- **`apps/miniprogram`** — 微信小程序端（Taro 4 + React 18）
 
-Web 端与小程序端均面向公寓运营方，提供组织管理、房源管理、房间管理、租约管理、账单与收款、水电抄表等全套业务功能；同时 Web 端还包含平台运营后台（租户管理、套餐配置、系统设置等）。
+Web 端面向公寓运营方，提供组织管理、房源管理、房间管理、租约管理、账单与收款、水电抄表等全套业务功能；同时 Web 端还包含平台运营后台（租户管理、套餐配置、系统设置等）。
 
 ---
 
@@ -28,23 +27,21 @@ Web 端与小程序端均面向公寓运营方，提供组织管理、房源管�
 
 所有命令均在仓库根目录执行：
 
-| 命令                     | 说明                                     |
-| ------------------------ | ---------------------------------------- |
-| `pnpm install`           | 安装所有 workspace 依赖                  |
-| `pnpm dev`               | 并行启动 `api` + `tenant-web` 开发服务   |
-| `pnpm dev:all`           | 一键启动本地开发（基础设施和项目代码）   |
-| `pnpm dev:infra`         | 启动 Docker 基础设施                     |
-| `pnpm dev:miniprogram`   | 启动小程序 WeChat 监听构建               |
-| `pnpm build`             | 递归构建所有应用                         |
-| `pnpm build:miniprogram` | 构建小程序 WeChat 产物                   |
-| `pnpm check`             | 全量类型检查 + Lint + 格式检查 + 构建    |
-| `pnpm lint`              | 递归执行所有子应用的 lint                |
-| `pnpm format`            | Prettier 格式化整个仓库                  |
-| `pnpm format:check`      | Prettier 格式检查                        |
-| `pnpm typecheck`         | 递归执行所有子应用的 TypeScript 类型检查 |
-| `pnpm db:generate`       | 生成 Prisma Client                       |
-| `pnpm db:migrate`        | 执行 Prisma migrate dev                  |
-| `pnpm release`           | 交互式版本发布                           |
+| 命令                | 说明                                     |
+| ------------------- | ---------------------------------------- |
+| `pnpm install`      | 安装所有 workspace 依赖                  |
+| `pnpm dev`          | 并行启动 `api` + `tenant-web` 开发服务   |
+| `pnpm dev:all`      | 一键启动本地开发（基础设施和项目代码）   |
+| `pnpm dev:infra`    | 启动 Docker 基础设施                     |
+| `pnpm build`        | 递归构建所有应用                         |
+| `pnpm check`        | 全量类型检查 + Lint + 格式检查 + 构建    |
+| `pnpm lint`         | 递归执行所有子应用的 lint                |
+| `pnpm format`       | Prettier 格式化整个仓库                  |
+| `pnpm format:check` | Prettier 格式检查                        |
+| `pnpm typecheck`    | 递归执行所有子应用的 TypeScript 类型检查 |
+| `pnpm db:generate`  | 生成 Prisma Client                       |
+| `pnpm db:migrate`   | 执行 Prisma migrate dev                  |
+| `pnpm release`      | 交互式版本发布                           |
 
 ---
 
@@ -92,7 +89,7 @@ Web 端与小程序端均面向公寓运营方，提供组织管理、房源管�
 
 - API 路由按资源命名：`/api/auth`, `/api/organizations`, `/api/apartments`, `/api/leases`, `/api/bills`, `/api/admin`, `/api/platform`
 - TypeScript 路径别名：`@/` → `src/`
-- API 与 Web 端均使用 ESM；小程序使用 Taro 的 Webpack5 编译
+- API 与 Web 端均使用 ESM
 
 ---
 
@@ -108,7 +105,7 @@ Web 端与小程序端均面向公寓运营方，提供组织管理、房源管�
 ### 中间件链
 
 1. `helmet()` — 安全响应头
-2. `cors(...)` — 跨域处理（生产环境限制 `CORS_ORIGINS` + 微信小程序域 `servicewechat.com`）
+2. `cors(...)` — 跨域处理（生产环境限制 `CORS_ORIGINS`）
 3. `express.json({ limit: '2mb' })` — JSON 解析
 
 ### 错误处理

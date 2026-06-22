@@ -115,7 +115,7 @@ export default function OpsSystemSettingsPage() {
               prefix={<SettingOutlined className="text-subtle" />}
             />
           </Form.Item>
-          <Form.Item label="Logo URL" extra="填写图片地址，将在小程序端展示">
+          <Form.Item label="Logo URL" extra="填写图片地址，将在平台展示">
             <Input
               placeholder="https://example.com/logo.png"
               value={platformInfo.logoUrl}

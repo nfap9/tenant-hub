@@ -21,7 +21,7 @@
 - **`pr-check.yml`**：根配置变更时执行 lint + typecheck（全部）
 - **`api-ci.yml`**：API 代码变更时执行 typecheck + lint + build
 - **`tenant-web-ci.yml`**：Tenant Web 代码变更时执行 typecheck + lint + build
-- **`release.yml`**：`main` 分支每次 push 执行全量检查（根 lint/typecheck + API lint/typecheck/build + Tenant Web lint/typecheck/build + Miniprogram build:weapp + build:h5）
+- **`release.yml`**：`main` 分支每次 push 执行全量检查（根 lint/typecheck + API lint/typecheck/build + Tenant Web lint/typecheck/build）
 
 ### 版本发布
 
