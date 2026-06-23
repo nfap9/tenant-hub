@@ -1,7 +1,7 @@
 const SESSION_KEY = 'tenantHubSession';
 const ORG_KEY = 'tenantHubCurrentOrgId';
 
-export type WebSession = {
+type WebSession = {
   token: string;
   user: { id: string; phone: string; username: string };
 };

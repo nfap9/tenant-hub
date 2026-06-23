@@ -25,19 +25,6 @@ export type OrgMember = {
   role: OrgRole;
 };
 
-export type OrgInvite = {
-  id: string;
-  organizationId: string;
-  code: string;
-  maxUses: number;
-  usedCount: number;
-  expiresAt: string;
-  usedAt?: string;
-  createdAt: string;
-  createdBy?: { id: string; username: string; phone: string };
-  usedBy?: { id: string; username: string; phone: string };
-};
-
 export type Plan = {
   id: string;
   name: string;
@@ -99,8 +86,6 @@ export type BillItemType =
   | 'PROPERTY'
   | 'NETWORK'
   | 'OTHER';
-export type MeterType = 'WATER' | 'POWER';
-export type MeterReadingStatus = 'NORMAL' | 'SUSPECTED' | 'CONFIRMED' | 'VOID';
 
 export type ApartmentExpense = {
   id: string;
@@ -253,7 +238,6 @@ export type DepositStatus =
   | 'FULLY_REFUNDED'
   | 'DEDUCTED';
 export type DepositType = 'ROOM' | 'KEY';
-export type DepositPaymentType = 'COLLECT' | 'REFUND' | 'DEDUCT';
 
 export type Deposit = {
   id: string;
@@ -270,18 +254,6 @@ export type Deposit = {
   updatedAt: string;
   lease?: Lease & { room?: Room; bills?: Bill[] };
   bill?: Bill & { payments?: Payment[] };
-};
-
-export type DepositPayment = {
-  id: string;
-  depositId: string;
-  userId: string;
-  type: DepositPaymentType;
-  amount: string | number;
-  paidAt: string;
-  method: string;
-  note?: string;
-  user?: { id: string; username: string; phone: string };
 };
 
 export type SettlementStatus = 'PENDING' | 'SETTLED';
@@ -386,35 +358,4 @@ export type LeaseSettlement = {
   bill?: Bill;
   payments?: SettlementPayment[];
   createdAt?: string;
-};
-
-export type MonthlyBill = {
-  id: string;
-  organizationId: string;
-  leaseId: string;
-  tenantName?: string;
-  tenantPhone?: string;
-  billingDate: string;
-  dueDate: string;
-  status: BillStatus;
-  totalAmount: string | number;
-  paidAmount: string | number;
-  lease?: Lease;
-  bills?: Bill[];
-  payments?: Payment[];
-};
-
-export type MeterReading = {
-  id: string;
-  organizationId: string;
-  apartmentId: string;
-  roomId: string;
-  leaseId?: string;
-  meterType: MeterType;
-  readingDate: string;
-  value: string | number;
-  status: MeterReadingStatus;
-  note?: string;
-  room?: Room;
-  lease?: Lease;
 };

@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Deposit, Payment } from '@/types/domain';
+import type { Deposit } from '@/types/domain';
 
 export async function getDeposits(organizationId: string, status?: string) {
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
@@ -22,21 +22,4 @@ export async function getDepositDetail(
   depositId: string
 ) {
   return apiClient<Deposit>(`/deposits/${depositId}`, { organizationId });
-}
-
-export async function recordDepositPayment(
-  organizationId: string,
-  depositId: string,
-  payload: {
-    type: 'COLLECT' | 'REFUND' | 'DEDUCT';
-    amount: number;
-    method: string;
-    note?: string;
-  }
-) {
-  return apiClient<Payment>(`/deposits/${depositId}/payments`, {
-    method: 'POST',
-    body: payload,
-    organizationId,
-  });
 }

@@ -175,20 +175,6 @@ export async function* manifestChatWithAgent(
   );
 }
 
-export function getAgentSchema(name: string) {
-  return apiClient<{
-    data: {
-      name: string;
-      method: string;
-      path: string;
-      description: string;
-      category: string;
-      requiresConfirmation: boolean;
-      fields: FormField[];
-    };
-  }>(`/agent/schema?name=${encodeURIComponent(name)}`);
-}
-
 export function executeAgentAction(data: {
   tool: string;
   path: string;

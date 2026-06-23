@@ -64,16 +64,3 @@ export function optionalText(value: unknown): string | undefined {
   if (value === '' || value === null || value === undefined) return undefined;
   return String(value);
 }
-
-export function toFacilityArray(value: string | undefined): string[] {
-  if (!value) return [];
-  return value
-    .split(/[,，]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-export function facilitiesText(facilities?: string[]): string {
-  if (!facilities || facilities.length === 0) return '-';
-  return facilities.join('、');
-}

@@ -59,11 +59,6 @@ export const selectableFeeTypes: Array<{ type: BillItemType; label: string }> =
     { type: 'OTHER', label: '其他费用' },
   ];
 
-export const feeTypeLabels = selectableFeeTypes.reduce(
-  (labels, item) => ({ ...labels, [item.type]: item.label }),
-  {} as Partial<Record<BillItemType, string>>
-);
-
 export const terminationLabels: Record<TerminationType, string> = {
   EXPIRED: '到期解约',
   NEGOTIATED: '协商解约',

@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { money, numberValue } from '@/utils/format';
+import { numberValue } from '@/utils/format';
 import type { Lease, Deposit } from '@/types/domain';
 import type { LeaseFeeFormItem, TerminationType, RentCycle } from './constants';
 
@@ -50,13 +50,6 @@ export const getKeyDeposit = (lease?: Lease): Deposit | undefined =>
 export const getTotalDepositPaid = (lease?: Lease): number => {
   if (!lease?.deposits) return 0;
   return lease.deposits.reduce((sum, d) => sum + Number(d.paidAmount ?? 0), 0);
-};
-
-export const calculateKeyDepositAmount = (
-  keyQuantity: number,
-  keyUnitPrice: number
-): number => {
-  return keyQuantity * keyUnitPrice;
 };
 
 export const computeSettlementPreview = (
@@ -144,12 +137,6 @@ export const buildLeaseFeesPayload = (fees: LeaseFeeFormItem[]) =>
       name: item.name.trim(),
       amount: Number(item.amount),
     }));
-
-export const terminationResultText = (net: number) => {
-  if (net > 0) return `退租完成，租客应补交 ¥${money(net)}`;
-  if (net < 0) return `退租完成，应退租客 ¥${money(Math.abs(net))}`;
-  return '退租完成，结算已结清';
-};
 
 export const defaultTerminationType = (
   endDate: string,

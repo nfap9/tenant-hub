@@ -1,4 +1,4 @@
-import { day, money } from '@/utils/format';
+import { day } from '@/utils/format';
 import type { Bill, BillStatus, Payment } from '@/types/domain';
 
 export type BillGroup = {
@@ -21,12 +21,6 @@ export const remainingAmount = (bill: {
   paidAmount: string | number;
 }) => Number(bill.totalAmount) - Number(bill.paidAmount);
 
-export const roomKeyForBill = (bill: Bill) =>
-  bill.lease?.roomId ??
-  bill.lease?.room?.id ??
-  bill.lease?.room?.roomNo ??
-  bill.id;
-
 const statusPriority: Record<BillStatus, number> = {
   UNPAID: 0,
   PARTIAL_PAID: 0,
@@ -37,20 +31,6 @@ const statusPriority: Record<BillStatus, number> = {
   VOID: 4,
   REFUNDED: 5,
 };
-
-export const sortBillsForList = (bills: Bill[]) =>
-  [...bills].sort((left, right) => {
-    const priorityDiff =
-      statusPriority[left.status] - statusPriority[right.status];
-    if (priorityDiff !== 0) return priorityDiff;
-    const dueDateDiff =
-      new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime();
-    if (dueDateDiff !== 0) return dueDateDiff;
-    return (
-      new Date(right.billingDate).getTime() -
-      new Date(left.billingDate).getTime()
-    );
-  });
 
 export const groupBills = (bills: Bill[]): BillGroup[] => {
   const map = new Map<string, Bill[]>();
@@ -125,17 +105,4 @@ export const getBillGroupCardSummary = (group: BillGroup) => {
     remainingAmount: group.totalAmount - group.paidAmount,
     detailCountText: `${billCount} 项账单 · ${paymentCount} 笔收款`,
   };
-};
-
-export const getPaymentAmountError = (
-  amountText: string,
-  remaining: number
-) => {
-  if (!amountText.trim()) return '请填写收款金额';
-  const amount = Number(amountText);
-  if (!Number.isFinite(amount)) return '收款金额必须是有效数字';
-  if (amount <= 0) return '收款金额必须大于 0';
-  if (amount > remaining)
-    return `收款金额不能超过剩余应收 ¥${money(remaining)}`;
-  return undefined;
 };

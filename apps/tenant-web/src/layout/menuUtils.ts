@@ -30,13 +30,6 @@ export function getKeyFromPath(
   return 'dashboard';
 }
 
-export function getPathFromKey(
-  configs: MenuItemConfig[],
-  key: string
-): string | undefined {
-  return flattenMenu(configs).find((item) => item.key === key)?.path;
-}
-
 export function getLabelFromKey(
   configs: MenuItemConfig[],
   key: string

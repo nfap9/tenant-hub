@@ -1,4 +1,4 @@
-export const MAX_BATCH_ROOM_COUNT = 200;
+const MAX_BATCH_ROOM_COUNT = 200;
 
 const positiveInteger = (value: string) => {
   const parsed = Number(value);

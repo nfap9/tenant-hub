@@ -483,7 +483,10 @@ export default function BillListPage() {
             onChange={setRoomFilter}
             allowClear
             style={{ width: 200 }}
-            options={filteredRooms.map((r) => ({ label: r.roomNo, value: r.id }))}
+            options={filteredRooms.map((r) => ({
+              label: r.roomNo,
+              value: r.id,
+            }))}
           />
         </div>
         <Tabs
