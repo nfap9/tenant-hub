@@ -5,6 +5,7 @@ import {
   Button,
   Tabs,
   Input,
+  Select,
   Space,
   Tag,
   Spin,
@@ -37,6 +38,7 @@ import {
   generateBills,
 } from '@/api/bills';
 import { getRooms } from '@/api/rooms';
+import { getApartments } from '@/api/apartments';
 import { money } from '@/utils/format';
 import { statusLabels, toneForBillStatus } from './constants';
 import {
@@ -51,7 +53,7 @@ import PaymentDialog from '@/components/PaymentDialog';
 import UtilityExportModal from './UtilityExportModal';
 import UtilityModal from './UtilityModal';
 import ReadingDrawer from './ReadingDrawer';
-import type { Bill, BillStatus } from '@/types/domain';
+import type { Bill, BillStatus, Apartment, Room } from '@/types/domain';
 import styles from './BillListPage.module.scss';
 import clsx from 'clsx';
 
@@ -67,8 +69,11 @@ export default function BillListPage() {
   const [readingOpen, setReadingOpen] = useState(false);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [reviewBills, setReviewBills] = useState<Bill[]>([]);
-  const [, setRooms] = useState<import('@/types/domain').Room[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [apartments, setApartments] = useState<Apartment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [apartmentFilter, setApartmentFilter] = useState<string>('');
+  const [roomFilter, setRoomFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BillStatus | ''>('');
 
@@ -76,12 +81,13 @@ export default function BillListPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [allBills, failedBills, billingBills, nextRooms] =
+      const [allBills, failedBills, billingBills, nextRooms, apts] =
         await Promise.all([
           getBills(currentOrgId),
           getBillsByStatus(currentOrgId, 'FAILED'),
           getBillsByStatus(currentOrgId, 'BILLING'),
           getRooms(currentOrgId),
+          getApartments(currentOrgId),
         ]);
       const postpaidReviewBills = [...failedBills, ...billingBills].filter(
         (bill) => bill.mode === 'POSTPAID'
@@ -89,6 +95,7 @@ export default function BillListPage() {
       setBillGroups(groupBills(allBills));
       setReviewBills(postpaidReviewBills);
       setRooms(nextRooms);
+      setApartments(apts);
     } catch (e) {
       message.error(e instanceof Error ? e.message : '账单加载失败');
     } finally {
@@ -100,15 +107,51 @@ export default function BillListPage() {
     loadData();
   }, [loadData]);
 
+  const filteredRooms = useMemo(() => {
+    if (!apartmentFilter) return rooms;
+    return rooms.filter((r) => r.apartmentId === apartmentFilter);
+  }, [rooms, apartmentFilter]);
+
+  const filteredBillGroups = useMemo(() => {
+    let result = billGroups;
+    if (apartmentFilter) {
+      result = result.filter(
+        (g) => g.lease?.room?.apartmentId === apartmentFilter
+      );
+    }
+    if (roomFilter) {
+      result = result.filter((g) => g.lease?.room?.id === roomFilter);
+    }
+    return result;
+  }, [billGroups, apartmentFilter, roomFilter]);
+
+  const filteredReviewBills = useMemo(() => {
+    let result = reviewBills;
+    if (apartmentFilter) {
+      result = result.filter(
+        (b) => b.lease?.room?.apartmentId === apartmentFilter
+      );
+    }
+    if (roomFilter) {
+      result = result.filter((b) => b.lease?.room?.id === roomFilter);
+    }
+    return result;
+  }, [reviewBills, apartmentFilter, roomFilter]);
+
+  const handleApartmentChange = (value: string) => {
+    setApartmentFilter(value);
+    setRoomFilter('');
+  };
+
   const unpaidGroups = useMemo(
     () =>
-      billGroups.filter(
+      filteredBillGroups.filter(
         (g) => g.status === 'UNPAID' || g.status === 'PARTIAL_PAID'
       ),
-    [billGroups]
+    [filteredBillGroups]
   );
   const filteredAllGroups = useMemo(() => {
-    let result = [...billGroups];
+    let result = [...filteredBillGroups];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       result = result.filter(
@@ -120,7 +163,7 @@ export default function BillListPage() {
     }
     if (statusFilter) result = result.filter((g) => g.status === statusFilter);
     return sortBillGroupsForList(result);
-  }, [billGroups, searchQuery, statusFilter]);
+  }, [filteredBillGroups, searchQuery, statusFilter]);
 
   const handleDeleteGroup = async (group: BillGroup) => {
     if (!currentOrgId) return;
@@ -425,6 +468,24 @@ export default function BillListPage() {
       />
 
       <Spin spinning={loading}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+          <Select
+            placeholder="选择公寓"
+            value={apartmentFilter || undefined}
+            onChange={handleApartmentChange}
+            allowClear
+            style={{ width: 200 }}
+            options={apartments.map((a) => ({ label: a.name, value: a.id }))}
+          />
+          <Select
+            placeholder="选择房间"
+            value={roomFilter || undefined}
+            onChange={setRoomFilter}
+            allowClear
+            style={{ width: 200 }}
+            options={filteredRooms.map((r) => ({ label: r.roomNo, value: r.id }))}
+          />
+        </div>
         <Tabs
           activeKey={tab}
           onChange={(key) => {
@@ -453,23 +514,23 @@ export default function BillListPage() {
             },
             {
               key: 'pending',
-              label: `待处理 (${reviewBills.length})`,
+              label: `待处理 (${filteredReviewBills.length})`,
               children: (
                 <div>
-                  {reviewBills.length === 0 ? (
+                  {filteredReviewBills.length === 0 ? (
                     <EmptyState
                       title="暂无待处理账单"
                       description="所有账单均已处理完毕"
                     />
                   ) : (
-                    reviewBills.map((bill) => renderPendingCard(bill))
+                    filteredReviewBills.map((bill) => renderPendingCard(bill))
                   )}
                 </div>
               ),
             },
             {
               key: 'all',
-              label: `全部 (${billGroups.length})`,
+              label: `全部 (${filteredBillGroups.length})`,
               children: (
                 <div>
                   <Input
