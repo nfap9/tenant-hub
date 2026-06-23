@@ -90,7 +90,7 @@ adminRouter.get(
         prisma.lease.count({ where: { status: 'ACTIVE' } }),
         prisma.bill.count({
           where: {
-            status: { in: ['UNPAID', 'PARTIAL_PAID', 'BILLING', 'FAILED'] },
+            status: { in: ['UNPAID', 'BILLING'] },
           },
         }),
       ]);

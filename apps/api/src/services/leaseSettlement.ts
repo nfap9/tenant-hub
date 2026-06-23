@@ -758,7 +758,7 @@ export const recordSettlementPayment = async ({
       where: { id: settlement.bill.id },
       data: {
         paidAmount: newPaidAmount,
-        status: isPaid ? 'PAID' : 'PARTIAL_PAID',
+        status: isPaid ? 'PAID' : 'UNPAID',
       },
     });
   }

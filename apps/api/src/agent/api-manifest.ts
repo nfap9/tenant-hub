@@ -109,16 +109,7 @@ const querySettlementsInput = z.object({
 
 const queryBillsInput = z.object({
   status: z
-    .enum([
-      'DRAFT',
-      'BILLING',
-      'UNPAID',
-      'PARTIAL_PAID',
-      'PAID',
-      'REFUNDED',
-      'FAILED',
-      'VOID',
-    ])
+    .enum(['BILLING', 'UNPAID', 'PAID', 'REFUNDED', 'VOID'])
     .optional()
     .describe('按账单状态筛选'),
   tenantName: z.string().optional().describe('按租户姓名关键词筛选（可选）'),

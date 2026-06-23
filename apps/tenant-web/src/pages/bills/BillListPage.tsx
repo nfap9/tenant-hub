@@ -81,15 +81,13 @@ export default function BillListPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [allBills, failedBills, billingBills, nextRooms, apts] =
-        await Promise.all([
-          getBills(currentOrgId),
-          getBillsByStatus(currentOrgId, 'FAILED'),
-          getBillsByStatus(currentOrgId, 'BILLING'),
-          getRooms(currentOrgId),
-          getApartments(currentOrgId),
-        ]);
-      const postpaidReviewBills = [...failedBills, ...billingBills].filter(
+      const [allBills, billingBills, nextRooms, apts] = await Promise.all([
+        getBills(currentOrgId),
+        getBillsByStatus(currentOrgId, 'BILLING'),
+        getRooms(currentOrgId),
+        getApartments(currentOrgId),
+      ]);
+      const postpaidReviewBills = billingBills.filter(
         (bill) => bill.mode === 'POSTPAID'
       );
       setBillGroups(groupBills(allBills));
@@ -144,10 +142,7 @@ export default function BillListPage() {
   };
 
   const unpaidGroups = useMemo(
-    () =>
-      filteredBillGroups.filter(
-        (g) => g.status === 'UNPAID' || g.status === 'PARTIAL_PAID'
-      ),
+    () => filteredBillGroups.filter((g) => g.status === 'UNPAID'),
     [filteredBillGroups]
   );
   const filteredAllGroups = useMemo(() => {
@@ -545,26 +540,18 @@ export default function BillListPage() {
                     allowClear
                   />
                   <Space wrap className="mb-16">
-                    {(
-                      [
-                        '',
-                        'UNPAID',
-                        'PARTIAL_PAID',
-                        'PAID',
-                        'FAILED',
-                        'VOID',
-                        'REFUNDED',
-                      ] as const
-                    ).map((status) => (
-                      <Button
-                        key={status || 'all'}
-                        type={statusFilter === status ? 'primary' : 'default'}
-                        size="small"
-                        onClick={() => setStatusFilter(status)}
-                      >
-                        {status ? statusLabels[status] : '全部状态'}
-                      </Button>
-                    ))}
+                    {(['', 'UNPAID', 'PAID', 'VOID', 'REFUNDED'] as const).map(
+                      (status) => (
+                        <Button
+                          key={status || 'all'}
+                          type={statusFilter === status ? 'primary' : 'default'}
+                          size="small"
+                          onClick={() => setStatusFilter(status)}
+                        >
+                          {status ? statusLabels[status] : '全部状态'}
+                        </Button>
+                      )
+                    )}
                   </Space>
                   {filteredAllGroups.length === 0 ? (
                     <EmptyState

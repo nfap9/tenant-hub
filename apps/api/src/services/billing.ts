@@ -237,7 +237,7 @@ export const assertBillPaymentAllowed = ({
 }: BillPaymentTarget) => {
   if (status === 'PAID' || status === 'VOID' || status === 'REFUNDED')
     throw new HttpError(400, '该账单已结清或作废，不能继续收款');
-  if (status === 'BILLING' || status === 'FAILED')
+  if (status === 'BILLING')
     throw new HttpError(400, '该账单尚未出账完成，不能收款');
   const paymentAmount = new Prisma.Decimal(amount);
   if (paymentAmount.lessThanOrEqualTo(0))
@@ -255,9 +255,7 @@ const BILL_OPERATION_GUARDS: Record<
   { allowVoid: boolean; allowRefund: boolean; allowDelete: boolean }
 > = {
   UNPAID: { allowVoid: true, allowRefund: false, allowDelete: true },
-  PARTIAL_PAID: { allowVoid: true, allowRefund: false, allowDelete: true },
   BILLING: { allowVoid: true, allowRefund: false, allowDelete: true },
-  FAILED: { allowVoid: true, allowRefund: false, allowDelete: true },
   PAID: { allowVoid: false, allowRefund: true, allowDelete: false },
   REFUNDED: { allowVoid: false, allowRefund: false, allowDelete: false },
   VOID: { allowVoid: false, allowRefund: false, allowDelete: false },
@@ -462,13 +460,9 @@ export const refreshBillTotals = async (billId: string) => {
         ? 'REFUNDED'
         : netPaidAmount.greaterThanOrEqualTo(totalAmount)
           ? 'PAID'
-          : netPaidAmount.greaterThan(0)
-            ? 'PARTIAL_PAID'
-            : bill.items.some((item) => item.status === 'FAILED')
-              ? 'FAILED'
-              : bill.items.some((item) => item.status === 'BILLING')
-                ? 'BILLING'
-                : 'UNPAID';
+          : bill.items.some((item) => item.status === 'BILLING')
+            ? 'BILLING'
+            : 'UNPAID';
 
   await prisma.bill.update({
     where: { id: billId },
@@ -502,10 +496,10 @@ const failPostpaidBill = async (billId: string, failureReason: string) => {
   await prisma.bill.update({
     where: { id: billId },
     data: {
-      status: 'FAILED',
+      status: 'BILLING',
       failureReason,
       items: {
-        updateMany: { where: {}, data: { status: 'FAILED', amount: 0 } },
+        updateMany: { where: {}, data: { status: 'BILLING', amount: 0 } },
       },
     },
   });
@@ -655,7 +649,7 @@ const generateBillForBillingDate = async (
     billingDate,
   });
   const dueDate = startOfDay(billingDate).toDate();
-  const prepaid = await prisma.bill.upsert({
+  const prepaidResult = await prisma.bill.upsert({
     where: {
       leaseId_billingDate_mode_depositType: {
         leaseId: lease.id,
@@ -693,16 +687,22 @@ const generateBillForBillingDate = async (
     },
     update: {},
   });
-  await refreshBillTotals(prepaid.id);
+  await refreshBillTotals(prepaidResult.id);
+  const prepaid = await prisma.bill.findUnique({
+    where: { id: prepaidResult.id },
+  });
+  if (!prepaid) {
+    throw new Error('Failed to refresh prepaid bill');
+  }
 
-  let postpaid: Awaited<ReturnType<typeof prisma.bill.upsert>> | undefined;
+  let postpaid: Awaited<ReturnType<typeof prisma.bill.findUnique>> = null;
   if (
     shouldGeneratePostpaidBill({
       leaseStartDate: lease.startDate,
       billingDate,
     })
   ) {
-    postpaid = await prisma.bill.upsert({
+    const postpaidResult = await prisma.bill.upsert({
       where: {
         leaseId_billingDate_mode_depositType: {
           leaseId: lease.id,
@@ -741,9 +741,12 @@ const generateBillForBillingDate = async (
       },
       update: {},
     });
-    if (postpaid.status === 'BILLING' || postpaid.status === 'FAILED') {
-      await completePostpaidBillFromReadings(postpaid.id);
+    if (postpaidResult.status === 'BILLING') {
+      await completePostpaidBillFromReadings(postpaidResult.id);
     }
+    postpaid = await prisma.bill.findUnique({
+      where: { id: postpaidResult.id },
+    });
   }
 
   return { prepaid, postpaid };
@@ -1139,7 +1142,7 @@ export const recordBillPayment = async ({
         where: { id: billId },
         data: {
           paidAmount: newPaidAmount,
-          status: isPaid ? 'PAID' : 'PARTIAL_PAID',
+          status: isPaid ? 'PAID' : 'UNPAID',
         },
       });
     }

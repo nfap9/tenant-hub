@@ -10,14 +10,7 @@ import { calculateUtilityLineAmounts, refreshBillTotals } from './billing.js';
  */
 export const listBills = async (
   organizationId: string,
-  status?:
-    | 'DRAFT'
-    | 'BILLING'
-    | 'UNPAID'
-    | 'PARTIAL_PAID'
-    | 'PAID'
-    | 'FAILED'
-    | 'VOID'
+  status?: 'BILLING' | 'UNPAID' | 'PAID' | 'VOID'
 ) => {
   return prisma.bill.findMany({
     where: {
@@ -42,15 +35,7 @@ export const listBills = async (
 export const listBillsRaw = async (
   organizationId: string,
   options?: {
-    status?:
-      | 'DRAFT'
-      | 'BILLING'
-      | 'UNPAID'
-      | 'PARTIAL_PAID'
-      | 'PAID'
-      | 'REFUNDED'
-      | 'FAILED'
-      | 'VOID';
+    status?: 'BILLING' | 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOID';
     tenantName?: string;
     mode?: 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
     limit?: number;
@@ -252,7 +237,7 @@ export const findPendingPostpaidBillsByRoom = async (roomId: string) => {
     where: {
       lease: { roomId },
       mode: 'POSTPAID',
-      status: { in: ['BILLING', 'FAILED'] },
+      status: { in: ['BILLING'] },
     },
     select: { id: true },
   });
@@ -419,7 +404,7 @@ export const findPendingPostpaidBillsForExport = async (
   return prisma.bill.findMany({
     where: {
       mode: 'POSTPAID',
-      status: { in: ['BILLING', 'FAILED'] },
+      status: { in: ['BILLING'] },
       organizationId,
     },
     include: { lease: { include: { room: true } }, items: true },

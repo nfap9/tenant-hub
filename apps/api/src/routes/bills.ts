@@ -95,15 +95,7 @@ billRouter.get(
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
     const status = z
-      .enum([
-        'DRAFT',
-        'BILLING',
-        'UNPAID',
-        'PARTIAL_PAID',
-        'PAID',
-        'FAILED',
-        'VOID',
-      ])
+      .enum(['BILLING', 'UNPAID', 'PAID', 'VOID'])
       .optional()
       .parse(req.query.status);
     ok(res, await listBills(req.organizationId!, status));

@@ -173,7 +173,6 @@ export async function executeApiAction(
           | 'ACTIVE'
           | 'TERMINATED'
           | 'EXPIRED'
-          | 'DRAFT'
           | undefined,
         limit: validatedBody.limit as number | undefined,
       });
@@ -191,13 +190,10 @@ export async function executeApiAction(
       return queryBillsForAgent({
         organizationId: ctx.organizationId,
         status: validatedBody.status as
-          | 'DRAFT'
           | 'BILLING'
           | 'UNPAID'
-          | 'PARTIAL_PAID'
           | 'PAID'
           | 'REFUNDED'
-          | 'FAILED'
           | 'VOID'
           | undefined,
         tenantName: validatedBody.tenantName as string | undefined,

@@ -18,15 +18,7 @@ export const queryBillsForAgent = async ({
   limit = 30,
 }: {
   organizationId: string;
-  status?:
-    | 'DRAFT'
-    | 'BILLING'
-    | 'UNPAID'
-    | 'PARTIAL_PAID'
-    | 'PAID'
-    | 'REFUNDED'
-    | 'FAILED'
-    | 'VOID';
+  status?: 'BILLING' | 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOID';
   tenantName?: string;
   mode?: 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
   limit?: number;

@@ -92,11 +92,7 @@ export default function PaymentDialog({
   const leaseBills = useMemo(() => {
     if (!selectedLeaseId) return [];
     return bills
-      .filter(
-        (b) =>
-          b.leaseId === selectedLeaseId &&
-          (b.status === 'UNPAID' || b.status === 'PARTIAL_PAID')
-      )
+      .filter((b) => b.leaseId === selectedLeaseId && b.status === 'UNPAID')
       .sort(
         (a, b) =>
           new Date(a.billingDate).getTime() - new Date(b.billingDate).getTime()

@@ -41,14 +41,14 @@ export const getAnalyticsSummaryForAgent = async (organizationId: string) => {
 
   const monthlyRentIncome =
     monthlyBills
-      .filter((b) => b.status === 'PAID' || b.status === 'PARTIAL_PAID')
+      .filter((b) => b.status === 'PAID')
       .reduce((sum, b) => sum + Number(b._sum.paidAmount || 0), 0) || 0;
 
   const totalBilled =
     allBills.reduce((sum, b) => sum + Number(b._sum.totalAmount || 0), 0) || 0;
   const totalPaid =
     allBills
-      .filter((b) => b.status === 'PAID' || b.status === 'PARTIAL_PAID')
+      .filter((b) => b.status === 'PAID')
       .reduce((sum, b) => sum + Number(b._sum.paidAmount || 0), 0) || 0;
 
   const unpaidBillsAmount = totalBilled - totalPaid;

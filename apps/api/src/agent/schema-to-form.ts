@@ -98,7 +98,6 @@ const ENUM_LABEL_MAP: Record<string, string> = {
   ACTIVE: '生效中',
   TERMINATED: '已退租',
   EXPIRED: '已到期',
-  DRAFT: '草稿',
   // 收支/账单方向
   INCOME: '收入',
   EXPENSE: '支出',
@@ -123,12 +122,10 @@ const ENUM_LABEL_MAP: Record<string, string> = {
   RECEIVE: '收款',
   REFUND: '退款',
   // 账单状态
+  BILLING: '出账中',
   UNPAID: '未缴',
-  PARTIAL_PAID: '部分缴纳',
   PAID: '已缴',
   REFUNDED: '已退款',
-  FAILED: '失败',
-  BILLING: '出账中',
   // 押金状态
   PARTIAL_REFUNDED: '部分退还',
   FULLY_REFUNDED: '全部退还',

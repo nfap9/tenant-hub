@@ -64,15 +64,7 @@ export type RoomStatus =
 export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type LeaseStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
 export type TerminationType = 'EXPIRED' | 'NEGOTIATED' | 'BREACH';
-export type BillStatus =
-  | 'DRAFT'
-  | 'BILLING'
-  | 'UNPAID'
-  | 'PARTIAL_PAID'
-  | 'PAID'
-  | 'FAILED'
-  | 'VOID'
-  | 'REFUNDED';
+export type BillStatus = 'BILLING' | 'UNPAID' | 'PAID' | 'VOID' | 'REFUNDED';
 export type BillMode = 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
 export type BillItemType =
   | 'RENT'

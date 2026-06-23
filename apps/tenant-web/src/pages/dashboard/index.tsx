@@ -83,22 +83,17 @@ export default function DashboardPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [nextApartments, nextRooms, allBills, failedBills, billingBills] =
+      const [nextApartments, nextRooms, allBills, billingBills] =
         await Promise.all([
           getApartments(currentOrgId),
           getRooms(currentOrgId),
           getBills(currentOrgId),
-          getBillsByStatus(currentOrgId, 'FAILED'),
           getBillsByStatus(currentOrgId, 'BILLING'),
         ]);
       setApartments(nextApartments);
       setRooms(nextRooms);
       setBillGroups(groupBills(allBills));
-      setReviewBills(
-        [...failedBills, ...billingBills].filter(
-          (bill) => bill.mode === 'POSTPAID'
-        )
-      );
+      setReviewBills(billingBills.filter((bill) => bill.mode === 'POSTPAID'));
     } catch (e) {
       message.error(e instanceof Error ? e.message : '首页数据加载失败');
     } finally {

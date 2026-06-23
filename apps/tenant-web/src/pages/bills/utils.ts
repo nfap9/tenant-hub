@@ -23,10 +23,7 @@ export const remainingAmount = (bill: {
 
 const statusPriority: Record<BillStatus, number> = {
   UNPAID: 0,
-  PARTIAL_PAID: 0,
   BILLING: 1,
-  FAILED: 2,
-  DRAFT: 2,
   PAID: 3,
   VOID: 4,
   REFUNDED: 5,
@@ -54,11 +51,11 @@ export const groupBills = (bills: Bill[]): BillGroup[] => {
 
     let status: BillStatus = 'PAID';
     for (const b of groupBills) {
-      if (b.status === 'UNPAID' || b.status === 'PARTIAL_PAID') {
+      if (b.status === 'UNPAID') {
         status = b.status;
         break;
       }
-      if (b.status === 'BILLING' || b.status === 'FAILED') {
+      if (b.status === 'BILLING') {
         status = b.status;
       }
     }
