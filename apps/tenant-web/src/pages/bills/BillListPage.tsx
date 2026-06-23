@@ -50,9 +50,9 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import PaymentDialog from '@/components/PaymentDialog';
-import UtilityExportModal from './UtilityExportModal';
-import UtilityModal from './UtilityModal';
-import ReadingDrawer from './ReadingDrawer';
+import UtilityExportModal from './components/UtilityExportModal';
+import UtilityModal from './components/UtilityModal';
+import ReadingDrawer from './components/ReadingDrawer';
 import type { Bill, BillStatus, Apartment, Room } from '@/types/domain';
 import styles from './BillListPage.module.scss';
 import clsx from 'clsx';

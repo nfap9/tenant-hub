@@ -29,7 +29,7 @@ import { groupBills, type BillGroup } from './utils';
 import type { Bill } from '@/types/domain';
 import PageHeader from '@/components/ui/PageHeader';
 import PaymentDialog from '@/components/PaymentDialog';
-import UtilityModal from './UtilityModal';
+import UtilityModal from './components/UtilityModal';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';

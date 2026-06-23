@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import PageHeader from '@/components/ui/PageHeader';
 import PaymentDialog from '@/components/PaymentDialog';
-import ReadingDrawer from '@/pages/bills/ReadingDrawer';
+import ReadingDrawer from '@/pages/bills/components/ReadingDrawer';
 import { useAppSession } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
