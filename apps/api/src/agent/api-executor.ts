@@ -245,7 +245,7 @@ export async function executeApiAction(
       const leases = await listLeasesRaw(ctx.organizationId, {
         tenantName: validatedBody.tenantName as string | undefined,
         roomId: validatedBody.roomId as string | undefined,
-        status: validatedBody.status as 'ACTIVE' | 'TERMINATED' | 'EXPIRED' | undefined,
+        status: validatedBody.status as 'ACTIVE' | 'TERMINATED' | 'EXPIRED' | 'DRAFT' | undefined,
         limit: validatedBody.limit as number | undefined,
       });
       return leases.map((l) => ({
