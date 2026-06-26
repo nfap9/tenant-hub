@@ -1,17 +1,18 @@
 import { createLlmClient } from './llm-client.js';
 import { mapChatMessagesToBaseMessages } from './message-mapper.js';
-import { z } from 'zod';
 import {
-  SystemMessage,
   HumanMessage,
   AIMessage,
+  ToolMessage,
+  SystemMessage,
 } from '@langchain/core/messages';
+import type { BaseMessage } from '@langchain/core/messages';
+import type { Runnable } from '@langchain/core/runnables';
 import {
   statusChunk,
   messageChunk,
   chartChunk,
-  formChunk,
-  actionChunk,
+  toolCallChunk,
   doneChunk,
   errorChunk,
 } from './stream-formatter.js';
@@ -23,98 +24,101 @@ import {
 import { schemaToFormFields } from '../schema-to-form.js';
 import { executeApiAction } from '../api-executor.js';
 import type { AgentContext, ChatMessage, StreamChunk } from '../types.js';
-
-export interface ManifestAgentDecision {
-  intent: string;
-  selectedApi?: {
-    name: string;
-    method: string;
-    path: string;
-  };
-  ready: boolean;
-  requiresConfirmation?: boolean;
-  reason?: string;
-  missingFields?: Array<{
-    name: string;
-    reason: string;
-  }>;
-  params?: Record<string, unknown>;
-  reply?: string;
-}
+import { z } from 'zod';
 
 const MAX_ITERATIONS = 5;
 
-function buildManifestPrompt(
-  manifest: ApiManifestItem[],
-  userMessage: string
+// --- Build LangChain tool definitions from manifest items ---
+
+interface ToolDef {
+  name: string;
+  description: string;
+  schema: z.ZodTypeAny;
+}
+
+function buildTools(manifest: ApiManifestItem[]): ToolDef[] {
+  return manifest.map((item) => ({
+    name: item.name,
+    description: item.description,
+    schema: mergeToolSchema(item),
+  }));
+}
+
+/** Merge pathParamsSchema + bodySchema so LLM knows about all required params */
+function mergeToolSchema(item: ApiManifestItem): z.ZodTypeAny {
+  const bodyShape =
+    item.bodySchema instanceof z.ZodObject
+      ? (item.bodySchema.shape as Record<string, z.ZodTypeAny>)
+      : {};
+  const pathShape =
+    item.pathParamsSchema instanceof z.ZodObject
+      ? (item.pathParamsSchema.shape as Record<string, z.ZodTypeAny>)
+      : {};
+  const merged = { ...bodyShape, ...pathShape };
+  if (Object.keys(merged).length === 0) return z.object({});
+  return z.object(merged);
+}
+
+/** Substitute path params (e.g. :id, :roomId) with values from LLM args */
+function buildActualPath(
+  item: ApiManifestItem,
+  args: Record<string, unknown>
 ): string {
+  let path = item.path;
+  if (item.pathParamsSchema instanceof z.ZodObject) {
+    for (const key of Object.keys(item.pathParamsSchema.shape)) {
+      const value = args[key];
+      if (value !== undefined && value !== null) {
+        path = path.replace(`:${key}`, encodeURIComponent(String(value)));
+      }
+    }
+  }
+  return path;
+}
+
+function buildSystemPrompt(manifest: ApiManifestItem[]): string {
   const items = manifest
-    .map((item) => {
-      const params = item.bodySchema
-        ? describeSchema(item.bodySchema)
-        : '无参数';
-      return `- ${item.name}: [${item.method}] ${item.path} - ${item.description}（参数：${params}）`;
-    })
+    .map(
+      (item) =>
+        `- ${item.name}: ${item.description}（${item.category === 'query' ? '查询类，自动执行' : '写操作类，需确认'}）`
+    )
     .join('\n');
 
-  return `你是 Tenant Hub（租务通）的智能助手，能够通过调用业务 API 帮助用户完成公寓租赁管理业务。
+  return `你是 Tenant Hub（租务通）的智能助手。你的唯一职责是调用工具来响应用户请求。系统会自动处理参数验证和操作确认。
 
-## 可用业务接口
+## Available Tools
 ${items}
 
-## 工作规则
-1. 分析用户意图，从上方接口中选择最合适的一个。
-2. 查询类接口（category=query）不需要用户确认，系统会自动执行并把结果返回给你，你可以基于结果继续选择下一个查询或给出最终回复。
-3. 写操作类接口（POST/PUT/PATCH/DELETE）默认需要用户确认，返回 selectedApi、params、requiresConfirmation=true。
-4. 仔细从用户消息中提取已经提供的字段值，放入 params。只把仍然缺失的必要字段放入 missingFields，不要编造数据。
-5. 字段名必须严格使用接口参数中列出的 name（英文），missingFields 中的 name 也要与参数名完全一致。
-6. 如果用户意图与任何接口无关，直接友好回复，selectedApi 为空。
-7. 不要执行删除、退款等高风险操作，除非用户明确请求。
-8. 如果用户请求生成图表，请使用 generate_chart 接口。
-
-## 输出格式（严格 JSON）
-{
-  "intent": "用户意图简述",
-  "selectedApi": { "name": "接口名称", "method": "GET", "path": "/api/xxx" },
-  "ready": true | false,
-  "requiresConfirmation": true | false,
-  "reason": "选择/缺失参数的原因",
-  "missingFields": [{ "name": "字段名", "reason": "为什么需要" }],
-  "params": { "字段名": "值" },
-  "reply": "给用户看的自然语言回复"
+## Fundamental Rules（最高优先级）
+- **始终直接调用工具**：只要用户表达了操作意图，立即调用对应工具并传入已知参数。系统会自动弹出表单让用户补齐缺失信息，或弹出确认框请用户确认。
+- **禁止预先查询验证**：不要先调用查询工具验证数据是否存在。直接调用用户意图对应的操作工具即可。
+- **每个请求必须至少调用一个工具**：用户说"改"就调 update 工具，用户说"退租"就调 terminate 工具，用户说"创建"就调 create 工具。
+- 查询类工具会自动执行并返回结果，写操作类工具会触发表单或确认弹窗。
+- 如果用户请求生成图表，请使用 generate_chart 工具。
+- 如果用户意图与任何工具无关，直接友好回复。
+- 不要执行删除、退款等高风险操作，除非用户明确请求。
+- 当用户消息提示"已补充参数"或"已确认操作"时，继续执行操作。`;
 }
 
-用户消息："""${userMessage}"""`;
-}
+// --- Parameter validation ---
 
-function describeSchema(schema: z.ZodTypeAny): string {
+function getRequiredFields(schema: z.ZodTypeAny): string[] {
   try {
     const fields = schemaToFormFields(schema);
-    if (fields.length === 0) return '无参数';
-    return fields
-      .map((f) => {
-        const extras: string[] = [];
-        if (f.type) extras.push(`类型:${f.type}`);
-        if (f.required) extras.push('必填');
-        if (f.options?.length) {
-          extras.push(`可选值:${f.options.map((o) => o.value).join('|')}`);
-        }
-        return `${f.label}(${f.name}${extras.length ? `, ${extras.join(', ')}` : ''})`;
-      })
-      .join('; ');
+    return fields.filter((f) => f.required).map((f) => f.name);
   } catch {
-    return '未知';
+    return [];
   }
 }
 
-function parseDecision(text: string): ManifestAgentDecision | undefined {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return undefined;
-  try {
-    return JSON.parse(jsonMatch[0]) as ManifestAgentDecision;
-  } catch {
-    return undefined;
-  }
+function getMissingRequiredFields(
+  schema: z.ZodTypeAny,
+  params: Record<string, unknown>
+): string[] {
+  return getRequiredFields(schema).filter(
+    (name) =>
+      params[name] === undefined || params[name] === null || params[name] === ''
+  );
 }
 
 function isChartResult(result: unknown): boolean {
@@ -131,7 +135,19 @@ function buildActionSummary(
   item: ApiManifestItem,
   params: Record<string, unknown>
 ): string {
-  return `${item.description}：${JSON.stringify(params, null, 2)}`;
+  // Build a human-readable operation description with parameter table
+  const fieldDefs = schemaToFormFields(mergeToolSchema(item));
+  const fieldMap = new Map(fieldDefs.map((f) => [f.name, f]));
+  const paramLines = Object.entries(params).map(([key, value]) => {
+    const label = fieldMap.get(key)?.label || key;
+    const displayValue =
+      typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+    return `| ${label} | ${displayValue} |`;
+  });
+
+  const header = `| 参数 | 值 |\n|------|-----|`;
+  const body = paramLines.length > 0 ? paramLines.join('\n') : '（无参数）';
+  return `${item.description}\n\n${header}\n${body}`;
 }
 
 export async function* runManifestAgent(
@@ -157,126 +173,140 @@ export async function* runManifestAgent(
 
   yield statusChunk('正在分析您的需求...');
 
-  const messages = [
-    new SystemMessage(buildManifestPrompt(manifest, userMessage)),
+  const tools = buildTools(manifest);
+  const llmWithTools = client.bindTools(tools) as unknown as Runnable<
+    BaseMessage[],
+    AIMessage
+  >;
+
+  const messages: BaseMessage[] = [
+    new SystemMessage(buildSystemPrompt(manifest)),
     ...mapChatMessagesToBaseMessages(history),
     new HumanMessage(userMessage),
   ];
 
   try {
     for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-      const response = await client.invoke(messages);
+      const response = await llmWithTools.invoke(messages);
+
+      // Native tool call from LLM
+      if (response.tool_calls && response.tool_calls.length > 0) {
+        messages.push(response);
+
+        const toolCall = response.tool_calls[0];
+        const toolName = toolCall.name;
+        const toolArgs = (toolCall.args ?? {}) as Record<string, unknown>;
+
+        const item = getApiManifestItem(toolName);
+        if (!item) {
+          messages.push(
+            new ToolMessage({
+              content: `错误：未找到工具 ${toolName}`,
+              tool_call_id: toolCall.id ?? '',
+            })
+          );
+          continue;
+        }
+
+        // Query tools: execute immediately, feed result back
+        if (item.category === 'query') {
+          yield statusChunk(`正在查询${item.description}...`);
+
+          try {
+            const result = await executeApiAction(
+              item,
+              buildActualPath(item, toolArgs),
+              toolArgs,
+              { organizationId: ctx.organizationId, userId: ctx.userId }
+            );
+
+            if (item.name === 'generate_chart' && isChartResult(result)) {
+              messages.push(
+                new ToolMessage({
+                  content: JSON.stringify(result),
+                  tool_call_id: toolCall.id ?? '',
+                })
+              );
+              yield chartChunk(JSON.stringify(result));
+              yield doneChunk();
+              return;
+            }
+
+            messages.push(
+              new ToolMessage({
+                content: JSON.stringify(result),
+                tool_call_id: toolCall.id ?? '',
+              })
+            );
+          } catch (error) {
+            const errorText =
+              error instanceof Error ? error.message : '查询执行失败';
+            messages.push(
+              new ToolMessage({
+                content: `查询失败：${errorText}`,
+                tool_call_id: toolCall.id ?? '',
+              })
+            );
+          }
+          continue;
+        }
+
+        // Action tools: check params completeness
+        const mergedSchema = mergeToolSchema(item);
+        const missing = getMissingRequiredFields(mergedSchema, toolArgs);
+
+        if (missing.length > 0) {
+          // Show form for missing required fields
+          const fields = schemaToFormFields(mergedSchema);
+          const missingNames = new Set(missing);
+          const visibleFields = fields.filter(
+            (f) => missingNames.has(f.name) || f.required
+          );
+
+          const fieldsWithDefaults = visibleFields.map((field) => ({
+            ...field,
+            defaultValue:
+              toolArgs[field.name] !== undefined
+                ? toolArgs[field.name]
+                : field.defaultValue,
+          }));
+
+          yield toolCallChunk('请补充以下信息：', {
+            tool: item.name,
+            kind: 'form',
+            reason: `缺少必要参数：${missing.join('、')}`,
+            fields: fieldsWithDefaults,
+          });
+          return;
+        }
+
+        // All params present: show confirmation
+        const summary = buildActionSummary(item, toolArgs);
+        yield toolCallChunk('准备执行以下操作：', {
+          tool: item.name,
+          kind: 'confirmation',
+          reason: '请确认操作',
+          method: item.method,
+          path: item.path,
+          params: toolArgs,
+          summary,
+          impact: [item.description],
+          requiresConfirmation: true,
+        });
+        return;
+      }
+
+      // Text reply (no tool call)
       const text =
         typeof response.content === 'string'
           ? response.content
           : JSON.stringify(response.content);
 
-      const decision = parseDecision(text);
-      if (!decision) {
+      if (text.trim()) {
         yield messageChunk(text);
-        yield doneChunk();
-        return;
       }
-
-      // 记录模型本轮思考，用于多轮查询上下文
-      messages.push(new AIMessage(text));
-
-      if (!decision.selectedApi) {
-        if (decision.reply) {
-          yield messageChunk(decision.reply);
-        }
-        yield doneChunk();
-        return;
-      }
-
-      const item = getApiManifestItem(decision.selectedApi.name);
-      if (!item) {
-        yield errorChunk(`未找到接口：${decision.selectedApi.name}`);
-        return;
-      }
-
-      const needsForm =
-        !decision.ready ||
-        (decision.missingFields && decision.missingFields.length > 0);
-      const requiresConfirmation =
-        (decision.requiresConfirmation ?? item.category === 'action') &&
-        !needsForm;
-
-      // 需要展示表单或确认卡片时，不额外输出文本回复，避免重复
-      if (decision.reply && !needsForm && !requiresConfirmation) {
-        yield messageChunk(decision.reply);
-      }
-
-      if (needsForm) {
-        const fields = item.bodySchema
-          ? schemaToFormFields(item.bodySchema)
-          : [];
-        const missingNames = new Set(
-          (decision.missingFields ?? []).map((f) => f.name)
-        );
-        const visibleFields = fields.filter(
-          (f) => missingNames.has(f.name) || f.required
-        );
-
-        const providedParams = decision.params ?? {};
-        const fieldsWithDefaults = visibleFields.map((field) => ({
-          ...field,
-          defaultValue:
-            providedParams[field.name] !== undefined
-              ? providedParams[field.name]
-              : field.defaultValue,
-        }));
-
-        yield formChunk(decision.reason || '请补充以下信息：', {
-          tool: item.name,
-          reason: decision.reason || '缺少必要参数',
-          fields: fieldsWithDefaults,
-        });
-        yield doneChunk();
-        return;
-      }
-
-      if (requiresConfirmation) {
-        const summary = buildActionSummary(item, decision.params ?? {});
-        yield actionChunk(decision.reason || '准备执行以下操作：', {
-          tool: item.name,
-          method: item.method,
-          path: item.path,
-          params: decision.params ?? {},
-          summary,
-          impact: [item.description],
-          requiresConfirmation: true,
-        });
-        yield doneChunk();
-        return;
-      }
-
-      // 查询类接口：自动执行，把结果喂给模型继续下一轮
-      yield statusChunk(`正在查询${item.description}...`);
-
-      try {
-        const result = await executeApiAction(
-          item,
-          item.path,
-          decision.params ?? {},
-          { organizationId: ctx.organizationId, userId: ctx.userId }
-        );
-
-        if (item.name === 'generate_chart' && isChartResult(result)) {
-          yield chartChunk(JSON.stringify(result));
-          yield doneChunk();
-          return;
-        }
-
-        const observation = `查询结果：${JSON.stringify(result, null, 2)}`;
-        messages.push(new HumanMessage(observation));
-      } catch (error) {
-        const errorText =
-          error instanceof Error ? error.message : '查询执行失败';
-        messages.push(
-          new HumanMessage(`查询执行失败：${errorText}，请尝试其他方式。`)
-        );
-      }
+      yield doneChunk();
+      return;
     }
 
     yield errorChunk('思考次数过多，请简化您的问题后重试。');

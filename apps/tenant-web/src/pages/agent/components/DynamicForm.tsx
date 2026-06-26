@@ -7,15 +7,12 @@ import {
   Switch,
   Button,
   Space,
-  Card,
 } from 'antd';
 import dayjs from 'dayjs';
 import type { FormField } from '@/api/agent';
-import styles from '../AgentChatPage.module.scss';
 
 interface DynamicFormProps {
   fields: FormField[];
-  reason?: string;
   onSubmit: (values: Record<string, unknown>) => void;
   onCancel?: () => void;
 }
@@ -94,12 +91,7 @@ function getInitialValues(fields: FormField[]): Record<string, unknown> {
   return values;
 }
 
-export function DynamicForm({
-  fields,
-  reason,
-  onSubmit,
-  onCancel,
-}: DynamicFormProps) {
+export function DynamicForm({ fields, onSubmit, onCancel }: DynamicFormProps) {
   const [form] = Form.useForm();
 
   const handleFinish = (values: Record<string, unknown>) => {
@@ -125,42 +117,36 @@ export function DynamicForm({
   };
 
   return (
-    <Card
-      size="small"
-      title={reason || '请补充以下信息'}
-      className={styles.agentFormCard}
+    <Form
+      form={form}
+      layout="vertical"
+      initialValues={getInitialValues(fields)}
+      onFinish={handleFinish}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={getInitialValues(fields)}
-        onFinish={handleFinish}
-      >
-        {fields.map((field) => (
-          <Form.Item
-            key={field.name}
-            name={field.name}
-            label={field.label}
-            rules={[
-              {
-                required: field.required,
-                message: `请填写${field.label}`,
-              },
-            ]}
-            valuePropName={field.type === 'boolean' ? 'checked' : 'value'}
-          >
-            {renderField(field)}
-          </Form.Item>
-        ))}
-        <Form.Item>
-          <Space>
-            <Button type="primary" htmlType="submit">
-              提交
-            </Button>
-            {onCancel && <Button onClick={onCancel}>取消</Button>}
-          </Space>
+      {fields.map((field) => (
+        <Form.Item
+          key={field.name}
+          name={field.name}
+          label={field.label}
+          rules={[
+            {
+              required: field.required,
+              message: `请填写${field.label}`,
+            },
+          ]}
+          valuePropName={field.type === 'boolean' ? 'checked' : 'value'}
+        >
+          {renderField(field)}
         </Form.Item>
-      </Form>
-    </Card>
+      ))}
+      <Form.Item>
+        <Space>
+          <Button type="primary" htmlType="submit">
+            提交
+          </Button>
+          {onCancel && <Button onClick={onCancel}>取消</Button>}
+        </Space>
+      </Form.Item>
+    </Form>
   );
 }

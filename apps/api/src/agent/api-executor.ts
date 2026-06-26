@@ -8,6 +8,11 @@ import {
   createApartmentExpense,
   updateRoom,
   getApartmentName,
+  updateApartment,
+  countActiveLeasesInApartment,
+  deleteApartment,
+  countActiveLeasesInRoom,
+  deleteRoom,
 } from '../services/apartment.js';
 import {
   createMeterReading,
@@ -15,6 +20,10 @@ import {
   findLeaseForMeterReading,
   findPendingPostpaidBillsByRoom,
   applyUtilityReadingToBill,
+  getBillById,
+  deleteBillWithPayments,
+  findPendingPostpaidBillsForExport,
+  getBillForRetry,
 } from '../services/bill.js';
 import {
   createLeaseWithDeposit,
@@ -25,25 +34,49 @@ import { createTransaction } from '../services/transaction.js';
 import {
   findRoomForReservation,
   upsertReservation,
+  deleteReservation,
+  getReservationByRoomId,
 } from '../services/reservation.js';
 import {
   retryPostpaidBillAndMonthlyBill,
   generateCurrentLeaseBills,
   generateLeaseBills,
+  voidBill,
+  assertBillOperation,
 } from '../services/billing.js';
 import {
   createLeaseSettlement,
   recordSettlementPayment,
+  getLeaseSettlementPreview,
 } from '../services/leaseSettlement.js';
-import { getLeaseEndDate } from '../services/lease.js';
+import {
+  getLeaseEndDate,
+  getLeaseById,
+  getLeaseWithFees,
+  findRoomById,
+  activateLease,
+  updateLease,
+  updateRoomStatus,
+} from '../services/lease.js';
 import { parseUtilityImportRows } from '../services/utilityImport.js';
-import { listApartmentsRaw, listRoomsRaw, getRoomByIdRaw } from '../services/apartment.js';
+import {
+  listApartmentsRaw,
+  listRoomsRaw,
+  getRoomByIdRaw,
+} from '../services/apartment.js';
 import { listBillsRaw, listMeterReadingsRaw } from '../services/bill.js';
 import { listLeasesRaw, listLeaseSettlementsRaw } from '../services/lease.js';
-import { listTransactionsRaw, getTransactionSummaryRaw } from '../services/transaction.js';
+import {
+  listTransactionsRaw,
+  getTransactionSummaryRaw,
+  getTransactionById,
+  deleteTransaction,
+} from '../services/transaction.js';
 import { findReservationByRoomIdRaw } from '../services/reservation.js';
 import { getCategoryLabel } from '../services/transactionCategories.js';
+import { TRANSACTION_CATEGORIES } from '../services/transactionCategories.js';
 import { calculateDepositSummary } from '../services/depositUtils.js';
+import { recordDepositPayment } from '../services/deposit.js';
 import { hasExpired, isAutoRenewalPeriod } from '../services/leaseLifecycle.js';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
@@ -149,7 +182,9 @@ export async function executeApiAction(
               contractEnd: contract.contractEnd
                 ? contract.contractEnd.toISOString().split('T')[0]
                 : null,
-              rentAmount: contract.rentAmount ? Number(contract.rentAmount) : null,
+              rentAmount: contract.rentAmount
+                ? Number(contract.rentAmount)
+                : null,
               floors: contract.floors,
               landArea: contract.landArea ? Number(contract.landArea) : null,
               totalArea: contract.totalArea ? Number(contract.totalArea) : null,
@@ -161,7 +196,13 @@ export async function executeApiAction(
     case 'query_rooms': {
       const rooms = await listRoomsRaw(ctx.organizationId, {
         apartmentId: validatedBody.apartmentId as string | undefined,
-        status: validatedBody.status as 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE' | undefined,
+        status: validatedBody.status as
+          | 'VACANT'
+          | 'RESERVED'
+          | 'OCCUPIED'
+          | 'MAINTENANCE'
+          | 'SELF_USE'
+          | undefined,
         keyword: validatedBody.keyword as string | undefined,
         limit: validatedBody.limit as number | undefined,
       });
@@ -184,7 +225,10 @@ export async function executeApiAction(
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       const currentBills = await prisma.bill.findMany({
         where: {
-          lease: { roomId: pathParams.roomId, organizationId: ctx.organizationId },
+          lease: {
+            roomId: pathParams.roomId,
+            organizationId: ctx.organizationId,
+          },
           deletedAt: null,
           billingDate: {
             gte: monthStart,
@@ -209,7 +253,9 @@ export async function executeApiAction(
               name: room.reservation.name,
               phone: room.reservation.phone,
               deposit: Number(room.reservation.deposit),
-              expectedMoveInDate: room.reservation.expectedMoveInDate.toISOString().split('T')[0],
+              expectedMoveInDate: room.reservation.expectedMoveInDate
+                .toISOString()
+                .split('T')[0],
             }
           : null,
         activeLease: activeLease
@@ -222,16 +268,23 @@ export async function executeApiAction(
               rentAmount: Number(activeLease.rentAmount),
               cycle: activeLease.cycle,
               fees: activeLease.fees.map((f) => ({
-                type: f.type, name: f.name, amount: Number(f.amount),
+                type: f.type,
+                name: f.name,
+                amount: Number(f.amount),
               })),
               deposits: activeLease.deposits.map((d) => ({
-                type: d.type, amount: Number(d.amount),
-                paidAmount: Number(d.paidAmount), status: d.status,
+                type: d.type,
+                amount: Number(d.amount),
+                paidAmount: Number(d.paidAmount),
+                status: d.status,
               })),
             }
           : null,
         currentMonthBills: currentBills.map((b) => ({
-          id: b.id, status: b.status, totalAmount: Number(b.totalAmount), mode: b.mode,
+          id: b.id,
+          status: b.status,
+          totalAmount: Number(b.totalAmount),
+          mode: b.mode,
         })),
         recentReadings: room.meterReadings.map((r) => ({
           meterType: r.meterType,
@@ -245,7 +298,12 @@ export async function executeApiAction(
       const leases = await listLeasesRaw(ctx.organizationId, {
         tenantName: validatedBody.tenantName as string | undefined,
         roomId: validatedBody.roomId as string | undefined,
-        status: validatedBody.status as 'ACTIVE' | 'TERMINATED' | 'EXPIRED' | 'DRAFT' | undefined,
+        status: validatedBody.status as
+          | 'ACTIVE'
+          | 'TERMINATED'
+          | 'EXPIRED'
+          | 'DRAFT'
+          | undefined,
         limit: validatedBody.limit as number | undefined,
       });
       return leases.map((l) => ({
@@ -268,9 +326,15 @@ export async function executeApiAction(
         isAutoRenewal: isAutoRenewalPeriod(l),
         cycle: l.cycle,
         autoRenew: l.autoRenew,
-        fees: l.fees.map((f) => ({ type: f.type, name: f.name, amount: Number(f.amount) })),
+        fees: l.fees.map((f) => ({
+          type: f.type,
+          name: f.name,
+          amount: Number(f.amount),
+        })),
         deposits: l.deposits.map((d) => ({
-          id: d.id, type: d.type, amount: Number(d.amount),
+          id: d.id,
+          type: d.type,
+          amount: Number(d.amount),
           paidAmount: Number(d.paidAmount),
           refundedAmount: Number(d.refundedAmount),
           deductedAmount: Number(d.deductedAmount),
@@ -316,9 +380,19 @@ export async function executeApiAction(
 
     case 'query_bills': {
       const bills = await listBillsRaw(ctx.organizationId, {
-        status: validatedBody.status as 'BILLING' | 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOID' | undefined,
+        status: validatedBody.status as
+          | 'BILLING'
+          | 'UNPAID'
+          | 'PAID'
+          | 'REFUNDED'
+          | 'VOID'
+          | undefined,
         tenantName: validatedBody.tenantName as string | undefined,
-        mode: validatedBody.mode as 'PREPAID' | 'POSTPAID' | 'DEPOSIT' | undefined,
+        mode: validatedBody.mode as
+          | 'PREPAID'
+          | 'POSTPAID'
+          | 'DEPOSIT'
+          | undefined,
         limit: validatedBody.limit as number | undefined,
       });
       return bills.map((b) => ({
@@ -331,21 +405,30 @@ export async function executeApiAction(
         dueDate: b.dueDate.toISOString().split('T')[0],
         totalAmount: Number(b.totalAmount),
         paidAmount: Number(b.paidAmount),
-        remainingAmount: Number((Number(b.totalAmount) - Number(b.paidAmount)).toFixed(2)),
+        remainingAmount: Number(
+          (Number(b.totalAmount) - Number(b.paidAmount)).toFixed(2)
+        ),
         status: b.status,
         mode: b.mode,
         note: b.note,
         failureReason: b.failureReason,
         items: b.items.map((item) => ({
-          type: item.type, name: item.name, amount: Number(item.amount), status: item.status,
+          type: item.type,
+          name: item.name,
+          amount: Number(item.amount),
+          status: item.status,
           previousWater: item.previousWater ? Number(item.previousWater) : null,
           currentWater: item.currentWater ? Number(item.currentWater) : null,
           previousPower: item.previousPower ? Number(item.previousPower) : null,
           currentPower: item.currentPower ? Number(item.currentPower) : null,
         })),
         payments: b.payments.map((p) => ({
-          id: p.id, type: p.type, amount: Number(p.amount), method: p.method,
-          status: p.status, note: p.note,
+          id: p.id,
+          type: p.type,
+          amount: Number(p.amount),
+          method: p.method,
+          status: p.status,
+          note: p.note,
           recordedBy: p.user.username,
           paidAt: p.paidAt.toISOString().split('T')[0],
         })),
@@ -380,8 +463,13 @@ export async function executeApiAction(
         startDate: validatedBody.startDate as Date | undefined,
         endDate: validatedBody.endDate as Date | undefined,
         sourceType: validatedBody.sourceType as
-          | 'BILL_PAYMENT' | 'DEPOSIT_PAYMENT' | 'SETTLEMENT_PAYMENT'
-          | 'APARTMENT_EXPENSE' | 'RESERVATION' | 'MANUAL' | undefined,
+          | 'BILL_PAYMENT'
+          | 'DEPOSIT_PAYMENT'
+          | 'SETTLEMENT_PAYMENT'
+          | 'APARTMENT_EXPENSE'
+          | 'RESERVATION'
+          | 'MANUAL'
+          | undefined,
         keyword: validatedBody.keyword as string | undefined,
         page: validatedBody.page as number | undefined,
         pageSize: validatedBody.pageSize as number | undefined,
@@ -415,7 +503,10 @@ export async function executeApiAction(
       });
       let totalIncome = 0;
       let totalExpense = 0;
-      const byCategory: Record<string, { label: string; income: number; expense: number }> = {};
+      const byCategory: Record<
+        string,
+        { label: string; income: number; expense: number }
+      > = {};
       for (const t of transactions) {
         const amount = Number(t.amount);
         if (t.type === 'INCOME') {
@@ -424,7 +515,11 @@ export async function executeApiAction(
           totalExpense += amount;
         }
         if (!byCategory[t.category]) {
-          byCategory[t.category] = { label: getCategoryLabel(t.category), income: 0, expense: 0 };
+          byCategory[t.category] = {
+            label: getCategoryLabel(t.category),
+            income: 0,
+            expense: 0,
+          };
         }
         if (t.type === 'INCOME') {
           byCategory[t.category].income += amount;
@@ -438,7 +533,8 @@ export async function executeApiAction(
         netIncome: Number((totalIncome - totalExpense).toFixed(2)),
         transactionCount: transactions.length,
         byCategory: Object.entries(byCategory).map(([key, val]) => ({
-          category: key, label: val.label,
+          category: key,
+          label: val.label,
           income: Number(val.income.toFixed(2)),
           expense: Number(val.expense.toFixed(2)),
         })),
@@ -446,7 +542,13 @@ export async function executeApiAction(
     }
 
     case 'query_deposits': {
-      const status = validatedBody.status as 'UNPAID' | 'PAID' | 'PARTIAL_REFUNDED' | 'FULLY_REFUNDED' | 'DEDUCTED' | undefined;
+      const status = validatedBody.status as
+        | 'UNPAID'
+        | 'PAID'
+        | 'PARTIAL_REFUNDED'
+        | 'FULLY_REFUNDED'
+        | 'DEDUCTED'
+        | undefined;
       const deposits = await prisma.deposit.findMany({
         where: {
           organizationId: ctx.organizationId,
@@ -498,7 +600,10 @@ export async function executeApiAction(
     }
 
     case 'query_reservation': {
-      const reservation = await findReservationByRoomIdRaw(pathParams.roomId, ctx.organizationId);
+      const reservation = await findReservationByRoomIdRaw(
+        pathParams.roomId,
+        ctx.organizationId
+      );
       if (!reservation) return { exists: false };
       return {
         exists: true,
@@ -510,7 +615,9 @@ export async function executeApiAction(
         customerPhone: reservation.phone,
         deposit: Number(reservation.deposit),
         paymentMethod: reservation.paymentMethod,
-        expectedMoveInDate: reservation.expectedMoveInDate.toISOString().split('T')[0],
+        expectedMoveInDate: reservation.expectedMoveInDate
+          .toISOString()
+          .split('T')[0],
         createdAt: reservation.createdAt.toISOString().split('T')[0],
       };
     }
@@ -520,39 +627,47 @@ export async function executeApiAction(
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-      const [apartments, rooms, activeLeases, monthlyBills, allBills] = await Promise.all([
-        listApartmentsRaw(ctx.organizationId),
-        listRoomsRaw(ctx.organizationId),
-        prisma.lease.count({
-          where: { organizationId: ctx.organizationId, deletedAt: null, status: 'ACTIVE' },
-        }),
-        prisma.bill.groupBy({
-          by: ['status'],
-          where: {
-            organizationId: ctx.organizationId,
-            deletedAt: null,
-            billingDate: { gte: startOfMonth, lt: endOfMonth },
-          },
-          _sum: { totalAmount: true, paidAmount: true },
-        }),
-        prisma.bill.groupBy({
-          by: ['status'],
-          where: { organizationId: ctx.organizationId, deletedAt: null },
-          _sum: { totalAmount: true, paidAmount: true },
-        }),
-      ]);
+      const [apartments, rooms, activeLeases, monthlyBills, allBills] =
+        await Promise.all([
+          listApartmentsRaw(ctx.organizationId),
+          listRoomsRaw(ctx.organizationId),
+          prisma.lease.count({
+            where: {
+              organizationId: ctx.organizationId,
+              deletedAt: null,
+              status: 'ACTIVE',
+            },
+          }),
+          prisma.bill.groupBy({
+            by: ['status'],
+            where: {
+              organizationId: ctx.organizationId,
+              deletedAt: null,
+              billingDate: { gte: startOfMonth, lt: endOfMonth },
+            },
+            _sum: { totalAmount: true, paidAmount: true },
+          }),
+          prisma.bill.groupBy({
+            by: ['status'],
+            where: { organizationId: ctx.organizationId, deletedAt: null },
+            _sum: { totalAmount: true, paidAmount: true },
+          }),
+        ]);
 
       const totalApartments = apartments.length;
       const totalRooms = rooms.length;
       const occupiedRooms = rooms.filter((r) => r.status === 'OCCUPIED').length;
       const vacantRooms = rooms.filter((r) => r.status === 'VACANT').length;
       const monthlyRentIncome =
-        monthlyBills.filter((b) => b.status === 'PAID')
+        monthlyBills
+          .filter((b) => b.status === 'PAID')
           .reduce((sum, b) => sum + Number(b._sum.paidAmount || 0), 0) || 0;
       const totalBilled =
-        allBills.reduce((sum, b) => sum + Number(b._sum.totalAmount || 0), 0) || 0;
+        allBills.reduce((sum, b) => sum + Number(b._sum.totalAmount || 0), 0) ||
+        0;
       const totalPaid =
-        allBills.filter((b) => b.status === 'PAID')
+        allBills
+          .filter((b) => b.status === 'PAID')
           .reduce((sum, b) => sum + Number(b._sum.paidAmount || 0), 0) || 0;
 
       return {
@@ -560,12 +675,18 @@ export async function executeApiAction(
         totalRooms,
         occupiedRooms,
         vacantRooms,
-        occupancyRate: totalRooms > 0 ? Number(((occupiedRooms / totalRooms) * 100).toFixed(2)) : 0,
+        occupancyRate:
+          totalRooms > 0
+            ? Number(((occupiedRooms / totalRooms) * 100).toFixed(2))
+            : 0,
         activeLeases,
         monthlyRentIncome: Number(monthlyRentIncome.toFixed(2)),
         unpaidBillsAmount: Number((totalBilled - totalPaid).toFixed(2)),
         paidBillsAmount: Number(totalPaid.toFixed(2)),
-        collectionRate: totalBilled > 0 ? Number(((totalPaid / totalBilled) * 100).toFixed(2)) : 100,
+        collectionRate:
+          totalBilled > 0
+            ? Number(((totalPaid / totalBilled) * 100).toFixed(2))
+            : 100,
       };
     }
 
@@ -946,6 +1067,419 @@ export async function executeApiAction(
         method: validatedBody.method as string,
         note: validatedBody.note as string | undefined,
       });
+    }
+
+    // --- 公寓管理（补充） ---
+    case 'update_apartment': {
+      await ensureApartmentInOrg(pathParams.id, ctx.organizationId);
+      return updateApartment(pathParams.id, {
+        name: validatedBody.name as string | undefined,
+        location: validatedBody.location as string | undefined,
+      });
+    }
+
+    case 'delete_apartment': {
+      await ensureApartmentInOrg(pathParams.id, ctx.organizationId);
+      const activeCount = await countActiveLeasesInApartment(
+        pathParams.id,
+        ctx.organizationId
+      );
+      if (activeCount > 0)
+        throw new HttpError(400, '公寓存在活跃租约，无法删除');
+      return deleteApartment(pathParams.id);
+    }
+
+    case 'delete_room': {
+      await ensureRoomInOrg(pathParams.roomId, ctx.organizationId);
+      const activeCount = await countActiveLeasesInRoom(
+        pathParams.roomId,
+        ctx.organizationId
+      );
+      if (activeCount > 0)
+        throw new HttpError(400, '房间存在活跃租约，无法删除');
+      return deleteRoom(pathParams.roomId);
+    }
+
+    // --- 账单管理（补充） ---
+    case 'query_bill_detail': {
+      const bill = await getBillById(pathParams.id, ctx.organizationId);
+      if (!bill) return null;
+      return {
+        id: bill.id,
+        tenantName: bill.lease.tenantName,
+        roomNo: bill.lease.room.roomNo,
+        billingDate: bill.billingDate.toISOString().split('T')[0],
+        periodStart: bill.periodStart.toISOString().split('T')[0],
+        periodEnd: bill.periodEnd.toISOString().split('T')[0],
+        dueDate: bill.dueDate.toISOString().split('T')[0],
+        totalAmount: Number(bill.totalAmount),
+        paidAmount: Number(bill.paidAmount),
+        remainingAmount: Number(
+          (Number(bill.totalAmount) - Number(bill.paidAmount)).toFixed(2)
+        ),
+        status: bill.status,
+        mode: bill.mode,
+        note: bill.note,
+        failureReason: bill.failureReason,
+        items: bill.items.map((item) => ({
+          type: item.type,
+          name: item.name,
+          amount: Number(item.amount),
+          status: item.status,
+          previousWater: item.previousWater ? Number(item.previousWater) : null,
+          currentWater: item.currentWater ? Number(item.currentWater) : null,
+          previousPower: item.previousPower ? Number(item.previousPower) : null,
+          currentPower: item.currentPower ? Number(item.currentPower) : null,
+        })),
+        payments: bill.payments.map((p) => ({
+          id: p.id,
+          type: p.type,
+          amount: Number(p.amount),
+          method: p.method,
+          status: p.status,
+          note: p.note,
+          paidAt: p.paidAt.toISOString().split('T')[0],
+        })),
+      };
+    }
+
+    case 'delete_bill': {
+      const bill = await getBillById(pathParams.id, ctx.organizationId);
+      if (!bill) throw new HttpError(404, '账单不存在');
+      assertBillOperation(bill.status, 'delete');
+      await deleteBillWithPayments(pathParams.id);
+      return { deleted: true };
+    }
+
+    case 'void_bill': {
+      return voidBill(pathParams.id, ctx.organizationId);
+    }
+
+    case 'retry_billing': {
+      const bill = await getBillForRetry(pathParams.id, ctx.organizationId);
+      if (!bill) throw new HttpError(404, '账单不存在');
+      return retryPostpaidBillAndMonthlyBill(pathParams.id);
+    }
+
+    case 'export_utility_pending': {
+      const bills = await findPendingPostpaidBillsForExport(ctx.organizationId);
+      const header =
+        'billId,房间号,租客,交租日,水电周期开始,水电周期结束,上月水表,本月水表,上月电表,本月电表,失败原因';
+      const rows = bills.map((b) => {
+        const waterItem = b.items.find((i) => i.type === 'WATER');
+        const powerItem = b.items.find((i) => i.type === 'POWER');
+        return [
+          b.id,
+          b.lease.room.roomNo,
+          b.lease.tenantName,
+          b.billingDate.toISOString().split('T')[0],
+          b.periodStart.toISOString().split('T')[0],
+          b.periodEnd.toISOString().split('T')[0],
+          waterItem?.previousWater ?? '',
+          waterItem?.currentWater ?? '',
+          powerItem?.previousPower ?? '',
+          powerItem?.currentPower ?? '',
+          b.failureReason ?? '',
+        ].join(',');
+      });
+      return { csv: [header, ...rows].join('\n') };
+    }
+
+    // --- 租赁管理（补充） ---
+    case 'update_lease': {
+      const lease = await getLeaseById(pathParams.id, ctx.organizationId);
+      if (!lease) throw new HttpError(404, '租约不存在');
+      if (lease.status !== 'ACTIVE')
+        throw new HttpError(400, '仅有效租约可以变更');
+
+      const leaseData: Record<string, unknown> = {};
+      if (validatedBody.rentAmount !== undefined)
+        leaseData.rentAmount = new Prisma.Decimal(
+          Number(validatedBody.rentAmount)
+        );
+      if (validatedBody.roomDepositAmount !== undefined)
+        leaseData.roomDepositAmount = new Prisma.Decimal(
+          Number(validatedBody.roomDepositAmount)
+        );
+      if (validatedBody.keyQuantity !== undefined)
+        leaseData.keyQuantity = Number(validatedBody.keyQuantity);
+      if (validatedBody.keyUnitPrice !== undefined)
+        leaseData.keyUnitPrice = new Prisma.Decimal(
+          Number(validatedBody.keyUnitPrice)
+        );
+      if (validatedBody.waterUnitPrice !== undefined)
+        leaseData.waterUnitPrice = new Prisma.Decimal(
+          Number(validatedBody.waterUnitPrice)
+        );
+      if (validatedBody.powerUnitPrice !== undefined)
+        leaseData.powerUnitPrice = new Prisma.Decimal(
+          Number(validatedBody.powerUnitPrice)
+        );
+
+      return updateLease(pathParams.id, {
+        leaseData: leaseData as Parameters<typeof updateLease>[1]['leaseData'],
+      });
+    }
+
+    case 'activate_lease': {
+      const lease = await getLeaseWithFees(pathParams.id, ctx.organizationId);
+      if (!lease) throw new HttpError(404, '租约不存在');
+      if (lease.status !== 'DRAFT')
+        throw new HttpError(400, '仅草稿状态的租约可以激活');
+
+      const room = await findRoomById(lease.roomId, ctx.organizationId);
+      if (!room) throw new HttpError(404, '房间不存在');
+      if (room.status !== 'VACANT' && room.status !== 'RESERVED') {
+        throw new HttpError(400, '房间已被占用，无法激活租约');
+      }
+
+      await activateLease({
+        leaseId: pathParams.id,
+        organizationId: ctx.organizationId,
+        userId: ctx.userId,
+      });
+      await updateRoomStatus(lease.roomId, 'OCCUPIED');
+      return generateLeaseBills(pathParams.id, new Date(), {
+        onlyCurrentPeriod: false,
+      });
+    }
+
+    case 'preview_settlement': {
+      const terminatedAt = validatedBody.terminatedAt
+        ? new Date(validatedBody.terminatedAt as string)
+        : new Date();
+      const preview = await getLeaseSettlementPreview({
+        leaseId: pathParams.id,
+        organizationId: ctx.organizationId,
+        terminatedAt,
+      });
+      return {
+        previousWater: Number(preview.previousWater),
+        previousPower: Number(preview.previousPower),
+      };
+    }
+
+    // --- 收支管理（补充） ---
+    case 'query_transaction_categories': {
+      return Object.entries(TRANSACTION_CATEGORIES).map(([key, val]) => ({
+        key,
+        label: val.label,
+        type: val.type,
+      }));
+    }
+
+    case 'query_transaction_detail': {
+      const tx = await getTransactionById(pathParams.id, ctx.organizationId);
+      if (!tx) return null;
+      return {
+        id: tx.id,
+        type: tx.type,
+        category: tx.category,
+        categoryLabel: getCategoryLabel(tx.category),
+        amount: Number(tx.amount),
+        method: tx.method,
+        description: tx.description,
+        sourceType: tx.sourceType,
+        occurredAt: tx.occurredAt.toISOString().split('T')[0],
+        note: tx.note,
+        apartmentName: tx.apartment?.name ?? null,
+        tenantName: tx.lease?.tenantName ?? null,
+        roomNo: tx.lease?.room?.roomNo ?? null,
+        operatorName: tx.operator?.username ?? null,
+        bill: tx.bill
+          ? {
+              id: tx.bill.id,
+              mode: tx.bill.mode,
+              periodStart: tx.bill.periodStart.toISOString().split('T')[0],
+              periodEnd: tx.bill.periodEnd.toISOString().split('T')[0],
+              status: tx.bill.status,
+            }
+          : null,
+      };
+    }
+
+    case 'delete_transaction': {
+      const result = await deleteTransaction(pathParams.id, ctx.organizationId);
+      if (!result) throw new HttpError(404, '收支记录不存在');
+      return { deleted: true };
+    }
+
+    // --- 押金管理（补充） ---
+    case 'query_deposit_detail': {
+      const deposit = await prisma.deposit.findFirst({
+        where: { id: pathParams.id, organizationId: ctx.organizationId },
+        include: {
+          lease: { include: { room: { include: { apartment: true } } } },
+          bill: {
+            include: {
+              payments: { include: { user: { select: { username: true } } } },
+            },
+          },
+        },
+      });
+      if (!deposit) return null;
+
+      const depositBills = await prisma.bill.findMany({
+        where: { leaseId: deposit.leaseId, mode: 'DEPOSIT', deletedAt: null },
+        include: {
+          payments: { include: { user: { select: { username: true } } } },
+        },
+      });
+
+      return {
+        id: deposit.id,
+        tenantName: deposit.lease.tenantName,
+        roomNo: deposit.lease.room.roomNo,
+        apartmentName: deposit.lease.room.apartment.name,
+        type: deposit.type,
+        amount: Number(deposit.amount),
+        paidAmount: Number(deposit.paidAmount),
+        refundedAmount: Number(deposit.refundedAmount),
+        deductedAmount: Number(deposit.deductedAmount),
+        status: deposit.status,
+        createdAt: deposit.createdAt.toISOString().split('T')[0],
+        bill: deposit.bill
+          ? {
+              id: deposit.bill.id,
+              status: deposit.bill.status,
+              totalAmount: Number(deposit.bill.totalAmount),
+              paidAmount: Number(deposit.bill.paidAmount),
+              payments: deposit.bill.payments.map((p) => ({
+                id: p.id,
+                type: p.type,
+                amount: Number(p.amount),
+                method: p.method,
+                note: p.note,
+                paidAt: p.paidAt.toISOString().split('T')[0],
+                recordedBy: p.user.username,
+              })),
+            }
+          : null,
+        depositBills: depositBills.map((b) => ({
+          id: b.id,
+          status: b.status,
+          depositType: b.depositType,
+          totalAmount: Number(b.totalAmount),
+          paidAmount: Number(b.paidAmount),
+          payments: b.payments.map((p) => ({
+            id: p.id,
+            type: p.type,
+            amount: Number(p.amount),
+            method: p.method,
+            note: p.note,
+            paidAt: p.paidAt.toISOString().split('T')[0],
+            recordedBy: p.user.username,
+          })),
+        })),
+      };
+    }
+
+    case 'record_deposit_payment': {
+      return recordDepositPayment({
+        depositId: pathParams.id,
+        userId: ctx.userId,
+        type: validatedBody.type as 'COLLECT' | 'REFUND' | 'DEDUCT',
+        amount: new Prisma.Decimal(Number(validatedBody.amount)),
+        method: validatedBody.method as string,
+        note: validatedBody.note as string | undefined,
+      });
+    }
+
+    // --- 上游合同管理 ---
+    case 'create_apartment_contract': {
+      await ensureApartmentInOrg(pathParams.id, ctx.organizationId);
+      const existing = await prisma.apartmentContract.findUnique({
+        where: { apartmentId: pathParams.id },
+      });
+      if (existing) throw new HttpError(409, '该公寓已存在上游合同');
+      return prisma.apartmentContract.create({
+        data: {
+          apartmentId: pathParams.id,
+          organizationId: ctx.organizationId,
+          landlordName: validatedBody.landlordName as string | undefined,
+          landlordPhone: validatedBody.landlordPhone as string | undefined,
+          contractStart: validatedBody.contractStart
+            ? new Date(validatedBody.contractStart as string)
+            : undefined,
+          contractEnd: validatedBody.contractEnd
+            ? new Date(validatedBody.contractEnd as string)
+            : undefined,
+          rentAmount:
+            validatedBody.rentAmount != null
+              ? new Prisma.Decimal(Number(validatedBody.rentAmount))
+              : undefined,
+          floors: validatedBody.floors as number | undefined,
+          landArea:
+            validatedBody.landArea != null
+              ? new Prisma.Decimal(Number(validatedBody.landArea))
+              : undefined,
+          totalArea:
+            validatedBody.totalArea != null
+              ? new Prisma.Decimal(Number(validatedBody.totalArea))
+              : undefined,
+        },
+      });
+    }
+
+    case 'update_apartment_contract': {
+      await ensureApartmentInOrg(pathParams.id, ctx.organizationId);
+      const existing = await prisma.apartmentContract.findUnique({
+        where: { apartmentId: pathParams.id },
+      });
+      if (!existing) throw new HttpError(404, '上游合同不存在');
+      const updateData: Record<string, unknown> = {};
+      if (validatedBody.landlordName !== undefined)
+        updateData.landlordName = validatedBody.landlordName;
+      if (validatedBody.landlordPhone !== undefined)
+        updateData.landlordPhone = validatedBody.landlordPhone;
+      if (validatedBody.contractStart !== undefined)
+        updateData.contractStart = new Date(
+          validatedBody.contractStart as string
+        );
+      if (validatedBody.contractEnd !== undefined)
+        updateData.contractEnd = new Date(validatedBody.contractEnd as string);
+      if (validatedBody.rentAmount !== undefined)
+        updateData.rentAmount = new Prisma.Decimal(
+          Number(validatedBody.rentAmount)
+        );
+      if (validatedBody.floors !== undefined)
+        updateData.floors = validatedBody.floors;
+      if (validatedBody.landArea !== undefined)
+        updateData.landArea = new Prisma.Decimal(
+          Number(validatedBody.landArea)
+        );
+      if (validatedBody.totalArea !== undefined)
+        updateData.totalArea = new Prisma.Decimal(
+          Number(validatedBody.totalArea)
+        );
+      return prisma.apartmentContract.update({
+        where: { apartmentId: pathParams.id },
+        data: updateData,
+      });
+    }
+
+    case 'delete_apartment_contract': {
+      await ensureApartmentInOrg(pathParams.id, ctx.organizationId);
+      const existing = await prisma.apartmentContract.findUnique({
+        where: { apartmentId: pathParams.id },
+      });
+      if (!existing) throw new HttpError(404, '上游合同不存在');
+      return prisma.apartmentContract.delete({
+        where: { apartmentId: pathParams.id },
+      });
+    }
+
+    // --- 预定管理（补充） ---
+    case 'delete_reservation': {
+      const room = await findRoomForReservation(
+        pathParams.roomId,
+        ctx.organizationId
+      );
+      if (!room) throw new HttpError(404, '房间不存在');
+      const reservation = await getReservationByRoomId(pathParams.roomId);
+      if (!reservation) throw new HttpError(404, '该房间没有预留记录');
+      await deleteReservation(pathParams.roomId);
+      return { deleted: true };
     }
 
     default:

@@ -90,16 +90,6 @@
     color: #dc2626;
     border: 1px solid #fecaca;
   }
-
-  &.form,
-  &.action {
-    background: #fff;
-    color: #1f2937;
-    border: 1px solid #e5e7eb;
-    border-bottom-left-radius: 4px;
-    max-width: 85%;
-    padding: 8px;
-  }
 }
 
 .markdownBody {
@@ -198,12 +188,6 @@
   background: #f9fafb;
   border-radius: 8px;
   border: 1px solid #f3f4f6;
-}
-
-.agentFormCard,
-.actionConfirmCard {
-  margin-top: 12px;
-  border-radius: 8px;
 }
 
 .actionImpact {
@@ -332,6 +316,32 @@
   }
 }
 
+.processingIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.processingIcon {
+  font-size: 16px;
+  color: #22c55e;
+}
+
+.processingDots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.statusText {
+  color: #6b7280;
+  font-size: 13px;
+}
+
 .typingIndicator {
   display: inline-flex;
   align-items: center;
@@ -344,8 +354,8 @@
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   background: #9ca3af;
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out both;

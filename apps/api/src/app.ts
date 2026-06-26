@@ -14,6 +14,7 @@ import { platformRouter } from './routes/platform.js';
 import { reservationRouter } from './routes/reservations.js';
 import { transactionRouter } from './routes/transactions.js';
 import { agentRouter } from './routes/agent.js';
+import { analyticsRouter } from './routes/analytics.js';
 import { errorHandler } from './middleware/error.js';
 
 export const app = express();
@@ -50,4 +51,5 @@ app.use('/api/transactions', transactionRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/platform', platformRouter);
 app.use('/api/agent', agentRouter);
+app.use('/api/analytics', analyticsRouter);
 app.use(errorHandler);

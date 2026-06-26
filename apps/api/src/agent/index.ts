@@ -7,8 +7,7 @@ export {
   chartChunk,
   doneChunk,
   errorChunk,
-  formChunk,
-  actionChunk,
+  toolCallChunk,
 } from './core/stream-formatter.js';
 export type { AgentContext, ChatMessage, StreamChunk } from './types.js';
 

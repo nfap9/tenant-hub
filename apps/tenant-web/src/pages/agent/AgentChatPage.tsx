@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Spin } from 'antd';
+import { Spin, Drawer, Modal } from 'antd';
 import { useAppSession } from '@/context/AppSessionContext';
 
 import styles from './AgentChatPage.module.scss';
@@ -11,6 +11,8 @@ import { MessageList } from './components/MessageList';
 import { ChatInput } from './components/ChatInput';
 import { WelcomeCard } from './components/WelcomeCard';
 import { ConversationHeader } from './components/ConversationHeader';
+import { DynamicForm } from './components/DynamicForm';
+import { ActionConfirm } from './components/ActionConfirm';
 
 export default function AgentChatPage() {
   const { currentOrgId } = useAppSession();
@@ -27,7 +29,6 @@ export default function AgentChatPage() {
   });
   const handleConversationCreate = useCallback(
     (id: string) => {
-      // 标记已处理，避免 URL 参数 effect 又把当前会话当成外部切换重新加载
       processedSearchRef.current = `?conv=${id}`;
       navigate(`/agent?conv=${id}`, { replace: true });
     },
@@ -36,11 +37,10 @@ export default function AgentChatPage() {
 
   const {
     sendMessage,
-    submitForm,
-    confirmAction,
-    cancelAction,
+    submitToolResult,
+    cancelToolCall,
+    activeToolCall,
     isLoading,
-    executingActionId,
     abort,
   } = useSendMessage({
     orgId,
@@ -117,13 +117,7 @@ export default function AgentChatPage() {
         {messages.length === 0 ? (
           <WelcomeCard onPromptClick={handlePromptClick} />
         ) : (
-          <MessageList
-            messages={messages}
-            onFormSubmit={submitForm}
-            onActionConfirm={confirmAction}
-            onActionCancel={cancelAction}
-            executingActionId={executingActionId}
-          />
+          <MessageList messages={messages} />
         )}
         <ChatInput
           value={input}
@@ -133,6 +127,52 @@ export default function AgentChatPage() {
           disabled={isLoading}
         />
       </div>
+
+      {/* Tool Call: Form → Drawer */}
+      {activeToolCall?.toolCall.kind === 'form' && (
+        <Drawer
+          title={activeToolCall.toolCall.reason || '填写表单'}
+          open={true}
+          onClose={cancelToolCall}
+          width={480}
+          destroyOnClose
+        >
+          <DynamicForm
+            fields={activeToolCall.toolCall.fields ?? []}
+            onSubmit={(values) => submitToolResult(values)}
+            onCancel={cancelToolCall}
+          />
+        </Drawer>
+      )}
+
+      {/* Tool Call: Confirmation → Modal */}
+      {activeToolCall?.toolCall.kind === 'confirmation' && (
+        <Modal
+          title="确认执行以下操作"
+          open={true}
+          onCancel={cancelToolCall}
+          footer={null}
+          destroyOnClose
+        >
+          <ActionConfirm
+            action={{
+              tool: activeToolCall.toolCall.tool,
+              method: activeToolCall.toolCall.method ?? '',
+              path: activeToolCall.toolCall.path ?? '',
+              params: activeToolCall.toolCall.params ?? {},
+              summary: activeToolCall.toolCall.summary ?? '',
+              impact: activeToolCall.toolCall.impact ?? [],
+              requiresConfirmation:
+                activeToolCall.toolCall.requiresConfirmation ?? true,
+            }}
+            onConfirm={() => {
+              submitToolResult(activeToolCall.toolCall.params ?? {});
+            }}
+            onCancel={cancelToolCall}
+            loading={isLoading}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

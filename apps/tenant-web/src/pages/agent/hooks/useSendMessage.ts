@@ -2,12 +2,13 @@ import { useCallback, useRef, useState } from 'react';
 import { message } from 'antd';
 import {
   manifestChatWithAgent,
+  submitToolResult as submitToolResultApi,
   createConversation as createServerConversation,
   saveMessages,
   updateConversation,
-  executeAgentAction,
   type ChatMessage,
   type SavedMessage,
+  type ToolCallChunkData,
 } from '@/api/agent';
 import type { LocalConversation, DisplayMessage } from '../types';
 import {
@@ -36,32 +37,14 @@ function makeTitleFromMessage(text: string) {
   return text.trim().slice(0, 20) || '新对话';
 }
 
-function describeForHistory(m: DisplayMessage): string {
-  if (m.role === 'form' && m.formData) {
-    return `[需要补充表单：${m.formData.reason || m.formData.tool}]`;
-  }
-  if (m.role === 'action' && m.actionData) {
-    return `[待确认操作：${m.actionData.summary}]`;
-  }
-  return m.content;
-}
-
 function buildHistory(messages: DisplayMessage[]): ChatMessage[] {
   return messages
-    .filter((m) => ['user', 'assistant', 'form', 'action'].includes(m.role))
+    .filter((m) => ['user', 'assistant'].includes(m.role))
     .slice(-MAX_HISTORY_MESSAGES)
     .map((m) => ({
-      role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
-      content: describeForHistory(m),
+      role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: m.content,
     }));
-}
-
-function summarizeValues(values: Record<string, unknown>): string {
-  const entries = Object.entries(values)
-    .filter(([, v]) => v !== undefined && v !== null && v !== '')
-    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`);
-  if (entries.length === 0) return '（无有效内容）';
-  return entries.join('\n');
 }
 
 export function useSendMessage({
@@ -72,11 +55,12 @@ export function useSendMessage({
   onConversationCreate,
 }: UseSendMessageOptions) {
   const [isLoading, setIsLoading] = useState(false);
-  const [executingActionId, setExecutingActionId] = useState<string | null>(
-    null
-  );
+  const [activeToolCall, setActiveToolCall] = useState<{
+    toolCall: ToolCallChunkData;
+  } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const latestMessagesRef = useRef<DisplayMessage[]>([]);
+  const historyRef = useRef<ChatMessage[]>([]);
 
   const abort = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -97,10 +81,7 @@ export function useSendMessage({
   const persistAfterStream = useCallback(
     async (conv: LocalConversation) => {
       const serverId = conv.serverId;
-      if (!serverId) {
-        // 无后端会话时不进行服务端持久化
-        return;
-      }
+      if (!serverId) return;
 
       let updatedConv = conv;
 
@@ -120,18 +101,14 @@ export function useSendMessage({
 
       const toSave: SavedMessage[] = conv.messages
         .filter((m) =>
-          ['user', 'assistant', 'status', 'error', 'form', 'action'].includes(
-            m.role
-          )
+          ['user', 'assistant', 'status', 'error'].includes(m.role)
         )
         .map((m) => ({
           id: m.id,
-          role: m.role,
+          role: m.role as SavedMessage['role'],
           content: m.content,
           chartData: m.chartData,
           thinking: m.thinking,
-          formData: m.formData,
-          actionData: m.actionData,
         }));
 
       try {
@@ -152,22 +129,28 @@ export function useSendMessage({
     [setConversation, storageKey]
   );
 
-  const runAgentStream = useCallback(
+  const processStream = useCallback(
     async (
+      stream: AsyncGenerator<import('@/api/agent').StreamChunk>,
       workingConversation: LocalConversation,
-      userText: string,
       initialMessages: DisplayMessage[]
     ) => {
-      const statusId = crypto.randomUUID();
       const assistantId = crypto.randomUUID();
+      // Placeholder assistant message: shows loading/status text until real content arrives
+      const assistantPlaceholder: DisplayMessage = {
+        id: assistantId,
+        role: 'assistant' as const,
+        content: '',
+        statusText: '正在分析...',
+      };
 
-      latestMessagesRef.current = initialMessages;
+      latestMessagesRef.current = [...initialMessages, assistantPlaceholder];
       setConversation((prev) =>
         prev?.id === workingConversation.id
           ? {
               ...prev,
               updatedAt: Date.now(),
-              messages: initialMessages,
+              messages: latestMessagesRef.current,
               loading: true,
             }
           : prev
@@ -175,31 +158,20 @@ export function useSendMessage({
 
       syncConversationToCache({
         ...workingConversation,
-        messages: initialMessages,
+        messages: latestMessagesRef.current,
         updatedAt: Date.now(),
         loading: true,
       });
 
-      const history = buildHistory(
-        initialMessages.filter((m) => m.id !== statusId)
-      );
+      let hasRealContent = false;
 
       try {
-        const stream = manifestChatWithAgent(userText, history, orgId, {
-          conversationId:
-            workingConversation.serverId || workingConversation.id,
-          signal: abortControllerRef.current?.signal,
-        });
-
         for await (const chunk of stream) {
           if (chunk.type === 'status') {
-            const next = latestMessagesRef.current
-              .filter((m) => m.id !== statusId)
-              .concat({
-                id: statusId,
-                role: 'status',
-                content: chunk.content,
-              } as DisplayMessage);
+            const base = latestMessagesRef.current;
+            const next = base.map((m) =>
+              m.id === assistantId ? { ...m, statusText: chunk.content } : m
+            );
             latestMessagesRef.current = next;
             setConversation((prev) =>
               prev?.id === workingConversation.id
@@ -207,22 +179,26 @@ export function useSendMessage({
                 : prev
             );
           } else if (chunk.type === 'message') {
-            const base = latestMessagesRef.current.filter(
-              (m) => m.id !== statusId
-            );
+            hasRealContent = true;
+            const base = latestMessagesRef.current;
             const existing = base.find((m) => m.id === assistantId);
             const next = existing
               ? base.map((m) =>
                   m.id === assistantId
-                    ? { ...m, content: m.content + chunk.content }
+                    ? {
+                        ...m,
+                        content: m.content + chunk.content,
+                        statusText: undefined,
+                      }
                     : m
                 )
               : [
                   ...base,
                   {
                     id: assistantId,
-                    role: 'assistant',
+                    role: 'assistant' as const,
                     content: chunk.content,
+                    statusText: undefined,
                   } as DisplayMessage,
                 ];
             latestMessagesRef.current = next;
@@ -232,23 +208,25 @@ export function useSendMessage({
                 : prev
             );
           } else if (chunk.type === 'chart') {
+            hasRealContent = true;
             try {
               const chartData = JSON.parse(chunk.content);
-              const base = latestMessagesRef.current.filter(
-                (m) => m.id !== statusId
-              );
+              const base = latestMessagesRef.current;
               const existing = base.find((m) => m.id === assistantId);
               const next = existing
                 ? base.map((m) =>
-                    m.id === assistantId ? { ...m, chartData } : m
+                    m.id === assistantId
+                      ? { ...m, chartData, statusText: undefined }
+                      : m
                   )
                 : [
                     ...base,
                     {
                       id: assistantId,
-                      role: 'assistant',
+                      role: 'assistant' as const,
                       content: '',
                       chartData,
+                      statusText: undefined,
                     } as DisplayMessage,
                   ];
               latestMessagesRef.current = next;
@@ -258,46 +236,35 @@ export function useSendMessage({
                   : prev
               );
             } catch {
-              // 图表数据解析失败，忽略
+              // ignore
             }
-          } else if (chunk.type === 'form' && chunk.form) {
-            const next = latestMessagesRef.current
-              .filter((m) => m.id !== statusId)
-              .concat({
-                id: crypto.randomUUID(),
-                role: 'form',
-                content: chunk.form.reason || '请补充以下信息',
-                formData: chunk.form,
-              } as DisplayMessage);
-            latestMessagesRef.current = next;
+          } else if (chunk.type === 'tool_call' && chunk.toolCall) {
+            // Tool call: remove assistant placeholder (no chat trace for tool interactions)
+            const base = latestMessagesRef.current.filter(
+              (m) => m.id !== assistantId
+            );
+            latestMessagesRef.current = base;
             setConversation((prev) =>
               prev?.id === workingConversation.id
-                ? { ...prev, messages: next }
+                ? { ...prev, messages: base }
                 : prev
             );
-          } else if (chunk.type === 'action' && chunk.action) {
-            const next = latestMessagesRef.current
-              .filter((m) => m.id !== statusId)
-              .concat({
-                id: crypto.randomUUID(),
-                role: 'action',
-                content: chunk.action.summary,
-                actionData: chunk.action,
-              } as DisplayMessage);
-            latestMessagesRef.current = next;
-            setConversation((prev) =>
-              prev?.id === workingConversation.id
-                ? { ...prev, messages: next }
-                : prev
-            );
+
+            historyRef.current = buildHistory(base);
+            setActiveToolCall({ toolCall: chunk.toolCall });
+            return;
           } else if (chunk.type === 'error') {
-            const next = latestMessagesRef.current
-              .filter((m) => m.id !== statusId)
-              .concat({
+            const base = latestMessagesRef.current.filter(
+              (m) => m.id !== assistantId
+            );
+            const next = [
+              ...base,
+              {
                 id: crypto.randomUUID(),
-                role: 'error',
+                role: 'error' as const,
                 content: chunk.content,
-              } as DisplayMessage);
+              } as DisplayMessage,
+            ];
             latestMessagesRef.current = next;
             setConversation((prev) =>
               prev?.id === workingConversation.id
@@ -310,16 +277,20 @@ export function useSendMessage({
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          // 用户主动中断，不显示错误
+          // user aborted
         } else {
-          const next = latestMessagesRef.current
-            .filter((m) => m.id !== statusId)
-            .concat({
+          const base = latestMessagesRef.current.filter(
+            (m) => m.id !== assistantId
+          );
+          const next = [
+            ...base,
+            {
               id: crypto.randomUUID(),
-              role: 'error',
+              role: 'error' as const,
               content:
                 error instanceof Error ? error.message : '发送失败，请重试',
-            } as DisplayMessage);
+            } as DisplayMessage,
+          ];
           latestMessagesRef.current = next;
           setConversation((prev) =>
             prev?.id === workingConversation.id
@@ -328,25 +299,33 @@ export function useSendMessage({
           );
         }
       } finally {
-        const next = latestMessagesRef.current.filter((m) => m.id !== statusId);
-        latestMessagesRef.current = next;
+        // If assistant has no real content, remove it
+        const finalMessages = hasRealContent
+          ? latestMessagesRef.current
+          : latestMessagesRef.current.filter((m) => m.id !== assistantId);
+        latestMessagesRef.current = finalMessages;
         setConversation((prev) =>
           prev?.id === workingConversation.id
-            ? { ...prev, messages: next, updatedAt: Date.now(), loading: false }
+            ? {
+                ...prev,
+                messages: finalMessages,
+                updatedAt: Date.now(),
+                loading: false,
+              }
             : prev
         );
 
         if (workingConversation.serverId) {
           await persistAfterStream({
             ...workingConversation,
-            messages: next,
+            messages: finalMessages,
             updatedAt: Date.now(),
             loading: false,
           });
         } else {
           syncConversationToCache({
             ...workingConversation,
-            messages: next,
+            messages: finalMessages,
             updatedAt: Date.now(),
             loading: false,
           });
@@ -356,7 +335,7 @@ export function useSendMessage({
         setIsLoading(false);
       }
     },
-    [orgId, persistAfterStream, syncConversationToCache, setConversation]
+    [persistAfterStream, syncConversationToCache, setConversation]
   );
 
   const sendMessage = useCallback(
@@ -372,13 +351,7 @@ export function useSendMessage({
         role: 'user',
         content: trimmed,
       };
-      const statusMessage: DisplayMessage = {
-        id: crypto.randomUUID(),
-        role: 'status',
-        content: '正在分析...',
-      };
 
-      // 如果当前没有会话（空会话页面），先创建本地草稿会话
       let workingConversation: LocalConversation;
       if (!conversation) {
         workingConversation = {
@@ -397,10 +370,8 @@ export function useSendMessage({
       const initialMessages: DisplayMessage[] = [
         ...workingConversation.messages,
         userMessage,
-        statusMessage,
       ];
 
-      // 首次发送时立即创建后端会话，确保会话记录已经生成
       if (!workingConversation.serverId) {
         try {
           const server = await createServerConversation(
@@ -427,154 +398,78 @@ export function useSendMessage({
             loading: true,
           });
         } catch {
-          // 后端会话创建失败时降级为本地会话，仍允许用户继续对话
+          // 后端会话创建失败时降级为本地会话
         }
       }
 
-      await runAgentStream(workingConversation, trimmed, initialMessages);
+      const history = buildHistory(workingConversation.messages);
+      historyRef.current = history;
+
+      try {
+        const stream = manifestChatWithAgent(trimmed, history, orgId, {
+          conversationId:
+            workingConversation.serverId || workingConversation.id,
+          signal: abortControllerRef.current?.signal,
+        });
+
+        await processStream(stream, workingConversation, initialMessages);
+      } catch (error) {
+        console.log(error);
+
+        // Handled in processStream
+      }
     },
-    [conversation, isLoading, runAgentStream, onConversationCreate]
+    [conversation, isLoading, orgId, processStream, onConversationCreate]
   );
 
-  const submitForm = useCallback(
-    async (messageId: string, values: Record<string, unknown>) => {
-      if (isLoading || !conversation) return;
+  const submitToolResult = useCallback(
+    async (result: Record<string, unknown>) => {
+      if (isLoading || !conversation || !activeToolCall) return;
 
-      const formMessage = conversation.messages.find((m) => m.id === messageId);
-      if (!formMessage || formMessage.role !== 'form') return;
-
+      setActiveToolCall(null);
       setIsLoading(true);
       abortControllerRef.current = new AbortController();
-
-      const userText = `已补充信息：\n${summarizeValues(values)}`;
-      const userMessage: DisplayMessage = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: userText,
-      };
-      const statusMessage: DisplayMessage = {
-        id: crypto.randomUUID(),
-        role: 'status',
-        content: '正在处理...',
-      };
 
       const workingConversation = { ...conversation, loading: true };
       setConversation(workingConversation);
 
       const initialMessages: DisplayMessage[] = [
         ...workingConversation.messages,
-        userMessage,
-        statusMessage,
       ];
 
-      await runAgentStream(workingConversation, userText, initialMessages);
-    },
-    [conversation, isLoading, runAgentStream]
-  );
-
-  const confirmAction = useCallback(
-    async (messageId: string) => {
-      if (isLoading || !conversation) return;
-
-      const actionMessage = conversation.messages.find(
-        (m) => m.id === messageId
-      );
-      if (
-        !actionMessage ||
-        actionMessage.role !== 'action' ||
-        !actionMessage.actionData
-      )
-        return;
-
-      setExecutingActionId(messageId);
-      const action = actionMessage.actionData;
-
       try {
-        const result = await executeAgentAction({
-          tool: action.tool,
-          path: action.path,
-          params: action.params,
-        });
-
-        const resultText =
-          typeof result === 'object'
-            ? JSON.stringify(result, null, 2)
-            : String(result ?? '执行成功');
-        const userText = `已确认执行，结果：\n${resultText}`;
-
-        setExecutingActionId(null);
-        setIsLoading(true);
-        abortControllerRef.current = new AbortController();
-
-        const userMessage: DisplayMessage = {
-          id: crypto.randomUUID(),
-          role: 'user',
-          content: userText,
-        };
-        const statusMessage: DisplayMessage = {
-          id: crypto.randomUUID(),
-          role: 'status',
-          content: '正在处理...',
-        };
-
-        const workingConversation = { ...conversation, loading: true };
-        setConversation(workingConversation);
-
-        const initialMessages: DisplayMessage[] = [
-          ...workingConversation.messages,
-          userMessage,
-          statusMessage,
-        ];
-
-        await runAgentStream(workingConversation, userText, initialMessages);
-      } catch (error) {
-        setExecutingActionId(null);
-        const errorText =
-          error instanceof Error ? error.message : '操作执行失败';
-        const next = conversation.messages.concat({
-          id: crypto.randomUUID(),
-          role: 'error',
-          content: errorText,
-        } as DisplayMessage);
-        setConversation((prev) =>
-          prev?.id === conversation.id
-            ? { ...prev, messages: next, updatedAt: Date.now(), loading: false }
-            : prev
+        const stream = submitToolResultApi(
+          result,
+          historyRef.current,
+          orgId,
+          {
+            conversationId:
+              workingConversation.serverId || workingConversation.id,
+            signal: abortControllerRef.current?.signal,
+          },
+          activeToolCall.toolCall
         );
-        syncConversationToCache({
-          ...conversation,
-          messages: next,
-          updatedAt: Date.now(),
-          loading: false,
-        });
+
+        await processStream(stream, workingConversation, initialMessages);
+      } catch (error) {
+        console.log(error);
+
+        // Handled in processStream
       }
     },
-    [conversation, isLoading, runAgentStream, syncConversationToCache]
+    [activeToolCall, conversation, isLoading, orgId, processStream]
   );
 
-  const cancelAction = useCallback(
-    (messageId: string) => {
-      if (!conversation) return;
-      const next = conversation.messages.filter((m) => m.id !== messageId);
-      const updated = {
-        ...conversation,
-        messages: next,
-        updatedAt: Date.now(),
-      };
-      setConversation(updated);
-      latestMessagesRef.current = next;
-      syncConversationToCache(updated);
-    },
-    [conversation, syncConversationToCache]
-  );
+  const cancelToolCall = useCallback(() => {
+    setActiveToolCall(null);
+  }, []);
 
   return {
     sendMessage,
-    submitForm,
-    confirmAction,
-    cancelAction,
+    submitToolResult,
+    cancelToolCall,
+    activeToolCall,
     isLoading,
-    executingActionId,
     abort,
   };
 }

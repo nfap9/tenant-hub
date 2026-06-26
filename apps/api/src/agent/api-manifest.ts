@@ -250,7 +250,7 @@ export const apiManifest: ApiManifestItem[] = [
   {
     name: 'query_room_detail',
     method: 'GET',
-    path: '/api/apartments/rooms/:roomId/detail',
+    path: '/api/apartments/rooms/:roomId',
     description:
       '查询单个房间的详细信息，包括公寓信息、预留记录、活跃租约（费用、押金）、当月账单、最近抄表读数。',
     permission: PERMISSIONS.ROOM_VIEW,
@@ -348,7 +348,7 @@ export const apiManifest: ApiManifestItem[] = [
   {
     name: 'query_reservation',
     method: 'GET',
-    path: '/api/reservations/room/:roomId',
+    path: '/api/reservations/:roomId',
     description: '查询房间的预留信息。返回预留客户、预期入住日期、定金等。',
     permission: PERMISSIONS.ROOM_VIEW,
     category: 'query',
@@ -520,6 +520,271 @@ export const apiManifest: ApiManifestItem[] = [
     permission: PERMISSIONS.ROOM_MANAGE,
     category: 'action',
     bodySchema: reservationInput,
+  },
+
+  // --- 公寓管理（补充） ---
+  {
+    name: 'update_apartment',
+    method: 'PUT',
+    path: '/api/apartments/:id',
+    description: '更新公寓的基本信息（名称、位置）',
+    permission: PERMISSIONS.APARTMENT_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: apartmentInput.partial(),
+  },
+  {
+    name: 'delete_apartment',
+    method: 'DELETE',
+    path: '/api/apartments/:id',
+    description: '删除指定公寓。注意：如果公寓下存在活跃租约则无法删除。',
+    permission: PERMISSIONS.APARTMENT_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+  },
+  {
+    name: 'delete_room',
+    method: 'DELETE',
+    path: '/api/apartments/rooms/:roomId',
+    description: '删除指定房间。注意：如果房间存在活跃租约则无法删除。',
+    permission: PERMISSIONS.ROOM_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ roomId: z.string() }),
+  },
+
+  // --- 账单管理（补充） ---
+  {
+    name: 'query_bill_detail',
+    method: 'GET',
+    path: '/api/bills/:id',
+    description:
+      '查询单条账单的详细信息，包括账单项目、付款记录、关联租约和房间信息。',
+    permission: PERMISSIONS.BILL_VIEW,
+    category: 'query',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: z.object({}),
+  },
+  {
+    name: 'delete_bill',
+    method: 'DELETE',
+    path: '/api/bills/:id',
+    description:
+      '删除指定账单及其关联的付款记录。注意：只能删除未支付或出账中的账单。',
+    permission: PERMISSIONS.BILL_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+  },
+  {
+    name: 'void_bill',
+    method: 'POST',
+    path: '/api/bills/:id/void',
+    description:
+      '作废指定账单。注意：退租结算账单不能作废，只能通过退租流程处理。',
+    permission: PERMISSIONS.BILL_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+  },
+  {
+    name: 'retry_billing',
+    method: 'POST',
+    path: '/api/bills/:id/retry-billing',
+    description: '对出账失败的后付费账单重新出账。仅适用于后付费模式的账单。',
+    permission: PERMISSIONS.BILL_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+  },
+  {
+    name: 'export_utility_pending',
+    method: 'GET',
+    path: '/api/bills/utility/pending-export',
+    description: '导出待抄表的后付费账单CSV，用于批量录入水电读数。',
+    permission: PERMISSIONS.BILL_VIEW,
+    category: 'query',
+    bodySchema: z.object({}),
+  },
+
+  // --- 租赁管理（补充） ---
+  {
+    name: 'update_lease',
+    method: 'PUT',
+    path: '/api/leases/:id',
+    description:
+      '更新活跃租约的条款，包括租金、费用、水电单价等。注意：只能更新活跃状态的租约。',
+    permission: PERMISSIONS.LEASE_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: z.object({
+      rentAmount: z.coerce.number().min(0).optional().describe('月租金'),
+      roomDepositAmount: z.coerce
+        .number()
+        .min(0)
+        .optional()
+        .describe('房间押金'),
+      keyQuantity: z.coerce
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('钥匙数量'),
+      keyUnitPrice: z.coerce.number().min(0).optional().describe('钥匙单价'),
+      waterUnitPrice: z.coerce.number().min(0).optional().describe('水单价'),
+      powerUnitPrice: z.coerce.number().min(0).optional().describe('电单价'),
+    }),
+  },
+  {
+    name: 'activate_lease',
+    method: 'POST',
+    path: '/api/leases/:id/activate',
+    description:
+      '激活草稿状态的租约，生成押金账单并将房间状态设为已出租。注意：只能激活草稿状态的租约。',
+    permission: PERMISSIONS.LEASE_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+  },
+  {
+    name: 'preview_settlement',
+    method: 'GET',
+    path: '/api/leases/:id/settlement-preview',
+    description: '预览退租结算信息，获取最近的水电读数用于退租结算计算。',
+    permission: PERMISSIONS.LEASE_VIEW,
+    category: 'query',
+    pathParamsSchema: z.object({ id: z.string() }),
+    querySchema: z.object({
+      terminatedAt: z.coerce
+        .date()
+        .optional()
+        .describe('退租日期，默认当前日期'),
+    }),
+    bodySchema: z.object({
+      terminatedAt: z.coerce
+        .date()
+        .optional()
+        .describe('退租日期，默认当前日期'),
+    }),
+  },
+
+  // --- 收支管理（补充） ---
+  {
+    name: 'query_transaction_categories',
+    method: 'GET',
+    path: '/api/transactions/categories',
+    description: '查询收支科目分类列表，包括收入和支出类别的代码和标签。',
+    permission: PERMISSIONS.BILL_VIEW,
+    category: 'query',
+    bodySchema: z.object({}),
+  },
+  {
+    name: 'query_transaction_detail',
+    method: 'GET',
+    path: '/api/transactions/:id',
+    description:
+      '查询单条收支记录的详细信息，包括关联的操作人、账单、租约和公寓。',
+    permission: PERMISSIONS.BILL_VIEW,
+    category: 'query',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: z.object({}),
+  },
+  {
+    name: 'delete_transaction',
+    method: 'DELETE',
+    path: '/api/transactions/:id',
+    description:
+      '删除一条手动创建的收支记录。注意：只能删除手动创建的记录，系统自动生成的记录不可删除。',
+    permission: PERMISSIONS.BILL_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+  },
+
+  // --- 押金管理（补充） ---
+  {
+    name: 'query_deposit_detail',
+    method: 'GET',
+    path: '/api/deposits/:id',
+    description:
+      '查询单条押金的详细信息，包括关联租约、房间、公寓、押金账单和付款记录。',
+    permission: PERMISSIONS.DEPOSIT_VIEW,
+    category: 'query',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: z.object({}),
+  },
+  {
+    name: 'record_deposit_payment',
+    method: 'POST',
+    path: '/api/deposits/:id/payments',
+    description:
+      '记录押金的收款、退款或扣款操作。收款增加已收金额，退款减少可退余额，扣款从押金中扣除。',
+    permission: PERMISSIONS.DEPOSIT_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: z.object({
+      type: z
+        .enum(['COLLECT', 'REFUND', 'DEDUCT'])
+        .describe('操作类型：COLLECT收款、REFUND退款、DEDUCT扣款'),
+      amount: z.coerce.number().positive().describe('操作金额'),
+      method: z.string().min(1).describe('支付方式'),
+      note: z.string().optional().describe('备注'),
+    }),
+  },
+
+  // --- 上游合同管理 ---
+  {
+    name: 'create_apartment_contract',
+    method: 'POST',
+    path: '/api/apartments/:id/contract',
+    description:
+      '为指定公寓创建上游租赁合同，包括房东信息、合同日期、租金、楼层和面积等。注意：每个公寓只能有一个上游合同。',
+    permission: PERMISSIONS.APARTMENT_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: z.object({
+      landlordName: z.string().optional().describe('房东姓名'),
+      landlordPhone: z.string().optional().describe('房东电话'),
+      contractStart: z.coerce.date().optional().describe('合同开始日期'),
+      contractEnd: z.coerce.date().optional().describe('合同结束日期'),
+      rentAmount: z.coerce.number().optional().describe('合同租金'),
+      floors: z.coerce.number().int().min(1).optional().describe('楼层数'),
+      landArea: z.coerce.number().optional().describe('土地面积'),
+      totalArea: z.coerce.number().optional().describe('总建筑面积'),
+    }),
+  },
+  {
+    name: 'update_apartment_contract',
+    method: 'PUT',
+    path: '/api/apartments/:id/contract',
+    description: '更新指定公寓的上游租赁合同信息。',
+    permission: PERMISSIONS.APARTMENT_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+    bodySchema: z.object({
+      landlordName: z.string().optional().describe('房东姓名'),
+      landlordPhone: z.string().optional().describe('房东电话'),
+      contractStart: z.coerce.date().optional().describe('合同开始日期'),
+      contractEnd: z.coerce.date().optional().describe('合同结束日期'),
+      rentAmount: z.coerce.number().optional().describe('合同租金'),
+      floors: z.coerce.number().int().min(1).optional().describe('楼层数'),
+      landArea: z.coerce.number().optional().describe('土地面积'),
+      totalArea: z.coerce.number().optional().describe('总建筑面积'),
+    }),
+  },
+  {
+    name: 'delete_apartment_contract',
+    method: 'DELETE',
+    path: '/api/apartments/:id/contract',
+    description: '删除指定公寓的上游租赁合同。',
+    permission: PERMISSIONS.APARTMENT_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ id: z.string() }),
+  },
+
+  // --- 预定管理（补充） ---
+  {
+    name: 'delete_reservation',
+    method: 'DELETE',
+    path: '/api/reservations/:roomId',
+    description: '删除房间的预留记录，同时将房间状态恢复为空闲。',
+    permission: PERMISSIONS.ROOM_MANAGE,
+    category: 'action',
+    pathParamsSchema: z.object({ roomId: z.string() }),
   },
 ];
 

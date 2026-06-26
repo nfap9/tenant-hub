@@ -42,7 +42,9 @@ export function useSwitchConversation({
           serverId: server.id,
           title: server.title,
           updatedAt: new Date(server.updatedAt).getTime(),
-          messages: server.messages as DisplayMessage[],
+          messages: (server.messages as DisplayMessage[]).filter(
+            (m) => !['form', 'action'].includes(m.role)
+          ),
         };
 
         setConversation(mapped);

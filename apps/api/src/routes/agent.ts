@@ -93,6 +93,112 @@ agentRouter.post(
   })
 );
 
+const toolResultSchema = z.object({
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['system', 'user', 'assistant', 'tool']),
+        content: z.string(),
+        name: z.string().optional(),
+        tool_call_id: z.string().optional(),
+      })
+    )
+    .max(20)
+    .default([]),
+  result: z.record(z.unknown()),
+  kind: z.enum(['form', 'confirmation']).default('form'),
+  tool: z.string().optional(),
+});
+
+agentRouter.post(
+  '/tool-result',
+  asyncHandler(async (req, res) => {
+    const input = toolResultSchema.parse(req.body);
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const ctx = {
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      permissions: req.permissions ?? [],
+    };
+
+    function sendChunk(chunk: StreamChunk) {
+      res.write(`event: ${chunk.type}\n`);
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    }
+
+    let historyWithResult: ChatMessage[];
+
+    if (input.kind === 'confirmation' && input.tool) {
+      // Confirmation: execute action directly, inject result
+      const item = getApiManifestItem(input.tool);
+      if (!item) {
+        sendChunk({ type: 'error', content: `未找到接口：${input.tool}` });
+        res.end();
+        return;
+      }
+
+      try {
+        const execResult = await executeApiAction(
+          item,
+          item.path,
+          input.result,
+          { organizationId: ctx.organizationId, userId: ctx.userId }
+        );
+
+        const resultMessage: ChatMessage = {
+          role: 'user',
+          content: `操作已执行，结果：${JSON.stringify(execResult)}`,
+        };
+        historyWithResult = [
+          ...(input.history as ChatMessage[]),
+          resultMessage,
+        ];
+      } catch (error) {
+        const errText = error instanceof Error ? error.message : '执行失败';
+        const resultMessage: ChatMessage = {
+          role: 'user',
+          content: `操作执行失败：${errText}`,
+        };
+        historyWithResult = [
+          ...(input.history as ChatMessage[]),
+          resultMessage,
+        ];
+      }
+    } else {
+      // Form: inject params for LLM to retry tool call
+      const resultMessage: ChatMessage = {
+        role: 'user',
+        content: `已补充参数：${JSON.stringify(input.result)}`,
+      };
+      historyWithResult = [...(input.history as ChatMessage[]), resultMessage];
+    }
+
+    try {
+      const stream = runManifestAgent('工具调用结果', historyWithResult, ctx);
+
+      for await (const chunk of stream) {
+        sendChunk(chunk);
+        if (chunk.type === 'done' || chunk.type === 'error') {
+          break;
+        }
+      }
+    } catch (error) {
+      sendChunk({
+        type: 'error',
+        content:
+          error instanceof Error ? error.message : '智能助手发生内部错误',
+      });
+    } finally {
+      res.end();
+    }
+  })
+);
+
 agentRouter.get(
   '/schema',
   asyncHandler(async (req, res) => {

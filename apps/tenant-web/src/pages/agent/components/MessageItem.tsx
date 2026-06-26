@@ -3,26 +3,14 @@ import { RobotOutlined, UserOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChartRenderer } from '../ChartRender';
-import { DynamicForm } from './DynamicForm';
-import { ActionConfirm } from './ActionConfirm';
 import styles from '../AgentChatPage.module.scss';
 import type { DisplayMessage } from '../types';
 
 interface MessageItemProps {
   message: DisplayMessage;
-  onFormSubmit?: (messageId: string, values: Record<string, unknown>) => void;
-  onActionConfirm?: (messageId: string) => void;
-  onActionCancel?: (messageId: string) => void;
-  executingActionId?: string | null;
 }
 
-export function MessageItem({
-  message,
-  onFormSubmit,
-  onActionConfirm,
-  onActionCancel,
-  executingActionId,
-}: MessageItemProps) {
+export function MessageItem({ message }: MessageItemProps) {
   const roleClass = styles[message.role as keyof typeof styles];
 
   const renderAvatar = () => {
@@ -35,16 +23,21 @@ export function MessageItem({
         />
       );
     }
-    if (
-      message.role === 'assistant' ||
-      message.role === 'form' ||
-      message.role === 'action'
-    ) {
+    if (message.role === 'assistant') {
       return (
         <Avatar
           className={styles.avatar}
           icon={<RobotOutlined />}
           style={{ background: '#22c55e' }}
+        />
+      );
+    }
+    if (message.role === 'status') {
+      return (
+        <Avatar
+          className={styles.avatar}
+          icon={<RobotOutlined />}
+          style={{ background: '#f0f0f0', color: '#9ca3af' }}
         />
       );
     }
@@ -56,11 +49,20 @@ export function MessageItem({
       {renderAvatar()}
 
       <div className={`${styles.messageBubble} ${roleClass}`}>
-        {message.loading ? (
-          <div className={styles.typingIndicator}>
-            <span className={styles.dot} />
-            <span className={styles.dot} />
-            <span className={styles.dot} />
+        {message.role === 'status' ? (
+          <span className={styles.statusText}>{message.content}</span>
+        ) : message.loading ||
+          (message.role === 'assistant' && message.statusText) ? (
+          <div className={styles.processingIndicator}>
+            <span className={styles.processingIcon}>
+              <RobotOutlined />
+            </span>
+            <span>{message.statusText || '思考中...'}</span>
+            <span className={styles.processingDots}>
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+            </span>
           </div>
         ) : (
           <>
@@ -76,7 +78,7 @@ export function MessageItem({
                 </ol>
               </details>
             )}
-            {message.content && !message.formData && !message.actionData && (
+            {message.content && (
               <div className={styles.markdownBody}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {message.content}
@@ -84,23 +86,6 @@ export function MessageItem({
               </div>
             )}
             {message.chartData && <ChartRenderer config={message.chartData} />}
-            {message.formData && onFormSubmit && (
-              <DynamicForm
-                fields={message.formData.fields}
-                reason={message.formData.reason}
-                onSubmit={(values) => onFormSubmit(message.id, values)}
-              />
-            )}
-            {message.actionData && onActionConfirm && (
-              <ActionConfirm
-                action={message.actionData}
-                onConfirm={() => onActionConfirm(message.id)}
-                onCancel={
-                  onActionCancel ? () => onActionCancel(message.id) : undefined
-                }
-                loading={executingActionId === message.id}
-              />
-            )}
           </>
         )}
       </div>

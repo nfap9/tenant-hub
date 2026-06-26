@@ -32,27 +32,25 @@ export interface FormField {
   fields?: FormField[];
 }
 
-export interface FormChunkData {
+export interface ToolCallChunkData {
   tool: string;
+  kind: 'form' | 'confirmation';
   reason: string;
-  fields: FormField[];
-}
-
-export interface ActionChunkData {
-  tool: string;
-  method: string;
-  path: string;
-  params: Record<string, unknown>;
-  summary: string;
-  impact: string[];
-  requiresConfirmation: boolean;
+  // form kind
+  fields?: FormField[];
+  // confirmation kind
+  method?: string;
+  path?: string;
+  params?: Record<string, unknown>;
+  summary?: string;
+  impact?: string[];
+  requiresConfirmation?: boolean;
 }
 
 export interface StreamChunk {
-  type: 'status' | 'message' | 'done' | 'error' | 'chart' | 'form' | 'action';
+  type: 'status' | 'message' | 'done' | 'error' | 'chart' | 'tool_call';
   content: string;
-  form?: FormChunkData;
-  action?: ActionChunkData;
+  toolCall?: ToolCallChunkData;
 }
 
 export interface ChartConfig {
@@ -66,12 +64,10 @@ export interface ChartConfig {
 
 export interface SavedMessage {
   id: string;
-  role: 'user' | 'assistant' | 'status' | 'error' | 'form' | 'action';
+  role: 'user' | 'assistant' | 'status' | 'error';
   content: string;
   chartData?: ChartConfig;
   thinking?: string[];
-  formData?: FormChunkData;
-  actionData?: ActionChunkData;
 }
 
 export interface ServerConversation {
@@ -184,6 +180,27 @@ export function executeAgentAction(data: {
     method: 'POST',
     body: data,
   });
+}
+
+export async function* submitToolResult(
+  result: Record<string, unknown>,
+  history: ChatMessage[],
+  organizationId: string,
+  options: ChatWithAgentOptions = {},
+  kindAndTool?: { kind: 'form' | 'confirmation'; tool: string }
+): AsyncGenerator<StreamChunk> {
+  yield* streamAgent(
+    '/agent/tool-result',
+    {
+      result,
+      history,
+      kind: kindAndTool?.kind ?? 'form',
+      tool: kindAndTool?.tool,
+      conversationId: options.conversationId,
+    },
+    organizationId,
+    options.signal
+  );
 }
 
 // --- 会话管理 RESTful API ---

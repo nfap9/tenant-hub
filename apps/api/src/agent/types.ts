@@ -1,21 +1,21 @@
 import type { FormField } from './schema-to-form.js';
 
 export interface StreamChunk {
-  type: 'status' | 'message' | 'done' | 'error' | 'chart' | 'form' | 'action';
+  type: 'status' | 'message' | 'done' | 'error' | 'chart' | 'tool_call';
   content: string;
-  form?: {
+  toolCall?: {
     tool: string;
+    kind: 'form' | 'confirmation';
     reason: string;
-    fields: FormField[];
-  };
-  action?: {
-    tool: string;
-    method: string;
-    path: string;
-    params: Record<string, unknown>;
-    summary: string;
-    impact: string[];
-    requiresConfirmation: boolean;
+    // form kind
+    fields?: FormField[];
+    // confirmation kind
+    method?: string;
+    path?: string;
+    params?: Record<string, unknown>;
+    summary?: string;
+    impact?: string[];
+    requiresConfirmation?: boolean;
   };
 }
 
