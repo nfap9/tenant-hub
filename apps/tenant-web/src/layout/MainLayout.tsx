@@ -31,8 +31,18 @@ import {
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { agentNewConfig, bizMenuConfig, opsMenuConfig } from './menuConfig';
-import { getKeyFromPath, getLabelFromKey } from './menuUtils';
+import {
+  agentNewConfig,
+  bizMenuConfig,
+  opsMenuConfig,
+  type MenuItemConfig,
+} from './menuConfig';
+import {
+  getKeyFromPath,
+  getLabelFromKey,
+  getParentKeys,
+  flattenMenu,
+} from './menuUtils';
 import {
   getConversations,
   updateConversation,
@@ -206,7 +216,11 @@ export default function MainLayout() {
       navigate(`/agent?conv=${convId}`);
       return;
     }
-    const allStatic = [agentNewConfig, ...bizMenuConfig, ...opsMenuConfig];
+    const allStatic = [
+      agentNewConfig,
+      ...flattenMenu(bizMenuConfig),
+      ...opsMenuConfig,
+    ];
     const item = allStatic.find((i) => i.key === key);
     if (item) {
       navigate(item.path);
@@ -516,18 +530,45 @@ export default function MainLayout() {
     handleEditClick,
   ]);
 
+  const defaultOpenKeys = useMemo(
+    () => getParentKeys(bizMenuConfig, selectedKey),
+    [selectedKey]
+  );
+  const [openKeys, setOpenKeys] = useState(defaultOpenKeys);
+
+  useEffect(() => {
+    setOpenKeys((prev) => {
+      const next = getParentKeys(bizMenuConfig, selectedKey);
+      return Array.from(new Set([...prev, ...next]));
+    });
+  }, [selectedKey]);
+
   const bizMenuItems = useMemo(() => {
-    return bizMenuConfig
-      .filter((item) => {
-        if (item.requireOrg && noOrg) return false;
-        return true;
-      })
-      .map(({ key, label, icon: Icon }) => ({
-        key,
-        icon: <Icon />,
-        label,
-        className: styles.bizMenuItem,
-      }));
+    function buildItems(
+      configs: MenuItemConfig[],
+      isRoot = true
+    ): MenuProps['items'] {
+      return configs
+        .filter((item) => !(item.requireOrg && noOrg))
+        .map((item) => {
+          const visibleChildren = item.children?.filter(
+            (child) => !(child.requireOrg && noOrg)
+          );
+          const hasChildren = visibleChildren && visibleChildren.length > 0;
+
+          return {
+            key: item.key,
+            icon: <item.icon />,
+            label: item.label,
+            className: isRoot ? styles.bizMenuItem : styles.subMenuItem,
+            children: hasChildren
+              ? buildItems(visibleChildren, false)
+              : undefined,
+          };
+        });
+    }
+
+    return buildItems(bizMenuConfig);
   }, [noOrg]);
 
   return (
@@ -564,9 +605,11 @@ export default function MainLayout() {
             <Menu
               mode="inline"
               selectedKeys={[selectedKey]}
+              openKeys={openKeys}
               className={`${styles.mainMenu} ${styles.bizMenu}`}
               items={bizMenuItems}
               onClick={({ key }) => handleMenuClick(key)}
+              onOpenChange={(keys) => setOpenKeys(keys)}
             />
           </div>
         </div>
