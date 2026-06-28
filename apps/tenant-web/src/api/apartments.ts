@@ -1,9 +1,5 @@
 import { apiClient } from './client';
-import type {
-  Apartment,
-  ApartmentContract,
-  ApartmentExpense,
-} from '@/types/domain';
+import type { Apartment, ApartmentContract } from '@/types/domain';
 
 export async function getApartments(organizationId: string) {
   return apiClient<Apartment[]>('/apartments', { organizationId });
@@ -41,23 +37,6 @@ export async function updateApartment(
 export async function deleteApartment(organizationId: string, id: string) {
   return apiClient<void>(`/apartments/${id}`, {
     method: 'DELETE',
-    organizationId,
-  });
-}
-
-export async function createApartmentExpense(
-  organizationId: string,
-  apartmentId: string,
-  payload: {
-    name: string;
-    amount: number;
-    spentAt: string;
-    note?: string;
-  }
-) {
-  return apiClient<ApartmentExpense>(`/apartments/${apartmentId}/expenses`, {
-    method: 'POST',
-    body: payload,
     organizationId,
   });
 }

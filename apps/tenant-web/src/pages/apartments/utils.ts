@@ -35,11 +35,6 @@ export const apartmentMonthlyIncome = (apartment: Apartment) =>
     return sum + leaseMonthlyRent + leaseMonthlyFees;
   }, 0);
 
-export const apartmentMonthlyExpense = (apartment: Apartment) =>
-  (apartment.expenses ?? [])
-    .filter((expense) => isThisMonth(expense.spentAt))
-    .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
-
 export const contractText = (contract?: ApartmentContract) => {
   const start = contract?.contractStart
     ? contract.contractStart.slice(0, 10)

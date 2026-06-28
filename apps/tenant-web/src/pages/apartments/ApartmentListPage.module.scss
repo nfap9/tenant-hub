@@ -21,7 +21,7 @@
 
 .stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   padding: var(--th-space-4);
   background: var(--th-bg);
@@ -42,10 +42,6 @@
 
   &--success {
     color: var(--th-success);
-  }
-
-  &--danger {
-    color: var(--th-danger);
   }
 }
 

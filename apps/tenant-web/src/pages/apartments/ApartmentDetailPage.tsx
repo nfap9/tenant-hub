@@ -16,7 +16,6 @@ import {
   PlusOutlined,
   AppstoreAddOutlined,
   HomeOutlined,
-  DollarOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
@@ -38,7 +37,6 @@ import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import UpstreamContractModal from './UpstreamContractModal';
 import ApartmentFormModal from './ApartmentFormModal';
-import ApartmentExpenseModal from './ApartmentExpenseModal';
 import RoomBatchDrawer from './RoomBatchDrawer';
 import RoomFormDrawer from '@/pages/rooms/RoomFormDrawer';
 import LeaseFormDrawer from '@/pages/rooms/LeaseFormDrawer';
@@ -58,7 +56,6 @@ export default function ApartmentDetailPage() {
   const [contractLoading, setContractLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [batchDrawerOpen, setBatchDrawerOpen] = useState(false);
   const [formDrawerOpen, setFormDrawerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -200,8 +197,8 @@ export default function ApartmentDetailPage() {
         <Tabs
           items={[
             {
-              key: 'detail',
-              label: '公寓详情',
+              key: 'info',
+              label: '公寓信息',
               children: (
                 <>
                   <DetailSection
@@ -251,160 +248,107 @@ export default function ApartmentDetailPage() {
 
                   <Divider />
 
-                  <DetailSection
-                    title={
-                      <>
-                        <DollarOutlined className="text-primary" /> 经营花费
-                      </>
-                    }
-                    actions={
-                      canManageApartment && (
-                        <Button
-                          type="primary"
-                          size="small"
-                          icon={<PlusOutlined />}
-                          onClick={() => setExpenseModalOpen(true)}
-                        >
-                          记录花费
-                        </Button>
-                      )
-                    }
-                  >
-                    {(apartment.expenses ?? []).length === 0 ? (
+                  <Spin spinning={contractLoading}>
+                    {contract ? (
+                      <DetailSection
+                        title={
+                          <>
+                            <FileTextOutlined className="text-primary" />{' '}
+                            上游合同
+                          </>
+                        }
+                        actions={
+                          canManageApartment && (
+                            <>
+                              <Button
+                                icon={<EditOutlined />}
+                                onClick={() => setModalOpen(true)}
+                              >
+                                编辑
+                              </Button>
+                              <Popconfirm
+                                title="删除上游合同"
+                                description="删除后不可恢复，是否继续？"
+                                onConfirm={handleDeleteContract}
+                                okText="确认删除"
+                                cancelText="取消"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <Button danger icon={<DeleteOutlined />}>
+                                  删除
+                                </Button>
+                              </Popconfirm>
+                            </>
+                          )
+                        }
+                      >
+                        <Row gutter={[24, 0]}>
+                          <Col span={8}>
+                            <DetailItem label="房东姓名">
+                              {contract.landlordName || '未维护'}
+                            </DetailItem>
+                          </Col>
+                          <Col span={8}>
+                            <DetailItem label="联系方式">
+                              {contract.landlordPhone || '未维护'}
+                            </DetailItem>
+                          </Col>
+                          <Col span={8}>
+                            <DetailItem label="合同期">
+                              {contractText(contract)}
+                            </DetailItem>
+                          </Col>
+                          <Col span={8}>
+                            <DetailItem label="上游租金">
+                              {contract.rentAmount
+                                ? `¥${money(contract.rentAmount)}`
+                                : '未维护'}
+                            </DetailItem>
+                          </Col>
+                          <Col span={8}>
+                            <DetailItem label="楼层数">
+                              {contract.floors
+                                ? `${contract.floors} 层`
+                                : '未维护'}
+                            </DetailItem>
+                          </Col>
+                          <Col span={8}>
+                            <DetailItem label="占地面积">
+                              {contract.landArea
+                                ? `${contract.landArea} ㎡`
+                                : '未维护'}
+                            </DetailItem>
+                          </Col>
+                          <Col span={8}>
+                            <DetailItem label="总面积">
+                              {contract.totalArea
+                                ? `${contract.totalArea} ㎡`
+                                : '未维护'}
+                            </DetailItem>
+                          </Col>
+                        </Row>
+                      </DetailSection>
+                    ) : (
                       <EmptyState
-                        title="暂无经营花费记录"
-                        description="点击右上角按钮记录第一笔经营花费"
+                        title="暂无上游合同信息"
+                        description="录入与上游房东签订的合同信息及房东信息"
                         action={
                           canManageApartment
                             ? {
-                                label: '记录花费',
-                                onClick: () =>
-                                  navigate(`/apartments/${id}/expenses`),
+                                label: '录入合同',
+                                onClick: () => setModalOpen(true),
                               }
                             : undefined
                         }
                       />
-                    ) : (
-                      <div className={styles.expenseList}>
-                        {(apartment.expenses ?? []).map((item) => (
-                          <div key={item.id} className={styles.expenseItem}>
-                            <span>
-                              {item.name} · {item.spentAt.slice(0, 10)}
-                            </span>
-                            <span className={styles.expenseAmount}>
-                              ¥{money(item.amount)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
                     )}
-                  </DetailSection>
+                  </Spin>
                 </>
               ),
             },
             {
-              key: 'upstream',
-              label: '上游信息',
-              children: (
-                <Spin spinning={contractLoading}>
-                  {contract ? (
-                    <DetailSection
-                      title={
-                        <>
-                          <FileTextOutlined className="text-primary" /> 上游合同
-                        </>
-                      }
-                      actions={
-                        canManageApartment && (
-                          <>
-                            <Button
-                              icon={<EditOutlined />}
-                              onClick={() => setModalOpen(true)}
-                            >
-                              编辑
-                            </Button>
-                            <Popconfirm
-                              title="删除上游合同"
-                              description="删除后不可恢复，是否继续？"
-                              onConfirm={handleDeleteContract}
-                              okText="确认删除"
-                              cancelText="取消"
-                              okButtonProps={{ danger: true }}
-                            >
-                              <Button danger icon={<DeleteOutlined />}>
-                                删除
-                              </Button>
-                            </Popconfirm>
-                          </>
-                        )
-                      }
-                    >
-                      <Row gutter={[24, 0]}>
-                        <Col span={8}>
-                          <DetailItem label="房东姓名">
-                            {contract.landlordName || '未维护'}
-                          </DetailItem>
-                        </Col>
-                        <Col span={8}>
-                          <DetailItem label="联系方式">
-                            {contract.landlordPhone || '未维护'}
-                          </DetailItem>
-                        </Col>
-                        <Col span={8}>
-                          <DetailItem label="合同期">
-                            {contractText(contract)}
-                          </DetailItem>
-                        </Col>
-                        <Col span={8}>
-                          <DetailItem label="上游租金">
-                            {contract.rentAmount
-                              ? `¥${money(contract.rentAmount)}`
-                              : '未维护'}
-                          </DetailItem>
-                        </Col>
-                        <Col span={8}>
-                          <DetailItem label="楼层数">
-                            {contract.floors
-                              ? `${contract.floors} 层`
-                              : '未维护'}
-                          </DetailItem>
-                        </Col>
-                        <Col span={8}>
-                          <DetailItem label="占地面积">
-                            {contract.landArea
-                              ? `${contract.landArea} ㎡`
-                              : '未维护'}
-                          </DetailItem>
-                        </Col>
-                        <Col span={8}>
-                          <DetailItem label="总面积">
-                            {contract.totalArea
-                              ? `${contract.totalArea} ㎡`
-                              : '未维护'}
-                          </DetailItem>
-                        </Col>
-                      </Row>
-                    </DetailSection>
-                  ) : (
-                    <EmptyState
-                      title="暂无上游合同信息"
-                      description="录入与上游房东签订的合同信息及房东信息"
-                      action={
-                        canManageApartment
-                          ? {
-                              label: '录入合同',
-                              onClick: () => setModalOpen(true),
-                            }
-                          : undefined
-                      }
-                    />
-                  )}
-                </Spin>
-              ),
-            },
-            {
               key: 'rooms',
-              label: `房间列表 (${apartmentRooms.length})`,
+              label: `房间 (${apartmentRooms.length})`,
               children: (
                 <div>
                   <div className={styles.roomsHeader}>
@@ -497,16 +441,6 @@ export default function ApartmentDetailPage() {
         onCancel={() => setEditModalOpen(false)}
         onSuccess={() => {
           setEditModalOpen(false);
-          loadApartments();
-        }}
-      />
-
-      <ApartmentExpenseModal
-        open={expenseModalOpen}
-        apartmentId={apartment.id}
-        onCancel={() => setExpenseModalOpen(false)}
-        onSuccess={() => {
-          setExpenseModalOpen(false);
           loadApartments();
         }}
       />
