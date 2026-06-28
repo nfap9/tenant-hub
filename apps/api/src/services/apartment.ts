@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
-import { enforceOrganizationQuota } from './quotas.js';
+import { enforceOrganizationQuota, type PrismaLike } from './quotas.js';
 
 /**
  * 确保指定公寓属于当前组织，不存在则抛出 404 错误
@@ -250,7 +250,31 @@ export const getRoomByIdRaw = async (
 };
 
 /**
- * 创建新公寓（先校验组织配额）
+ * 校验指定组织下是否已存在同名公寓（不区分大小写，排除软删除）
+ * @param organizationId - 组织 ID
+ * @param name - 公寓名称
+ * @param excludeId - 更新时需要排除的公寓 ID（可选）
+ */
+export const ensureApartmentNameUnique = async (
+  organizationId: string,
+  name: string,
+  excludeId?: string,
+  db: PrismaLike = prisma
+) => {
+  const existing = await db.apartment.findFirst({
+    where: {
+      organizationId,
+      name: { equals: name, mode: 'insensitive' },
+      deletedAt: null,
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (existing) throw new HttpError(409, '公寓名称已存在');
+};
+
+/**
+ * 创建新公寓（先校验组织配额与名称唯一性）
  * @param data - 公寓数据
  * @param data.name - 公寓名称
  * @param data.location - 公寓地址
@@ -263,6 +287,12 @@ export const createApartment = async (data: {
   organizationId: string;
 }) => {
   return prisma.$transaction(async (tx) => {
+    await ensureApartmentNameUnique(
+      data.organizationId,
+      data.name,
+      undefined,
+      tx
+    );
     await enforceOrganizationQuota(
       tx,
       data.organizationId,
@@ -287,13 +317,18 @@ export const createApartment = async (data: {
 /**
  * 更新指定公寓的基本信息
  * @param apartmentId - 公寓 ID
+ * @param organizationId - 所属组织 ID
  * @param data - 部分更新的字段（name / location）
  * @returns 更新后的公寓记录
  */
 export const updateApartment = async (
   apartmentId: string,
+  organizationId: string,
   data: Partial<Pick<Prisma.ApartmentCreateInput, 'name' | 'location'>>
 ) => {
+  if (data.name) {
+    await ensureApartmentNameUnique(organizationId, data.name, apartmentId);
+  }
   return prisma.apartment.update({
     where: { id: apartmentId },
     data,

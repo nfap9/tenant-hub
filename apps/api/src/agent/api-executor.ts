@@ -1072,7 +1072,7 @@ export async function executeApiAction(
     // --- 公寓管理（补充） ---
     case 'update_apartment': {
       await ensureApartmentInOrg(pathParams.id, ctx.organizationId);
-      return updateApartment(pathParams.id, {
+      return updateApartment(pathParams.id, ctx.organizationId, {
         name: validatedBody.name as string | undefined,
         location: validatedBody.location as string | undefined,
       });

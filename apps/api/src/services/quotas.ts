@@ -28,7 +28,7 @@ const limitLabel: Record<QuotaKind, string> = {
   member: '成员',
 };
 
-type PrismaLike = typeof prisma | Prisma.TransactionClient;
+export type PrismaLike = typeof prisma | Prisma.TransactionClient;
 
 /**
  * 对指定组织的配额进行 PostgreSQL advisory lock 锁定，防止并发竞争

@@ -146,7 +146,7 @@ apartmentRouter.put(
   asyncHandler(async (req, res) => {
     const input = apartmentInput.partial().parse(req.body);
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
-    ok(res, await updateApartment(req.params.id, input));
+    ok(res, await updateApartment(req.params.id, req.organizationId!, input));
   })
 );
 
