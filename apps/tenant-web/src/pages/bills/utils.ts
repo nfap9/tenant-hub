@@ -1,4 +1,3 @@
-import { day } from '@/utils/format';
 import type { Bill, BillStatus, Payment } from '@/types/domain';
 
 export type BillGroup = {
@@ -91,15 +90,5 @@ export const sortBillGroupsForList = (groups: BillGroup[]) =>
     );
   });
 
-export const getBillGroupCardSummary = (group: BillGroup) => {
-  const billCount = group.bills.length;
-  const paymentCount = group.payments.length;
-  return {
-    title: `${group.tenantName} · ${day(group.billingDate)}`,
-    meta: `${group.lease?.room?.roomNo ?? '房间'} · 到期 ${day(group.dueDate)}`,
-    totalAmount: group.totalAmount,
-    paidAmount: group.paidAmount,
-    remainingAmount: group.totalAmount - group.paidAmount,
-    detailCountText: `${billCount} 项账单 · ${paymentCount} 笔收款`,
-  };
-};
+export const getGroupItems = (group: BillGroup): Bill['items'] =>
+  group.bills.flatMap((b) => b.items ?? []);

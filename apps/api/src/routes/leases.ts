@@ -37,6 +37,7 @@ import {
   activateLease,
   getLeaseEndDate,
   listLeaseSettlements,
+  getLeaseDetail,
 } from '../services/lease.js';
 
 export const leaseRouter = Router();
@@ -152,6 +153,16 @@ leaseRouter.get(
   requirePermission(PERMISSIONS.LEASE_VIEW),
   asyncHandler(async (req, res) => {
     ok(res, await listLeases(req.organizationId!));
+  })
+);
+
+leaseRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const lease = await getLeaseDetail(req.params.id, req.organizationId!);
+    if (!lease) throw new HttpError(404, '租约不存在');
+    ok(res, lease);
   })
 );
 

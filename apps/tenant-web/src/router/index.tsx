@@ -24,6 +24,7 @@ const RoomDetailPage = lazy(() => import('@/pages/rooms/RoomDetailPage'));
 
 // 租约
 const LeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
+const LeaseDetailPage = lazy(() => import('@/pages/leases/LeaseDetailPage'));
 
 // 押金
 const DepositsPage = lazy(() => import('@/pages/deposits/DepositsPage'));
@@ -191,6 +192,14 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <LeasesPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/leases/:id"
+            element={
+              <RequireOrg>
+                <LeaseDetailPage />
               </RequireOrg>
             }
           />

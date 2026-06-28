@@ -280,8 +280,13 @@ export default function MonthlyDetailPage() {
                   <div className="flex-between">
                     <div>
                       <span className={styles.mdpChildTitle}>
-                        {billModeText(child.mode)} · {day(child.periodStart)} 至{' '}
-                        {day(child.periodEnd)}
+                        {(() => {
+                          const item = child.items?.[0];
+                          const period = item
+                            ? `${day(item.periodStart)} 至 ${day(item.periodEnd)}`
+                            : `${day(child.billingDate)} 至 ${day(child.billingDate)}`;
+                          return `${billModeText(child.mode)} · ${period}`;
+                        })()}
                       </span>
                     </div>
                     <Space>

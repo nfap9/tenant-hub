@@ -74,6 +74,10 @@ export async function getLeases(organizationId: string) {
   return apiClient<Lease[]>('/leases', { organizationId });
 }
 
+export async function getLease(organizationId: string, leaseId: string) {
+  return apiClient<Lease>(`/leases/${leaseId}`, { organizationId });
+}
+
 export async function terminateLease(
   organizationId: string,
   leaseId: string,

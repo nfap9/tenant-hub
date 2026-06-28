@@ -58,6 +58,18 @@ import {
   updateLease,
   updateRoomStatus,
 } from '../services/lease.js';
+
+const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+const getBillPeriod = (bill: {
+  items: Array<{ periodStart: Date; periodEnd: Date }>;
+}) => {
+  const firstItem = bill.items[0];
+  return {
+    periodStart: firstItem ? formatDate(firstItem.periodStart) : '',
+    periodEnd: firstItem ? formatDate(firstItem.periodEnd) : '',
+  };
+};
 import { parseUtilityImportRows } from '../services/utilityImport.js';
 import {
   listApartmentsRaw,
@@ -399,10 +411,9 @@ export async function executeApiAction(
         id: b.id,
         tenantName: b.lease.tenantName,
         roomNo: b.lease.room.roomNo,
-        billingDate: b.billingDate.toISOString().split('T')[0],
-        periodStart: b.periodStart.toISOString().split('T')[0],
-        periodEnd: b.periodEnd.toISOString().split('T')[0],
-        dueDate: b.dueDate.toISOString().split('T')[0],
+        billingDate: formatDate(b.billingDate),
+        ...getBillPeriod(b),
+        dueDate: formatDate(b.dueDate),
         totalAmount: Number(b.totalAmount),
         paidAmount: Number(b.paidAmount),
         remainingAmount: Number(
@@ -1108,10 +1119,9 @@ export async function executeApiAction(
         id: bill.id,
         tenantName: bill.lease.tenantName,
         roomNo: bill.lease.room.roomNo,
-        billingDate: bill.billingDate.toISOString().split('T')[0],
-        periodStart: bill.periodStart.toISOString().split('T')[0],
-        periodEnd: bill.periodEnd.toISOString().split('T')[0],
-        dueDate: bill.dueDate.toISOString().split('T')[0],
+        billingDate: formatDate(bill.billingDate),
+        ...getBillPeriod(bill),
+        dueDate: formatDate(bill.dueDate),
         totalAmount: Number(bill.totalAmount),
         paidAmount: Number(bill.paidAmount),
         remainingAmount: Number(
@@ -1172,9 +1182,9 @@ export async function executeApiAction(
           b.id,
           b.lease.room.roomNo,
           b.lease.tenantName,
-          b.billingDate.toISOString().split('T')[0],
-          b.periodStart.toISOString().split('T')[0],
-          b.periodEnd.toISOString().split('T')[0],
+          formatDate(b.billingDate),
+          waterItem ? formatDate(waterItem.periodStart) : '',
+          waterItem ? formatDate(waterItem.periodEnd) : '',
           waterItem?.previousWater ?? '',
           waterItem?.currentWater ?? '',
           powerItem?.previousPower ?? '',
@@ -1290,8 +1300,6 @@ export async function executeApiAction(
           ? {
               id: tx.bill.id,
               mode: tx.bill.mode,
-              periodStart: tx.bill.periodStart.toISOString().split('T')[0],
-              periodEnd: tx.bill.periodEnd.toISOString().split('T')[0],
               status: tx.bill.status,
             }
           : null,

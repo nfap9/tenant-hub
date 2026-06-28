@@ -449,15 +449,17 @@ export const createLeaseSettlement = async ({
         leaseId: lease.id,
         mode: 'DEPOSIT',
         billingDate,
-        periodStart: billingDate,
-        periodEnd: billingDate,
         dueDate: billingDate,
         status: billStatus,
         totalAmount: netAbs.greaterThan(0) ? netAbs : itemTotal,
         paidAmount: 0,
         note: 'LEASE_SETTLEMENT',
         items: {
-          create: billItems,
+          create: billItems.map((item) => ({
+            ...item,
+            periodStart: billingDate,
+            periodEnd: billingDate,
+          })),
         },
       },
     });

@@ -201,8 +201,6 @@ export const listTransactions = async (input: ListTransactionsInput) => {
           select: {
             id: true,
             mode: true,
-            periodStart: true,
-            periodEnd: true,
           },
         },
         lease: {
@@ -435,8 +433,6 @@ export const getTransactionById = async (
         select: {
           id: true,
           mode: true,
-          periodStart: true,
-          periodEnd: true,
           status: true,
         },
       },

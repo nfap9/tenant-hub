@@ -280,9 +280,9 @@ export default function LeasesPage() {
                       type="link"
                       size="small"
                       icon={<EyeOutlined />}
-                      onClick={() => navigate(`/rooms/${row.roomId}`)}
+                      onClick={() => navigate(`/leases/${row.id}`)}
                     >
-                      查看房间
+                      查看详情
                     </Button>
                     {row.status === 'DRAFT' && canManageLease && (
                       <Popconfirm

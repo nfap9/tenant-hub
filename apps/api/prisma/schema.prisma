@@ -328,8 +328,6 @@ model Bill {
   leaseId        String
   mode           BillMode         @default(PREPAID)
   billingDate    DateTime
-  periodStart    DateTime
-  periodEnd      DateTime
   dueDate        DateTime
   status         BillStatus       @default(UNPAID)
   totalAmount    Decimal          @default(0) @db.Decimal(12, 2)
@@ -360,6 +358,8 @@ model BillItem {
   name           String
   amount         Decimal      @default(0) @db.Decimal(12, 2)
   status         BillStatus   @default(UNPAID)
+  periodStart    DateTime
+  periodEnd      DateTime
   previousWater  Decimal?     @db.Decimal(12, 2)
   currentWater   Decimal?     @db.Decimal(12, 2)
   previousPower  Decimal?     @db.Decimal(12, 2)

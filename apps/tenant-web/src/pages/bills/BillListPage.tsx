@@ -1,14 +1,14 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card,
   Button,
   Tabs,
   Input,
   Select,
   Space,
   Tag,
-  Spin,
+  Table,
+  Tooltip,
   message,
   Modal,
   Popconfirm,
@@ -16,16 +16,11 @@ import {
 import {
   PlusOutlined,
   ReloadOutlined,
-  DeleteOutlined,
-  EyeOutlined,
   SearchOutlined,
   DownloadOutlined,
   UploadOutlined,
   ThunderboltOutlined,
-  ExclamationCircleOutlined,
   ThunderboltFilled,
-  StopOutlined,
-  RollbackOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
@@ -39,12 +34,12 @@ import {
 } from '@/api/bills';
 import { getRooms } from '@/api/rooms';
 import { getApartments } from '@/api/apartments';
-import { money } from '@/utils/format';
-import { statusLabels, toneForBillStatus } from './constants';
+import { money, day } from '@/utils/format';
+import { statusLabels, toneForBillStatus, billItemTypeText } from './constants';
 import {
   groupBills,
   sortBillGroupsForList,
-  getBillGroupCardSummary,
+  getGroupItems,
   type BillGroup,
 } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
@@ -53,9 +48,13 @@ import PaymentDialog from '@/components/PaymentDialog';
 import UtilityExportModal from './components/UtilityExportModal';
 import UtilityModal from './components/UtilityModal';
 import ReadingDrawer from './components/ReadingDrawer';
-import type { Bill, BillStatus, Apartment, Room } from '@/types/domain';
-import styles from './BillListPage.module.scss';
-import clsx from 'clsx';
+import type {
+  Bill,
+  BillStatus,
+  Apartment,
+  Room,
+  BillItem,
+} from '@/types/domain';
 
 export default function BillListPage() {
   const { currentOrgId } = useAppSession();
@@ -63,6 +62,7 @@ export default function BillListPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentLeaseId, setPaymentLeaseId] = useState<string | undefined>();
   const [utilityExportOpen, setUtilityExportOpen] = useState(false);
   const [utilityOpen, setUtilityOpen] = useState(false);
   const [utilityBillId, setUtilityBillId] = useState<string | null>(null);
@@ -235,155 +235,214 @@ export default function BillListPage() {
     }
   };
 
-  const renderBillCard = (group: BillGroup, showDelete = false) => {
-    const summary = getBillGroupCardSummary(group);
+  const renderTenantCell = (tenantName?: string, lease?: Bill['lease']) => (
+    <div>
+      <div>{tenantName || '-'}</div>
+      <div style={{ fontSize: 12, color: 'var(--th-foreground-muted)' }}>
+        {lease?.room?.apartment?.name ?? '公寓'} ·{' '}
+        {lease?.room?.roomNo ?? '房间'}
+      </div>
+    </div>
+  );
+
+  const renderItemTags = (items?: BillItem[]) => (
+    <Space size={[4, 4]} wrap>
+      {(items ?? []).map((item, index) => (
+        <Tooltip key={index} title={`${item.name} ¥${money(item.amount)}`}>
+          <Tag>{billItemTypeText(item.type)}</Tag>
+        </Tooltip>
+      ))}
+    </Space>
+  );
+
+  const renderPeriods = (items?: BillItem[]) => {
+    const set = new Set<string>();
+    (items ?? []).forEach((item) => {
+      set.add(`${day(item.periodStart)} ~ ${day(item.periodEnd)}`);
+    });
+    const periods = Array.from(set);
+    if (periods.length === 0) return '-';
     return (
-      <Card
-        key={group.id}
-        size="small"
-        className={clsx(styles.billCard, 'cursor-pointer')}
-        onClick={() => navigate(`/bills/monthly/${group.id}`)}
-        bodyStyle={{ padding: 'var(--th-space-5)' }}
-      >
-        <div className="flex-start">
-          <div>
-            <div className={styles.billCardTitle}>{summary.title}</div>
-            <div className={styles.billCardMeta}>{summary.meta}</div>
-          </div>
-          <Tag color={toneForBillStatus(group.status)}>
-            {statusLabels[group.status]}
-          </Tag>
-        </div>
-        <div className={styles.billCardFooter}>
-          <div
-            className={clsx(
-              styles.billCardAmount,
-              group.status === 'REFUNDED' && styles.billCardAmountRefund
-            )}
-          >
-            ¥{money(summary.totalAmount)}
-          </div>
-          <div className={styles.textRight}>
-            <div className={styles.billCardMuted}>
-              剩余 ¥{money(summary.remainingAmount)}
-            </div>
-            <div className={styles.billCardSubtle}>
-              已收 ¥{money(summary.paidAmount)}
-            </div>
-          </div>
-        </div>
-        <div className={styles.billCardActions}>
-          <span className={styles.billCardCount}>
-            {summary.detailCountText}
-          </span>
-          <Space>
-            {showDelete &&
-              group.status !== 'PAID' &&
-              group.status !== 'VOID' &&
-              group.status !== 'REFUNDED' && (
-                <>
-                  {canManageBill && (
-                    <Popconfirm
-                      title="作废账单组"
-                      description="作废后所有账单将无法继续收款或恢复，确认作废？"
-                      onConfirm={(e) => {
-                        e?.stopPropagation();
-                        handleVoidGroup(group);
-                      }}
-                      okText="确认作废"
-                      cancelText="取消"
-                      okButtonProps={{ danger: true }}
-                      onPopupClick={(e) => e.stopPropagation()}
-                    >
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<StopOutlined />}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        作废
-                      </Button>
-                    </Popconfirm>
-                  )}
-                  <Button
-                    type="text"
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteGroup(group);
-                    }}
-                  >
-                    删除
-                  </Button>
-                </>
-              )}
-            {showDelete && group.status === 'PAID' && canManageBill && (
-              <Button
-                type="text"
-                size="small"
-                icon={<RollbackOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRefundGroup(group);
-                }}
-              >
-                退款
-              </Button>
-            )}
-            <Button type="link" size="small" icon={<EyeOutlined />}>
-              查看详情
-            </Button>
-          </Space>
-        </div>
-      </Card>
+      <Tooltip title={periods.join(' / ')}>
+        <span>
+          {periods[0]}
+          {periods.length > 1 ? ` +${periods.length - 1}` : ''}
+        </span>
+      </Tooltip>
     );
   };
 
-  const renderPendingCard = (bill: Bill) => (
-    <Card
-      key={bill.id}
-      size="small"
-      className={styles.billCard}
-      bodyStyle={{ padding: 'var(--th-space-5)' }}
-    >
-      <div className="flex-start">
-        <div>
-          <div className={styles.billCardTitle}>
-            {bill.lease?.tenantName ?? '租客'} ·{' '}
-            {bill.lease?.room?.roomNo ?? '房间'}
+  const renderGroupActions = (group: BillGroup, manage: boolean) => (
+    <Space size="small" onClick={(e) => e.stopPropagation()}>
+      <Button
+        type="link"
+        size="small"
+        onClick={() => navigate(`/bills/monthly/${group.id}`)}
+      >
+        查看详情
+      </Button>
+      {group.status === 'UNPAID' && (
+        <Button
+          type="link"
+          size="small"
+          onClick={() => {
+            setPaymentLeaseId(group.leaseId);
+            setPaymentOpen(true);
+          }}
+        >
+          收款
+        </Button>
+      )}
+      {manage &&
+        group.status !== 'PAID' &&
+        group.status !== 'VOID' &&
+        group.status !== 'REFUNDED' &&
+        canManageBill && (
+          <>
+            <Popconfirm
+              title="作废账单组"
+              description="作废后所有账单将无法继续收款或恢复，确认作废？"
+              onConfirm={() => handleVoidGroup(group)}
+              okText="确认作废"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="link" size="small">
+                作废
+              </Button>
+            </Popconfirm>
+            <Button
+              type="link"
+              danger
+              size="small"
+              onClick={() => handleDeleteGroup(group)}
+            >
+              删除
+            </Button>
+          </>
+        )}
+      {manage && group.status === 'PAID' && canManageBill && (
+        <Button
+          type="link"
+          size="small"
+          onClick={() => handleRefundGroup(group)}
+        >
+          退款
+        </Button>
+      )}
+    </Space>
+  );
+
+  const groupColumns = useMemo(
+    () => [
+      {
+        title: '租客/房间',
+        width: 180,
+        render: (_: unknown, group: BillGroup) =>
+          renderTenantCell(group.tenantName, group.lease),
+      },
+      {
+        title: '费用项目',
+        ellipsis: true,
+        render: (_: unknown, group: BillGroup) =>
+          renderItemTags(getGroupItems(group)),
+      },
+      {
+        title: '账期',
+        width: 180,
+        render: (_: unknown, group: BillGroup) =>
+          renderPeriods(getGroupItems(group)),
+      },
+      {
+        title: '金额',
+        width: 150,
+        align: 'right' as const,
+        render: (_: unknown, group: BillGroup) => (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontWeight: 600 }}>¥{money(group.totalAmount)}</div>
+            <div style={{ fontSize: 12, color: 'var(--th-foreground-muted)' }}>
+              已收 ¥{money(group.paidAmount)} / 剩余 ¥
+              {money(group.totalAmount - group.paidAmount)}
+            </div>
           </div>
-          <div className={styles.billCardMeta}>
-            {bill.periodStart?.slice(0, 10)} 至 {bill.periodEnd?.slice(0, 10)}
-          </div>
-        </div>
-        <Tag color={toneForBillStatus(bill.status)}>
-          {statusLabels[bill.status]}
-        </Tag>
-      </div>
-      <div className={styles.billCardAlert}>
-        <ExclamationCircleOutlined className={styles.billListAlertIcon} />
-        {bill.failureReason ?? '需要补录或修正水电读数'}
-      </div>
-      <div className={styles.pendingActions}>
-        <Space>
-          <Button size="small" onClick={() => handleRetry(bill)}>
-            重新出账
-          </Button>
-          <Button
-            type="primary"
-            size="small"
-            onClick={() => {
-              setUtilityBillId(bill.id);
-              setUtilityOpen(true);
-            }}
-          >
-            录入本期水电
-          </Button>
-        </Space>
-      </div>
-    </Card>
+        ),
+      },
+      {
+        title: '状态',
+        width: 100,
+        render: (_: unknown, group: BillGroup) => (
+          <Tag color={toneForBillStatus(group.status)}>
+            {statusLabels[group.status]}
+          </Tag>
+        ),
+      },
+      {
+        title: '到期日',
+        width: 110,
+        render: (_: unknown, group: BillGroup) => day(group.dueDate),
+      },
+      {
+        title: '操作',
+        width: 260,
+        fixed: 'right' as const,
+        align: 'right' as const,
+        render: (_: unknown, group: BillGroup) =>
+          renderGroupActions(group, tab === 'all'),
+      },
+    ],
+    [canManageBill, tab]
+  );
+
+  const renderPendingActions = (bill: Bill) => (
+    <Space size="small">
+      <Button type="link" size="small" onClick={() => handleRetry(bill)}>
+        重新出账
+      </Button>
+      <Button
+        type="link"
+        size="small"
+        onClick={() => {
+          setUtilityBillId(bill.id);
+          setUtilityOpen(true);
+        }}
+      >
+        录入本期水电
+      </Button>
+    </Space>
+  );
+
+  const pendingColumns = useMemo(
+    () => [
+      {
+        title: '租客/房间',
+        width: 180,
+        render: (_: unknown, bill: Bill) =>
+          renderTenantCell(bill.lease?.tenantName, bill.lease),
+      },
+      {
+        title: '费用项目',
+        ellipsis: true,
+        render: (_: unknown, bill: Bill) => renderItemTags(bill.items),
+      },
+      {
+        title: '账期',
+        width: 180,
+        render: (_: unknown, bill: Bill) => renderPeriods(bill.items),
+      },
+      {
+        title: '失败原因',
+        ellipsis: true,
+        render: (_: unknown, bill: Bill) => bill.failureReason || '-',
+      },
+      {
+        title: '操作',
+        width: 180,
+        fixed: 'right' as const,
+        align: 'right' as const,
+        render: (_: unknown, bill: Bill) => renderPendingActions(bill),
+      },
+    ],
+    []
   );
 
   return (
@@ -462,116 +521,128 @@ export default function BillListPage() {
         }
       />
 
-      <Spin spinning={loading}>
-        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-          <Select
-            placeholder="选择公寓"
-            value={apartmentFilter || undefined}
-            onChange={handleApartmentChange}
-            allowClear
-            style={{ width: 200 }}
-            options={apartments.map((a) => ({ label: a.name, value: a.id }))}
-          />
-          <Select
-            placeholder="选择房间"
-            value={roomFilter || undefined}
-            onChange={setRoomFilter}
-            allowClear
-            style={{ width: 200 }}
-            options={filteredRooms.map((r) => ({
-              label: r.roomNo,
-              value: r.id,
-            }))}
-          />
-        </div>
-        <Tabs
-          activeKey={tab}
-          onChange={(key) => {
-            setTab(key as 'unpaid' | 'pending' | 'all');
-            setSearchQuery('');
-            setStatusFilter('');
-          }}
-          items={[
-            {
-              key: 'unpaid',
-              label: `待支付 (${unpaidGroups.length})`,
-              children: (
-                <div>
-                  {unpaidGroups.length === 0 ? (
-                    <EmptyState
-                      title="暂无待支付账单"
-                      description="当前没有待支付的账单记录"
-                    />
-                  ) : (
-                    sortBillGroupsForList(unpaidGroups).map((g) =>
-                      renderBillCard(g)
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+        <Select
+          placeholder="选择公寓"
+          value={apartmentFilter || undefined}
+          onChange={handleApartmentChange}
+          allowClear
+          style={{ width: 200 }}
+          options={apartments.map((a) => ({ label: a.name, value: a.id }))}
+        />
+        <Select
+          placeholder="选择房间"
+          value={roomFilter || undefined}
+          onChange={setRoomFilter}
+          allowClear
+          style={{ width: 200 }}
+          options={filteredRooms.map((r) => ({
+            label: r.roomNo,
+            value: r.id,
+          }))}
+        />
+      </div>
+      <Tabs
+        activeKey={tab}
+        onChange={(key) => {
+          setTab(key as 'unpaid' | 'pending' | 'all');
+          setSearchQuery('');
+          setStatusFilter('');
+        }}
+        items={[
+          {
+            key: 'unpaid',
+            label: `待支付 (${unpaidGroups.length})`,
+            children:
+              unpaidGroups.length === 0 ? (
+                <EmptyState
+                  title="暂无待支付账单"
+                  description="当前没有待支付的账单记录"
+                />
+              ) : (
+                <Table
+                  rowKey="id"
+                  columns={groupColumns}
+                  dataSource={sortBillGroupsForList(unpaidGroups)}
+                  loading={loading}
+                  pagination={{ pageSize: 10 }}
+                  scroll={{ x: 'max-content' }}
+                />
+              ),
+          },
+          {
+            key: 'pending',
+            label: `待处理 (${filteredReviewBills.length})`,
+            children:
+              filteredReviewBills.length === 0 ? (
+                <EmptyState
+                  title="暂无待处理账单"
+                  description="所有账单均已处理完毕"
+                />
+              ) : (
+                <Table
+                  rowKey="id"
+                  columns={pendingColumns}
+                  dataSource={filteredReviewBills}
+                  loading={loading}
+                  pagination={{ pageSize: 10 }}
+                  scroll={{ x: 'max-content' }}
+                />
+              ),
+          },
+          {
+            key: 'all',
+            label: `全部 (${filteredBillGroups.length})`,
+            children: (
+              <div>
+                <Input
+                  placeholder="搜索租客姓名、房间号或手机号"
+                  prefix={<SearchOutlined />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="mb-16"
+                  allowClear
+                />
+                <Space wrap className="mb-16">
+                  {(['', 'UNPAID', 'PAID', 'VOID', 'REFUNDED'] as const).map(
+                    (status) => (
+                      <Button
+                        key={status || 'all'}
+                        type={statusFilter === status ? 'primary' : 'default'}
+                        size="small"
+                        onClick={() => setStatusFilter(status)}
+                      >
+                        {status ? statusLabels[status] : '全部状态'}
+                      </Button>
                     )
                   )}
-                </div>
-              ),
-            },
-            {
-              key: 'pending',
-              label: `待处理 (${filteredReviewBills.length})`,
-              children: (
-                <div>
-                  {filteredReviewBills.length === 0 ? (
-                    <EmptyState
-                      title="暂无待处理账单"
-                      description="所有账单均已处理完毕"
-                    />
-                  ) : (
-                    filteredReviewBills.map((bill) => renderPendingCard(bill))
-                  )}
-                </div>
-              ),
-            },
-            {
-              key: 'all',
-              label: `全部 (${filteredBillGroups.length})`,
-              children: (
-                <div>
-                  <Input
-                    placeholder="搜索租客姓名、房间号或手机号"
-                    prefix={<SearchOutlined />}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="mb-16"
-                    allowClear
+                </Space>
+                {filteredAllGroups.length === 0 ? (
+                  <EmptyState
+                    title="未找到账单"
+                    description="请尝试调整搜索条件或筛选状态"
                   />
-                  <Space wrap className="mb-16">
-                    {(['', 'UNPAID', 'PAID', 'VOID', 'REFUNDED'] as const).map(
-                      (status) => (
-                        <Button
-                          key={status || 'all'}
-                          type={statusFilter === status ? 'primary' : 'default'}
-                          size="small"
-                          onClick={() => setStatusFilter(status)}
-                        >
-                          {status ? statusLabels[status] : '全部状态'}
-                        </Button>
-                      )
-                    )}
-                  </Space>
-                  {filteredAllGroups.length === 0 ? (
-                    <EmptyState
-                      title="未找到账单"
-                      description="请尝试调整搜索条件或筛选状态"
-                    />
-                  ) : (
-                    filteredAllGroups.map((g) => renderBillCard(g, true))
-                  )}
-                </div>
-              ),
-            },
-          ]}
-        />
-      </Spin>
+                ) : (
+                  <Table
+                    rowKey="id"
+                    columns={groupColumns}
+                    dataSource={filteredAllGroups}
+                    loading={loading}
+                    pagination={{ pageSize: 10 }}
+                    scroll={{ x: 'max-content' }}
+                  />
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
 
       <PaymentDialog
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
         onSuccess={loadData}
+        defaultLeaseId={paymentLeaseId}
       />
 
       <UtilityExportModal

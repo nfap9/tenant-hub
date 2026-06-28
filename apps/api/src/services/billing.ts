@@ -517,31 +517,41 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
   });
   if (!bill || bill.mode !== 'POSTPAID') return bill;
 
+  const waterItem = bill.items.find((item) => item.type === 'WATER');
+  const powerItem = bill.items.find((item) => item.type === 'POWER');
+  if (!waterItem || !powerItem) {
+    await failPostpaidBill(bill.id, '账单缺少水电项目');
+    return prisma.bill.findUnique({
+      where: { id: bill.id },
+      include: { items: true },
+    });
+  }
+
   const [previousWater, currentWater, previousPower, currentPower] =
     await Promise.all([
       findReadingAtOrBefore({
         organizationId: bill.organizationId,
         roomId: bill.lease.roomId,
         meterType: 'WATER',
-        date: bill.periodStart,
+        date: waterItem.periodStart,
       }),
       findReadingAtOrBefore({
         organizationId: bill.organizationId,
         roomId: bill.lease.roomId,
         meterType: 'WATER',
-        date: bill.periodEnd,
+        date: waterItem.periodEnd,
       }),
       findReadingAtOrBefore({
         organizationId: bill.organizationId,
         roomId: bill.lease.roomId,
         meterType: 'POWER',
-        date: bill.periodStart,
+        date: powerItem.periodStart,
       }),
       findReadingAtOrBefore({
         organizationId: bill.organizationId,
         roomId: bill.lease.roomId,
         meterType: 'POWER',
-        date: bill.periodEnd,
+        date: powerItem.periodEnd,
       }),
     ]);
 
@@ -663,8 +673,6 @@ const generateBillForBillingDate = async (
       leaseId: lease.id,
       mode: 'PREPAID',
       billingDate: startOfDay(billingDate).toDate(),
-      periodStart: periods.prepaid.start,
-      periodEnd: periods.prepaid.end,
       dueDate,
       status: 'UNPAID',
       items: {
@@ -674,6 +682,8 @@ const generateBillForBillingDate = async (
             name: '房租',
             amount: lease.rentAmount,
             status: 'UNPAID',
+            periodStart: periods.prepaid.start,
+            periodEnd: periods.prepaid.end,
           },
           ...lease.fees.map((fee) => ({
             type:
@@ -681,6 +691,8 @@ const generateBillForBillingDate = async (
             name: fee.name,
             amount: fee.amount,
             status: 'UNPAID' as const,
+            periodStart: periods.prepaid.start,
+            periodEnd: periods.prepaid.end,
           })),
         ],
       },
@@ -716,8 +728,6 @@ const generateBillForBillingDate = async (
         leaseId: lease.id,
         mode: 'POSTPAID',
         billingDate: startOfDay(billingDate).toDate(),
-        periodStart: periods.postpaid.start,
-        periodEnd: periods.postpaid.end,
         dueDate,
         status: 'BILLING',
         items: {
@@ -727,6 +737,8 @@ const generateBillForBillingDate = async (
               name: '水费',
               amount: 0,
               status: 'BILLING',
+              periodStart: periods.postpaid.start,
+              periodEnd: periods.postpaid.end,
               waterUnitPrice: lease.waterUnitPrice,
             },
             {
@@ -734,6 +746,8 @@ const generateBillForBillingDate = async (
               name: '电费',
               amount: 0,
               status: 'BILLING',
+              periodStart: periods.postpaid.start,
+              periodEnd: periods.postpaid.end,
               powerUnitPrice: lease.powerUnitPrice,
             },
           ],

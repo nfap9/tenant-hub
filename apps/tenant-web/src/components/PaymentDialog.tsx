@@ -270,8 +270,13 @@ export default function PaymentDialog({
                             marginTop: 2,
                           }}
                         >
-                          {statusLabels[bill.status]} · {day(bill.periodStart)}{' '}
-                          至 {day(bill.periodEnd)}
+                          {(() => {
+                            const item = bill.items?.[0];
+                            const period = item
+                              ? `${day(item.periodStart)} 至 ${day(item.periodEnd)}`
+                              : `${day(bill.billingDate)} 至 ${day(bill.billingDate)}`;
+                            return `${statusLabels[bill.status]} · ${period}`;
+                          })()}
                         </div>
                       </div>
                       <div

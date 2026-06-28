@@ -150,6 +150,8 @@ export type Lease = {
   fees?: LeaseFee[];
   room?: Room;
   deposits?: Deposit[];
+  bills?: Bill[];
+  settlement?: LeaseSettlement;
 };
 
 export type Room = {
@@ -185,6 +187,8 @@ export type BillItem = {
   name: string;
   amount: string | number;
   status: BillStatus;
+  periodStart: string;
+  periodEnd: string;
   previousWater?: string | number;
   currentWater?: string | number;
   previousPower?: string | number;
@@ -200,8 +204,6 @@ export type Bill = {
   leaseId: string;
   mode: BillMode;
   billingDate: string;
-  periodStart: string;
-  periodEnd: string;
   dueDate: string;
   status: BillStatus;
   totalAmount: string | number;
@@ -298,7 +300,7 @@ export type Transaction = {
   depositId?: string;
   leaseId?: string;
   apartmentId?: string;
-  bill?: { id: string; mode: string; periodStart: string; periodEnd: string };
+  bill?: { id: string; mode: string };
   lease?: {
     id: string;
     tenantName?: string;

@@ -77,6 +77,9 @@ async function createDepositBillAndRecord(
   const netAmount = amount.minus(offset);
   const typeLabel = depositType === 'ROOM' ? '房间押金' : '钥匙押金';
 
+  const periodStart = startOfLeaseDay(lease.startDate).toDate();
+  const periodEnd = startOfLeaseDay(lease.endDate).toDate();
+
   const bill = await tx.bill.create({
     data: {
       organizationId,
@@ -84,8 +87,6 @@ async function createDepositBillAndRecord(
       mode: 'DEPOSIT',
       depositType,
       billingDate: startOfLeaseDay(lease.startDate).toDate(),
-      periodStart: startOfLeaseDay(lease.startDate).toDate(),
-      periodEnd: startOfLeaseDay(lease.endDate).toDate(),
       dueDate: startOfLeaseDay(lease.startDate).toDate(),
       status: netAmount.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
       totalAmount: netAmount,
@@ -100,6 +101,8 @@ async function createDepositBillAndRecord(
               : typeLabel,
             amount: netAmount,
             status: netAmount.lessThanOrEqualTo(0) ? 'PAID' : 'UNPAID',
+            periodStart,
+            periodEnd,
           },
         ],
       },
@@ -621,6 +624,40 @@ export const getLeaseEndDate = async (
     select: { id: true, endDate: true },
   });
   return lease;
+};
+
+/**
+ * 获取租约详情（含房间、费用、押金、账单及退租结算）
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @returns 租约详情
+ */
+export const getLeaseDetail = async (
+  leaseId: string,
+  organizationId: string
+) => {
+  const lease = await prisma.lease.findFirst({
+    where: { id: leaseId, organizationId },
+    include: {
+      room: { include: { apartment: true } },
+      fees: true,
+      deposits: true,
+      bills: {
+        include: { items: true },
+        orderBy: { billingDate: 'desc' },
+      },
+      settlement: {
+        include: {
+          payments: {
+            include: {
+              user: { select: { id: true, username: true, phone: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+  return lease ? withLeaseLifecycle(lease) : null;
 };
 
 /**

@@ -217,19 +217,22 @@ billRouter.get(
           '本月电表',
           '失败原因',
         ],
-        ...bills.map((bill) => [
-          bill.id,
-          bill.lease.room.roomNo,
-          bill.lease.tenantName,
-          bill.billingDate.toISOString(),
-          bill.periodStart.toISOString(),
-          bill.periodEnd.toISOString(),
-          '',
-          '',
-          '',
-          '',
-          bill.failureReason ?? '',
-        ]),
+        ...bills.map((bill) => {
+          const waterItem = bill.items.find((item) => item.type === 'WATER');
+          return [
+            bill.id,
+            bill.lease.room.roomNo,
+            bill.lease.tenantName,
+            bill.billingDate.toISOString(),
+            waterItem?.periodStart.toISOString() ?? '',
+            waterItem?.periodEnd.toISOString() ?? '',
+            '',
+            '',
+            '',
+            '',
+            bill.failureReason ?? '',
+          ];
+        }),
       ])
     );
   })
