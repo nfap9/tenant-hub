@@ -132,7 +132,6 @@ export const listRooms = async (organizationId: string) => {
       apartment: true,
       reservation: true,
       leases: {
-        where: { status: 'ACTIVE' },
         include: {
           fees: true,
           deposits: true,
@@ -140,7 +139,7 @@ export const listRooms = async (organizationId: string) => {
             select: { id: true, status: true, billingDate: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { startDate: 'desc' },
       },
     },
     orderBy: [{ apartment: { createdAt: 'desc' } }, { roomNo: 'asc' }],
