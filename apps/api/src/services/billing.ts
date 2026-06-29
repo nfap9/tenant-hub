@@ -847,6 +847,7 @@ export const recordBillPayment = async ({
   amount,
   method,
   note,
+  paidAt,
 }: {
   billId: string;
   organizationId: string;
@@ -854,6 +855,7 @@ export const recordBillPayment = async ({
   amount: Prisma.Decimal.Value;
   method: string;
   note?: string;
+  paidAt?: Date;
 }) => {
   const bill = await prisma.bill.findFirst({
     where: { id: billId, organizationId },
@@ -866,7 +868,7 @@ export const recordBillPayment = async ({
   assertBillPaymentAllowed({ ...bill, amount });
 
   const payment = await prisma.payment.create({
-    data: { billId, userId, amount, method, note },
+    data: { billId, userId, amount, method, note, paidAt },
   });
 
   await refreshBillTotals(billId);

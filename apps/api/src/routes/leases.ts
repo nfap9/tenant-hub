@@ -58,10 +58,11 @@ export const createLeaseInput = z
     rentCycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).describe('付款周期'),
     rentAmount: amountSchema.describe('月租金'),
     roomDepositAmount: amountSchema.default(0).describe('房间押金'),
+    keyDepositAmount: amountSchema.optional().describe('钥匙押金'),
     keyQuantity: z.coerce.number().int().min(0).default(0).describe('钥匙数量'),
     keyUnitPrice: amountSchema.default(0).describe('钥匙单价'),
-    waterUnitPrice: amountSchema.describe('水费单价'),
-    powerUnitPrice: amountSchema.describe('电费单价'),
+    waterUnitPrice: amountSchema.default(0).describe('水费单价'),
+    powerUnitPrice: amountSchema.default(0).describe('电费单价'),
     status: z.enum(['DRAFT', 'ACTIVE']).default('ACTIVE').describe('状态'),
     fees: z
       .array(
@@ -153,6 +154,7 @@ leaseRouter.post(
       historicalBasePower,
       depositSettled,
       roomDepositAmount,
+      keyDepositAmount,
       keyQuantity,
       keyUnitPrice,
       ...leaseData
@@ -170,7 +172,10 @@ leaseRouter.post(
       throw new HttpError(400, '仅空闲或已预留房间可以保存草稿');
 
     const roomDeposit = new Prisma.Decimal(roomDepositAmount);
-    const keyDeposit = calculateKeyDepositAmount(keyQuantity, keyUnitPrice);
+    const keyDeposit =
+      keyDepositAmount !== undefined
+        ? new Prisma.Decimal(keyDepositAmount)
+        : calculateKeyDepositAmount(keyQuantity, keyUnitPrice);
     const depositAmount = roomDeposit.plus(keyDeposit);
 
     const createFn = depositAmount.greaterThan(0)

@@ -264,6 +264,20 @@ export const ensureApartmentNameUnique = async (
   if (existing) throw new HttpError(409, '公寓名称已存在');
 };
 
+type ApartmentEditableFields = Partial<
+  Pick<
+    Prisma.ApartmentCreateInput,
+    | 'name'
+    | 'address'
+    | 'rentAmount'
+    | 'landlordName'
+    | 'landlordPhone'
+    | 'contractStart'
+    | 'contractEnd'
+    | 'floors'
+  >
+>;
+
 /**
  * 创建新公寓
  * @param data - 公寓数据
@@ -272,11 +286,13 @@ export const ensureApartmentNameUnique = async (
  * @param data.organizationId - 所属组织 ID
  * @returns 创建的公寓记录
  */
-export const createApartment = async (data: {
-  name: string;
-  address: string;
-  organizationId: string;
-}) => {
+export const createApartment = async (
+  data: {
+    name: string;
+    address: string;
+    organizationId: string;
+  } & ApartmentEditableFields
+) => {
   return prisma.$transaction(async (tx) => {
     await ensureApartmentNameUnique(data.organizationId, data.name);
     return tx.apartment.create({
@@ -284,7 +300,12 @@ export const createApartment = async (data: {
         name: data.name,
         address: data.address,
         organizationId: data.organizationId,
-        rentAmount: 0,
+        rentAmount: data.rentAmount ?? 0,
+        landlordName: data.landlordName,
+        landlordPhone: data.landlordPhone,
+        contractStart: data.contractStart,
+        contractEnd: data.contractEnd,
+        floors: data.floors,
       },
     });
   });
@@ -294,13 +315,13 @@ export const createApartment = async (data: {
  * 更新指定公寓的基本信息
  * @param apartmentId - 公寓 ID
  * @param organizationId - 所属组织 ID
- * @param data - 部分更新的字段（name / address）
+ * @param data - 部分更新的字段
  * @returns 更新后的公寓记录
  */
 export const updateApartment = async (
   apartmentId: string,
   organizationId: string,
-  data: Partial<Pick<Prisma.ApartmentCreateInput, 'name' | 'address'>>
+  data: ApartmentEditableFields
 ) => {
   if (data.name) {
     await ensureApartmentNameUnique(organizationId, data.name, apartmentId);

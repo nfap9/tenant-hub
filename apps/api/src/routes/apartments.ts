@@ -36,6 +36,12 @@ apartmentRouter.use(requireAuth, requireOrg);
 export const apartmentInput = z.object({
   name: z.string().min(1).describe('公寓名称'),
   address: z.string().min(1).describe('公寓地址'),
+  rentAmount: z.coerce.number().nonnegative().optional().describe('上游租金'),
+  landlordName: z.string().optional().describe('房东姓名'),
+  landlordPhone: z.string().optional().describe('房东联系方式'),
+  contractStart: z.coerce.date().optional().describe('合同开始日期'),
+  contractEnd: z.coerce.date().optional().describe('合同结束日期'),
+  floors: z.coerce.number().int().min(1).optional().describe('楼层数'),
 });
 
 export const batchCreateRoomsInput = z.object({

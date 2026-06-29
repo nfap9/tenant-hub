@@ -13,6 +13,8 @@ export async function createLease(
     rentAmount: number;
     roomDepositAmount?: number;
     keyDepositAmount?: number;
+    waterUnitPrice?: number;
+    powerUnitPrice?: number;
     fees?: Array<{ type: string; name: string; amount: number }>;
   }
 ) {

@@ -57,6 +57,7 @@ export const billPaymentInput = z.object({
   amount: z.coerce.number().positive().describe('收款金额'),
   method: z.string().min(1).describe('收款方式'),
   note: z.string().optional().describe('备注'),
+  paidAt: z.coerce.date().optional().describe('收款时间'),
 });
 
 /**
