@@ -4,6 +4,7 @@ import {
   Form,
   Select,
   DatePicker,
+  InputNumber,
   Input,
   Button,
   Spin,
@@ -21,12 +22,14 @@ interface ReadingDrawerProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  roomId?: string;
 }
 
 export default function ReadingDrawer({
   open,
   onClose,
   onSuccess,
+  roomId: defaultRoomId,
 }: ReadingDrawerProps) {
   const { currentOrgId } = useAppSession();
   const [form] = Form.useForm();
@@ -35,24 +38,37 @@ export default function ReadingDrawer({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!currentOrgId || !open) return;
+    if (!open) {
+      form.resetFields();
+      return;
+    }
+    if (!currentOrgId) return;
+
+    form.resetFields();
+    form.setFieldsValue({
+      readingDate: dayjs(today()),
+      waterValue: 0,
+      powerValue: 0,
+    });
+
     setLoading(true);
     getRooms(currentOrgId)
       .then((data) => {
         setRooms(data);
-        if (data.length > 0 && !form.getFieldValue('roomId')) {
-          form.setFieldsValue({ roomId: data[0].id });
+        const targetId = defaultRoomId ?? (data.length > 0 ? data[0].id : null);
+        if (targetId) {
+          form.setFieldsValue({ roomId: targetId });
         }
       })
       .catch((e) => message.error(e instanceof Error ? e.message : '加载失败'))
       .finally(() => setLoading(false));
-  }, [currentOrgId, open, form]);
+  }, [currentOrgId, open, form, defaultRoomId]);
 
   const handleSubmit = async (values: {
     roomId: string;
-    meterType: 'WATER' | 'POWER';
     readingDate: dayjs.Dayjs;
-    value: string;
+    waterValue: number;
+    powerValue: number;
     note?: string;
   }) => {
     if (!currentOrgId) return;
@@ -62,9 +78,9 @@ export default function ReadingDrawer({
     try {
       await createMeterReading(currentOrgId, {
         roomId: values.roomId,
-        meterType: values.meterType,
         readingDate: values.readingDate.format('YYYY-MM-DD'),
-        value: Number(values.value),
+        waterValue: Number(values.waterValue),
+        powerValue: Number(values.powerValue),
         note: values.note?.trim() || undefined,
       });
       message.success('抄表记录已保存');
@@ -112,7 +128,8 @@ export default function ReadingDrawer({
           onFinish={handleSubmit}
           initialValues={{
             readingDate: dayjs(today()),
-            meterType: 'WATER',
+            waterValue: 0,
+            powerValue: 0,
           }}
         >
           <Form.Item
@@ -126,18 +143,6 @@ export default function ReadingDrawer({
             />
           </Form.Item>
           <Form.Item
-            name="meterType"
-            label="表类型"
-            rules={[{ required: true, message: '请选择表类型' }]}
-          >
-            <Select
-              options={[
-                { label: '水表', value: 'WATER' },
-                { label: '电表', value: 'POWER' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item
             name="readingDate"
             label="读数日期"
             rules={[{ required: true, message: '请选择日期' }]}
@@ -145,11 +150,18 @@ export default function ReadingDrawer({
             <DatePicker className="w-full" />
           </Form.Item>
           <Form.Item
-            name="value"
-            label="读数"
-            rules={[{ required: true, message: '请输入读数' }]}
+            name="waterValue"
+            label="水表读数"
+            rules={[{ required: true, message: '请输入水表读数' }]}
           >
-            <Input placeholder="读数" />
+            <InputNumber min={0} className="w-full" placeholder="水表读数" />
+          </Form.Item>
+          <Form.Item
+            name="powerValue"
+            label="电表读数"
+            rules={[{ required: true, message: '请输入电表读数' }]}
+          >
+            <InputNumber min={0} className="w-full" placeholder="电表读数" />
           </Form.Item>
           <Form.Item name="note" label="备注">
             <Input.TextArea placeholder="备注（可选）" rows={3} />

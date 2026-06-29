@@ -23,6 +23,9 @@ const LeasesPage = lazy(() => import('@/pages/leases/LeasesPage'));
 const LeaseDetailPage = lazy(() => import('@/pages/leases/LeaseDetailPage'));
 
 const BillListPage = lazy(() => import('@/pages/bills/BillListPage'));
+const MeterReadingListPage = lazy(
+  () => import('@/pages/meter-readings/MeterReadingListPage')
+);
 
 const OrganizationPage = lazy(
   () => import('@/pages/settings/OrganizationPage')
@@ -163,6 +166,14 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <BillListPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/meter-readings"
+            element={
+              <RequireOrg>
+                <MeterReadingListPage />
               </RequireOrg>
             }
           />

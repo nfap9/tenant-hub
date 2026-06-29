@@ -1,5 +1,10 @@
 import { apiClient } from './client';
-import type { Bill, Payment, MeterReading } from '@/types/domain';
+import type {
+  Bill,
+  Payment,
+  MeterReading,
+  MeterReadingRoom,
+} from '@/types/domain';
 
 export async function getBills(organizationId: string) {
   return apiClient<Bill[]>('/bills', { organizationId });
@@ -83,21 +88,53 @@ export async function voidBill(organizationId: string, billId: string) {
   });
 }
 
+export async function getMeterReadings(
+  organizationId: string,
+  filters?: {
+    roomId?: string;
+    apartmentId?: string;
+    meterType?: 'WATER' | 'POWER';
+    startDate?: string;
+    endDate?: string;
+  }
+) {
+  const params = new URLSearchParams();
+  if (filters?.roomId) params.set('roomId', filters.roomId);
+  if (filters?.apartmentId) params.set('apartmentId', filters.apartmentId);
+  if (filters?.meterType) params.set('meterType', filters.meterType);
+  if (filters?.startDate) params.set('startDate', filters.startDate);
+  if (filters?.endDate) params.set('endDate', filters.endDate);
+  const query = params.toString();
+  return apiClient<MeterReading[]>(
+    `/bills/meter-readings${query ? `?${query}` : ''}`,
+    { organizationId }
+  );
+}
+
+export async function getMeterReadingRooms(organizationId: string) {
+  return apiClient<MeterReadingRoom[]>('/bills/meter-reading-rooms', {
+    organizationId,
+  });
+}
+
 export async function createMeterReading(
   organizationId: string,
   payload: {
     roomId: string;
-    meterType: 'WATER' | 'POWER';
     readingDate: string;
-    value: number;
+    waterValue: number;
+    powerValue: number;
     note?: string;
   }
 ) {
-  return apiClient<MeterReading>('/bills/meter-readings', {
-    method: 'POST',
-    body: payload,
-    organizationId,
-  });
+  return apiClient<{ waterReading: MeterReading; powerReading: MeterReading }>(
+    '/bills/meter-readings',
+    {
+      method: 'POST',
+      body: payload,
+      organizationId,
+    }
+  );
 }
 
 export async function recordUtilityReading(

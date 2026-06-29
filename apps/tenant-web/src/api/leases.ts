@@ -15,6 +15,8 @@ export async function createLease(
     keyDepositAmount?: number;
     waterUnitPrice?: number;
     powerUnitPrice?: number;
+    initialWaterReading?: number;
+    initialPowerReading?: number;
     fees?: Array<{ type: string; name: string; amount: number }>;
   }
 ) {

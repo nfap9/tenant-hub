@@ -5,6 +5,7 @@ import {
   FileTextOutlined,
   ApartmentOutlined,
   AccountBookOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 
 export interface MenuItemConfig {
@@ -76,6 +77,13 @@ export const bizMenuConfig: MenuItemConfig[] = [
         label: '账单',
         path: '/bills',
         icon: FileTextOutlined,
+        requireOrg: true,
+      },
+      {
+        key: 'meter-readings',
+        label: '水电抄表',
+        path: '/meter-readings',
+        icon: ThunderboltOutlined,
         requireOrg: true,
       },
     ],

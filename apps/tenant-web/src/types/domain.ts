@@ -76,6 +76,8 @@ export type Lease = {
   rentAmount: string | number;
   depositAmount: string | number;
   keyDepositAmount: string | number;
+  waterUnitPrice?: string | number;
+  powerUnitPrice?: string | number;
   currentMonthBillGenerated?: boolean;
   currentMonthBillSettled?: boolean;
   currentMonthBillLabel?: string;
@@ -84,6 +86,7 @@ export type Lease = {
   room?: Room;
   deposits?: Deposit[];
   bills?: Bill[];
+  meterReadings?: MeterReading[];
 };
 
 export type Room = {
@@ -167,6 +170,20 @@ export type MeterReading = {
   value: string | number;
   note?: string;
   createdAt: string;
+  apartment?: Apartment;
   room?: Room;
   lease?: Lease;
+};
+
+export type MeterReadingRoom = {
+  leaseId: string;
+  tenantName: string;
+  roomId: string;
+  roomNo: string;
+  apartmentId: string;
+  apartmentName: string;
+  lastWaterReadingDate: string | null;
+  lastWaterValue: number | null;
+  lastPowerReadingDate: string | null;
+  lastPowerValue: number | null;
 };

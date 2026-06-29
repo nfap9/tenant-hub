@@ -41,6 +41,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import PaymentDialog from '@/components/PaymentDialog';
 import ReadingDrawer from './components/ReadingDrawer';
+import UtilityReadingDrawer from './components/UtilityReadingDrawer';
 import type {
   Bill,
   BillStatus,
@@ -56,6 +57,7 @@ export default function BillListPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentLeaseId, setPaymentLeaseId] = useState<string | undefined>();
   const [readingOpen, setReadingOpen] = useState(false);
+  const [utilityBill, setUtilityBill] = useState<Bill | null>(null);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [apartments, setApartments] = useState<Apartment[]>([]);
@@ -213,6 +215,34 @@ export default function BillListPage() {
           收款
         </Button>
       )}
+      {group.bills.some((b) =>
+        b.items?.some(
+          (item) =>
+            item.category === 'UTILITY' &&
+            (item.name === '水费' || item.name === '电费')
+        )
+      ) &&
+        canManageBill &&
+        group.status !== 'PAID' &&
+        group.status !== 'VOID' && (
+          <Button
+            type="link"
+            size="small"
+            icon={<ThunderboltOutlined />}
+            onClick={() => {
+              const target = group.bills.find((b) =>
+                b.items?.some(
+                  (item) =>
+                    item.category === 'UTILITY' &&
+                    (item.name === '水费' || item.name === '电费')
+                )
+              );
+              if (target) setUtilityBill(target);
+            }}
+          >
+            录入水电
+          </Button>
+        )}
       {canManageBill && group.status !== 'PAID' && group.status !== 'VOID' && (
         <>
           <Popconfirm
@@ -476,6 +506,13 @@ export default function BillListPage() {
       <ReadingDrawer
         open={readingOpen}
         onClose={() => setReadingOpen(false)}
+        onSuccess={loadData}
+      />
+
+      <UtilityReadingDrawer
+        open={Boolean(utilityBill)}
+        bill={utilityBill}
+        onClose={() => setUtilityBill(null)}
         onSuccess={loadData}
       />
     </div>

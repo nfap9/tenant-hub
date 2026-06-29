@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
   requireOrg,
@@ -21,9 +22,9 @@ import {
   listBills,
   findLeaseById,
   listMeterReadings,
+  listMeterReadingRooms,
   findRoomForMeterReading,
   findLeaseForMeterReading,
-  createMeterReading,
   findPendingPostpaidBillsByRoom,
   applyUtilityReadingToBill,
   getBillForRetry,
@@ -41,9 +42,9 @@ export const generateBillsInput = z.object({
 
 export const meterReadingInput = z.object({
   roomId: z.string().describe('房间ID'),
-  meterType: z.enum(['WATER', 'POWER']).describe('表类型：WATER水表/POWER电表'),
   readingDate: z.coerce.date().describe('抄表日期'),
-  value: z.coerce.number().nonnegative().describe('读数'),
+  waterValue: z.coerce.number().nonnegative().describe('水表读数'),
+  powerValue: z.coerce.number().nonnegative().describe('电表读数'),
   note: z.string().optional().describe('备注'),
 });
 
@@ -126,7 +127,35 @@ billRouter.get(
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
     const roomId = z.string().optional().parse(req.query.roomId);
-    ok(res, await listMeterReadings(req.organizationId!, roomId));
+    const apartmentId = z.string().optional().parse(req.query.apartmentId);
+    const meterType = z
+      .enum(['WATER', 'POWER'])
+      .optional()
+      .parse(req.query.meterType);
+    const startDate = z.coerce.date().optional().parse(req.query.startDate);
+    const endDate = z.coerce.date().optional().parse(req.query.endDate);
+    ok(
+      res,
+      await listMeterReadings(req.organizationId!, {
+        roomId,
+        apartmentId,
+        meterType,
+        startDate,
+        endDate,
+      })
+    );
+  })
+);
+
+/**
+ * GET /api/bills/meter-reading-rooms
+ * 获取当前组织下有待抄表的房间列表（含最近一次水电读数）
+ */
+billRouter.get(
+  '/meter-reading-rooms',
+  requirePermission(PERMISSIONS.BILL_VIEW),
+  asyncHandler(async (req, res) => {
+    ok(res, await listMeterReadingRooms(req.organizationId!));
   })
 );
 
@@ -150,16 +179,23 @@ billRouter.post(
       input.readingDate
     );
 
-    const reading = await createMeterReading({
+    const baseReading = {
       organizationId: req.organizationId!,
       apartmentId: room.apartmentId,
       roomId: room.id,
       leaseId: lease?.id,
-      meterType: input.meterType,
       readingDate: input.readingDate,
-      value: input.value,
       note: input.note,
-    });
+    };
+
+    const [waterReading, powerReading] = await prisma.$transaction([
+      prisma.meterReading.create({
+        data: { ...baseReading, meterType: 'WATER', value: input.waterValue },
+      }),
+      prisma.meterReading.create({
+        data: { ...baseReading, meterType: 'POWER', value: input.powerValue },
+      }),
+    ]);
 
     // 尝试自动完成该房间所有待出账的后付费账单
     const pendingBills = await findPendingPostpaidBillsByRoom(room.id);
@@ -169,7 +205,7 @@ billRouter.post(
       )
     );
 
-    ok(res, reading);
+    ok(res, { waterReading, powerReading });
   })
 );
 

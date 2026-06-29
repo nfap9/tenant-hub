@@ -112,16 +112,33 @@ export const findLeaseById = async (
  */
 export const listMeterReadings = async (
   organizationId: string,
-  roomId?: string
+  filters?: {
+    roomId?: string;
+    apartmentId?: string;
+    meterType?: 'WATER' | 'POWER';
+    startDate?: Date;
+    endDate?: Date;
+  }
 ) => {
   return prisma.meterReading.findMany({
     where: {
       organizationId,
-      ...(roomId ? { roomId } : {}),
+      ...(filters?.roomId ? { roomId: filters.roomId } : {}),
+      ...(filters?.apartmentId ? { apartmentId: filters.apartmentId } : {}),
+      ...(filters?.meterType ? { meterType: filters.meterType } : {}),
+      ...(filters?.startDate || filters?.endDate
+        ? {
+            readingDate: {
+              ...(filters.startDate ? { gte: filters.startDate } : {}),
+              ...(filters.endDate ? { lte: filters.endDate } : {}),
+            },
+          }
+        : {}),
     },
     include: {
       room: true,
       lease: true,
+      apartment: true,
     },
     orderBy: { readingDate: 'desc' },
   });
@@ -157,6 +174,82 @@ export const listMeterReadingsRaw = async (
     },
     take: options?.limit,
     orderBy: { readingDate: 'desc' },
+  });
+};
+
+/**
+ * 查询待抄表房间列表（有活跃租约的房间及其最近一次抄表读数）
+ * @param organizationId - 组织ID
+ * @returns 待抄表房间列表
+ */
+export const listMeterReadingRooms = async (organizationId: string) => {
+  const leases = await prisma.lease.findMany({
+    where: {
+      organizationId,
+      status: 'ACTIVE',
+    },
+    include: {
+      room: {
+        include: { apartment: true },
+      },
+    },
+    orderBy: { startDate: 'desc' },
+  });
+
+  const roomIds = leases.map((lease) => lease.roomId);
+  if (roomIds.length === 0) return [];
+
+  const [latestWaterReadings, latestPowerReadings] = await Promise.all([
+    prisma.meterReading.findMany({
+      where: {
+        organizationId,
+        roomId: { in: roomIds },
+        meterType: 'WATER',
+      },
+      orderBy: [{ roomId: 'asc' }, { readingDate: 'desc' }],
+      distinct: ['roomId'],
+    }),
+    prisma.meterReading.findMany({
+      where: {
+        organizationId,
+        roomId: { in: roomIds },
+        meterType: 'POWER',
+      },
+      orderBy: [{ roomId: 'asc' }, { readingDate: 'desc' }],
+      distinct: ['roomId'],
+    }),
+  ]);
+
+  const readingMap = new Map<
+    string,
+    Map<'WATER' | 'POWER', { readingDate: Date; value: number }>
+  >();
+  for (const reading of [...latestWaterReadings, ...latestPowerReadings]) {
+    if (!readingMap.has(reading.roomId)) {
+      readingMap.set(reading.roomId, new Map());
+    }
+    readingMap.get(reading.roomId)!.set(reading.meterType, {
+      readingDate: reading.readingDate,
+      value: Number(reading.value),
+    });
+  }
+
+  return leases.map((lease) => {
+    const roomReadings = readingMap.get(lease.roomId) ?? new Map();
+    const water = roomReadings.get('WATER');
+    const power = roomReadings.get('POWER');
+    return {
+      leaseId: lease.id,
+      tenantName: lease.tenantName,
+      roomId: lease.roomId,
+      roomNo: lease.room.roomNo,
+      apartmentId: lease.room.apartmentId,
+      apartmentName: lease.room.apartment.name,
+      lastWaterReadingDate: water?.readingDate ?? null,
+      lastWaterValue: water?.value ?? null,
+      lastPowerReadingDate: power?.readingDate ?? null,
+      lastPowerValue: power?.value ?? null,
+    };
   });
 };
 

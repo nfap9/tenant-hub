@@ -354,7 +354,7 @@ export const getLeaseWithFees = async (
 ) => {
   return prisma.lease.findFirst({
     where: { id: leaseId, organizationId },
-    include: { fees: true },
+    include: { fees: true, room: { include: { apartment: true } } },
   });
 };
 
@@ -441,6 +441,9 @@ export const getLeaseDetail = async (
       bills: {
         include: { items: true },
         orderBy: { billingDate: 'desc' },
+      },
+      meterReadings: {
+        orderBy: { readingDate: 'desc' },
       },
     },
   });

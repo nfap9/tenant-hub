@@ -63,6 +63,16 @@ export const createLeaseInput = z
     keyUnitPrice: amountSchema.default(0).describe('钥匙单价'),
     waterUnitPrice: amountSchema.default(0).describe('水费单价'),
     powerUnitPrice: amountSchema.default(0).describe('电费单价'),
+    initialWaterReading: z.coerce
+      .number()
+      .min(0)
+      .default(0)
+      .describe('初始水表读数'),
+    initialPowerReading: z.coerce
+      .number()
+      .min(0)
+      .default(0)
+      .describe('初始电表读数'),
     status: z.enum(['DRAFT', 'ACTIVE']).default('ACTIVE').describe('状态'),
     fees: z
       .array(
@@ -157,6 +167,8 @@ leaseRouter.post(
       keyDepositAmount,
       keyQuantity,
       keyUnitPrice,
+      initialWaterReading,
+      initialPowerReading,
       ...leaseData
     } = input;
     const room = await findRoomById(roomId, req.organizationId!);
@@ -198,6 +210,29 @@ leaseRouter.post(
         amount: new Prisma.Decimal(fee.amount),
       })),
     })) as Awaited<ReturnType<typeof createLeaseWithDeposit>>;
+
+    await prisma.meterReading.createMany({
+      data: [
+        {
+          organizationId: req.organizationId!,
+          apartmentId: lease.room.apartmentId,
+          roomId: lease.roomId,
+          leaseId: lease.id,
+          meterType: 'WATER',
+          readingDate: startOfLeaseDay(lease.startDate).toDate(),
+          value: initialWaterReading,
+        },
+        {
+          organizationId: req.organizationId!,
+          apartmentId: lease.room.apartmentId,
+          roomId: lease.roomId,
+          leaseId: lease.id,
+          meterType: 'POWER',
+          readingDate: startOfLeaseDay(lease.startDate).toDate(),
+          value: initialPowerReading,
+        },
+      ],
+    });
 
     if (!isDraft) {
       await updateRoomStatus(roomId, 'OCCUPIED');
@@ -330,6 +365,34 @@ leaseRouter.post(
     });
 
     await updateRoomStatus(lease.roomId, 'OCCUPIED');
+
+    const existingReadingCount = await prisma.meterReading.count({
+      where: { leaseId: lease.id },
+    });
+    if (existingReadingCount === 0) {
+      await prisma.meterReading.createMany({
+        data: [
+          {
+            organizationId: req.organizationId!,
+            apartmentId: lease.room.apartmentId,
+            roomId: lease.roomId,
+            leaseId: lease.id,
+            meterType: 'WATER',
+            readingDate: startOfLeaseDay(lease.startDate).toDate(),
+            value: 0,
+          },
+          {
+            organizationId: req.organizationId!,
+            apartmentId: lease.room.apartmentId,
+            roomId: lease.roomId,
+            leaseId: lease.id,
+            meterType: 'POWER',
+            readingDate: startOfLeaseDay(lease.startDate).toDate(),
+            value: 0,
+          },
+        ],
+      });
+    }
 
     const isHistorical = startOfLeaseDay(lease.startDate).isBefore(
       startOfLeaseDay(new Date()),

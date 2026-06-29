@@ -134,6 +134,10 @@ export default function LeaseFormDrawer({
         rentAmount: Number(values.rentAmount),
         roomDepositAmount: Number(values.roomDepositAmount || 0),
         keyDepositAmount: Number(values.keyDepositAmount || 0),
+        waterUnitPrice: Number(values.waterUnitPrice ?? 0),
+        powerUnitPrice: Number(values.powerUnitPrice ?? 0),
+        initialWaterReading: Number(values.initialWaterReading ?? 0),
+        initialPowerReading: Number(values.initialPowerReading ?? 0),
         fees: buildLeaseFeesPayload(fees),
       });
       message.success('签约完成');
@@ -175,6 +179,10 @@ export default function LeaseFormDrawer({
           startDate: dayjs(today()),
           endDate: dayjs(nextYear()),
           rentCycle: 'MONTHLY',
+          waterUnitPrice: 0,
+          powerUnitPrice: 0,
+          initialWaterReading: 0,
+          initialPowerReading: 0,
         }}
       >
         <Form.Item label="租客姓名" name="tenantName">
@@ -251,6 +259,44 @@ export default function LeaseFormDrawer({
               options={(['MONTHLY', 'QUARTERLY', 'YEARLY'] as RentCycle[]).map(
                 (c) => ({ label: cycleLabels[c], value: c })
               )}
+            />
+          </Form.Item>
+        </div>
+
+        <Divider orientation="left" className={styles.sectionDivider}>
+          水电设置
+        </Divider>
+        <div className={styles.formGrid2}>
+          <Form.Item label="水费单价" name="waterUnitPrice">
+            <InputNumber
+              min={0}
+              className="w-full"
+              prefix="¥"
+              placeholder="每吨单价"
+            />
+          </Form.Item>
+          <Form.Item label="电费单价" name="powerUnitPrice">
+            <InputNumber
+              min={0}
+              className="w-full"
+              prefix="¥"
+              placeholder="每度单价"
+            />
+          </Form.Item>
+        </div>
+        <div className={styles.formGrid2}>
+          <Form.Item label="初始水表读数" name="initialWaterReading">
+            <InputNumber
+              min={0}
+              className="w-full"
+              placeholder="签约时水表底数"
+            />
+          </Form.Item>
+          <Form.Item label="初始电表读数" name="initialPowerReading">
+            <InputNumber
+              min={0}
+              className="w-full"
+              placeholder="签约时电表底数"
             />
           </Form.Item>
         </div>
