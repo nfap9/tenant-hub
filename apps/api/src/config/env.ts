@@ -19,6 +19,24 @@ const envSchema = z
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
+
+    // AI Provider 密钥（按需启用）
+    ANTHROPIC_API_KEY: z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
+    DEEPSEEK_API_KEY: z.string().optional(),
+    QWEN_API_KEY: z.string().optional(),
+    MOONSHOT_API_KEY: z.string().optional(),
+    OLLAMA_API_KEY: z.string().optional(),
+
+    // AI 全局配置
+    AI_ENABLED: z.coerce.boolean().default(true),
+    AI_DEFAULT_MODEL_ID: z.string().default('claude-sonnet-4-6'),
+    AI_ALLOW_LOCAL: z.coerce.boolean().default(false),
+    AI_MAX_ITERATIONS: z.coerce.number().default(8),
+    AI_RATE_LIMIT_PER_MIN: z.coerce.number().default(20),
+    AI_PENDING_ACTION_TTL_MIN: z.coerce.number().default(10),
+    AI_HISTORY_MAX_TURNS: z.coerce.number().default(20),
+    AI_CUSTOM_MODELS: z.string().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;

@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth.js';
 import { billRouter } from './routes/bills.js';
 import { leaseRouter } from './routes/leases.js';
 import { orgRouter } from './routes/organizations.js';
+import { aiRouter } from './routes/ai.js';
 import { errorHandler } from './middleware/error.js';
 
 export const app = express();
@@ -45,4 +46,5 @@ app.use('/api/organizations', orgRouter);
 app.use('/api/apartments', apartmentRouter);
 app.use('/api/leases', leaseRouter);
 app.use('/api/bills', billRouter);
+app.use('/api/ai', aiRouter);
 app.use(errorHandler);

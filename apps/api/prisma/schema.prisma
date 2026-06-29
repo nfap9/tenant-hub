@@ -33,6 +33,10 @@ model Organization {
   updatedAt   DateTime     @updatedAt
   inviteCode  String?      @unique
 
+  aiModelDefault   String?
+  aiDailyBudgetUsd Decimal?  @db.Decimal(10, 2)
+  aiEnabled        Boolean   @default(true)
+
   apartments  Apartment[]
   bills       Bill[]
   deposits    Deposit[]
@@ -41,6 +45,7 @@ model Organization {
   invites     OrgInvite[]
   meterReadings MeterReading[]
   roles       Role[]
+  aiConversations AiConversation[]
 }
 
 model Role {
@@ -290,6 +295,90 @@ model MeterReading {
   @@index([leaseId, meterType, readingDate])
 }
 
+// ==================== AI ====================
+
+model AiConversation {
+  id             String              @id @default(cuid())
+  organizationId String
+  userId         String
+  title          String?
+  modelId        String
+  status         AiConversationStatus @default(ACTIVE)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages       AiMessage[]
+
+  @@index([organizationId, userId, updatedAt])
+}
+
+model AiMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           AiRole
+  content        Json
+  modelId        String?
+  tokensInput    Int?
+  tokensOutput   Int?
+  parentId       String?
+  createdAt      DateTime @default(now())
+
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  toolCalls      AiToolCall[]
+
+  @@index([conversationId, createdAt])
+}
+
+model AiToolCall {
+  id             String   @id @default(cuid())
+  messageId      String
+  toolName       String
+  input          Json
+  output         Json?
+  status         AiToolCallStatus @default(PENDING)
+  errorMessage   String?
+  durationMs     Int?
+  isWrite        Boolean  @default(false)
+  confirmedById  String?
+  confirmedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  message        AiMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([toolName, createdAt])
+}
+
+model AiPendingAction {
+  id             String   @id @default(cuid())
+  conversationId String
+  toolCallId     String   @unique
+  toolName       String
+  input          Json
+  summary        Json
+  status         AiPendingStatus @default(PENDING)
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, status])
+}
+
+model AiUsageDaily {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  modelId         String
+  date            DateTime @db.Date
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  estimatedCostUsd Decimal @db.Decimal(10, 4) @default(0)
+  requestCount    Int      @default(0)
+
+  @@unique([organizationId, userId, modelId, date])
+  @@index([organizationId, date])
+}
+
 // ==================== Enums ====================
 
 enum OrgStatus {
@@ -358,4 +447,30 @@ enum DepositStatus {
 enum MeterType {
   WATER
   POWER
+}
+
+enum AiConversationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AiRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+enum AiToolCallStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  DENIED
+}
+
+enum AiPendingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  EXPIRED
 }
