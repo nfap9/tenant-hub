@@ -15,6 +15,12 @@ export type JoinOrganizationInput = {
   inviteCode: string;
 };
 
+export type CreateRoleInput = {
+  name: string;
+  description?: string;
+  permissions: string[];
+};
+
 export async function createOrganization(input: CreateOrganizationInput) {
   return apiClient<{ id: string; name: string; code: string }>(
     '/organizations',
@@ -117,6 +123,42 @@ export async function updateOrganizationMemberRole(
 
 export async function getOrganizationRoles(organizationId: string) {
   return apiClient<OrgRole[]>(`/organizations/${organizationId}/roles`, {
+    organizationId,
+  });
+}
+
+export async function createOrganizationRole(
+  organizationId: string,
+  input: CreateRoleInput
+) {
+  return apiClient<OrgRole>(`/organizations/${organizationId}/roles`, {
+    method: 'POST',
+    body: input as Record<string, unknown>,
+    organizationId,
+  });
+}
+
+export async function updateOrganizationRole(
+  organizationId: string,
+  roleId: string,
+  input: CreateRoleInput
+) {
+  return apiClient<OrgRole>(
+    `/organizations/${organizationId}/roles/${roleId}`,
+    {
+      method: 'PUT',
+      body: input as Record<string, unknown>,
+      organizationId,
+    }
+  );
+}
+
+export async function deleteOrganizationRole(
+  organizationId: string,
+  roleId: string
+) {
+  return apiClient<void>(`/organizations/${organizationId}/roles/${roleId}`, {
+    method: 'DELETE',
     organizationId,
   });
 }

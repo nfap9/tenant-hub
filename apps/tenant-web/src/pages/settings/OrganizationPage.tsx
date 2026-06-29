@@ -13,6 +13,7 @@ import {
   Select,
   Card,
   Descriptions,
+  Checkbox,
 } from 'antd';
 import {
   SaveOutlined,
@@ -24,6 +25,8 @@ import {
   DeleteOutlined,
   SwapOutlined,
   ExclamationCircleOutlined,
+  SafetyCertificateOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
@@ -33,11 +36,24 @@ import {
   transferOrganizationOwnership,
   disableOrganizationMember,
   updateOrganizationMemberRole,
+  createOrganizationRole,
+  updateOrganizationRole,
+  deleteOrganizationRole,
 } from '@/api/organization';
+import {
+  PERMISSIONS,
+  PERMISSION_LABELS,
+  hasPermission,
+} from '@/utils/permissions';
 import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
 import EmptyState from '@/components/ui/EmptyState';
 import styles from './OrganizationPage.module.scss';
+
+const PERMISSION_OPTIONS = Object.values(PERMISSIONS).map((value) => ({
+  label: PERMISSION_LABELS[value] ?? value,
+  value,
+}));
 
 export default function OrganizationPage() {
   const { session, currentMembership, members, roles, reload } =
@@ -45,6 +61,7 @@ export default function OrganizationPage() {
   const [editForm] = Form.useForm();
   const [transferForm] = Form.useForm();
   const [deleteForm] = Form.useForm();
+  const [roleForm] = Form.useForm();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -53,7 +70,16 @@ export default function OrganizationPage() {
   const [transferLoading, setTransferLoading] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [roleLoading, setRoleLoading] = useState<Record<string, boolean>>({});
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [roleModalTitle, setRoleModalTitle] = useState('创建角色');
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = useState(false);
+  const [roleActionLoading, setRoleActionLoading] = useState<
+    Record<string, boolean>
+  >({});
+  const [memberRoleLoading, setMemberRoleLoading] = useState<
+    Record<string, boolean>
+  >({});
   const [removeLoading, setRemoveLoading] = useState<Record<string, boolean>>(
     {}
   );
@@ -68,10 +94,13 @@ export default function OrganizationPage() {
   }
 
   const org = currentMembership.organization;
-  const permissions = currentMembership.role.permissions ?? [];
+  const userPermissions = currentMembership.role.permissions ?? [];
   const isOwner = session?.user.id === org.ownerId;
-  const canManageOrg = permissions.includes('org:manage');
-  const canManageMembers = permissions.includes('member:manage');
+  const canManageOrg = hasPermission(userPermissions, PERMISSIONS.ORG_MANAGE);
+  const canManageMembers = hasPermission(
+    userPermissions,
+    PERMISSIONS.MEMBER_MANAGE
+  );
 
   const ownerMember = members.find((m) => m.userId === org.ownerId);
   const nonOwnerMembers = members.filter((m) => m.userId !== org.ownerId);
@@ -128,8 +157,8 @@ export default function OrganizationPage() {
     }
   };
 
-  const handleRoleChange = async (memberId: string, roleId: string) => {
-    setRoleLoading((prev) => ({ ...prev, [memberId]: true }));
+  const handleMemberRoleChange = async (memberId: string, roleId: string) => {
+    setMemberRoleLoading((prev) => ({ ...prev, [memberId]: true }));
     try {
       await updateOrganizationMemberRole(org.id, memberId, roleId);
       message.success('角色已更新');
@@ -137,7 +166,7 @@ export default function OrganizationPage() {
     } catch (e) {
       message.error(e instanceof Error ? e.message : '更新失败');
     } finally {
-      setRoleLoading((prev) => ({ ...prev, [memberId]: false }));
+      setMemberRoleLoading((prev) => ({ ...prev, [memberId]: false }));
     }
   };
 
@@ -194,6 +223,76 @@ export default function OrganizationPage() {
     }
   };
 
+  const handleCreateRoleOpen = () => {
+    setEditingRoleId(null);
+    setRoleModalTitle('创建角色');
+    roleForm.resetFields();
+    setRoleModalOpen(true);
+  };
+
+  const handleEditRoleOpen = (role: (typeof roles)[0]) => {
+    setEditingRoleId(role.id);
+    setRoleModalTitle('编辑角色');
+    roleForm.setFieldsValue({
+      name: role.name,
+      description: role.description || '',
+      permissions: role.permissions,
+    });
+    setRoleModalOpen(true);
+  };
+
+  const handleRoleSubmit = async (values: {
+    name: string;
+    description?: string;
+    permissions: string[];
+  }) => {
+    setRoleLoading(true);
+    try {
+      const payload = {
+        name: values.name.trim(),
+        description: values.description?.trim(),
+        permissions: values.permissions,
+      };
+      if (editingRoleId) {
+        await updateOrganizationRole(org.id, editingRoleId, payload);
+        message.success('角色已更新');
+      } else {
+        await createOrganizationRole(org.id, payload);
+        message.success('角色已创建');
+      }
+      roleForm.resetFields();
+      setRoleModalOpen(false);
+      await reload();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleDeleteRole = async (roleId: string, roleName: string) => {
+    Modal.confirm({
+      title: `确认删除角色「${roleName}」？`,
+      icon: <ExclamationCircleOutlined />,
+      content: '删除后已分配该角色的成员权限将失效，且不可恢复。',
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        setRoleActionLoading((prev) => ({ ...prev, [roleId]: true }));
+        try {
+          await deleteOrganizationRole(org.id, roleId);
+          message.success('角色已删除');
+          await reload();
+        } catch (e) {
+          message.error(e instanceof Error ? e.message : '删除失败');
+        } finally {
+          setRoleActionLoading((prev) => ({ ...prev, [roleId]: false }));
+        }
+      },
+    });
+  };
+
   const memberColumns = [
     {
       title: '用户名',
@@ -224,8 +323,8 @@ export default function OrganizationPage() {
             <Select
               value={record.role.id}
               options={roles.map((r) => ({ value: r.id, label: r.name }))}
-              loading={roleLoading[record.id]}
-              onChange={(roleId) => handleRoleChange(record.id, roleId)}
+              loading={memberRoleLoading[record.id]}
+              onChange={(roleId) => handleMemberRoleChange(record.id, roleId)}
               style={{ minWidth: 120 }}
             />
           );
@@ -250,6 +349,75 @@ export default function OrganizationPage() {
           >
             移除
           </Button>
+        );
+      },
+    },
+  ];
+
+  const roleColumns = [
+    {
+      title: '角色名称',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string, record: (typeof roles)[0]) => (
+        <Space>
+          <span>{text}</span>
+          {record.system && <Tag>系统预设</Tag>}
+          {record.id === currentMembership.role.id && (
+            <Tag color="success">我</Tag>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      key: 'description',
+      render: (text?: string) => text || '-',
+    },
+    {
+      title: '权限',
+      dataIndex: 'permissions',
+      key: 'permissions',
+      render: (permissions: string[]) => {
+        if (permissions.includes('*')) {
+          return <Tag color="warning">全部权限</Tag>;
+        }
+        return (
+          <Space size="small" wrap>
+            {permissions.map((p) => (
+              <Tag key={p}>{PERMISSION_LABELS[p] ?? p}</Tag>
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_: unknown, record: (typeof roles)[0]) => {
+        if (record.system || !canManageOrg) return '-';
+        return (
+          <Space>
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEditRoleOpen(record)}
+            >
+              编辑
+            </Button>
+            <Button
+              type="link"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              loading={roleActionLoading[record.id]}
+              onClick={() => handleDeleteRole(record.id, record.name)}
+            >
+              删除
+            </Button>
+          </Space>
         );
       },
     },
@@ -296,6 +464,34 @@ export default function OrganizationPage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <DetailSection
+        title={
+          <span className={styles.sectionTitle}>
+            <SafetyCertificateOutlined />
+            角色权限
+          </span>
+        }
+        actions={
+          canManageOrg && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreateRoleOpen}
+            >
+              创建角色
+            </Button>
+          )
+        }
+      >
+        <Table
+          dataSource={roles}
+          columns={roleColumns}
+          rowKey={(record) => record.id}
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+        />
+      </DetailSection>
 
       <DetailSection
         title={
@@ -425,6 +621,49 @@ export default function OrganizationPage() {
               type="primary"
               htmlType="submit"
               loading={editLoading}
+              icon={<SaveOutlined />}
+            >
+              保存
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={roleModalTitle}
+        open={roleModalOpen}
+        onCancel={() => setRoleModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={roleForm}
+          layout="vertical"
+          onFinish={handleRoleSubmit}
+          className={styles.orgForm}
+        >
+          <Form.Item
+            label="角色名称"
+            name="name"
+            rules={[{ required: true, message: '请输入角色名称' }]}
+          >
+            <Input placeholder="例如：财务" />
+          </Form.Item>
+          <Form.Item label="角色描述" name="description">
+            <Input.TextArea rows={2} placeholder="可选" />
+          </Form.Item>
+          <Form.Item
+            label="权限"
+            name="permissions"
+            rules={[{ required: true, message: '请至少选择一项权限' }]}
+          >
+            <Checkbox.Group options={PERMISSION_OPTIONS} />
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={roleLoading}
               icon={<SaveOutlined />}
             >
               保存

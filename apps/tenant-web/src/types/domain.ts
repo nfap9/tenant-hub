@@ -14,6 +14,9 @@ export type OrgRole = {
   id: string;
   code: string;
   name: string;
+  description?: string;
+  system?: boolean;
+  organizationId?: string;
   permissions: string[];
 };
 

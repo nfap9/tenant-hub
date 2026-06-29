@@ -17,7 +17,6 @@ import {
   refreshOrganizationInviteCode,
   updateOrganization,
   softDeleteOrganization,
-  listRoles,
   listOrgMembers,
   getOrgMemberWithRole,
   disableOrgMember,
@@ -25,6 +24,13 @@ import {
   findRoleByCode,
   transferOrganizationOwnership,
 } from '../services/organization.js';
+import {
+  listRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+  getRoleById,
+} from '../services/roles.js';
 
 export const orgRouter = Router();
 
@@ -132,13 +138,83 @@ orgRouter.delete(
 
 /**
  * GET /api/organizations/:organizationId/roles
- * 获取系统角色列表
+ * 获取组织可用角色列表（系统角色 + 自定义角色）
  */
 orgRouter.get(
   '/:organizationId/roles',
   requireOrg,
-  asyncHandler(async (_req, res) => {
-    ok(res, await listRoles());
+  asyncHandler(async (req, res) => {
+    ok(res, await listRoles(req.organizationId!));
+  })
+);
+
+/**
+ * POST /api/organizations/:organizationId/roles
+ * 创建组织自定义角色
+ */
+orgRouter.post(
+  '/:organizationId/roles',
+  requireOrg,
+  requirePermission(PERMISSIONS.ORG_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        permissions: z.array(z.string()),
+      })
+      .parse(req.body);
+    ok(
+      res,
+      await createRole({
+        organizationId: req.organizationId!,
+        ...input,
+      })
+    );
+  })
+);
+
+/**
+ * PUT /api/organizations/:organizationId/roles/:roleId
+ * 更新组织自定义角色
+ */
+orgRouter.put(
+  '/:organizationId/roles/:roleId',
+  requireOrg,
+  requirePermission(PERMISSIONS.ORG_MANAGE),
+  asyncHandler(async (req, res) => {
+    const roleId = req.params.roleId;
+    const role = await getRoleById(roleId);
+    if (!role || role.system || role.organizationId !== req.organizationId) {
+      throw new HttpError(404, '角色不存在或不可编辑');
+    }
+    const input = z
+      .object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        permissions: z.array(z.string()),
+      })
+      .parse(req.body);
+    ok(res, await updateRole(roleId, input));
+  })
+);
+
+/**
+ * DELETE /api/organizations/:organizationId/roles/:roleId
+ * 删除组织自定义角色
+ */
+orgRouter.delete(
+  '/:organizationId/roles/:roleId',
+  requireOrg,
+  requirePermission(PERMISSIONS.ORG_MANAGE),
+  asyncHandler(async (req, res) => {
+    const roleId = req.params.roleId;
+    const role = await getRoleById(roleId);
+    if (!role || role.system || role.organizationId !== req.organizationId) {
+      throw new HttpError(404, '角色不存在或不可删除');
+    }
+    await deleteRole(roleId);
+    ok(res, { message: '角色已删除' });
   })
 );
 
