@@ -27,6 +27,14 @@ import {
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
 import dayjs from 'dayjs';
+import {
+  nameRule,
+  addressRule,
+  descriptionRule,
+  moneyRule,
+  positiveIntegerRule,
+  endDateAfterStartRule,
+} from '@/utils/validators';
 import styles from './ApartmentFormPage.module.scss';
 
 interface ApartmentFormModalProps {
@@ -165,41 +173,53 @@ export default function ApartmentFormModal({
           onFinish={handleSubmit}
           style={{ marginTop: 16 }}
         >
-          <Form.Item
-            label="公寓名称"
-            name="name"
-            rules={[{ required: true, message: '请输入公寓名称' }]}
-          >
+          <Form.Item label="公寓名称" name="name" rules={nameRule('公寓名称')}>
             <Input
               prefix={<HomeOutlined className="text-subtle" />}
               placeholder="例如 阳光公寓"
+              maxLength={64}
+              showCount
             />
           </Form.Item>
-          <Form.Item
-            label="地址"
-            name="address"
-            rules={[{ required: true, message: '请输入地址' }]}
-          >
+          <Form.Item label="地址" name="address" rules={addressRule}>
             <Input
               prefix={<EnvironmentOutlined className="text-subtle" />}
               placeholder="请输入地址或片区"
+              maxLength={255}
+              showCount
             />
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="房东姓名" name="landlordName">
+              <Form.Item
+                label="房东姓名"
+                name="landlordName"
+                rules={[descriptionRule('房东姓名', 64)]}
+              >
                 <Input
                   prefix={<UserOutlined className="text-subtle" />}
                   placeholder="选填"
+                  maxLength={64}
+                  showCount
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="联系方式" name="landlordPhone">
+              <Form.Item
+                label="联系方式"
+                name="landlordPhone"
+                rules={[
+                  {
+                    pattern: /^1[3-9]\d{9}$/,
+                    message: '请输入有效的手机号',
+                  },
+                ]}
+              >
                 <Input
                   prefix={<PhoneOutlined className="text-subtle" />}
                   placeholder="选填"
+                  maxLength={11}
                 />
               </Form.Item>
             </Col>
@@ -212,7 +232,11 @@ export default function ApartmentFormModal({
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="合同结束" name="contractEnd">
+              <Form.Item
+                label="合同结束"
+                name="contractEnd"
+                rules={[endDateAfterStartRule('contractStart')]}
+              >
                 <DatePicker className="w-full" />
               </Form.Item>
             </Col>
@@ -220,9 +244,14 @@ export default function ApartmentFormModal({
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="上游租金" name="rentAmount">
+              <Form.Item
+                label="上游租金"
+                name="rentAmount"
+                rules={moneyRule('上游租金', { required: false })}
+              >
                 <InputNumber
                   min={0}
+                  precision={2}
                   className="w-full"
                   prefix="¥"
                   placeholder="选填"
@@ -230,9 +259,14 @@ export default function ApartmentFormModal({
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="楼层数" name="floors">
+              <Form.Item
+                label="楼层数"
+                name="floors"
+                rules={positiveIntegerRule('楼层数', { required: false })}
+              >
                 <InputNumber
                   min={1}
+                  precision={0}
                   className="w-full"
                   prefix={<BuildOutlined className="text-subtle" />}
                   placeholder="选填"

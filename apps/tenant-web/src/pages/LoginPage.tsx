@@ -9,6 +9,12 @@ import {
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { loginWithPassword, register } from '@/api/auth';
+import {
+  phoneRule,
+  usernameRule,
+  passwordRule,
+  confirmPasswordRule,
+} from '@/utils/validators';
 import styles from './LoginPage.module.scss';
 import clsx from 'clsx';
 
@@ -91,11 +97,7 @@ export default function LoginPage() {
           onFinish={handleSubmit}
           autoComplete="off"
         >
-          <Form.Item
-            label="手机号"
-            name="phone"
-            rules={[{ required: true, message: '请输入手机号' }]}
-          >
+          <Form.Item label="手机号" name="phone" rules={phoneRule}>
             <Input
               placeholder="请输入手机号"
               maxLength={11}
@@ -104,11 +106,7 @@ export default function LoginPage() {
           </Form.Item>
 
           {isRegister && (
-            <Form.Item
-              label="用户名"
-              name="username"
-              rules={[{ required: true, message: '请输入用户名' }]}
-            >
+            <Form.Item label="用户名" name="username" rules={usernameRule}>
               <Input
                 placeholder="请输入用户名"
                 maxLength={24}
@@ -120,10 +118,7 @@ export default function LoginPage() {
           <Form.Item
             label="密码"
             name="password"
-            rules={[
-              { required: true, message: '请输入密码' },
-              ...(isRegister ? [{ min: 8, message: '密码至少 8 位' }] : []),
-            ]}
+            rules={passwordRule(isRegister)}
           >
             <Input.Password
               placeholder={isRegister ? '至少 8 位密码' : '请输入密码'}
@@ -135,17 +130,7 @@ export default function LoginPage() {
             <Form.Item
               label="确认密码"
               name="confirmPassword"
-              rules={[
-                { required: true, message: '请再次输入密码' },
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    if (!value || getFieldValue('password') === value) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(new Error('两次输入的密码不一致'));
-                  },
-                }),
-              ]}
+              rules={confirmPasswordRule('password')}
             >
               <Input.Password
                 placeholder="再次输入密码"

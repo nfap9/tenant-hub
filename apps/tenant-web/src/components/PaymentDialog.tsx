@@ -15,6 +15,7 @@ import { getBills, createLeasePayment } from '@/api/bills';
 import { getLeases } from '@/api/leases';
 import { money, day } from '@/utils/format';
 import { remainingAmount } from '@/pages/bills/utils';
+import { paymentAmountRule } from '@/utils/validators';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Bill, Lease } from '@/types/domain';
 
@@ -141,26 +142,7 @@ export default function PaymentDialog({
     if (!currentOrgId || !selectedLeaseId) return;
 
     const paid = Number(values.amount);
-    if (paid <= 0 || paid > totalRemaining) {
-      message.error('实付金额不合法');
-      return;
-    }
-
     const waiver = values.waiver ? round2(totalRemaining - paid) : 0;
-    if (values.waiver) {
-      if (waiver > 1) {
-        message.error('抹零金额不能超过 1 元');
-        return;
-      }
-      if (waiver < 0) {
-        message.error('抹零金额不能为负数');
-        return;
-      }
-      if (Math.abs(paid + waiver - totalRemaining) > 0.01) {
-        message.error('实付金额与抹零金额之和应等于剩余应收');
-        return;
-      }
-    }
 
     setSubmitting(true);
     try {
@@ -392,26 +374,7 @@ export default function PaymentDialog({
                 <Form.Item
                   name="amount"
                   label="实付金额"
-                  rules={[
-                    { required: true, message: '请输入实付金额' },
-                    {
-                      validator: (_, value) => {
-                        if (!value) return Promise.resolve();
-                        const num = Number(value);
-                        if (!Number.isFinite(num) || num <= 0) {
-                          return Promise.reject(new Error('金额必须大于 0'));
-                        }
-                        if (totalRemaining > 0 && num > totalRemaining) {
-                          return Promise.reject(
-                            new Error(
-                              `金额不能超过剩余应收 ¥${money(totalRemaining)}`
-                            )
-                          );
-                        }
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
+                  rules={paymentAmountRule(totalRemaining, !!waiverChecked)}
                 >
                   <Input prefix="¥" placeholder={`${money(totalRemaining)}`} />
                 </Form.Item>
@@ -438,7 +401,10 @@ export default function PaymentDialog({
                   valuePropName="checked"
                   initialValue={false}
                 >
-                  <Checkbox disabled={totalRemaining <= 0}>
+                  <Checkbox
+                    disabled={totalRemaining <= 0}
+                    onChange={() => form.validateFields(['amount'])}
+                  >
                     抹零（未收金额最多豁免 1 元并记为已结清）
                   </Checkbox>
                 </Form.Item>

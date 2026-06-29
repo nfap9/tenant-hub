@@ -48,6 +48,7 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
 import EmptyState from '@/components/ui/EmptyState';
+import { nameRule, descriptionRule } from '@/utils/validators';
 import styles from './OrganizationPage.module.scss';
 
 const PERMISSION_OPTIONS = Object.values(PERMISSIONS).map((value) => ({
@@ -606,15 +607,20 @@ export default function OrganizationPage() {
           onFinish={handleUpdate}
           className={styles.orgForm}
         >
-          <Form.Item
-            label="组织名称"
-            name="name"
-            rules={[{ required: true, message: '请输入组织名称' }]}
-          >
-            <Input placeholder="请输入组织名称" />
+          <Form.Item label="组织名称" name="name" rules={nameRule('组织名称')}>
+            <Input placeholder="请输入组织名称" maxLength={64} showCount />
           </Form.Item>
-          <Form.Item label="组织描述" name="description">
-            <Input.TextArea rows={3} placeholder="可选，简单描述组织用途" />
+          <Form.Item
+            label="组织描述"
+            name="description"
+            rules={[descriptionRule('组织描述')]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="可选，简单描述组织用途"
+              maxLength={255}
+              showCount
+            />
           </Form.Item>
           <Form.Item>
             <Button
@@ -642,15 +648,20 @@ export default function OrganizationPage() {
           onFinish={handleRoleSubmit}
           className={styles.orgForm}
         >
-          <Form.Item
-            label="角色名称"
-            name="name"
-            rules={[{ required: true, message: '请输入角色名称' }]}
-          >
-            <Input placeholder="例如：财务" />
+          <Form.Item label="角色名称" name="name" rules={nameRule('角色名称')}>
+            <Input placeholder="例如：财务" maxLength={64} showCount />
           </Form.Item>
-          <Form.Item label="角色描述" name="description">
-            <Input.TextArea rows={2} placeholder="可选" />
+          <Form.Item
+            label="角色描述"
+            name="description"
+            rules={[descriptionRule('角色描述')]}
+          >
+            <Input.TextArea
+              rows={2}
+              placeholder="可选"
+              maxLength={255}
+              showCount
+            />
           </Form.Item>
           <Form.Item
             label="权限"

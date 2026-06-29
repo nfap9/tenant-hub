@@ -12,6 +12,10 @@ import { SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { recordUtilityReading, getMeterReadings } from '@/api/bills';
 import { money, day } from '@/utils/format';
+import {
+  nonNegativeIntegerRule,
+  readingIncreaseRule,
+} from '@/utils/validators';
 import type { Bill } from '@/types/domain';
 
 interface UtilityReadingDrawerProps {
@@ -192,30 +196,56 @@ export default function UtilityReadingDrawer({
           <Form.Item
             name="previousWater"
             label="上期水表读数"
-            rules={[{ required: true, message: '请输入上期水表读数' }]}
+            rules={nonNegativeIntegerRule('上期水表读数')}
           >
-            <InputNumber min={0} className="w-full" placeholder="上期读数" />
+            <InputNumber
+              min={0}
+              precision={0}
+              className="w-full"
+              placeholder="上期读数"
+            />
           </Form.Item>
           <Form.Item
             name="currentWater"
             label="本期水表读数"
-            rules={[{ required: true, message: '请输入本期水表读数' }]}
+            rules={[
+              ...nonNegativeIntegerRule('本期水表读数'),
+              readingIncreaseRule('previousWater', '本期水表读数'),
+            ]}
           >
-            <InputNumber min={0} className="w-full" placeholder="本期读数" />
+            <InputNumber
+              min={0}
+              precision={0}
+              className="w-full"
+              placeholder="本期读数"
+            />
           </Form.Item>
           <Form.Item
             name="previousPower"
             label="上期电表读数"
-            rules={[{ required: true, message: '请输入上期电表读数' }]}
+            rules={nonNegativeIntegerRule('上期电表读数')}
           >
-            <InputNumber min={0} className="w-full" placeholder="上期读数" />
+            <InputNumber
+              min={0}
+              precision={0}
+              className="w-full"
+              placeholder="上期读数"
+            />
           </Form.Item>
           <Form.Item
             name="currentPower"
             label="本期电表读数"
-            rules={[{ required: true, message: '请输入本期电表读数' }]}
+            rules={[
+              ...nonNegativeIntegerRule('本期电表读数'),
+              readingIncreaseRule('previousPower', '本期电表读数'),
+            ]}
           >
-            <InputNumber min={0} className="w-full" placeholder="本期读数" />
+            <InputNumber
+              min={0}
+              precision={0}
+              className="w-full"
+              placeholder="本期读数"
+            />
           </Form.Item>
         </Form>
       </Spin>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Drawer,
   Form,
+  Input,
   InputNumber,
   Button,
   message,
@@ -17,6 +18,7 @@ import { updateLease } from '@/api/leases';
 import type { Room } from '@/types/domain';
 import { selectableFeeTypes, type LeaseFeeFormItem } from './constants';
 import { buildLeaseFeesPayload } from './utils';
+import { moneyRule, feesRule } from '@/utils/validators';
 import styles from './LeaseEditPage.module.scss';
 import clsx from 'clsx';
 
@@ -129,6 +131,10 @@ export default function LeaseEditDrawer({
     setFees((old) => old.filter((item) => item.id !== feeId));
   };
 
+  useEffect(() => {
+    form.setFieldValue('fees', fees);
+  }, [form, fees]);
+
   const handleCancel = () => {
     form.resetFields();
     initializedRef.current = false;
@@ -188,15 +194,24 @@ export default function LeaseEditDrawer({
       <Spin spinning={loading}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <div className={styles.formGrid2}>
-            <Form.Item label="租金" name="rentAmount">
+            <Form.Item
+              label="租金"
+              name="rentAmount"
+              rules={moneyRule('租金', { required: false })}
+            >
               <InputNumber
                 min={0}
+                precision={2}
                 className="w-full"
                 prefix="¥"
                 placeholder="每期金额"
               />
             </Form.Item>
           </div>
+
+          <Form.Item name="fees" hidden rules={[feesRule(fees)]}>
+            <Input type="hidden" />
+          </Form.Item>
 
           <Divider orientation="left" className={styles.sectionDivider}>
             费用项目

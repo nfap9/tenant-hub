@@ -15,6 +15,7 @@ import { getApartments } from '@/api/apartments';
 import { createRoom, updateRoom } from '@/api/rooms';
 import type { Apartment, Room } from '@/types/domain';
 import { optionalNumber } from '@/utils/format';
+import { nameRule, positiveIntegerRule, areaRule } from '@/utils/validators';
 import { emptyRoomForm, roomStatuses, statusLabels } from './constants';
 import { roomLayoutOptions } from '@/pages/apartments/constants';
 import { furnishingOptions } from '@/constants/furnishings';
@@ -98,11 +99,6 @@ export default function RoomFormDrawer({
       message.warning('当前角色没有管理房间权限');
       return;
     }
-    if (!values.roomNo || !values.layout) {
-      message.warning('请填写房间号和户型');
-      return;
-    }
-
     setSaving(true);
     try {
       if (isEdit) {
@@ -186,17 +182,24 @@ export default function RoomFormDrawer({
           <Form.Item
             label="房号"
             name="roomNo"
-            rules={[{ required: true, message: '请输入房号' }]}
+            rules={nameRule('房号', { max: 32 })}
           >
             <Input
               placeholder="例如 301"
               prefix={<NumberOutlined className="text-subtle" />}
+              maxLength={32}
+              showCount
             />
           </Form.Item>
           <div className={styles.formRow}>
-            <Form.Item label="楼层" name="floor">
+            <Form.Item
+              label="楼层"
+              name="floor"
+              rules={positiveIntegerRule('楼层', { required: false })}
+            >
               <InputNumber
                 min={1}
+                precision={0}
                 className="w-full"
                 prefix={<BuildOutlined className="text-subtle" />}
                 placeholder="选填"
@@ -218,9 +221,10 @@ export default function RoomFormDrawer({
             </Form.Item>
           </div>
           <div className={styles.formRow}>
-            <Form.Item label="面积（㎡）" name="area">
+            <Form.Item label="面积（㎡）" name="area" rules={areaRule}>
               <InputNumber
                 min={0}
+                precision={2}
                 className="w-full"
                 placeholder="请输入面积"
               />
@@ -229,7 +233,7 @@ export default function RoomFormDrawer({
               <Form.Item
                 label="状态"
                 name="status"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: '请选择状态' }]}
               >
                 <Select
                   options={roomStatuses.map((s) => ({

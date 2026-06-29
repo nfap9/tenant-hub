@@ -29,6 +29,13 @@ import {
   type RentCycle,
 } from './constants';
 import { buildLeaseFeesPayload } from './utils';
+import {
+  moneyRule,
+  unitPriceRule,
+  nonNegativeIntegerRule,
+  endDateAfterStartRule,
+  feesRule,
+} from '@/utils/validators';
 import styles from './LeaseFormPage.module.scss';
 import clsx from 'clsx';
 
@@ -101,6 +108,10 @@ export default function LeaseFormDrawer({
     setFees((old) => old.filter((item) => item.id !== id));
   };
 
+  useEffect(() => {
+    form.setFieldValue('fees', fees);
+  }, [form, fees]);
+
   const handleCancel = () => {
     form.resetFields();
     setFees([]);
@@ -113,11 +124,6 @@ export default function LeaseFormDrawer({
       message.warning('当前角色没有管理租约权限');
       return;
     }
-    if (!values.rentAmount) {
-      message.warning('请填写租金');
-      return;
-    }
-
     setSaving(true);
     try {
       await createLease(currentOrgId, {
@@ -185,16 +191,32 @@ export default function LeaseFormDrawer({
           initialPowerReading: 0,
         }}
       >
-        <Form.Item label="租客姓名" name="tenantName">
+        <Form.Item
+          label="租客姓名"
+          name="tenantName"
+          rules={[{ max: 32, message: '租客姓名不能超过 32 个字符' }]}
+        >
           <Input
             placeholder="请输入姓名"
             prefix={<UserOutlined className="text-subtle" />}
+            maxLength={32}
+            showCount
           />
         </Form.Item>
-        <Form.Item label="租客电话" name="tenantPhone">
+        <Form.Item
+          label="租客电话"
+          name="tenantPhone"
+          rules={[
+            {
+              pattern: /^1[3-9]\d{9}$/,
+              message: '请输入有效的手机号',
+            },
+          ]}
+        >
           <Input
             placeholder="请输入手机号"
             prefix={<PhoneOutlined className="text-subtle" />}
+            maxLength={11}
           />
         </Form.Item>
         <div className={styles.formGrid2}>
@@ -211,7 +233,10 @@ export default function LeaseFormDrawer({
           <Form.Item
             label="结束日期"
             name="endDate"
-            rules={[{ required: true, message: '请选择结束日期' }]}
+            rules={[
+              { required: true, message: '请选择结束日期' },
+              endDateAfterStartRule('startDate'),
+            ]}
           >
             <DatePicker
               className="w-full"
@@ -220,21 +245,23 @@ export default function LeaseFormDrawer({
           </Form.Item>
         </div>
         <div className={styles.formGrid2}>
-          <Form.Item
-            label="租金"
-            name="rentAmount"
-            rules={[{ required: true, message: '请输入租金' }]}
-          >
+          <Form.Item label="租金" name="rentAmount" rules={moneyRule('租金')}>
             <InputNumber
               min={0}
+              precision={2}
               className="w-full"
               prefix="¥"
               placeholder="每期金额"
             />
           </Form.Item>
-          <Form.Item label="房间押金" name="roomDepositAmount">
+          <Form.Item
+            label="房间押金"
+            name="roomDepositAmount"
+            rules={moneyRule('房间押金', { required: false })}
+          >
             <InputNumber
               min={0}
+              precision={2}
               className="w-full"
               prefix="¥"
               placeholder="请输入房间押金"
@@ -242,9 +269,14 @@ export default function LeaseFormDrawer({
           </Form.Item>
         </div>
         <div className={styles.formGrid2}>
-          <Form.Item label="钥匙押金" name="keyDepositAmount">
+          <Form.Item
+            label="钥匙押金"
+            name="keyDepositAmount"
+            rules={moneyRule('钥匙押金', { required: false })}
+          >
             <InputNumber
               min={0}
+              precision={2}
               className="w-full"
               prefix="¥"
               placeholder="请输入钥匙押金"
@@ -253,7 +285,7 @@ export default function LeaseFormDrawer({
           <Form.Item
             label="交租周期"
             name="rentCycle"
-            rules={[{ required: true }]}
+            rules={[{ required: true, message: '请选择交租周期' }]}
           >
             <Select
               options={(['MONTHLY', 'QUARTERLY', 'YEARLY'] as RentCycle[]).map(
@@ -267,17 +299,27 @@ export default function LeaseFormDrawer({
           水电设置
         </Divider>
         <div className={styles.formGrid2}>
-          <Form.Item label="水费单价" name="waterUnitPrice">
+          <Form.Item
+            label="水费单价"
+            name="waterUnitPrice"
+            rules={unitPriceRule('水费单价')}
+          >
             <InputNumber
               min={0}
+              precision={2}
               className="w-full"
               prefix="¥"
               placeholder="每吨单价"
             />
           </Form.Item>
-          <Form.Item label="电费单价" name="powerUnitPrice">
+          <Form.Item
+            label="电费单价"
+            name="powerUnitPrice"
+            rules={unitPriceRule('电费单价')}
+          >
             <InputNumber
               min={0}
+              precision={2}
               className="w-full"
               prefix="¥"
               placeholder="每度单价"
@@ -285,21 +327,35 @@ export default function LeaseFormDrawer({
           </Form.Item>
         </div>
         <div className={styles.formGrid2}>
-          <Form.Item label="初始水表读数" name="initialWaterReading">
+          <Form.Item
+            label="初始水表读数"
+            name="initialWaterReading"
+            rules={nonNegativeIntegerRule('初始水表读数', { required: false })}
+          >
             <InputNumber
               min={0}
+              precision={0}
               className="w-full"
               placeholder="签约时水表底数"
             />
           </Form.Item>
-          <Form.Item label="初始电表读数" name="initialPowerReading">
+          <Form.Item
+            label="初始电表读数"
+            name="initialPowerReading"
+            rules={nonNegativeIntegerRule('初始电表读数', { required: false })}
+          >
             <InputNumber
               min={0}
+              precision={0}
               className="w-full"
               placeholder="签约时电表底数"
             />
           </Form.Item>
         </div>
+
+        <Form.Item name="fees" hidden rules={[feesRule(fees)]}>
+          <Input type="hidden" />
+        </Form.Item>
 
         <Divider orientation="left" className={styles.sectionDivider}>
           费用项目

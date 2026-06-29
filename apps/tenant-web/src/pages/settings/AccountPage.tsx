@@ -32,6 +32,14 @@ import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import EmptyState from '@/components/ui/EmptyState';
+import {
+  usernameRule,
+  passwordRule,
+  confirmPasswordRule,
+  nameRule,
+  descriptionRule,
+  inviteCodeRule,
+} from '@/utils/validators';
 import styles from './AccountPage.module.scss';
 
 export default function AccountPage() {
@@ -309,7 +317,7 @@ export default function AccountPage() {
           onFinish={handleUpdateProfile}
           className={styles.settingsForm}
         >
-          <Form.Item label="用户名" name="username">
+          <Form.Item label="用户名" name="username" rules={usernameRule}>
             <Input prefix={<UserOutlined className="text-subtle" />} />
           </Form.Item>
           <Form.Item label="手机号" name="phone">
@@ -347,7 +355,7 @@ export default function AccountPage() {
           <Form.Item
             label="原密码"
             name="currentPassword"
-            rules={[{ required: true, message: '请输入原密码' }]}
+            rules={passwordRule(false)}
           >
             <Input.Password
               prefix={<LockOutlined className="text-subtle" />}
@@ -357,10 +365,7 @@ export default function AccountPage() {
           <Form.Item
             label="新密码"
             name="newPassword"
-            rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 8, message: '密码至少 8 位' },
-            ]}
+            rules={passwordRule(true)}
           >
             <Input.Password
               prefix={<LockOutlined className="text-subtle" />}
@@ -370,17 +375,7 @@ export default function AccountPage() {
           <Form.Item
             label="确认新密码"
             name="confirmPassword"
-            rules={[
-              { required: true, message: '请再次输入新密码' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('两次输入的密码不一致'));
-                },
-              }),
-            ]}
+            rules={confirmPasswordRule('newPassword')}
           >
             <Input.Password
               prefix={<LockOutlined className="text-subtle" />}
@@ -413,15 +408,20 @@ export default function AccountPage() {
           onFinish={handleCreateOrganization}
           className={styles.settingsForm}
         >
-          <Form.Item
-            label="组织名称"
-            name="name"
-            rules={[{ required: true, message: '请输入组织名称' }]}
-          >
-            <Input placeholder="请输入组织名称" />
+          <Form.Item label="组织名称" name="name" rules={nameRule('组织名称')}>
+            <Input placeholder="请输入组织名称" maxLength={64} showCount />
           </Form.Item>
-          <Form.Item label="组织描述" name="description">
-            <Input.TextArea rows={3} placeholder="可选，简单描述组织用途" />
+          <Form.Item
+            label="组织描述"
+            name="description"
+            rules={[descriptionRule('组织描述')]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="可选，简单描述组织用途"
+              maxLength={255}
+              showCount
+            />
           </Form.Item>
           <Form.Item>
             <Button
@@ -449,12 +449,8 @@ export default function AccountPage() {
           onFinish={handleJoinOrganization}
           className={styles.settingsForm}
         >
-          <Form.Item
-            label="邀请码"
-            name="inviteCode"
-            rules={[{ required: true, message: '请输入邀请码' }]}
-          >
-            <Input placeholder="请输入组织邀请码" />
+          <Form.Item label="邀请码" name="inviteCode" rules={inviteCodeRule}>
+            <Input placeholder="请输入组织邀请码" maxLength={32} />
           </Form.Item>
           <Form.Item>
             <Button

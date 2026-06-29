@@ -16,6 +16,11 @@ import { getRooms } from '@/api/rooms';
 import { createMeterReading } from '@/api/bills';
 import { today } from '@/utils/format';
 import dayjs from 'dayjs';
+import {
+  nonNegativeIntegerRule,
+  noFutureDateRule,
+  noteRule,
+} from '@/utils/validators';
 import type { Room } from '@/types/domain';
 
 interface ReadingDrawerProps {
@@ -145,26 +150,44 @@ export default function ReadingDrawer({
           <Form.Item
             name="readingDate"
             label="读数日期"
-            rules={[{ required: true, message: '请选择日期' }]}
+            rules={[
+              { required: true, message: '请选择日期' },
+              noFutureDateRule('读数日期'),
+            ]}
           >
             <DatePicker className="w-full" />
           </Form.Item>
           <Form.Item
             name="waterValue"
             label="水表读数"
-            rules={[{ required: true, message: '请输入水表读数' }]}
+            rules={nonNegativeIntegerRule('水表读数')}
           >
-            <InputNumber min={0} className="w-full" placeholder="水表读数" />
+            <InputNumber
+              min={0}
+              precision={0}
+              className="w-full"
+              placeholder="水表读数"
+            />
           </Form.Item>
           <Form.Item
             name="powerValue"
             label="电表读数"
-            rules={[{ required: true, message: '请输入电表读数' }]}
+            rules={nonNegativeIntegerRule('电表读数')}
           >
-            <InputNumber min={0} className="w-full" placeholder="电表读数" />
+            <InputNumber
+              min={0}
+              precision={0}
+              className="w-full"
+              placeholder="电表读数"
+            />
           </Form.Item>
-          <Form.Item name="note" label="备注">
-            <Input.TextArea placeholder="备注（可选）" rows={3} />
+          <Form.Item name="note" label="备注" rules={[noteRule('备注')]}>
+            <Input.TextArea
+              placeholder="备注（可选）"
+              rows={3}
+              maxLength={255}
+              showCount
+            />
           </Form.Item>
         </Form>
       </Spin>
