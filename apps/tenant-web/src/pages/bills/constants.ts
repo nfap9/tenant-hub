@@ -1,11 +1,9 @@
-import type { BillStatus } from '@/types/domain';
+import type { BillCategory, BillStatus } from '@/types/domain';
 
 export const statusLabels: Record<BillStatus, string> = {
-  BILLING: '出账中',
   UNPAID: '待支付',
   PAID: '已支付',
   VOID: '已作废',
-  REFUNDED: '已退款',
 };
 
 export const toneForBillStatus = (
@@ -13,16 +11,15 @@ export const toneForBillStatus = (
 ): 'success' | 'warning' | 'error' | 'default' => {
   if (status === 'PAID') return 'success';
   if (status === 'VOID') return 'error';
-  if (status === 'REFUNDED') return 'default';
-  if (status === 'BILLING') return 'default';
   return 'warning';
 };
 
-export const billModeText = (mode: string) => {
-  if (mode === 'PREPAID') return '预付';
-  if (mode === 'POSTPAID') return '后付';
-  if (mode === 'DEPOSIT') return '押金';
-  return mode;
+export const billCategoryText: Record<BillCategory, string> = {
+  RENT: '租金账单',
+  UTILITY: '水电账单',
+  DEPOSIT: '押金账单',
+  FEE: '费用账单',
+  OTHER: '其他账单',
 };
 
 export const billItemTypeText = (type: string) => {

@@ -1,27 +1,54 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, Button, message, Modal, Space, Row, Col } from 'antd';
+import { useSearchParams } from 'react-router-dom';
+import {
+  Form,
+  Input,
+  Button,
+  message,
+  Modal,
+  Space,
+  Row,
+  Col,
+  Table,
+  Tag,
+  Avatar,
+  Card,
+} from 'antd';
 import {
   SaveOutlined,
   LockOutlined,
   UserOutlined,
   MobileOutlined,
   EditOutlined,
+  TeamOutlined,
+  CopyOutlined,
+  BuildOutlined,
+  UserAddOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { updatePassword } from '@/api/auth';
+import { createOrganization, joinOrganization } from '@/api/organization';
 import PageHeader from '@/components/ui/PageHeader';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
+import EmptyState from '@/components/ui/EmptyState';
 import styles from './AccountPage.module.scss';
 
 export default function AccountPage() {
-  const { session } = useAppSession();
+  const { session, memberships, currentMembership, reload } = useAppSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const [createForm] = Form.useForm();
+  const [joinForm] = Form.useForm();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
 
   useEffect(() => {
     if (session?.user) {
@@ -31,6 +58,18 @@ export default function AccountPage() {
       });
     }
   }, [session, form]);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create') {
+      setCreateModalOpen(true);
+    } else if (action === 'join') {
+      setJoinModalOpen(true);
+    }
+    if (action) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleUpdateProfile = async (_values: { username: string }) => {
     setProfileLoading(true);
@@ -67,21 +106,124 @@ export default function AccountPage() {
     }
   };
 
+  const handleCreateOrganization = async (values: {
+    name: string;
+    description?: string;
+  }) => {
+    setCreateLoading(true);
+    try {
+      await createOrganization({
+        name: values.name.trim(),
+        description: values.description?.trim(),
+      });
+      message.success('组织创建成功');
+      createForm.resetFields();
+      setCreateModalOpen(false);
+      await reload();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '创建失败');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const handleJoinOrganization = async (values: { inviteCode: string }) => {
+    setJoinLoading(true);
+    try {
+      await joinOrganization({ inviteCode: values.inviteCode.trim() });
+      message.success('加入组织成功');
+      joinForm.resetFields();
+      setJoinModalOpen(false);
+      await reload();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加入失败');
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
+  const handleCopyInviteCode = (code?: string) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+      message.success('邀请码已复制');
+    });
+  };
+
+  const orgColumns = [
+    {
+      title: '组织名称',
+      dataIndex: ['organization', 'name'],
+      key: 'name',
+      render: (text: string, record: (typeof memberships)[0]) => (
+        <Space>
+          <span>{text}</span>
+          {record.organization.id === currentMembership?.organization.id && (
+            <Tag color="success">当前组织</Tag>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: '角色',
+      dataIndex: ['role', 'name'],
+      key: 'role',
+      render: (text: string) => <Tag>{text}</Tag>,
+    },
+    {
+      title: '组织编码',
+      dataIndex: ['organization', 'code'],
+      key: 'code',
+    },
+    {
+      title: '邀请码',
+      key: 'inviteCode',
+      render: (_: unknown, record: (typeof memberships)[0]) => {
+        const code = record.organization.inviteCode;
+        if (!code) return '-';
+        return (
+          <Space>
+            <span style={{ fontFamily: 'monospace' }}>{code}</span>
+            <Button
+              type="link"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopyInviteCode(code)}
+            >
+              复制
+            </Button>
+          </Space>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="page-content">
-      <PageHeader
-        back="/settings"
-        breadcrumb={[
-          { label: '设置', path: '/settings' },
-          { label: '账号设置' },
-        ]}
-      />
+      <PageHeader breadcrumb={[{ label: '个人中心' }]} />
+
+      <Card className={styles.profileCard}>
+        <div className={styles.profileHeader}>
+          <Avatar
+            size={72}
+            icon={<UserOutlined />}
+            className={styles.profileAvatar}
+          />
+          <div className={styles.profileInfo}>
+            <div className={styles.profileName}>
+              {session?.user?.username || session?.user?.phone}
+            </div>
+            <div className={styles.profilePhone}>
+              {session?.user?.phone || '-'}
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <DetailSection
         title={
           <span className={styles.settingsCardTitle}>
             <UserOutlined />
-            账号信息
+            帐户信息
           </span>
         }
         actions={
@@ -90,7 +232,7 @@ export default function AccountPage() {
               icon={<EditOutlined />}
               onClick={() => setProfileModalOpen(true)}
             >
-              修改信息
+              编辑个人信息
             </Button>
             <Button
               type="primary"
@@ -116,8 +258,46 @@ export default function AccountPage() {
         </Row>
       </DetailSection>
 
+      <DetailSection
+        title={
+          <span className={styles.settingsCardTitle}>
+            <TeamOutlined />
+            加入的组织
+          </span>
+        }
+        actions={
+          <Space>
+            <Button
+              icon={<UserAddOutlined />}
+              onClick={() => setJoinModalOpen(true)}
+            >
+              加入组织
+            </Button>
+            <Button
+              type="primary"
+              icon={<BuildOutlined />}
+              onClick={() => setCreateModalOpen(true)}
+            >
+              创建组织
+            </Button>
+          </Space>
+        }
+      >
+        {memberships.length > 0 ? (
+          <Table
+            dataSource={memberships}
+            columns={orgColumns}
+            rowKey={(record) => record.organization.id}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+          />
+        ) : (
+          <EmptyState description="暂未加入任何组织" />
+        )}
+      </DetailSection>
+
       <Modal
-        title="修改信息"
+        title="编辑个人信息"
         open={profileModalOpen}
         onCancel={() => setProfileModalOpen(false)}
         footer={null}
@@ -215,6 +395,75 @@ export default function AccountPage() {
               icon={<SaveOutlined />}
             >
               更新密码
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="创建组织"
+        open={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={createForm}
+          layout="vertical"
+          onFinish={handleCreateOrganization}
+          className={styles.settingsForm}
+        >
+          <Form.Item
+            label="组织名称"
+            name="name"
+            rules={[{ required: true, message: '请输入组织名称' }]}
+          >
+            <Input placeholder="请输入组织名称" />
+          </Form.Item>
+          <Form.Item label="组织描述" name="description">
+            <Input.TextArea rows={3} placeholder="可选，简单描述组织用途" />
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={createLoading}
+              icon={<SaveOutlined />}
+            >
+              创建
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="加入组织"
+        open={joinModalOpen}
+        onCancel={() => setJoinModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={joinForm}
+          layout="vertical"
+          onFinish={handleJoinOrganization}
+          className={styles.settingsForm}
+        >
+          <Form.Item
+            label="邀请码"
+            name="inviteCode"
+            rules={[{ required: true, message: '请输入邀请码' }]}
+          >
+            <Input placeholder="请输入组织邀请码" />
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={joinLoading}
+              icon={<SaveOutlined />}
+            >
+              加入
             </Button>
           </Form.Item>
         </Form>

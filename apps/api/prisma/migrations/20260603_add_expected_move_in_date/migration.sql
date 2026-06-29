@@ -1,1 +1,0 @@
--- This migration is now empty because the `expectedMoveInDate` column was added in the init migration.

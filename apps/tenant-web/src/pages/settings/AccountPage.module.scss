@@ -6,6 +6,9 @@
 }
 
 .settings-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   color: $th-foreground;
 }
@@ -14,10 +17,33 @@
   max-width: 600px;
 }
 
-.account-info {
-  padding: 24px 0;
+.profile-card {
+  margin-bottom: 24px;
 }
 
-.account-actions {
-  margin-top: 16px;
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  background-color: $th-primary;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: $th-foreground;
+}
+
+.profile-phone {
+  font-size: 14px;
+  color: $th-foreground-muted;
 }

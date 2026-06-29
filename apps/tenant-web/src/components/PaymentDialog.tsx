@@ -16,7 +16,7 @@ import { getLeases } from '@/api/leases';
 import { money, day } from '@/utils/format';
 import {
   statusLabels,
-  billModeText,
+  billCategoryText,
   billItemTypeText,
 } from '@/pages/bills/constants';
 import { remainingAmount } from '@/pages/bills/utils';
@@ -252,13 +252,13 @@ export default function PaymentDialog({
                           }}
                         >
                           {bill.billingDate.slice(0, 10)} ·{' '}
-                          {billModeText(bill.mode)}
+                          {billCategoryText[bill.category]}
                           {bill.items && bill.items.length > 0 && (
                             <span style={{ color: '#6b7280', fontWeight: 400 }}>
                               {' '}
                               ·{' '}
                               {bill.items
-                                .map((i) => billItemTypeText(i.type))
+                                .map((i) => billItemTypeText(i.category))
                                 .join('、')}
                             </span>
                           )}

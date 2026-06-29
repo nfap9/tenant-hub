@@ -18,7 +18,7 @@ import {
   toggleBatchRoomSelection,
 } from '@/utils/batchRooms';
 import EmptyState from '@/components/ui/EmptyState';
-import { facilityOptions } from '@/constants/facilities';
+import { furnishingOptions } from '@/constants/furnishings';
 import styles from './RoomBatchPage.module.scss';
 
 interface RoomBatchDrawerProps {
@@ -43,7 +43,7 @@ export default function RoomBatchDrawer({
   const [selectedBatchRoomNos, setSelectedBatchRoomNos] = useState<string[]>(
     []
   );
-  const [batchFacilities, setBatchFacilities] = useState<string[]>([]);
+  const [batchFurnishings, setBatchFurnishings] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const generatedBatchRoomNos = useMemo(
@@ -89,11 +89,15 @@ export default function RoomBatchDrawer({
       await createRoomsBatch(
         currentOrgId,
         apartmentId,
-        selectedGeneratedBatchRoomNos.map((roomNo) => ({
-          roomNo,
-          layout: '未配置',
-          facilities: batchFacilities,
-        }))
+        selectedGeneratedBatchRoomNos.map((roomNo) => {
+          const floor = Number(roomNo.slice(0, -2)) || 1;
+          return {
+            roomNo,
+            floor,
+            layout: '未配置',
+            furnishings: batchFurnishings,
+          };
+        })
       );
       message.success(
         `已提交 ${selectedGeneratedBatchRoomNos.length} 间房间，重复房间会自动跳过`
@@ -163,13 +167,13 @@ export default function RoomBatchDrawer({
             />
           </Form.Item>
         </div>
-        <Form.Item label="设施">
+        <Form.Item label="家具家电">
           <Select
             mode="tags"
-            placeholder="选择或输入设施，如：空调、热水器"
-            value={batchFacilities}
-            onChange={setBatchFacilities}
-            options={facilityOptions.map((f) => ({
+            placeholder="选择或输入家具家电，如：空调、热水器"
+            value={batchFurnishings}
+            onChange={setBatchFurnishings}
+            options={furnishingOptions.map((f) => ({
               label: f,
               value: f,
             }))}

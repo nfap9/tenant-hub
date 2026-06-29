@@ -25,9 +25,10 @@ import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import type { Lease, LeaseStatus, BillItem } from '@/types/domain';
 import { money, day } from '@/utils/format';
-import { cycleLabels, terminationLabels } from '@/pages/rooms/constants';
+import { cycleLabels } from '@/pages/rooms/constants';
 import {
   billItemTypeText,
+  billCategoryText,
   statusLabels as billStatusLabels,
   toneForBillStatus,
 } from '@/pages/bills/constants';
@@ -45,12 +46,6 @@ const statusColors: Record<LeaseStatus, string> = {
   ACTIVE: 'success',
   TERMINATED: 'warning',
   EXPIRED: 'error',
-};
-
-const billModeLabels: Record<string, string> = {
-  PREPAID: '周期账单',
-  POSTPAID: '水电账单',
-  DEPOSIT: '押金账单',
 };
 
 export default function LeaseDetailPage() {
@@ -199,12 +194,7 @@ export default function LeaseDetailPage() {
                 </Col>
                 <Col span={8}>
                   <DetailItem label="付款周期">
-                    {cycleLabels[lease.cycle]}
-                  </DetailItem>
-                </Col>
-                <Col span={8}>
-                  <DetailItem label="自动续约">
-                    {lease.autoRenew ? '是' : '否'}
+                    {cycleLabels[lease.rentCycle]}
                   </DetailItem>
                 </Col>
                 <Col span={8}>
@@ -214,22 +204,12 @@ export default function LeaseDetailPage() {
                 </Col>
                 <Col span={8}>
                   <DetailItem label="房间押金">
-                    ¥{money(roomDeposit?.amount ?? lease.roomDepositAmount)}
+                    ¥{money(roomDeposit?.amount ?? lease.depositAmount)}
                   </DetailItem>
                 </Col>
                 <Col span={8}>
                   <DetailItem label="钥匙押金">
-                    ¥{money(keyDeposit?.amount ?? 0)}（{lease.keyQuantity} 套）
-                  </DetailItem>
-                </Col>
-                <Col span={8}>
-                  <DetailItem label="水费单价">
-                    ¥{money(lease.waterUnitPrice)}
-                  </DetailItem>
-                </Col>
-                <Col span={8}>
-                  <DetailItem label="电费单价">
-                    ¥{money(lease.powerUnitPrice)}
+                    ¥{money(keyDeposit?.amount ?? lease.keyDepositAmount)}
                   </DetailItem>
                 </Col>
               </Row>
@@ -287,7 +267,7 @@ export default function LeaseDetailPage() {
                               {
                                 title: '费用项目类型',
                                 render: (_: unknown, { item }) => (
-                                  <span>{billItemTypeText(item.type)}</span>
+                                  <span>{billItemTypeText(item.category)}</span>
                                 ),
                               },
                               {
@@ -320,14 +300,14 @@ export default function LeaseDetailPage() {
                       {
                         title: '账单类型',
                         render: (_: unknown, row: BillGroup) => {
-                          const modes = Array.from(
-                            new Set(row.bills.map((bill) => bill.mode))
+                          const categories = Array.from(
+                            new Set(row.bills.map((bill) => bill.category))
                           );
                           return (
                             <Space wrap>
-                              {modes.map((mode) => (
-                                <Tag key={mode}>
-                                  {billModeLabels[mode] ?? mode}
+                              {categories.map((category) => (
+                                <Tag key={category}>
+                                  {billCategoryText[category] ?? category}
                                 </Tag>
                               ))}
                             </Space>
@@ -362,152 +342,6 @@ export default function LeaseDetailPage() {
                       },
                     ]}
                   />
-                </DetailSection>
-              </>
-            )}
-
-            {lease.settlement && (
-              <>
-                <Divider />
-                <DetailSection title="退租结算">
-                  <Row gutter={[24, 0]}>
-                    <Col span={8}>
-                      <DetailItem label="退租类型">
-                        {terminationLabels[lease.settlement.type]}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="退租日期">
-                        {day(lease.settlement.terminatedAt)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="退租原因">
-                        {lease.settlement.reason || '-'}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="水表读数">
-                        {lease.settlement.previousWater} →{' '}
-                        {lease.settlement.currentWater}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="电表读数">
-                        {lease.settlement.previousPower} →{' '}
-                        {lease.settlement.currentPower}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="水电费用">
-                        ¥{money(lease.settlement.utilityAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="租金调整">
-                        ¥{money(lease.settlement.rentAdjustmentAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="其他费用">
-                        ¥{money(lease.settlement.otherFeeAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="违约金">
-                        ¥{money(lease.settlement.penaltyAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="赔偿金">
-                        ¥{money(lease.settlement.compensationAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="房间押金退还">
-                        ¥{money(lease.settlement.roomDepositRefundAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="钥匙押金退还">
-                        ¥{money(lease.settlement.keyDepositRefundAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="房间押金扣款">
-                        ¥{money(lease.settlement.roomDepositDeductionAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="钥匙押金扣款">
-                        ¥{money(lease.settlement.keyDepositDeductionAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="押金扣款原因">
-                        {lease.settlement.depositDeductionReason || '-'}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="应收金额">
-                        <span className="text-error">
-                          ¥{money(lease.settlement.receivableAmount)}
-                        </span>
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="应退金额">
-                        <span className="text-success">
-                          ¥{money(lease.settlement.refundableAmount)}
-                        </span>
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="净额">
-                        <strong>¥{money(lease.settlement.netAmount)}</strong>
-                      </DetailItem>
-                    </Col>
-                  </Row>
-
-                  {lease.settlement.payments &&
-                    lease.settlement.payments.length > 0 && (
-                      <>
-                        <Divider />
-                        <Table
-                          rowKey="id"
-                          dataSource={lease.settlement.payments}
-                          pagination={false}
-                          columns={[
-                            {
-                              title: '方向',
-                              dataIndex: 'direction',
-                              render: (direction: string) =>
-                                direction === 'RECEIVE' ? '收款' : '退款',
-                            },
-                            {
-                              title: '金额',
-                              dataIndex: 'amount',
-                              render: (amount: number | string) => (
-                                <span>¥{money(amount)}</span>
-                              ),
-                            },
-                            {
-                              title: '方式',
-                              dataIndex: 'method',
-                            },
-                            {
-                              title: '操作人',
-                              dataIndex: ['user', 'username'],
-                            },
-                            {
-                              title: '备注',
-                              dataIndex: 'note',
-                              render: (note?: string) => note || '-',
-                            },
-                          ]}
-                        />
-                      </>
-                    )}
                 </DetailSection>
               </>
             )}

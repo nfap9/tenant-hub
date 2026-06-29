@@ -1,11 +1,6 @@
-import type {
-  RoomStatus,
-  RentCycle,
-  BillItemType,
-  TerminationType,
-} from '@/types/domain';
+import type { RoomStatus, RentCycle } from '@/types/domain';
 
-export type { RentCycle, TerminationType };
+export type { RentCycle };
 
 export const statusLabels: Record<RoomStatus, string> = {
   VACANT: '空闲',
@@ -49,34 +44,28 @@ export const cycleLabels: Record<RentCycle, string> = {
   YEARLY: '年付',
 };
 
-export const selectableFeeTypes: Array<{ type: BillItemType; label: string }> =
-  [
-    { type: 'MANAGEMENT', label: '管理费' },
-    { type: 'SANITATION', label: '卫生费' },
-    { type: 'ELEVATOR', label: '电梯费' },
-    { type: 'PROPERTY', label: '物业费' },
-    { type: 'NETWORK', label: '网费' },
-    { type: 'OTHER', label: '其他费用' },
-  ];
-
-export const terminationLabels: Record<TerminationType, string> = {
-  EXPIRED: '到期解约',
-  NEGOTIATED: '协商解约',
-  BREACH: '违约退租',
-};
+export const selectableFeeTypes: Array<{ type: string; label: string }> = [
+  { type: 'MANAGEMENT', label: '管理费' },
+  { type: 'SANITATION', label: '卫生费' },
+  { type: 'ELEVATOR', label: '电梯费' },
+  { type: 'PROPERTY', label: '物业费' },
+  { type: 'NETWORK', label: '网费' },
+  { type: 'OTHER', label: '其他费用' },
+];
 
 export type LeaseFeeFormItem = {
   id: string;
-  type: BillItemType;
+  type: string;
   name: string;
   amount: string;
 };
 
 export const emptyRoomForm = {
   roomNo: '',
+  floor: undefined as number | undefined,
   layout: '',
   area: '',
-  facilities: [] as string[],
+  furnishings: [] as string[],
   status: 'VACANT' as RoomStatus,
 };
 
@@ -85,46 +74,14 @@ export const emptyLeaseForm = {
   tenantPhone: '',
   startDate: '',
   endDate: '',
-  cycle: 'MONTHLY' as RentCycle,
+  rentCycle: 'MONTHLY' as RentCycle,
   rentAmount: '',
   roomDepositAmount: '',
-  keyQuantity: 0,
-  keyUnitPrice: '',
-  waterUnitPrice: '0',
-  powerUnitPrice: '0',
-  autoRenew: true,
-  historicalBills: [] as {
-    billingDate: string;
-    currentWater: number;
-    currentPower: number;
-    settled: boolean;
-  }[],
-  historicalBaseWater: 0,
-  historicalBasePower: 0,
-  depositSettled: false,
+  keyDepositAmount: '',
 };
 
 export const emptyEditLeaseForm = {
   rentAmount: '',
   roomDepositAmount: '',
-  keyQuantity: 0,
-  keyUnitPrice: '',
-  waterUnitPrice: '0',
-  powerUnitPrice: '0',
-};
-
-export const emptyTerminationForm = {
-  type: 'NEGOTIATED' as TerminationType,
-  terminatedAt: '',
-  reason: '',
-  rentAdjustmentAmount: '0',
-  currentWater: '0',
-  currentPower: '0',
-  otherFeeAmount: '0',
-  otherFeeReason: '',
-  roomDepositRefundAmount: '0',
-  keyDepositRefundAmount: '0',
-  roomDepositDeductionAmount: '0',
-  keyDepositDeductionAmount: '0',
-  depositDeductionReason: '',
+  keyDepositAmount: '',
 };

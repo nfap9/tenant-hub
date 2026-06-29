@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Tabs,
@@ -17,21 +16,11 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  DownloadOutlined,
-  UploadOutlined,
-  ThunderboltOutlined,
   ThunderboltFilled,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
-import {
-  getBills,
-  getBillsByStatus,
-  deleteBill,
-  voidBill,
-  refundBill,
-  retryBillBilling,
-  generateBills,
-} from '@/api/bills';
+import { getBills, deleteBill, voidBill, generateBills } from '@/api/bills';
 import { getRooms } from '@/api/rooms';
 import { getApartments } from '@/api/apartments';
 import { money, day } from '@/utils/format';
@@ -45,8 +34,6 @@ import {
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import PaymentDialog from '@/components/PaymentDialog';
-import UtilityExportModal from './components/UtilityExportModal';
-import UtilityModal from './components/UtilityModal';
 import ReadingDrawer from './components/ReadingDrawer';
 import type {
   Bill,
@@ -59,16 +46,11 @@ import type {
 export default function BillListPage() {
   const { currentOrgId } = useAppSession();
   const canManageBill = useHasPermission('bill:manage');
-  const navigate = useNavigate();
-  const [tab, setTab] = useState<'unpaid' | 'pending' | 'all'>('unpaid');
+  const [tab, setTab] = useState<'unpaid' | 'all'>('unpaid');
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentLeaseId, setPaymentLeaseId] = useState<string | undefined>();
-  const [utilityExportOpen, setUtilityExportOpen] = useState(false);
-  const [utilityOpen, setUtilityOpen] = useState(false);
-  const [utilityBillId, setUtilityBillId] = useState<string | null>(null);
   const [readingOpen, setReadingOpen] = useState(false);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
-  const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [apartments, setApartments] = useState<Apartment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,17 +63,12 @@ export default function BillListPage() {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [allBills, billingBills, nextRooms, apts] = await Promise.all([
+      const [allBills, nextRooms, apts] = await Promise.all([
         getBills(currentOrgId),
-        getBillsByStatus(currentOrgId, 'BILLING'),
         getRooms(currentOrgId),
         getApartments(currentOrgId),
       ]);
-      const postpaidReviewBills = billingBills.filter(
-        (bill) => bill.mode === 'POSTPAID'
-      );
       setBillGroups(groupBills(allBills));
-      setReviewBills(postpaidReviewBills);
       setRooms(nextRooms);
       setApartments(apts);
     } catch (e) {
@@ -122,19 +99,6 @@ export default function BillListPage() {
     }
     return result;
   }, [billGroups, apartmentFilter, roomFilter]);
-
-  const filteredReviewBills = useMemo(() => {
-    let result = reviewBills;
-    if (apartmentFilter) {
-      result = result.filter(
-        (b) => b.lease?.room?.apartmentId === apartmentFilter
-      );
-    }
-    if (roomFilter) {
-      result = result.filter((b) => b.lease?.room?.id === roomFilter);
-    }
-    return result;
-  }, [reviewBills, apartmentFilter, roomFilter]);
 
   const handleApartmentChange = (value: string) => {
     setApartmentFilter(value);
@@ -181,17 +145,6 @@ export default function BillListPage() {
     });
   };
 
-  const handleRetry = async (bill: Bill) => {
-    if (!currentOrgId) return;
-    try {
-      await retryBillBilling(currentOrgId, bill.id);
-      message.success('已重新尝试出账');
-      await loadData();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '重试失败');
-    }
-  };
-
   const handleVoidGroup = async (group: BillGroup) => {
     if (!currentOrgId) return;
     try {
@@ -200,38 +153,6 @@ export default function BillListPage() {
       await loadData();
     } catch (e) {
       message.error(e instanceof Error ? e.message : '作废失败');
-    }
-  };
-
-  const handleRefundGroup = async (group: BillGroup) => {
-    if (!currentOrgId) return;
-    const netPaid = Number(group.paidAmount) || 0;
-    const method = window.prompt(
-      `退款金额（已付 ¥${netPaid.toFixed(2)}）/ 退款方式：`,
-      `${netPaid.toFixed(2)} 现金`
-    );
-    if (!method) return;
-    const [amountStr, ...methodParts] = method.split(' ');
-    const amount = parseFloat(amountStr);
-    if (isNaN(amount) || amount <= 0) {
-      message.warning('请输入有效退款金额');
-      return;
-    }
-    try {
-      await Promise.all(
-        group.bills
-          .filter((b) => b.status === 'PAID')
-          .map((b) =>
-            refundBill(currentOrgId, b.id, {
-              amount,
-              method: methodParts.join(' ') || '退款',
-            })
-          )
-      );
-      message.success('退款已登记');
-      await loadData();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '退款失败');
     }
   };
 
@@ -249,7 +170,7 @@ export default function BillListPage() {
     <Space size={[4, 4]} wrap>
       {(items ?? []).map((item, index) => (
         <Tooltip key={index} title={`${item.name} ¥${money(item.amount)}`}>
-          <Tag>{billItemTypeText(item.type)}</Tag>
+          <Tag>{billItemTypeText(item.category)}</Tag>
         </Tooltip>
       ))}
     </Space>
@@ -272,15 +193,8 @@ export default function BillListPage() {
     );
   };
 
-  const renderGroupActions = (group: BillGroup, manage: boolean) => (
+  const renderGroupActions = (group: BillGroup) => (
     <Space size="small" onClick={(e) => e.stopPropagation()}>
-      <Button
-        type="link"
-        size="small"
-        onClick={() => navigate(`/bills/monthly/${group.id}`)}
-      >
-        查看详情
-      </Button>
       {group.status === 'UNPAID' && (
         <Button
           type="link"
@@ -293,42 +207,29 @@ export default function BillListPage() {
           收款
         </Button>
       )}
-      {manage &&
-        group.status !== 'PAID' &&
-        group.status !== 'VOID' &&
-        group.status !== 'REFUNDED' &&
-        canManageBill && (
-          <>
-            <Popconfirm
-              title="作废账单组"
-              description="作废后所有账单将无法继续收款或恢复，确认作废？"
-              onConfirm={() => handleVoidGroup(group)}
-              okText="确认作废"
-              cancelText="取消"
-              okButtonProps={{ danger: true }}
-            >
-              <Button type="link" size="small">
-                作废
-              </Button>
-            </Popconfirm>
-            <Button
-              type="link"
-              danger
-              size="small"
-              onClick={() => handleDeleteGroup(group)}
-            >
-              删除
+      {canManageBill && group.status !== 'PAID' && group.status !== 'VOID' && (
+        <>
+          <Popconfirm
+            title="作废账单组"
+            description="作废后所有账单将无法继续收款或恢复，确认作废？"
+            onConfirm={() => handleVoidGroup(group)}
+            okText="确认作废"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+          >
+            <Button type="link" size="small">
+              作废
             </Button>
-          </>
-        )}
-      {manage && group.status === 'PAID' && canManageBill && (
-        <Button
-          type="link"
-          size="small"
-          onClick={() => handleRefundGroup(group)}
-        >
-          退款
-        </Button>
+          </Popconfirm>
+          <Button
+            type="link"
+            danger
+            size="small"
+            onClick={() => handleDeleteGroup(group)}
+          >
+            删除
+          </Button>
+        </>
       )}
     </Space>
   );
@@ -386,63 +287,10 @@ export default function BillListPage() {
         width: 260,
         fixed: 'right' as const,
         align: 'right' as const,
-        render: (_: unknown, group: BillGroup) =>
-          renderGroupActions(group, tab === 'all'),
+        render: (_: unknown, group: BillGroup) => renderGroupActions(group),
       },
     ],
-    [canManageBill, tab]
-  );
-
-  const renderPendingActions = (bill: Bill) => (
-    <Space size="small">
-      <Button type="link" size="small" onClick={() => handleRetry(bill)}>
-        重新出账
-      </Button>
-      <Button
-        type="link"
-        size="small"
-        onClick={() => {
-          setUtilityBillId(bill.id);
-          setUtilityOpen(true);
-        }}
-      >
-        录入本期水电
-      </Button>
-    </Space>
-  );
-
-  const pendingColumns = useMemo(
-    () => [
-      {
-        title: '租客/房间',
-        width: 180,
-        render: (_: unknown, bill: Bill) =>
-          renderTenantCell(bill.lease?.tenantName, bill.lease),
-      },
-      {
-        title: '费用项目',
-        ellipsis: true,
-        render: (_: unknown, bill: Bill) => renderItemTags(bill.items),
-      },
-      {
-        title: '账期',
-        width: 180,
-        render: (_: unknown, bill: Bill) => renderPeriods(bill.items),
-      },
-      {
-        title: '失败原因',
-        ellipsis: true,
-        render: (_: unknown, bill: Bill) => bill.failureReason || '-',
-      },
-      {
-        title: '操作',
-        width: 180,
-        fixed: 'right' as const,
-        align: 'right' as const,
-        render: (_: unknown, bill: Bill) => renderPendingActions(bill),
-      },
-    ],
-    []
+    [canManageBill]
   );
 
   return (
@@ -463,28 +311,12 @@ export default function BillListPage() {
                 登记收款
               </Button>
             )}
-            {tab === 'pending' && (
-              <>
-                <Button
-                  icon={<ThunderboltOutlined />}
-                  onClick={() => setReadingOpen(true)}
-                >
-                  录入读数
-                </Button>
-                <Button
-                  icon={<DownloadOutlined />}
-                  onClick={() => setUtilityExportOpen(true)}
-                >
-                  导出
-                </Button>
-                <Button
-                  icon={<UploadOutlined />}
-                  onClick={() => navigate('/bills/utility-import')}
-                >
-                  导入
-                </Button>
-              </>
-            )}
+            <Button
+              icon={<ThunderboltOutlined />}
+              onClick={() => setReadingOpen(true)}
+            >
+              录入读数
+            </Button>
             <Button
               icon={<ThunderboltFilled />}
               onClick={async () => {
@@ -545,7 +377,7 @@ export default function BillListPage() {
       <Tabs
         activeKey={tab}
         onChange={(key) => {
-          setTab(key as 'unpaid' | 'pending' | 'all');
+          setTab(key as 'unpaid' | 'all');
           setSearchQuery('');
           setStatusFilter('');
         }}
@@ -571,26 +403,6 @@ export default function BillListPage() {
               ),
           },
           {
-            key: 'pending',
-            label: `待处理 (${filteredReviewBills.length})`,
-            children:
-              filteredReviewBills.length === 0 ? (
-                <EmptyState
-                  title="暂无待处理账单"
-                  description="所有账单均已处理完毕"
-                />
-              ) : (
-                <Table
-                  rowKey="id"
-                  columns={pendingColumns}
-                  dataSource={filteredReviewBills}
-                  loading={loading}
-                  pagination={{ pageSize: 10 }}
-                  scroll={{ x: 'max-content' }}
-                />
-              ),
-          },
-          {
             key: 'all',
             label: `全部 (${filteredBillGroups.length})`,
             children: (
@@ -604,18 +416,16 @@ export default function BillListPage() {
                   allowClear
                 />
                 <Space wrap className="mb-16">
-                  {(['', 'UNPAID', 'PAID', 'VOID', 'REFUNDED'] as const).map(
-                    (status) => (
-                      <Button
-                        key={status || 'all'}
-                        type={statusFilter === status ? 'primary' : 'default'}
-                        size="small"
-                        onClick={() => setStatusFilter(status)}
-                      >
-                        {status ? statusLabels[status] : '全部状态'}
-                      </Button>
-                    )
-                  )}
+                  {(['', 'UNPAID', 'PAID', 'VOID'] as const).map((status) => (
+                    <Button
+                      key={status || 'all'}
+                      type={statusFilter === status ? 'primary' : 'default'}
+                      size="small"
+                      onClick={() => setStatusFilter(status)}
+                    >
+                      {status ? statusLabels[status] : '全部状态'}
+                    </Button>
+                  ))}
                 </Space>
                 {filteredAllGroups.length === 0 ? (
                   <EmptyState
@@ -643,21 +453,6 @@ export default function BillListPage() {
         onClose={() => setPaymentOpen(false)}
         onSuccess={loadData}
         defaultLeaseId={paymentLeaseId}
-      />
-
-      <UtilityExportModal
-        open={utilityExportOpen}
-        onClose={() => setUtilityExportOpen(false)}
-      />
-
-      <UtilityModal
-        open={utilityOpen}
-        billId={utilityBillId}
-        onClose={() => {
-          setUtilityBillId(null);
-          setUtilityOpen(false);
-        }}
-        onSuccess={loadData}
       />
 
       <ReadingDrawer

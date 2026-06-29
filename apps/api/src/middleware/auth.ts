@@ -11,11 +11,22 @@ export type AuthUser = {
   username: string;
 };
 
+/**
+ * 为用户信息签发 JWT
+ * @param user - 用户信息（id、phone、username）
+ * @returns JWT 字符串
+ */
 export const signToken = (user: AuthUser) =>
   jwt.sign(user, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN as StringValue,
   });
 
+/**
+ * 判断 JWT 签发时间是否早于密码修改时间
+ * @param issuedAt - JWT 签发时间
+ * @param passwordChangedAt - 密码最后修改时间
+ * @returns 若 token 在改密前签发则返回 true
+ */
 export const isTokenStaleForPasswordChange = (
   issuedAt: Date | undefined,
   passwordChangedAt: Date | null
@@ -30,6 +41,12 @@ const isJwtError = (error: unknown) =>
     error.name
   );
 
+/**
+ * 校验请求头中的 JWT，将当前用户挂载到 req.user
+ * @param req - Express 请求对象
+ * @param _res - Express 响应对象
+ * @param next - Express 下一个中间件函数
+ */
 export const requireAuth = (
   req: Request,
   _res: Response,
@@ -67,6 +84,12 @@ export const requireAuth = (
     });
 };
 
+/**
+ * 校验当前用户是否属于指定组织，并将 organizationId 和权限挂载到请求对象
+ * @param req - Express 请求对象
+ * @param _res - Express 响应对象
+ * @param next - Express 下一个中间件函数
+ */
 export const requireOrg = (
   req: Request,
   _res: Response,
@@ -95,6 +118,11 @@ export const requireOrg = (
     .catch(next);
 };
 
+/**
+ * 校验当前用户是否拥有指定权限（或通配符 *）
+ * @param permission - 需要校验的权限字符串
+ * @returns Express 中间件函数
+ */
 export const requirePermission =
   (permission: string) =>
   (req: Request, _res: Response, next: NextFunction) => {
@@ -106,25 +134,3 @@ export const requirePermission =
     }
     next();
   };
-
-export const requirePlatformAccess = (
-  req: Request,
-  _res: Response,
-  next: NextFunction
-) => {
-  Promise.resolve()
-    .then(async () => {
-      if (!req.user) throw new HttpError(401, '请先登录');
-
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.id },
-        select: { platformRole: true },
-      });
-      if (!user) throw new HttpError(403, '无运营平台权限');
-
-      if (user.platformRole === 'SUPER_ADMIN') return next();
-
-      throw new HttpError(403, '无运营平台权限');
-    })
-    .catch(next);
-};

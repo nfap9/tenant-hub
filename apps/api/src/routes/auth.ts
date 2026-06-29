@@ -1,16 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { sendSms, type SmsConfig } from '../services/smsService.js';
 import { requireAuth, signToken } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import {
-  getSmsConfigured,
-  getSmsConfig,
-  createOtpCode,
-  verifyOtpCode,
   findUserByPhone,
-  isFirstUser,
   createUser,
   verifyPassword,
   updateUserPassword,
@@ -22,45 +16,19 @@ export const authRouter = Router();
 const phoneSchema = z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确');
 const passwordSchema = z.string().min(8, '密码至少 8 位');
 
-authRouter.post(
-  '/otp',
-  asyncHandler(async (req, res) => {
-    const smsConfigured = await getSmsConfigured();
-    if (!smsConfigured) {
-      throw new HttpError(400, '短信服务未配置，暂不支持验证码功能');
-    }
-    const input = z
-      .object({ phone: phoneSchema, purpose: z.enum(['REGISTER', 'LOGIN']) })
-      .parse(req.body);
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    await createOtpCode({ phone: input.phone, purpose: input.purpose, code });
-
-    const config = await getSmsConfig();
-    if (config?.url) {
-      await sendSms({
-        phoneNumber: input.phone,
-        code,
-        expireMinutes: 5,
-        config: config as SmsConfig,
-      }).catch((err) => {
-        console.error(`[SmsService] 发送验证码失败: ${err.message}`);
-      });
-    }
-    ok(res, { message: '验证码已发送' });
-  })
-);
-
+/**
+ * POST /api/auth/register
+ * 用户注册：校验手机号、用户名和密码，创建用户并返回登录 token
+ */
 authRouter.post(
   '/register',
   asyncHandler(async (req, res) => {
-    const smsConfigured = await getSmsConfigured();
     const input = z
       .object({
         phone: phoneSchema,
         username: z.string().min(1).max(24),
         password: passwordSchema,
         confirmPassword: passwordSchema,
-        code: smsConfigured ? z.string().length(6) : z.string().optional(),
       })
       .refine(
         (value) => value.password === value.confirmPassword,
@@ -70,23 +38,22 @@ authRouter.post(
 
     const existed = await findUserByPhone(input.phone);
     if (existed) throw new HttpError(409, '手机号已注册');
-    if (smsConfigured) {
-      await verifyOtpCode(input.phone, input.code!, 'REGISTER');
-    }
 
-    const firstUser = await isFirstUser();
     const user = await createUser({
       phone: input.phone,
       username: input.username,
       password: input.password,
-      platformRole: firstUser ? 'SUPER_ADMIN' : 'USER',
     });
     ok(res, { user, token: signToken(user) });
   })
 );
 
+/**
+ * POST /api/auth/login
+ * 用户登录：校验手机号和密码，返回用户信息及 JWT
+ */
 authRouter.post(
-  '/login/password',
+  '/login',
   asyncHandler(async (req, res) => {
     const input = z
       .object({ phone: phoneSchema, password: z.string().min(1) })
@@ -100,24 +67,10 @@ authRouter.post(
   })
 );
 
-authRouter.post(
-  '/login/otp',
-  asyncHandler(async (req, res) => {
-    const smsConfigured = await getSmsConfigured();
-    if (!smsConfigured) {
-      throw new HttpError(400, '短信服务未配置，暂不支持验证码登录');
-    }
-    const input = z
-      .object({ phone: phoneSchema, code: z.string().length(6) })
-      .parse(req.body);
-    const user = await findUserByPhone(input.phone);
-    if (!user) throw new HttpError(404, '用户不存在');
-    await verifyOtpCode(input.phone, input.code, 'LOGIN');
-    const payload = { id: user.id, phone: user.phone, username: user.username };
-    ok(res, { user: payload, token: signToken(payload) });
-  })
-);
-
+/**
+ * GET /api/auth/me
+ * 获取当前登录用户信息及其所属组织列表
+ */
 authRouter.get(
   '/me',
   requireAuth,
@@ -126,6 +79,10 @@ authRouter.get(
   })
 );
 
+/**
+ * PUT /api/auth/password
+ * 修改当前登录用户密码
+ */
 authRouter.put(
   '/password',
   requireAuth,

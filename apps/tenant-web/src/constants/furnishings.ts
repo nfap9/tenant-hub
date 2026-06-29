@@ -1,4 +1,4 @@
-export const facilityOptions = [
+export const furnishingOptions = [
   '床',
   '床垫',
   '衣柜',

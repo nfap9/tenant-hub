@@ -10,7 +10,6 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import RoomFormDrawer from './RoomFormDrawer';
 import LeaseFormDrawer from './LeaseFormDrawer';
-import ReservationDrawer from './ReservationDrawer';
 import styles from './RoomListPage.module.scss';
 
 export default function RoomListPage() {
@@ -24,8 +23,6 @@ export default function RoomListPage() {
   const [defaultApartmentId, setDefaultApartmentId] = useState<string>();
   const [leaseDrawerOpen, setLeaseDrawerOpen] = useState(false);
   const [leaseRoomId, setLeaseRoomId] = useState<string>('');
-  const [reserveDrawerOpen, setReserveDrawerOpen] = useState(false);
-  const [reserveRoomId, setReserveRoomId] = useState<string>('');
 
   const loadRooms = useCallback(async () => {
     if (!currentOrgId) return;
@@ -52,11 +49,6 @@ export default function RoomListPage() {
   const handleSign = (roomId: string) => {
     setLeaseRoomId(roomId);
     setLeaseDrawerOpen(true);
-  };
-
-  const handleReserve = (roomId: string) => {
-    setReserveRoomId(roomId);
-    setReserveDrawerOpen(true);
   };
 
   return (
@@ -117,7 +109,6 @@ export default function RoomListPage() {
                 room={room}
                 onStatusChange={loadRooms}
                 onSign={handleSign}
-                onReserve={handleReserve}
               />
             ))}
           </div>
@@ -142,16 +133,6 @@ export default function RoomListPage() {
         onCancel={() => setLeaseDrawerOpen(false)}
         onSuccess={() => {
           setLeaseDrawerOpen(false);
-          loadRooms();
-        }}
-      />
-
-      <ReservationDrawer
-        open={reserveDrawerOpen}
-        roomId={reserveRoomId}
-        onCancel={() => setReserveDrawerOpen(false)}
-        onSuccess={() => {
-          setReserveDrawerOpen(false);
           loadRooms();
         }}
       />

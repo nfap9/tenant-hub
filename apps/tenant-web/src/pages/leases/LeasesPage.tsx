@@ -36,19 +36,12 @@ const statusColors: Record<LeaseStatus, string> = {
   EXPIRED: 'error',
 };
 
-type LeaseFilter =
-  | 'ALL'
-  | 'ACTIVE'
-  | 'DRAFT'
-  | 'AUTO_RENEW'
-  | 'EXPIRING_SOON'
-  | 'TERMINATED';
+type LeaseFilter = 'ALL' | 'ACTIVE' | 'DRAFT' | 'EXPIRING_SOON' | 'TERMINATED';
 
 const filterLabels: Record<LeaseFilter, string> = {
   ALL: '全部',
   ACTIVE: '有效',
   DRAFT: '草稿',
-  AUTO_RENEW: '自动续约',
   EXPIRING_SOON: '近到期',
   TERMINATED: '已终止',
 };
@@ -57,7 +50,6 @@ const filters: LeaseFilter[] = [
   'ALL',
   'ACTIVE',
   'DRAFT',
-  'AUTO_RENEW',
   'EXPIRING_SOON',
   'TERMINATED',
 ];
@@ -106,8 +98,6 @@ export default function LeasesPage() {
       result = result.filter((l) => l.status === 'ACTIVE');
     } else if (filter === 'DRAFT') {
       result = result.filter((l) => l.status === 'DRAFT');
-    } else if (filter === 'AUTO_RENEW') {
-      result = result.filter((l) => l.status === 'ACTIVE' && l.autoRenew);
     } else if (filter === 'EXPIRING_SOON') {
       const soon = new Date();
       soon.setDate(soon.getDate() + 30);
@@ -139,8 +129,6 @@ export default function LeasesPage() {
       ALL: leases.length,
       ACTIVE: leases.filter((l) => l.status === 'ACTIVE').length,
       DRAFT: leases.filter((l) => l.status === 'DRAFT').length,
-      AUTO_RENEW: leases.filter((l) => l.status === 'ACTIVE' && l.autoRenew)
-        .length,
       EXPIRING_SOON: leases.filter((l) => {
         if (l.status !== 'ACTIVE') return false;
         const soon = new Date();
@@ -223,8 +211,7 @@ export default function LeasesPage() {
                       {day(row.startDate)} ~ {day(row.endDate)}
                     </div>
                     <div className="text-muted">
-                      {cycleLabels[row.cycle]}
-                      {row.autoRenew ? ' · 自动续约' : ''}
+                      {cycleLabels[row.rentCycle]}
                     </div>
                   </div>
                 ),
@@ -251,10 +238,7 @@ export default function LeasesPage() {
                           <div>
                             房间押金：¥{money(roomDeposit?.amount ?? 0)}
                           </div>
-                          <div>
-                            钥匙押金：¥{money(keyDeposit?.amount ?? 0)} (
-                            {row.keyQuantity}套)
-                          </div>
+                          <div>钥匙押金：¥{money(keyDeposit?.amount ?? 0)}</div>
                         </div>
                       }
                     >

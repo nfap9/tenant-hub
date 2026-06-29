@@ -7,19 +7,9 @@ export type LoginResult = {
   user: AppSession['user'];
 };
 
-export type SendOtpInput = {
-  phone: string;
-  purpose: 'REGISTER' | 'LOGIN';
-};
-
 export type PasswordLoginInput = {
   phone: string;
   password: string;
-};
-
-export type OtpLoginInput = {
-  phone: string;
-  code: string;
 };
 
 export type RegisterInput = {
@@ -27,7 +17,6 @@ export type RegisterInput = {
   username: string;
   password: string;
   confirmPassword: string;
-  code?: string;
 };
 
 export type UpdatePasswordInput = {
@@ -36,22 +25,8 @@ export type UpdatePasswordInput = {
   confirmPassword: string;
 };
 
-export async function sendOtp(input: SendOtpInput) {
-  return apiClient<{ message: string }>('/auth/otp', {
-    method: 'POST',
-    body: input as Record<string, unknown>,
-  });
-}
-
 export async function loginWithPassword(input: PasswordLoginInput) {
-  return apiClient<LoginResult>('/auth/login/password', {
-    method: 'POST',
-    body: input as Record<string, unknown>,
-  });
-}
-
-export async function loginWithOtp(input: OtpLoginInput) {
-  return apiClient<LoginResult>('/auth/login/otp', {
+  return apiClient<LoginResult>('/auth/login', {
     method: 'POST',
     body: input as Record<string, unknown>,
   });
@@ -66,7 +41,7 @@ export async function register(input: RegisterInput) {
 
 export async function getMe() {
   return apiClient<{
-    user: AppSession['user'] & { platformRole?: string };
+    user: AppSession['user'];
     memberships: Membership[];
   }>('/auth/me');
 }

@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "Lease" ALTER COLUMN "tenantName" DROP NOT NULL,
-ALTER COLUMN "tenantPhone" DROP NOT NULL;

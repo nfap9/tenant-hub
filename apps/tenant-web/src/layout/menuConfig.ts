@@ -4,17 +4,7 @@ import {
   HomeFilled,
   FileTextOutlined,
   ApartmentOutlined,
-  SettingOutlined,
-  DashboardOutlined,
   AccountBookOutlined,
-  TeamOutlined,
-  AppstoreOutlined,
-  SafetyCertificateOutlined,
-  MailOutlined,
-  ToolOutlined,
-  PlusOutlined,
-  UserOutlined,
-  CrownOutlined,
 } from '@ant-design/icons';
 
 export interface MenuItemConfig {
@@ -25,15 +15,6 @@ export interface MenuItemConfig {
   requireOrg?: boolean;
   children?: MenuItemConfig[];
 }
-
-/** 智能助手 — 新对话 */
-export const agentNewConfig: MenuItemConfig = {
-  key: 'agent-new',
-  label: '新对话',
-  path: '/agent',
-  icon: PlusOutlined,
-  requireOrg: true,
-};
 
 /** 业务菜单 */
 export const bizMenuConfig: MenuItemConfig[] = [
@@ -81,13 +62,6 @@ export const bizMenuConfig: MenuItemConfig[] = [
         icon: FileTextOutlined,
         requireOrg: true,
       },
-      {
-        key: 'deposits',
-        label: '押金',
-        path: '/deposits',
-        icon: FileTextOutlined,
-        requireOrg: true,
-      },
     ],
   },
   {
@@ -104,92 +78,6 @@ export const bizMenuConfig: MenuItemConfig[] = [
         icon: FileTextOutlined,
         requireOrg: true,
       },
-      {
-        key: 'transactions',
-        label: '收支记录',
-        path: '/transactions',
-        icon: AccountBookOutlined,
-        requireOrg: true,
-      },
     ],
-  },
-  {
-    key: 'system-settings',
-    label: '系统设置',
-    path: '/settings',
-    icon: SettingOutlined,
-    children: [
-      {
-        key: 'settings',
-        label: '设置首页',
-        path: '/settings',
-        icon: SettingOutlined,
-      },
-      {
-        key: 'settings-account',
-        label: '账号设置',
-        path: '/settings/account',
-        icon: UserOutlined,
-      },
-      {
-        key: 'settings-organization',
-        label: '组织管理',
-        path: '/settings/organization',
-        icon: TeamOutlined,
-      },
-      {
-        key: 'settings-plan',
-        label: '套餐订阅',
-        path: '/settings/plan',
-        icon: CrownOutlined,
-        requireOrg: true,
-      },
-    ],
-  },
-];
-
-/** 运营配置（仅 SUPER_ADMIN） */
-export const opsMenuConfig: MenuItemConfig[] = [
-  {
-    key: 'ops-dashboard',
-    label: '运营总览',
-    path: '/ops',
-    icon: DashboardOutlined,
-  },
-  {
-    key: 'ops-users',
-    label: '租户管理',
-    path: '/ops/users',
-    icon: TeamOutlined,
-  },
-  {
-    key: 'ops-plans',
-    label: '套餐配置',
-    path: '/ops/plans',
-    icon: AppstoreOutlined,
-  },
-  {
-    key: 'ops-organizations',
-    label: '组织管理',
-    path: '/ops/organizations',
-    icon: ApartmentOutlined,
-  },
-  {
-    key: 'ops-roles',
-    label: '角色权限',
-    path: '/ops/roles',
-    icon: SafetyCertificateOutlined,
-  },
-  {
-    key: 'ops-sms',
-    label: '短信配置',
-    path: '/ops/sms',
-    icon: MailOutlined,
-  },
-  {
-    key: 'ops-settings',
-    label: '系统配置',
-    path: '/ops/settings',
-    icon: ToolOutlined,
   },
 ];

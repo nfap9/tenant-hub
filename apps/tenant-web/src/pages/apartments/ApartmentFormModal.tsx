@@ -1,9 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Form, Input, Button, message, Spin } from 'antd';
+import {
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  DatePicker,
+  Button,
+  message,
+  Spin,
+  Row,
+  Col,
+} from 'antd';
 import {
   SaveOutlined,
   HomeOutlined,
   EnvironmentOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  BuildOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
@@ -12,6 +26,7 @@ import {
   getApartments,
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
+import dayjs from 'dayjs';
 import styles from './ApartmentFormPage.module.scss';
 
 interface ApartmentFormModalProps {
@@ -52,7 +67,19 @@ export default function ApartmentFormModal({
     if (open && isEdit && apartment && !initializedRef.current) {
       form.setFieldsValue({
         name: apartment.name,
-        location: apartment.location,
+        address: apartment.address,
+        rentAmount: apartment.rentAmount
+          ? Number(apartment.rentAmount)
+          : undefined,
+        landlordName: apartment.landlordName,
+        landlordPhone: apartment.landlordPhone,
+        contractStart: apartment.contractStart
+          ? dayjs(apartment.contractStart)
+          : undefined,
+        contractEnd: apartment.contractEnd
+          ? dayjs(apartment.contractEnd)
+          : undefined,
+        floors: apartment.floors,
       });
       initializedRef.current = true;
     }
@@ -80,7 +107,27 @@ export default function ApartmentFormModal({
 
     const payload = {
       name: String(values.name).trim(),
-      location: String(values.location).trim(),
+      address: String(values.address).trim(),
+      rentAmount:
+        values.rentAmount !== undefined && values.rentAmount !== ''
+          ? Number(values.rentAmount)
+          : undefined,
+      landlordName: values.landlordName
+        ? String(values.landlordName).trim()
+        : undefined,
+      landlordPhone: values.landlordPhone
+        ? String(values.landlordPhone).trim()
+        : undefined,
+      contractStart: values.contractStart
+        ? dayjs(values.contractStart as string).format('YYYY-MM-DD')
+        : undefined,
+      contractEnd: values.contractEnd
+        ? dayjs(values.contractEnd as string).format('YYYY-MM-DD')
+        : undefined,
+      floors:
+        values.floors !== undefined && values.floors !== ''
+          ? Number(values.floors)
+          : undefined,
     };
 
     setSaving(true);
@@ -108,7 +155,7 @@ export default function ApartmentFormModal({
       open={open}
       onCancel={handleCancel}
       footer={null}
-      width={520}
+      width={640}
       destroyOnClose
     >
       <Spin spinning={loading}>
@@ -130,7 +177,7 @@ export default function ApartmentFormModal({
           </Form.Item>
           <Form.Item
             label="地址"
-            name="location"
+            name="address"
             rules={[{ required: true, message: '请输入地址' }]}
           >
             <Input
@@ -138,6 +185,62 @@ export default function ApartmentFormModal({
               placeholder="请输入地址或片区"
             />
           </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="房东姓名" name="landlordName">
+                <Input
+                  prefix={<UserOutlined className="text-subtle" />}
+                  placeholder="选填"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="联系方式" name="landlordPhone">
+                <Input
+                  prefix={<PhoneOutlined className="text-subtle" />}
+                  placeholder="选填"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="合同开始" name="contractStart">
+                <DatePicker className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="合同结束" name="contractEnd">
+                <DatePicker className="w-full" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="上游租金" name="rentAmount">
+                <InputNumber
+                  min={0}
+                  className="w-full"
+                  prefix="¥"
+                  placeholder="选填"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="楼层数" name="floors">
+                <InputNumber
+                  min={1}
+                  className="w-full"
+                  prefix={<BuildOutlined className="text-subtle" />}
+                  placeholder="选填"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item>
             <Button
               type="primary"

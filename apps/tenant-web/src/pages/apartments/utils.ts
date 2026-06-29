@@ -1,4 +1,4 @@
-import type { Apartment, ApartmentContract } from '@/types/domain';
+import type { Apartment } from '@/types/domain';
 
 export const isThisMonth = (value?: string) => {
   if (!value) return false;
@@ -26,20 +26,12 @@ export const apartmentMonthlyIncome = (apartment: Apartment) =>
     if (!activeLease) return sum;
     const leaseMonthlyRent = monthlyAmount(
       activeLease.rentAmount,
-      activeLease.cycle
+      activeLease.rentCycle
     );
     const leaseMonthlyFees = (activeLease.fees ?? []).reduce(
-      (feeSum, fee) => feeSum + monthlyAmount(fee.amount, activeLease.cycle),
+      (feeSum, fee) =>
+        feeSum + monthlyAmount(fee.amount, activeLease.rentCycle),
       0
     );
     return sum + leaseMonthlyRent + leaseMonthlyFees;
   }, 0);
-
-export const contractText = (contract?: ApartmentContract) => {
-  const start = contract?.contractStart
-    ? contract.contractStart.slice(0, 10)
-    : '';
-  const end = contract?.contractEnd ? contract.contractEnd.slice(0, 10) : '';
-  if (!start && !end) return '未维护';
-  return `${start || '未填'} 至 ${end || '未填'}`;
-};

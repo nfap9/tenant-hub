@@ -93,7 +93,7 @@ export default function ApartmentListPage() {
                   }
                 >
                   <div className={styles.tagRow}>
-                    <Tag color="blue">{apt.location || '未填写地址'}</Tag>
+                    <Tag color="blue">{apt.address || '未填写地址'}</Tag>
                   </div>
                   <div className={styles.statsGrid}>
                     <div>
@@ -116,10 +116,9 @@ export default function ApartmentListPage() {
                       </div>
                     </div>
                   </div>
-                  {apt.contract?.contractStart && (
+                  {apt.contractStart && (
                     <div className={styles.contractPeriod}>
-                      合同期：{day(apt.contract.contractStart)} 至{' '}
-                      {day(apt.contract.contractEnd)}
+                      合同期：{day(apt.contractStart)} 至 {day(apt.contractEnd)}
                     </div>
                   )}
                 </Card>

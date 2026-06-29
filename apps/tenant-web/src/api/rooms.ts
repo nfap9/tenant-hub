@@ -14,9 +14,10 @@ export async function createRoom(
   apartmentId: string,
   payload: {
     roomNo: string;
+    floor?: number;
     layout: string;
     area?: number;
-    facilities?: string[];
+    furnishings?: string[];
   }
 ) {
   return apiClient<{ count: number }>(
@@ -34,9 +35,10 @@ export async function createRoomsBatch(
   apartmentId: string,
   rooms: {
     roomNo: string;
+    floor?: number;
     layout: string;
     area?: number;
-    facilities?: string[];
+    furnishings?: string[];
   }[]
 ) {
   return apiClient<{ count: number }>(
@@ -54,9 +56,10 @@ export async function updateRoom(
   roomId: string,
   payload: {
     roomNo?: string;
+    floor?: number;
     layout?: string;
     area?: number;
-    facilities?: string[];
+    furnishings?: string[];
     status?: string;
   }
 ) {

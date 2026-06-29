@@ -61,7 +61,6 @@ export default function ReadingDrawer({
     setSubmitting(true);
     try {
       await createMeterReading(currentOrgId, {
-        apartmentId: room.apartmentId,
         roomId: values.roomId,
         meterType: values.meterType,
         readingDate: values.readingDate.format('YYYY-MM-DD'),

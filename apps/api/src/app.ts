@@ -2,19 +2,11 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { corsOrigins, env } from './config/env.js';
-import { adminRouter } from './routes/admin.js';
-import { apartmentContractRouter } from './routes/apartmentContracts.js';
 import { apartmentRouter } from './routes/apartments.js';
 import { authRouter } from './routes/auth.js';
 import { billRouter } from './routes/bills.js';
-import { depositRouter } from './routes/deposits.js';
 import { leaseRouter } from './routes/leases.js';
 import { orgRouter } from './routes/organizations.js';
-import { platformRouter } from './routes/platform.js';
-import { reservationRouter } from './routes/reservations.js';
-import { transactionRouter } from './routes/transactions.js';
-import { agentRouter } from './routes/agent.js';
-import { analyticsRouter } from './routes/analytics.js';
 import { errorHandler } from './middleware/error.js';
 
 export const app = express();
@@ -22,12 +14,17 @@ export const app = express();
 app.use(helmet());
 app.use(
   cors({
+    /**
+     * CORS origin 校验回调
+     * 非生产环境或无 origin 时允许通过；生产环境仅允许配置的域名
+     * @param origin - 请求来源
+     * @param callback - CORS 校验回调
+     */
     origin: (origin, callback) => {
       if (!origin || env.NODE_ENV !== 'production') {
         callback(null, true);
         return;
       }
-      // 允许配置的域名
       if (corsOrigins.includes(origin)) {
         callback(null, true);
         return;
@@ -38,18 +35,14 @@ app.use(
 );
 app.use(express.json({ limit: '2mb' }));
 
+/**
+ * GET /health
+ * 健康检查端点
+ */
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRouter);
 app.use('/api/organizations', orgRouter);
 app.use('/api/apartments', apartmentRouter);
-app.use('/api/apartments', apartmentContractRouter);
 app.use('/api/leases', leaseRouter);
 app.use('/api/bills', billRouter);
-app.use('/api/deposits', depositRouter);
-app.use('/api/reservations', reservationRouter);
-app.use('/api/transactions', transactionRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/platform', platformRouter);
-app.use('/api/agent', agentRouter);
-app.use('/api/analytics', analyticsRouter);
 app.use(errorHandler);

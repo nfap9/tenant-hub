@@ -10,13 +10,10 @@ import {
   generateCurrentLeaseBills,
   generateLeaseBills,
   recordBillPayment,
-  refundBill,
   retryPostpaidBillAndMonthlyBill,
   voidBill,
 } from '../services/billing.js';
-import { toCsv } from '../services/csv.js';
 import { PERMISSIONS } from '../services/roles.js';
-import { parseUtilityImportRows } from '../services/utilityImport.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import {
@@ -28,7 +25,6 @@ import {
   createMeterReading,
   findPendingPostpaidBillsByRoom,
   applyUtilityReadingToBill,
-  findPendingPostpaidBillsForExport,
   getBillForRetry,
   getBillById,
   deleteBillWithPayments,
@@ -47,11 +43,6 @@ export const meterReadingInput = z.object({
   meterType: z.enum(['WATER', 'POWER']).describe('表类型：WATER水表/POWER电表'),
   readingDate: z.coerce.date().describe('抄表日期'),
   value: z.coerce.number().nonnegative().describe('读数'),
-  source: z.enum(['MANUAL', 'IMPORT']).default('MANUAL').describe('来源'),
-  status: z
-    .enum(['NORMAL', 'SUSPECTED', 'CONFIRMED', 'VOID'])
-    .default('NORMAL')
-    .describe('状态'),
   note: z.string().optional().describe('备注'),
 });
 
@@ -62,46 +53,32 @@ export const utilityReadingInput = z.object({
   currentPower: z.coerce.number().describe('本期电表读数'),
 });
 
-export const utilityImportInput = z.object({
-  csv: z.string().optional().describe('CSV内容（与rows二选一）'),
-  rows: z
-    .array(
-      z.object({
-        billId: z.string().describe('账单ID'),
-        previousWater: z.coerce.number().describe('上期水表读数'),
-        currentWater: z.coerce.number().describe('本期水表读数'),
-        previousPower: z.coerce.number().describe('上期电表读数'),
-        currentPower: z.coerce.number().describe('本期电表读数'),
-      })
-    )
-    .optional()
-    .describe('读数记录列表'),
-});
-
 export const billPaymentInput = z.object({
   amount: z.coerce.number().positive().describe('收款金额'),
   method: z.string().min(1).describe('收款方式'),
   note: z.string().optional().describe('备注'),
 });
 
-export const billRefundInput = z.object({
-  amount: z.coerce.number().positive().describe('退款金额'),
-  method: z.string().min(1).describe('退款方式'),
-  note: z.string().optional().describe('备注'),
-});
-
+/**
+ * GET /api/bills
+ * 获取当前组织下的账单列表（可按状态筛选）
+ */
 billRouter.get(
   '/',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
     const status = z
-      .enum(['BILLING', 'UNPAID', 'PAID', 'VOID'])
+      .enum(['UNPAID', 'PAID', 'VOID'])
       .optional()
       .parse(req.query.status);
     ok(res, await listBills(req.organizationId!, status));
   })
 );
 
+/**
+ * POST /api/bills/generate
+ * 为指定租约或当前组织所有活跃租约生成账单
+ */
 billRouter.post(
   '/generate',
   requirePermission(PERMISSIONS.BILL_MANAGE),
@@ -128,6 +105,10 @@ billRouter.post(
   })
 );
 
+/**
+ * GET /api/bills/meter-readings
+ * 获取当前组织下的抄表记录列表（可按房间筛选）
+ */
 billRouter.get(
   '/meter-readings',
   requirePermission(PERMISSIONS.BILL_VIEW),
@@ -137,6 +118,10 @@ billRouter.get(
   })
 );
 
+/**
+ * POST /api/bills/meter-readings
+ * 创建抄表记录，并自动尝试完成该房间待出账的后付费账单
+ */
 billRouter.post(
   '/meter-readings',
   requirePermission(PERMISSIONS.BILL_MANAGE),
@@ -161,10 +146,7 @@ billRouter.post(
       meterType: input.meterType,
       readingDate: input.readingDate,
       value: input.value,
-      source: input.source,
-      status: input.status,
       note: input.note,
-      createdById: req.user!.id,
     });
 
     // 尝试自动完成该房间所有待出账的后付费账单
@@ -179,6 +161,10 @@ billRouter.post(
   })
 );
 
+/**
+ * POST /api/bills/:id/utility-reading
+ * 为指定账单录入水电读数并计算水电费用
+ */
 billRouter.post(
   '/:id/utility-reading',
   requirePermission(PERMISSIONS.BILL_MANAGE),
@@ -196,70 +182,10 @@ billRouter.post(
   })
 );
 
-billRouter.get(
-  '/utility/pending-export',
-  requirePermission(PERMISSIONS.BILL_VIEW),
-  asyncHandler(async (req, res) => {
-    const bills = await findPendingPostpaidBillsForExport(req.organizationId!);
-    res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.send(
-      toCsv([
-        [
-          'billId',
-          '房间号',
-          '租客',
-          '交租日',
-          '水电周期开始',
-          '水电周期结束',
-          '上月水表',
-          '本月水表',
-          '上月电表',
-          '本月电表',
-          '失败原因',
-        ],
-        ...bills.map((bill) => {
-          const waterItem = bill.items.find((item) => item.type === 'WATER');
-          return [
-            bill.id,
-            bill.lease.room.roomNo,
-            bill.lease.tenantName,
-            bill.billingDate.toISOString(),
-            waterItem?.periodStart.toISOString() ?? '',
-            waterItem?.periodEnd.toISOString() ?? '',
-            '',
-            '',
-            '',
-            '',
-            bill.failureReason ?? '',
-          ];
-        }),
-      ])
-    );
-  })
-);
-
-billRouter.post(
-  '/utility/import',
-  requirePermission(PERMISSIONS.BILL_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = utilityImportInput.parse(req.body);
-    const rows = input.csv
-      ? parseUtilityImportRows(input.csv)
-      : (input.rows ?? []);
-    const results = [];
-    for (const row of rows) {
-      results.push(
-        await applyUtilityReadingToBill({
-          ...row,
-          organizationId: req.organizationId!,
-          userId: req.user!.id,
-        })
-      );
-    }
-    ok(res, results);
-  })
-);
-
+/**
+ * GET /api/bills/:id
+ * 获取指定账单的详细信息
+ */
 billRouter.get(
   '/:id',
   requirePermission(PERMISSIONS.BILL_VIEW),
@@ -270,18 +196,33 @@ billRouter.get(
   })
 );
 
+/**
+ * POST /api/bills/:id/retry-billing
+ * 重新根据抄表记录计算账单水电费用
+ */
 billRouter.post(
   '/:id/retry-billing',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const bill = await getBillForRetry(req.params.id, req.organizationId!);
     if (!bill) throw new HttpError(404, '账单不存在');
-    if (bill.mode !== 'POSTPAID')
-      throw new HttpError(400, '仅后付费账单需要重新出账');
+    const hasUtilityItems =
+      bill.items.some(
+        (item) => item.category === 'UTILITY' && item.name === '水费'
+      ) &&
+      bill.items.some(
+        (item) => item.category === 'UTILITY' && item.name === '电费'
+      );
+    if (!hasUtilityItems)
+      throw new HttpError(400, '仅包含水电项目的账单需要重新出账');
     ok(res, await retryPostpaidBillAndMonthlyBill(bill.id));
   })
 );
 
+/**
+ * POST /api/bills/:id/payments
+ * 为指定账单记录收款
+ */
 billRouter.post(
   '/:id/payments',
   requirePermission(PERMISSIONS.BILL_MANAGE),
@@ -299,6 +240,10 @@ billRouter.post(
   })
 );
 
+/**
+ * DELETE /api/bills/:id
+ * 删除指定账单及其付款记录（仅限未付款账单）
+ */
 billRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.BILL_MANAGE),
@@ -313,27 +258,14 @@ billRouter.delete(
   })
 );
 
+/**
+ * POST /api/bills/:id/void
+ * 作废指定账单
+ */
 billRouter.post(
   '/:id/void',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     ok(res, await voidBill(req.params.id, req.organizationId!));
-  })
-);
-
-billRouter.post(
-  '/:id/refund',
-  requirePermission(PERMISSIONS.BILL_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = billRefundInput.parse(req.body);
-    ok(
-      res,
-      await refundBill({
-        billId: req.params.id,
-        organizationId: req.organizationId!,
-        userId: req.user!.id,
-        ...input,
-      })
-    );
   })
 );

@@ -7,7 +7,7 @@ Tenant Hub（租务通）是一个轻量化的公寓租赁管理系统，采用 
 - **`apps/api`** — 后端 API 服务（Node.js 22 + Express 4 + Prisma 5 + PostgreSQL 16）
 - **`apps/tenant-web`** — Web 管理后台（React 18 + Vite 6 + Ant Design 5）
 
-Web 端面向公寓运营方，提供组织管理、房源管理、房间管理、租约管理、账单与收款、水电抄表等全套业务功能；同时 Web 端还包含平台运营后台（租户管理、套餐配置、系统设置等）。
+Web 端面向公寓运营方，仅保留核心租赁业务功能：组织管理、房源管理、房间管理、租约管理、账单与收款、水电抄表。
 
 ---
 
@@ -75,7 +75,7 @@ Web 端面向公寓运营方，提供组织管理、房源管理、房间管理�
   - `commit-msg`：执行 `node scripts/verify-commit.js`，校验提交信息格式
 - **提交信息格式**：`type(scope): subject`
 - **允许的 type**：`feat`, `fix`, `docs`, `dx`, `style`, `refactor`, `perf`, `workflow`, `build`, `ci`, `chore`, `types`, `wip`
-- 示例：`feat(bills): add utility import support`
+- 示例：`feat(bills): add utility reading support`
 
 ---
 
@@ -87,7 +87,7 @@ Web 端面向公寓运营方，提供组织管理、房源管理、房间管理�
 
 ## 命名与模块约定
 
-- API 路由按资源命名：`/api/auth`, `/api/organizations`, `/api/apartments`, `/api/leases`, `/api/bills`, `/api/admin`, `/api/platform`
+- API 路由按资源命名：`/api/auth`, `/api/organizations`, `/api/apartments`, `/api/leases`, `/api/bills`
 - TypeScript 路径别名：`@/` → `src/`
 - API 与 Web 端均使用 ESM
 
@@ -100,7 +100,6 @@ Web 端面向公寓运营方，提供组织管理、房源管理、房间管理�
 - **JWT Bearer Token**：`Authorization: Bearer <jwt>`
 - **组织隔离**：通过 `x-organization-id` Header 指定当前组织
 - **RBAC 权限**：`Role` 模型存储权限字符串数组，`*` 为通配符
-- **平台角色**：`User.platformRole` 区分普通用户与 `SUPER_ADMIN`
 
 ### 中间件链
 
@@ -121,6 +120,5 @@ Web 端面向公寓运营方，提供组织管理、房源管理、房间管理�
 
 ### 其他安全要点
 
-- 密码与 OTP 均使用 bcrypt 哈希存储
+- 密码使用 bcrypt 哈希存储
 - Token 在密码修改后会失效（校验 `passwordChangedAt`）
-- 配额操作使用 PostgreSQL advisory lock（`pg_advisory_xact_lock`）防止并发竞争
