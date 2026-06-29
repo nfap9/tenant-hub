@@ -252,16 +252,17 @@ model BillItem {
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  billId    String
-  userId    String
-  amount    Decimal  @db.Decimal(12, 2)
-  paidAt    DateTime @default(now())
-  method    String
-  note      String?
+  id            String   @id @default(cuid())
+  billId        String
+  userId        String
+  amount        Decimal  @db.Decimal(12, 2)
+  waiverAmount  Decimal  @default(0) @db.Decimal(10, 2)
+  paidAt        DateTime @default(now())
+  method        String
+  note          String?
 
-  bill      Bill     @relation(fields: [billId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  bill          Bill     @relation(fields: [billId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
 
   @@index([billId, paidAt])
 }

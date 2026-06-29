@@ -38,7 +38,9 @@ export const toneForBillBillingMethod = (
   return 'default';
 };
 
-export const billItemTypeText = (type: string) => {
+export const billItemTypeText = (type: string, name?: string) => {
+  if (name) return name;
+
   const map: Record<string, string> = {
     RENT: '房租',
     UTILITY: '水电费',

@@ -44,6 +44,24 @@ export async function createPayment(
   });
 }
 
+export async function createLeasePayment(
+  organizationId: string,
+  payload: {
+    leaseId: string;
+    amount: number;
+    waiverAmount?: number;
+    paidAt: string;
+    method: string;
+    note?: string;
+  }
+) {
+  return apiClient<Payment[]>('/bills/payments', {
+    method: 'POST',
+    body: payload,
+    organizationId,
+  });
+}
+
 export async function generateBills(
   organizationId: string,
   payload?: { leaseId?: string; today?: string }

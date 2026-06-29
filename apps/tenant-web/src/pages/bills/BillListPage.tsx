@@ -176,7 +176,7 @@ export default function BillListPage() {
     <Space size={[4, 4]} wrap>
       {(items ?? []).map((item, index) => (
         <Tooltip key={index} title={`${item.name} ¥${money(item.amount)}`}>
-          <Tag>{billItemTypeText(item.category)}</Tag>
+          <Tag>{billItemTypeText(item.category, item.name)}</Tag>
         </Tooltip>
       ))}
     </Space>

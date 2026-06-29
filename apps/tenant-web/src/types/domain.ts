@@ -129,6 +129,7 @@ export type Payment = {
   id: string;
   billId: string;
   amount: string | number;
+  waiverAmount?: string | number;
   paidAt: string;
   method: string;
   note?: string;

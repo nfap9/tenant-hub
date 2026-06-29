@@ -39,6 +39,7 @@ type PaymentTarget = {
 
 type BillPaymentTarget = PaymentTarget & {
   amount: Prisma.Decimal.Value;
+  waiverAmount?: Prisma.Decimal.Value;
 };
 
 const startOfDay = (date: Date) => dayjs.utc(date).startOf('day');
@@ -215,6 +216,7 @@ const remainingAmountFor = ({ totalAmount, paidAmount }: PaymentTarget) =>
  * @param totalAmount - 账单总金额
  * @param paidAmount - 已付金额
  * @param amount - 本次收款金额
+ * @param waiverAmount - 本次抹零金额（可选）
  * @throws 当不允许收款时抛出 HttpError
  */
 export const assertBillPaymentAllowed = ({
@@ -222,18 +224,25 @@ export const assertBillPaymentAllowed = ({
   totalAmount,
   paidAmount,
   amount,
+  waiverAmount,
 }: BillPaymentTarget) => {
   if (status === 'PAID' || status === 'VOID')
     throw new HttpError(400, '该账单已结清或作废，不能继续收款');
   const paymentAmount = new Prisma.Decimal(amount);
   if (paymentAmount.lessThanOrEqualTo(0))
     throw new HttpError(400, '收款金额必须大于 0');
+  const waiver = new Prisma.Decimal(waiverAmount ?? 0);
+  if (waiver.lessThan(0) || waiver.greaterThan(1))
+    throw new HttpError(400, '抹零金额必须在 0~1 元之间');
   const remaining = remainingAmountFor({ status, totalAmount, paidAmount });
-  if (paymentAmount.greaterThan(remaining))
+  const total = paymentAmount.plus(waiver);
+  if (total.greaterThan(remaining))
     throw new HttpError(
       400,
-      `收款金额不能超过剩余应收 ¥${remaining.toFixed(2)}`
+      `收款金额加抹零金额不能超过剩余应收 ¥${remaining.toFixed(2)}`
     );
+  if (waiver.greaterThan(0) && !total.equals(remaining))
+    throw new HttpError(400, '使用抹零时，实收金额加抹零金额必须等于剩余应收');
 };
 
 const BILL_OPERATION_GUARDS: Record<
@@ -316,7 +325,7 @@ export const refreshBillTotals = async (billId: string) => {
     new Prisma.Decimal(0)
   );
   const netPaidAmount = bill.payments.reduce(
-    (sum, payment) => sum.plus(payment.amount),
+    (sum, payment) => sum.plus(payment.amount).plus(payment.waiverAmount),
     new Prisma.Decimal(0)
   );
 
@@ -483,18 +492,18 @@ const generateBillForBillingDate = async (
   billingDate: Date,
   billingEnd: Date
 ) => {
+  // 押金账单可能与首期账单使用同一计费日，不能把它当成已存在的房租/费用账单
   const existing = await prisma.bill.findFirst({
     where: {
       leaseId: lease.id,
       billingDate: startOfDay(billingDate).toDate(),
       deletedAt: null,
+      items: { some: { category: { not: 'DEPOSIT' } } },
     },
+    include: { items: true },
   });
   if (existing) {
-    return prisma.bill.findUnique({
-      where: { id: existing.id },
-      include: { items: true },
-    });
+    return existing;
   }
 
   const periods = calculateBillingPeriods({
@@ -561,6 +570,9 @@ const generateBillForBillingDate = async (
   if (hasPostpaid) {
     await completePostpaidBillFromReadings(billResult.id);
   }
+
+  // 重新计算总金额与状态；无应收金额的账单应直接标记为已结清
+  await refreshBillTotals(billResult.id);
 
   return prisma.bill.findUnique({
     where: { id: billResult.id },
@@ -827,11 +839,205 @@ export const retryPostpaidBillAndMonthlyBill = async (billId: string) => {
 };
 
 /**
+ * 按租约记录收款，系统自动按账单账期顺序销账
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @param userId - 收款用户 ID
+ * @param amount - 收款金额
+ * @param waiverAmount - 抹零金额（可选）
+ * @param method - 收款方式
+ * @param note - 备注（可选）
+ * @param paidAt - 收款时间（可选）
+ * @returns 创建的付款记录列表
+ * @throws 当租约不存在或收款不合法时抛出 HttpError
+ */
+export const recordLeasePayment = async ({
+  leaseId,
+  organizationId,
+  userId,
+  amount,
+  waiverAmount,
+  method,
+  note,
+  paidAt,
+}: {
+  leaseId: string;
+  organizationId: string;
+  userId: string;
+  amount: Prisma.Decimal.Value;
+  waiverAmount?: Prisma.Decimal.Value;
+  method: string;
+  note?: string;
+  paidAt?: Date;
+}) => {
+  const lease = await prisma.lease.findFirst({
+    where: { id: leaseId, organizationId },
+    select: { id: true },
+  });
+  if (!lease) throw new HttpError(404, '租约不存在');
+
+  const bills = await prisma.bill.findMany({
+    where: {
+      leaseId,
+      organizationId,
+      status: { not: 'VOID' },
+      deletedAt: null,
+    },
+    orderBy: { billingDate: 'asc' },
+  });
+
+  const totalRemaining = bills.reduce(
+    (sum, bill) => sum.plus(bill.totalAmount).minus(bill.paidAmount),
+    new Prisma.Decimal(0)
+  );
+
+  const paymentAmount = new Prisma.Decimal(amount);
+  const waiver = new Prisma.Decimal(waiverAmount ?? 0);
+  if (paymentAmount.lessThanOrEqualTo(0))
+    throw new HttpError(400, '收款金额必须大于 0');
+  if (waiver.lessThan(0) || waiver.greaterThan(1))
+    throw new HttpError(400, '抹零金额必须在 0~1 元之间');
+
+  const totalSettlement = paymentAmount.plus(waiver);
+  if (totalSettlement.greaterThan(totalRemaining))
+    throw new HttpError(
+      400,
+      `收款金额加抹零金额不能超过剩余应收 ¥${totalRemaining.toFixed(2)}`
+    );
+  if (waiver.greaterThan(0) && !totalSettlement.equals(totalRemaining))
+    throw new HttpError(400, '使用抹零时，实收金额加抹零金额必须等于剩余应收');
+
+  type Allocation = {
+    billId: string;
+    amount: Prisma.Decimal;
+    waiver: Prisma.Decimal;
+  };
+
+  const allocations: Allocation[] = [];
+  const fullyPaidBillIds: string[] = [];
+  let remainingPayment = paymentAmount;
+  let remainingWaiver = waiver;
+
+  for (const bill of bills) {
+    const billRemaining = new Prisma.Decimal(bill.totalAmount).minus(
+      bill.paidAmount
+    );
+    if (billRemaining.lessThanOrEqualTo(0)) {
+      if (bill.status !== 'PAID' && bill.status !== 'VOID') {
+        fullyPaidBillIds.push(bill.id);
+      }
+      continue;
+    }
+    if (
+      remainingPayment.lessThanOrEqualTo(0) &&
+      remainingWaiver.lessThanOrEqualTo(0)
+    )
+      continue;
+
+    let applyAmount = new Prisma.Decimal(0);
+    let applyWaiver = new Prisma.Decimal(0);
+
+    if (remainingPayment.greaterThan(0)) {
+      applyAmount = Prisma.Decimal.min(remainingPayment, billRemaining);
+      remainingPayment = remainingPayment.minus(applyAmount);
+      const afterPayment = billRemaining.minus(applyAmount);
+      if (remainingWaiver.greaterThan(0) && afterPayment.greaterThan(0)) {
+        applyWaiver = Prisma.Decimal.min(remainingWaiver, afterPayment);
+        remainingWaiver = remainingWaiver.minus(applyWaiver);
+      }
+    } else if (remainingWaiver.greaterThan(0)) {
+      applyWaiver = Prisma.Decimal.min(remainingWaiver, billRemaining);
+      remainingWaiver = remainingWaiver.minus(applyWaiver);
+    }
+
+    if (applyAmount.greaterThan(0) || applyWaiver.greaterThan(0)) {
+      allocations.push({
+        billId: bill.id,
+        amount: applyAmount,
+        waiver: applyWaiver,
+      });
+    }
+  }
+
+  const payments = await prisma.$transaction(async (tx) => {
+    const created: Awaited<ReturnType<typeof tx.payment.create>>[] = [];
+    for (const {
+      billId,
+      amount: applyAmount,
+      waiver: applyWaiver,
+    } of allocations) {
+      const payment = await tx.payment.create({
+        data: {
+          billId,
+          userId,
+          amount: applyAmount,
+          waiverAmount: applyWaiver,
+          method,
+          note,
+          paidAt,
+        },
+      });
+      created.push(payment);
+
+      const bill = await tx.bill.findUnique({
+        where: { id: billId },
+        include: { payments: true },
+      });
+      if (bill) {
+        const newPaidAmount = bill.payments.reduce(
+          (sum, p) => sum.plus(p.amount).plus(p.waiverAmount),
+          new Prisma.Decimal(0)
+        );
+        const newStatus = newPaidAmount.greaterThanOrEqualTo(bill.totalAmount)
+          ? 'PAID'
+          : 'UNPAID';
+        await tx.bill.update({
+          where: { id: billId },
+          data: { paidAmount: newPaidAmount, status: newStatus },
+        });
+      }
+
+      const deposit = await tx.deposit.findUnique({ where: { billId } });
+      if (deposit) {
+        const newDepositPaid = deposit.paidAmount
+          .plus(applyAmount)
+          .plus(applyWaiver);
+        await tx.deposit.update({
+          where: { id: deposit.id },
+          data: {
+            paidAmount: newDepositPaid,
+            status: newDepositPaid.greaterThanOrEqualTo(deposit.amount)
+              ? 'PAID'
+              : 'UNPAID',
+          },
+        });
+      }
+    }
+
+    // 对剩余应收为 0 但未标记为已结清的账单进行修正
+    for (const billId of fullyPaidBillIds) {
+      const bill = await tx.bill.findUnique({ where: { id: billId } });
+      if (bill && bill.status !== 'PAID' && bill.status !== 'VOID') {
+        await tx.bill.update({
+          where: { id: billId },
+          data: { paidAmount: bill.totalAmount, status: 'PAID' },
+        });
+      }
+    }
+
+    return created;
+  });
+
+  return payments;
+};
+
+/**
  * 记录账单收款
  * @param billId - 账单 ID
  * @param organizationId - 组织 ID
  * @param userId - 收款用户 ID
  * @param amount - 收款金额
+ * @param waiverAmount - 抹零金额（可选）
  * @param method - 收款方式
  * @param note - 备注（可选）
  * @returns 创建的付款记录
@@ -842,6 +1048,7 @@ export const recordBillPayment = async ({
   organizationId,
   userId,
   amount,
+  waiverAmount,
   method,
   note,
   paidAt,
@@ -850,6 +1057,7 @@ export const recordBillPayment = async ({
   organizationId: string;
   userId: string;
   amount: Prisma.Decimal.Value;
+  waiverAmount?: Prisma.Decimal.Value;
   method: string;
   note?: string;
   paidAt?: Date;
@@ -862,10 +1070,18 @@ export const recordBillPayment = async ({
     },
   });
   if (!bill) throw new HttpError(404, '账单不存在');
-  assertBillPaymentAllowed({ ...bill, amount });
+  assertBillPaymentAllowed({ ...bill, amount, waiverAmount });
 
   const payment = await prisma.payment.create({
-    data: { billId, userId, amount, method, note, paidAt },
+    data: {
+      billId,
+      userId,
+      amount,
+      waiverAmount: waiverAmount ?? 0,
+      method,
+      note,
+      paidAt,
+    },
   });
 
   await refreshBillTotals(billId);
@@ -874,7 +1090,7 @@ export const recordBillPayment = async ({
     where: { billId: bill.id },
   });
   if (deposit) {
-    const paidAmount = deposit.paidAmount.plus(amount);
+    const paidAmount = deposit.paidAmount.plus(amount).plus(waiverAmount ?? 0);
     await prisma.deposit.update({
       where: { id: deposit.id },
       data: {

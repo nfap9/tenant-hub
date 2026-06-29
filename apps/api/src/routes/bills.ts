@@ -10,6 +10,7 @@ import {
   generateCurrentLeaseBills,
   generateLeaseBills,
   recordBillPayment,
+  recordLeasePayment,
   retryPostpaidBillAndMonthlyBill,
   voidBill,
 } from '../services/billing.js';
@@ -55,6 +56,16 @@ export const utilityReadingInput = z.object({
 
 export const billPaymentInput = z.object({
   amount: z.coerce.number().positive().describe('收款金额'),
+  waiverAmount: z.coerce.number().min(0).max(1).default(0).describe('抹零金额'),
+  method: z.string().min(1).describe('收款方式'),
+  note: z.string().optional().describe('备注'),
+  paidAt: z.coerce.date().optional().describe('收款时间'),
+});
+
+export const leasePaymentInput = z.object({
+  leaseId: z.string().min(1).describe('租约ID'),
+  amount: z.coerce.number().positive().describe('收款金额'),
+  waiverAmount: z.coerce.number().min(0).max(1).default(0).describe('抹零金额'),
   method: z.string().min(1).describe('收款方式'),
   note: z.string().optional().describe('备注'),
   paidAt: z.coerce.date().optional().describe('收款时间'),
@@ -217,6 +228,31 @@ billRouter.post(
     if (!hasUtilityItems)
       throw new HttpError(400, '仅包含水电项目的账单需要重新出账');
     ok(res, await retryPostpaidBillAndMonthlyBill(bill.id));
+  })
+);
+
+/**
+ * POST /api/bills/payments
+ * 为指定租约记录收款，系统自动按账期顺序销账
+ */
+billRouter.post(
+  '/payments',
+  requirePermission(PERMISSIONS.BILL_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = leasePaymentInput.parse(req.body);
+    ok(
+      res,
+      await recordLeasePayment({
+        leaseId: input.leaseId,
+        organizationId: req.organizationId!,
+        userId: req.user!.id,
+        amount: input.amount,
+        waiverAmount: input.waiverAmount,
+        method: input.method,
+        note: input.note,
+        paidAt: input.paidAt,
+      })
+    );
   })
 );
 

@@ -258,7 +258,9 @@ export default function LeaseDetailPage() {
                               {
                                 title: '费用项目类型',
                                 render: (_: unknown, { item }) => (
-                                  <span>{billItemTypeText(item.category)}</span>
+                                  <span>
+                                    {billItemTypeText(item.category, item.name)}
+                                  </span>
                                 ),
                               },
                               {
