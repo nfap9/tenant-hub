@@ -8,6 +8,7 @@ import {
   message,
   Checkbox,
   Modal,
+  Tag,
 } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
@@ -16,7 +17,8 @@ import { getLeases } from '@/api/leases';
 import { money, day } from '@/utils/format';
 import {
   statusLabels,
-  billCategoryText,
+  billingMethodText,
+  toneForBillBillingMethod,
   billItemTypeText,
 } from '@/pages/bills/constants';
 import { remainingAmount } from '@/pages/bills/utils';
@@ -252,7 +254,11 @@ export default function PaymentDialog({
                           }}
                         >
                           {bill.billingDate.slice(0, 10)} ·{' '}
-                          {billCategoryText[bill.category]}
+                          <Tag
+                            color={toneForBillBillingMethod(bill.billingMethod)}
+                          >
+                            {billingMethodText[bill.billingMethod]}
+                          </Tag>
                           {bill.items && bill.items.length > 0 && (
                             <span style={{ color: '#6b7280', fontWeight: 400 }}>
                               {' '}

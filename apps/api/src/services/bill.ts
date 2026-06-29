@@ -37,7 +37,6 @@ export const listBillsRaw = async (
   options?: {
     status?: 'UNPAID' | 'PAID' | 'VOID';
     tenantName?: string;
-    category?: 'RENT' | 'UTILITY' | 'DEPOSIT' | 'FEE' | 'OTHER';
     limit?: number;
   }
 ) => {
@@ -46,7 +45,6 @@ export const listBillsRaw = async (
       organizationId,
       deletedAt: null,
       ...(options?.status ? { status: options.status } : {}),
-      ...(options?.category ? { category: options.category } : {}),
       ...(options?.tenantName
         ? {
             lease: {

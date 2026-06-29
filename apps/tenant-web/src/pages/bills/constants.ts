@@ -1,4 +1,8 @@
-import type { BillCategory, BillStatus } from '@/types/domain';
+import type {
+  BillCategory,
+  BillBillingMethod,
+  BillStatus,
+} from '@/types/domain';
 
 export const statusLabels: Record<BillStatus, string> = {
   UNPAID: '待支付',
@@ -20,6 +24,18 @@ export const billCategoryText: Record<BillCategory, string> = {
   DEPOSIT: '押金账单',
   FEE: '费用账单',
   OTHER: '其他账单',
+};
+
+export const billingMethodText: Record<BillBillingMethod, string> = {
+  AUTO: '自动出账',
+  MANUAL: '手动出账',
+};
+
+export const toneForBillBillingMethod = (
+  method: BillBillingMethod
+): 'processing' | 'default' => {
+  if (method === 'AUTO') return 'processing';
+  return 'default';
 };
 
 export const billItemTypeText = (type: string) => {

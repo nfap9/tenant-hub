@@ -24,7 +24,13 @@ import { getBills, deleteBill, voidBill, generateBills } from '@/api/bills';
 import { getRooms } from '@/api/rooms';
 import { getApartments } from '@/api/apartments';
 import { money, day } from '@/utils/format';
-import { statusLabels, toneForBillStatus, billItemTypeText } from './constants';
+import {
+  statusLabels,
+  toneForBillStatus,
+  billItemTypeText,
+  billingMethodText,
+  toneForBillBillingMethod,
+} from './constants';
 import {
   groupBills,
   sortBillGroupsForList,
@@ -267,6 +273,18 @@ export default function BillListPage() {
             </div>
           </div>
         ),
+      },
+      {
+        title: '出账方式',
+        width: 100,
+        render: (_: unknown, group: BillGroup) => {
+          const method = group.bills[0]?.billingMethod ?? 'AUTO';
+          return (
+            <Tag color={toneForBillBillingMethod(method)}>
+              {billingMethodText[method]}
+            </Tag>
+          );
+        },
       },
       {
         title: '状态',

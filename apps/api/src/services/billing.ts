@@ -286,13 +286,11 @@ export const voidBill = async (billId: string, organizationId: string) => {
       data: { status: 'VOID', totalAmount: 0 },
     });
 
-    if (bill.category === 'DEPOSIT') {
-      const deposit = await tx.deposit.findUnique({
-        where: { billId },
-      });
-      if (deposit && deposit.status === 'UNPAID') {
-        await tx.deposit.delete({ where: { id: deposit.id } });
-      }
+    const deposit = await tx.deposit.findUnique({
+      where: { billId },
+    });
+    if (deposit && deposit.status === 'UNPAID') {
+      await tx.deposit.delete({ where: { id: deposit.id } });
     }
   });
 
@@ -489,7 +487,6 @@ const generateBillForBillingDate = async (
     where: {
       leaseId: lease.id,
       billingDate: startOfDay(billingDate).toDate(),
-      category: 'RENT',
       deletedAt: null,
     },
   });
@@ -553,7 +550,7 @@ const generateBillForBillingDate = async (
     data: {
       organizationId: lease.organizationId,
       leaseId: lease.id,
-      category: 'RENT',
+      billingMethod: 'AUTO',
       billingDate: startOfDay(billingDate).toDate(),
       dueDate,
       status: 'UNPAID',
@@ -873,22 +870,20 @@ export const recordBillPayment = async ({
 
   await refreshBillTotals(billId);
 
-  if (bill.category === 'DEPOSIT') {
-    const deposit = await prisma.deposit.findUnique({
-      where: { billId: bill.id },
+  const deposit = await prisma.deposit.findUnique({
+    where: { billId: bill.id },
+  });
+  if (deposit) {
+    const paidAmount = deposit.paidAmount.plus(amount);
+    await prisma.deposit.update({
+      where: { id: deposit.id },
+      data: {
+        paidAmount,
+        status: paidAmount.greaterThanOrEqualTo(deposit.amount)
+          ? 'PAID'
+          : 'UNPAID',
+      },
     });
-    if (deposit) {
-      const paidAmount = deposit.paidAmount.plus(amount);
-      await prisma.deposit.update({
-        where: { id: deposit.id },
-        data: {
-          paidAmount,
-          status: paidAmount.greaterThanOrEqualTo(deposit.amount)
-            ? 'PAID'
-            : 'UNPAID',
-        },
-      });
-    }
   }
 
   return payment;

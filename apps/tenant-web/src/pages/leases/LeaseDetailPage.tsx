@@ -1,16 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import {
-  Button,
-  Tag,
-  Spin,
-  message,
-  Divider,
-  Row,
-  Col,
-  Table,
-  Space,
-} from 'antd';
+import { Button, Tag, Spin, message, Divider, Row, Col, Table } from 'antd';
 import {
   FileTextOutlined,
   HomeOutlined,
@@ -28,7 +18,8 @@ import { money, day } from '@/utils/format';
 import { cycleLabels } from '@/pages/rooms/constants';
 import {
   billItemTypeText,
-  billCategoryText,
+  billingMethodText,
+  toneForBillBillingMethod,
   statusLabels as billStatusLabels,
   toneForBillStatus,
 } from '@/pages/bills/constants';
@@ -298,19 +289,13 @@ export default function LeaseDetailPage() {
                         ),
                       },
                       {
-                        title: '账单类型',
+                        title: '出账方式',
                         render: (_: unknown, row: BillGroup) => {
-                          const categories = Array.from(
-                            new Set(row.bills.map((bill) => bill.category))
-                          );
+                          const method = row.bills[0]?.billingMethod ?? 'AUTO';
                           return (
-                            <Space wrap>
-                              {categories.map((category) => (
-                                <Tag key={category}>
-                                  {billCategoryText[category] ?? category}
-                                </Tag>
-                              ))}
-                            </Space>
+                            <Tag color={toneForBillBillingMethod(method)}>
+                              {billingMethodText[method]}
+                            </Tag>
                           );
                         },
                       },

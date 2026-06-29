@@ -52,7 +52,7 @@ async function createDepositBillAndRecord(
     data: {
       organizationId,
       leaseId: lease.id,
-      category: 'DEPOSIT',
+      billingMethod: 'AUTO',
       billingDate: periodStart,
       dueDate: periodStart,
       status: 'UNPAID',

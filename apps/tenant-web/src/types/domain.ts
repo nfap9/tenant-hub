@@ -38,6 +38,7 @@ export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type LeaseStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
 export type BillStatus = 'UNPAID' | 'PAID' | 'VOID';
 export type BillCategory = 'RENT' | 'UTILITY' | 'DEPOSIT' | 'FEE' | 'OTHER';
+export type BillBillingMethod = 'AUTO' | 'MANUAL';
 export type BillItemType = BillCategory;
 
 export type Apartment = {
@@ -113,7 +114,7 @@ export type Bill = {
   id: string;
   organizationId: string;
   leaseId: string;
-  category: BillCategory;
+  billingMethod: BillBillingMethod;
   billingDate: string;
   dueDate: string;
   status: BillStatus;
