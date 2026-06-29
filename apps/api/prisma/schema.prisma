@@ -305,7 +305,6 @@ enum MemberStatus {
 
 enum RoomStatus {
   VACANT
-  RESERVED
   OCCUPIED
   MAINTENANCE
   SELF_USE

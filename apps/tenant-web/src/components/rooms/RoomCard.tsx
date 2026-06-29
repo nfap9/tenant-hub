@@ -1,7 +1,6 @@
 import { Card, Tag, Button, Space, message } from 'antd';
 import {
   UserAddOutlined,
-  PauseCircleOutlined,
   ToolOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
@@ -121,22 +120,13 @@ export default function RoomCard({
               签约
             </Button>
             {canManageRoom && (
-              <>
-                <Button
-                  size="small"
-                  icon={<PauseCircleOutlined />}
-                  onClick={(e) => handleStatusChange(e, 'RESERVED', '预留')}
-                >
-                  预留
-                </Button>
-                <Button
-                  size="small"
-                  icon={<ToolOutlined />}
-                  onClick={(e) => handleStatusChange(e, 'MAINTENANCE', '报修')}
-                >
-                  报修
-                </Button>
-              </>
+              <Button
+                size="small"
+                icon={<ToolOutlined />}
+                onClick={(e) => handleStatusChange(e, 'MAINTENANCE', '报修')}
+              >
+                报修
+              </Button>
             )}
           </Space>
         </div>

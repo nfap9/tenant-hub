@@ -291,7 +291,7 @@ export const createLeaseWithoutDeposit = async (data: {
  */
 export const updateRoomStatus = async (
   roomId: string,
-  status: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE'
+  status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE'
 ) => {
   return prisma.room.update({
     where: { id: roomId },

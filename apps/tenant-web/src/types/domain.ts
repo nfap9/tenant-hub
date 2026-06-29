@@ -28,12 +28,7 @@ export type OrgMember = {
   role: OrgRole;
 };
 
-export type RoomStatus =
-  | 'VACANT'
-  | 'RESERVED'
-  | 'OCCUPIED'
-  | 'MAINTENANCE'
-  | 'SELF_USE';
+export type RoomStatus = 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
 export type RentCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type LeaseStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED' | 'EXPIRED';
 export type BillStatus = 'UNPAID' | 'PAID' | 'VOID';

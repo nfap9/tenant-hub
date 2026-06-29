@@ -151,7 +151,7 @@ export const listRoomsRaw = async (
   organizationId: string,
   options?: {
     apartmentId?: string;
-    status?: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
+    status?: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
     keyword?: string;
     limit?: number;
   }
@@ -426,7 +426,7 @@ export const updateRoom = async (
     area: number;
     floor: number;
     furnishings: string[];
-    status: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
+    status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
   }>
 ) => {
   return prisma.room.update({

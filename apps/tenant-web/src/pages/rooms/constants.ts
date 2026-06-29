@@ -4,7 +4,6 @@ export type { RentCycle };
 
 export const statusLabels: Record<RoomStatus, string> = {
   VACANT: '空闲',
-  RESERVED: '预留',
   OCCUPIED: '已租',
   MAINTENANCE: '维修',
   SELF_USE: '自用',
@@ -15,7 +14,6 @@ export const toneForStatus: Record<
   'success' | 'neutral' | 'warning' | 'danger' | 'primary'
 > = {
   VACANT: 'success',
-  RESERVED: 'neutral',
   OCCUPIED: 'warning',
   MAINTENANCE: 'danger',
   SELF_USE: 'primary',
@@ -25,14 +23,12 @@ export const filters: Array<RoomStatus | 'ALL'> = [
   'ALL',
   'VACANT',
   'OCCUPIED',
-  'RESERVED',
   'MAINTENANCE',
   'SELF_USE',
 ];
 
 export const roomStatuses: RoomStatus[] = [
   'VACANT',
-  'RESERVED',
   'OCCUPIED',
   'MAINTENANCE',
   'SELF_USE',

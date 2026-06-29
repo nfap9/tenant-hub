@@ -178,10 +178,10 @@ leaseRouter.post(
 
     if (room.status === 'SELF_USE')
       throw new HttpError(400, '自用房间不可签约');
-    if (!isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
-      throw new HttpError(400, '仅空闲或已预留房间可以签约');
-    if (isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
-      throw new HttpError(400, '仅空闲或已预留房间可以保存草稿');
+    if (!isDraft && room.status !== 'VACANT')
+      throw new HttpError(400, '仅空闲房间可以签约');
+    if (isDraft && room.status !== 'VACANT')
+      throw new HttpError(400, '仅空闲房间可以保存草稿');
 
     const roomDeposit = new Prisma.Decimal(roomDepositAmount);
     const keyDeposit =
@@ -355,7 +355,7 @@ leaseRouter.post(
 
     const room = await findRoomById(lease.roomId, req.organizationId!);
     if (!room) throw new HttpError(404, '房间不存在');
-    if (room.status !== 'VACANT' && room.status !== 'RESERVED')
+    if (room.status !== 'VACANT')
       throw new HttpError(400, '房间已被占用，无法激活租约');
 
     const activated = await activateLease({
