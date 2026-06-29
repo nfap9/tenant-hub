@@ -327,6 +327,7 @@ enum BillStatus {
   UNPAID
   PAID
   VOID
+  PENDING
 }
 
 enum BillCategory {

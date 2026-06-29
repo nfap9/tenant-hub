@@ -8,13 +8,15 @@ export const statusLabels: Record<BillStatus, string> = {
   UNPAID: '待支付',
   PAID: '已支付',
   VOID: '已作废',
+  PENDING: '待出账',
 };
 
 export const toneForBillStatus = (
   status: BillStatus
-): 'success' | 'warning' | 'error' | 'default' => {
+): 'success' | 'warning' | 'error' | 'default' | 'processing' => {
   if (status === 'PAID') return 'success';
   if (status === 'VOID') return 'error';
+  if (status === 'PENDING') return 'processing';
   return 'warning';
 };
 

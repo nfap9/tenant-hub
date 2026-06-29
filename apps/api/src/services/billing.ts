@@ -228,6 +228,8 @@ export const assertBillPaymentAllowed = ({
 }: BillPaymentTarget) => {
   if (status === 'PAID' || status === 'VOID')
     throw new HttpError(400, '该账单已结清或作废，不能继续收款');
+  if (status === 'PENDING')
+    throw new HttpError(400, '该账单水电数据待补齐，暂时不能收款');
   const paymentAmount = new Prisma.Decimal(amount);
   if (paymentAmount.lessThanOrEqualTo(0))
     throw new HttpError(400, '收款金额必须大于 0');
@@ -252,6 +254,7 @@ const BILL_OPERATION_GUARDS: Record<
   UNPAID: { allowVoid: true, allowDelete: true },
   PAID: { allowVoid: false, allowDelete: false },
   VOID: { allowVoid: false, allowDelete: false },
+  PENDING: { allowVoid: true, allowDelete: true },
 };
 
 /**
@@ -283,7 +286,15 @@ export const voidBill = async (billId: string, organizationId: string) => {
     where: { id: billId, organizationId },
   });
   if (!bill) throw new HttpError(404, '账单不存在');
-  assertBillOperation(bill.status, 'void');
+
+  const isZeroAmountPaid =
+    bill.status === 'PAID' &&
+    new Prisma.Decimal(bill.totalAmount).equals(0) &&
+    new Prisma.Decimal(bill.paidAmount).equals(0);
+
+  if (!isZeroAmountPaid) {
+    assertBillOperation(bill.status, 'void');
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.billItem.updateMany({
@@ -330,8 +341,8 @@ export const refreshBillTotals = async (billId: string) => {
   );
 
   const status =
-    bill.status === 'VOID'
-      ? 'VOID'
+    bill.status === 'VOID' || bill.status === 'PENDING'
+      ? bill.status
       : netPaidAmount.greaterThanOrEqualTo(totalAmount)
         ? 'PAID'
         : 'UNPAID';
@@ -371,6 +382,87 @@ const findReadingAtOrBefore = async ({
     orderBy: { readingDate: 'desc' },
   });
 
+type UtilityReadingsForPeriod = {
+  previousWater: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+  currentWater: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+  previousPower: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+  currentPower: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+};
+
+/**
+ * 查询指定后付周期内的水电表读数
+ */
+const findUtilityReadingsForPeriod = async ({
+  organizationId,
+  roomId,
+  periodStart,
+  periodEnd,
+}: {
+  organizationId: string;
+  roomId: string;
+  periodStart: Date;
+  periodEnd: Date;
+}): Promise<UtilityReadingsForPeriod> => {
+  const [previousWater, currentWater, previousPower, currentPower] =
+    await Promise.all([
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'WATER',
+        date: periodStart,
+      }),
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'WATER',
+        date: periodEnd,
+      }),
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'POWER',
+        date: periodStart,
+      }),
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'POWER',
+        date: periodEnd,
+      }),
+    ]);
+
+  return {
+    previousWater,
+    currentWater,
+    previousPower,
+    currentPower,
+  };
+};
+
+type CompleteUtilityReadingsForPeriod = {
+  [K in keyof UtilityReadingsForPeriod]: NonNullable<
+    UtilityReadingsForPeriod[K]
+  >;
+};
+
+/**
+ * 判断水电表读数是否足够计算本期水电费
+ * 要求：周期开始和结束都有读数，且结束读数必须晚于开始读数（有新记录）
+ */
+const hasCompleteUtilityReadings = (
+  readings: UtilityReadingsForPeriod
+): readings is CompleteUtilityReadingsForPeriod => {
+  const { previousWater, currentWater, previousPower, currentPower } = readings;
+  return (
+    !!previousWater &&
+    !!currentWater &&
+    previousWater.id !== currentWater.id &&
+    !!previousPower &&
+    !!currentPower &&
+    previousPower.id !== currentPower.id
+  );
+};
+
 /**
  * 根据水电表读数完成后付账单
  * @param billId - 账单 ID
@@ -391,43 +483,18 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
   );
   if (!waterItem || !powerItem) return bill;
 
-  const [previousWater, currentWater, previousPower, currentPower] =
-    await Promise.all([
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'WATER',
-        date: waterItem.periodStart,
-      }),
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'WATER',
-        date: waterItem.periodEnd,
-      }),
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'POWER',
-        date: powerItem.periodStart,
-      }),
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'POWER',
-        date: powerItem.periodEnd,
-      }),
-    ]);
+  const readings = await findUtilityReadingsForPeriod({
+    organizationId: bill.organizationId,
+    roomId: bill.lease.roomId,
+    periodStart: waterItem.periodStart,
+    periodEnd: waterItem.periodEnd,
+  });
 
-  if (!previousWater || !currentWater || !previousPower || !currentPower) {
+  if (!hasCompleteUtilityReadings(readings)) {
     return bill;
   }
-  if (
-    previousWater.id === currentWater.id ||
-    previousPower.id === currentPower.id
-  ) {
-    return bill;
-  }
+
+  const { previousWater, currentWater, previousPower, currentPower } = readings;
 
   try {
     calculateUtilityAmount({
@@ -493,11 +560,13 @@ const generateBillForBillingDate = async (
   billingEnd: Date
 ) => {
   // 押金账单可能与首期账单使用同一计费日，不能把它当成已存在的房租/费用账单
+  // 已作废的账单视为不存在，允许重新生成
   const existing = await prisma.bill.findFirst({
     where: {
       leaseId: lease.id,
       billingDate: startOfDay(billingDate).toDate(),
       deletedAt: null,
+      status: { not: 'VOID' },
       items: { some: { category: { not: 'DEPOSIT' } } },
     },
     include: { items: true },
@@ -536,6 +605,8 @@ const generateBillForBillingDate = async (
     billingDate,
   });
 
+  // 后付账单需要水电表有新读数才能出账；读数不足时仍生成账单，但标记为 PENDING
+  let utilityPending = false;
   if (hasPostpaid) {
     baseItems.push(
       {
@@ -553,6 +624,14 @@ const generateBillForBillingDate = async (
         periodEnd: periods.postpaid.end,
       }
     );
+
+    const readings = await findUtilityReadingsForPeriod({
+      organizationId: lease.organizationId,
+      roomId: lease.room.id,
+      periodStart: periods.postpaid.start,
+      periodEnd: periods.postpaid.end,
+    });
+    utilityPending = !hasCompleteUtilityReadings(readings);
   }
 
   const billResult = await prisma.bill.create({
@@ -562,12 +641,12 @@ const generateBillForBillingDate = async (
       billingMethod: 'AUTO',
       billingDate: startOfDay(billingDate).toDate(),
       dueDate,
-      status: 'UNPAID',
+      status: utilityPending ? 'PENDING' : 'UNPAID',
       items: { create: baseItems },
     },
   });
 
-  if (hasPostpaid) {
+  if (hasPostpaid && !utilityPending) {
     await completePostpaidBillFromReadings(billResult.id);
   }
 
@@ -614,6 +693,7 @@ export const generateLeaseBills = async (
     options?.onlyCurrentPeriod && billingDates.length > 0
       ? [billingDates[billingDates.length - 1]]
       : billingDates;
+  const existingBillIds = new Set(lease.bills.map((b) => b.id));
   const generatedIds: string[] = [];
 
   for (const billingDate of datesToGenerate) {
@@ -622,7 +702,7 @@ export const generateLeaseBills = async (
       billingDate,
       billingEnd
     );
-    if (bill) {
+    if (bill && !existingBillIds.has(bill.id)) {
       generatedIds.push(bill.id);
     }
   }
@@ -880,7 +960,7 @@ export const recordLeasePayment = async ({
     where: {
       leaseId,
       organizationId,
-      status: { not: 'VOID' },
+      status: { notIn: ['VOID', 'PENDING'] },
       deletedAt: null,
     },
     orderBy: { billingDate: 'asc' },

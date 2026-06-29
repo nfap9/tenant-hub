@@ -21,6 +21,7 @@ export const remainingAmount = (bill: {
 }) => Number(bill.totalAmount) - Number(bill.paidAmount);
 
 const statusPriority: Record<BillStatus, number> = {
+  PENDING: -1,
   UNPAID: 0,
   PAID: 1,
   VOID: 2,
@@ -29,7 +30,8 @@ const statusPriority: Record<BillStatus, number> = {
 export const groupBills = (bills: Bill[]): BillGroup[] => {
   const map = new Map<string, Bill[]>();
   for (const bill of bills) {
-    const key = `${bill.leaseId}_${bill.billingDate}`;
+    // 按状态分组，避免已作废账单与重新生成的账单合并展示
+    const key = `${bill.leaseId}_${bill.billingDate}_${bill.status}`;
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(bill);
   }
@@ -48,9 +50,16 @@ export const groupBills = (bills: Bill[]): BillGroup[] => {
 
     let status: BillStatus = 'PAID';
     for (const b of groupBills) {
-      if (b.status === 'UNPAID') {
-        status = b.status;
+      if (b.status === 'PENDING') {
+        status = 'PENDING';
         break;
+      }
+      if (b.status === 'UNPAID') {
+        status = 'UNPAID';
+        break;
+      }
+      if (b.status === 'VOID') {
+        status = 'VOID';
       }
     }
 

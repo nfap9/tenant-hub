@@ -174,7 +174,7 @@ export const nonNegativeIntegerRule = (
   const { required = true, max = MAX_READING } = options ?? {};
   const rules: Rule[] = [];
   if (required) {
-    rules.push(requiredRule(`请输入${fieldName}`));
+    rules.push({ required: true, message: `请输入${fieldName}` });
   }
   rules.push({
     validator(_, value) {

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
@@ -7,7 +8,6 @@ import {
   requirePermission,
 } from '../middleware/auth.js';
 import {
-  assertBillOperation,
   generateCurrentLeaseBills,
   generateLeaseBills,
   recordBillPayment,
@@ -81,7 +81,7 @@ billRouter.get(
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
     const status = z
-      .enum(['UNPAID', 'PAID', 'VOID'])
+      .enum(['UNPAID', 'PAID', 'VOID', 'PENDING'])
       .optional()
       .parse(req.query.status);
     ok(res, await listBills(req.organizationId!, status));
@@ -110,6 +110,7 @@ billRouter.post(
     const lease = await findLeaseById(input.leaseId, req.organizationId!);
     if (!lease) throw new HttpError(404, '租约不存在');
     ok(res, {
+      leaseCount: 1,
       billIds: await generateLeaseBills(
         input.leaseId,
         input.today ?? new Date()
@@ -315,7 +316,8 @@ billRouter.post(
 
 /**
  * DELETE /api/bills/:id
- * 删除指定账单及其付款记录（仅限未付款账单）
+ * 删除指定账单及其付款记录
+ * 未付款账单可直接删除；金额为 0 且没有实际收款的已结清账单也允许删除
  */
 billRouter.delete(
   '/:id',
@@ -323,7 +325,17 @@ billRouter.delete(
   asyncHandler(async (req, res) => {
     const bill = await getBillById(req.params.id, req.organizationId!);
     if (!bill) throw new HttpError(404, '账单不存在');
-    assertBillOperation(bill.status, 'delete');
+
+    const isZeroAmountDeletable =
+      (bill.status === 'PAID' || bill.status === 'VOID') &&
+      new Prisma.Decimal(bill.totalAmount).equals(0);
+
+    if (!isZeroAmountDeletable) {
+      throw new HttpError(
+        400,
+        `当前账单状态不允许删除（状态：${bill.status}，金额：${bill.totalAmount}，已付：${bill.paidAmount}）`
+      );
+    }
 
     await deleteBillWithPayments(req.params.id);
 

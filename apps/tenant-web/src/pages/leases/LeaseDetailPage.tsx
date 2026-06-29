@@ -23,22 +23,17 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
-import type {
-  Lease,
-  LeaseStatus,
-  BillItem,
-  MeterReading,
-} from '@/types/domain';
+import type { Lease, LeaseStatus, MeterReading } from '@/types/domain';
 import { money, day } from '@/utils/format';
 import { cycleLabels } from '@/pages/rooms/constants';
 import {
-  billItemTypeText,
   billingMethodText,
   toneForBillBillingMethod,
   statusLabels as billStatusLabels,
   toneForBillStatus,
 } from '@/pages/bills/constants';
 import { groupBills, type BillGroup } from '@/pages/bills/utils';
+import BillGroupItemsTable from '@/pages/bills/components/BillGroupItemsTable';
 
 type ReadingGroup = {
   id: string;
@@ -331,52 +326,9 @@ export default function LeaseDetailPage() {
                       pagination={{ pageSize: 10 }}
                       scroll={{ x: 'max-content' }}
                       expandable={{
-                        expandedRowRender: (row: BillGroup) => {
-                          const itemRows = row.bills.flatMap((bill) =>
-                            (bill.items ?? []).map((item) => ({ item, bill }))
-                          );
-                          return (
-                            <Table<{
-                              item: BillItem;
-                              bill: BillGroup['bills'][0];
-                            }>
-                              rowKey={(record) =>
-                                `${record.bill.id}_${record.item.id}`
-                              }
-                              dataSource={itemRows}
-                              pagination={false}
-                              size="small"
-                              columns={[
-                                {
-                                  title: '费用项目类型',
-                                  render: (_: unknown, { item }) => (
-                                    <span>
-                                      {billItemTypeText(
-                                        item.category,
-                                        item.name
-                                      )}
-                                    </span>
-                                  ),
-                                },
-                                {
-                                  title: '账期',
-                                  render: (_: unknown, { item }) => (
-                                    <span>
-                                      {day(item.periodStart)} ~{' '}
-                                      {day(item.periodEnd)}
-                                    </span>
-                                  ),
-                                },
-                                {
-                                  title: '金额',
-                                  render: (_: unknown, { item }) => (
-                                    <span>¥{money(item.amount)}</span>
-                                  ),
-                                },
-                              ]}
-                            />
-                          );
-                        },
+                        expandedRowRender: (row: BillGroup) => (
+                          <BillGroupItemsTable group={row} />
+                        ),
                       }}
                       columns={[
                         {

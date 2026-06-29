@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import { calculateUtilityLineAmounts, refreshBillTotals } from './billing.js';
@@ -10,7 +11,7 @@ import { calculateUtilityLineAmounts, refreshBillTotals } from './billing.js';
  */
 export const listBills = async (
   organizationId: string,
-  status?: 'UNPAID' | 'PAID' | 'VOID'
+  status?: 'UNPAID' | 'PAID' | 'VOID' | 'PENDING'
 ) => {
   return prisma.bill.findMany({
     where: {
@@ -35,7 +36,7 @@ export const listBills = async (
 export const listBillsRaw = async (
   organizationId: string,
   options?: {
-    status?: 'UNPAID' | 'PAID' | 'VOID';
+    status?: 'UNPAID' | 'PAID' | 'VOID' | 'PENDING';
     tenantName?: string;
     limit?: number;
   }
@@ -322,7 +323,7 @@ export const findPendingPostpaidBillsByRoom = async (roomId: string) => {
   return prisma.bill.findMany({
     where: {
       lease: { roomId },
-      status: 'UNPAID',
+      status: { in: ['UNPAID', 'PENDING'] },
       items: {
         some: {
           category: 'UTILITY',
@@ -361,6 +362,37 @@ export const getBillWithItemsAndLease = async (
  * @param currentPower - 本期电表读数
  * @returns 更新后的账单（包含账单项目）
  */
+const upsertMeterReading = async (
+  tx: Prisma.TransactionClient,
+  data: {
+    organizationId: string;
+    apartmentId: string;
+    roomId: string;
+    leaseId?: string;
+    meterType: 'WATER' | 'POWER';
+    readingDate: Date;
+    value: number;
+  }
+) => {
+  const existing = await tx.meterReading.findFirst({
+    where: {
+      roomId: data.roomId,
+      meterType: data.meterType,
+      readingDate: data.readingDate,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (existing) {
+    return tx.meterReading.update({
+      where: { id: existing.id },
+      data: { value: data.value },
+    });
+  }
+
+  return tx.meterReading.create({ data });
+};
+
 export const applyUtilityReadingToBill = async ({
   billId,
   organizationId,
@@ -401,60 +433,56 @@ export const applyUtilityReadingToBill = async ({
     powerUnitPrice: bill.lease.powerUnitPrice,
   });
 
-  await prisma.$transaction([
-    prisma.billItem.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.billItem.update({
       where: { id: waterItem.id },
       data: { amount: waterAmount },
-    }),
-    prisma.billItem.update({
+    });
+    await tx.billItem.update({
       where: { id: powerItem.id },
       data: { amount: powerAmount },
-    }),
-    prisma.bill.update({
+    });
+    await tx.bill.update({
       where: { id: bill.id },
       data: { status: 'UNPAID' },
-    }),
-    prisma.meterReading.createMany({
-      data: [
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'WATER',
-          readingDate: waterItem.periodStart,
-          value: previousWater,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'WATER',
-          readingDate: waterItem.periodEnd,
-          value: currentWater,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'POWER',
-          readingDate: powerItem.periodStart,
-          value: previousPower,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'POWER',
-          readingDate: powerItem.periodEnd,
-          value: currentPower,
-        },
-      ],
-    }),
-  ]);
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'WATER',
+      readingDate: waterItem.periodStart,
+      value: previousWater,
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'WATER',
+      readingDate: waterItem.periodEnd,
+      value: currentWater,
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'POWER',
+      readingDate: powerItem.periodStart,
+      value: previousPower,
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'POWER',
+      readingDate: powerItem.periodEnd,
+      value: currentPower,
+    });
+  });
 
   await refreshBillTotals(bill.id);
   return prisma.bill.findUnique({

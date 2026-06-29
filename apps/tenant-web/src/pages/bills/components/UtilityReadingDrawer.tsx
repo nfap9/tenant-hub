@@ -48,6 +48,13 @@ export default function UtilityReadingDrawer({
       return;
     }
 
+    const waterItem = bill.items?.find(
+      (item) => item.category === 'UTILITY' && item.name === '水费'
+    );
+    const powerItem = bill.items?.find(
+      (item) => item.category === 'UTILITY' && item.name === '电费'
+    );
+
     setLoading(true);
     getMeterReadings(currentOrgId, { roomId })
       .then((readings) => {
@@ -69,11 +76,50 @@ export default function UtilityReadingDrawer({
         const latestWater = waterReadings[0];
         const latestPower = powerReadings[0];
 
+        const startOfDay = (date: string) =>
+          new Date(date).toISOString().split('T')[0];
+        const existingWaterStart = waterItem
+          ? waterReadings.find(
+              (r) =>
+                startOfDay(r.readingDate) === startOfDay(waterItem.periodStart)
+            )
+          : undefined;
+        const existingWaterEnd = waterItem
+          ? waterReadings.find(
+              (r) =>
+                startOfDay(r.readingDate) === startOfDay(waterItem.periodEnd)
+            )
+          : undefined;
+        const existingPowerStart = powerItem
+          ? powerReadings.find(
+              (r) =>
+                startOfDay(r.readingDate) === startOfDay(powerItem.periodStart)
+            )
+          : undefined;
+        const existingPowerEnd = powerItem
+          ? powerReadings.find(
+              (r) =>
+                startOfDay(r.readingDate) === startOfDay(powerItem.periodEnd)
+            )
+          : undefined;
+
         form.setFieldsValue({
-          previousWater: latestWater ? Number(latestWater.value) : 0,
-          previousPower: latestPower ? Number(latestPower.value) : 0,
-          currentWater: undefined,
-          currentPower: undefined,
+          previousWater: existingWaterStart
+            ? Number(existingWaterStart.value)
+            : latestWater
+              ? Number(latestWater.value)
+              : 0,
+          currentWater: existingWaterEnd
+            ? Number(existingWaterEnd.value)
+            : undefined,
+          previousPower: existingPowerStart
+            ? Number(existingPowerStart.value)
+            : latestPower
+              ? Number(latestPower.value)
+              : 0,
+          currentPower: existingPowerEnd
+            ? Number(existingPowerEnd.value)
+            : undefined,
         });
       })
       .catch(() => {
@@ -203,6 +249,7 @@ export default function UtilityReadingDrawer({
               precision={0}
               className="w-full"
               placeholder="上期读数"
+              disabled
             />
           </Form.Item>
           <Form.Item
@@ -230,6 +277,7 @@ export default function UtilityReadingDrawer({
               precision={0}
               className="w-full"
               placeholder="上期读数"
+              disabled
             />
           </Form.Item>
           <Form.Item
