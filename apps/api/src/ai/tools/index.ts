@@ -4,7 +4,12 @@ import { queryRoomsTool } from './queryRooms.js';
 import { queryLeasesTool } from './queryLeases.js';
 import { queryBillsTool } from './queryBills.js';
 import { getOverdueSummaryTool } from './getOverdueSummary.js';
+import { getRoomStatusOverviewTool } from './getRoomStatusOverview.js';
 import { queryMeterReadingsTool } from './queryMeterReadings.js';
+import { recordMeterReadingTool } from './recordMeterReading.js';
+import { generateBillsTool } from './generateBills.js';
+import { voidBillTool } from './voidBill.js';
+import { recordPaymentTool } from './recordPayment.js';
 
 export type AnyTool = ToolMeta<any, any>;
 
@@ -14,7 +19,12 @@ export const ALL_TOOLS: AnyTool[] = [
   queryLeasesTool,
   queryBillsTool,
   getOverdueSummaryTool,
+  getRoomStatusOverviewTool,
   queryMeterReadingsTool,
+  recordMeterReadingTool,
+  generateBillsTool,
+  voidBillTool,
+  recordPaymentTool,
 ];
 
 const hasPermission = (permissions: string[], required?: string): boolean => {

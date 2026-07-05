@@ -4,6 +4,7 @@ import { env } from '../config/env.js';
 import { HttpError } from '../utils/http.js';
 import type { ChatMessage, ChatRole, ToolCall } from './types.js';
 import { findModel, resolveDefaultModel } from './models.config.js';
+import type { ToolPreview } from './tools/types.js';
 
 export interface ConversationOwnership {
   id: string;
@@ -151,4 +152,128 @@ export const historyToChatMessages = (messages: AiMessage[]): ChatMessage[] => {
         content,
       };
     });
+};
+
+export interface PendingActionRecord {
+  id: string;
+  conversationId: string;
+  toolCallId: string;
+  toolName: string;
+  input: unknown;
+  summary: ToolPreview;
+  status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'EXPIRED';
+  expiresAt: Date;
+}
+
+const pendingTtlMs = () => env.AI_PENDING_ACTION_TTL_MIN * 60_000;
+
+export const createPendingAction = async (params: {
+  conversationId: string;
+  toolCallId: string;
+  toolName: string;
+  input: unknown;
+  summary: ToolPreview;
+}): Promise<PendingActionRecord> => {
+  const expiresAt = new Date(Date.now() + pendingTtlMs());
+  const created = await prisma.aiPendingAction.create({
+    data: {
+      conversationId: params.conversationId,
+      toolCallId: params.toolCallId,
+      toolName: params.toolName,
+      input: params.input as Prisma.InputJsonValue,
+      summary: params.summary as unknown as Prisma.InputJsonValue,
+      status: 'PENDING',
+      expiresAt,
+    },
+  });
+  return {
+    id: created.id,
+    conversationId: created.conversationId,
+    toolCallId: created.toolCallId,
+    toolName: created.toolName,
+    input: created.input,
+    summary: created.summary as unknown as ToolPreview,
+    status: created.status,
+    expiresAt: created.expiresAt,
+  };
+};
+
+export const getPendingActionForOrg = async (
+  actionId: string,
+  organizationId: string
+): Promise<PendingActionRecord | null> => {
+  const row = await prisma.aiPendingAction.findUnique({
+    where: { id: actionId },
+  });
+  if (!row) return null;
+  const conv = await prisma.aiConversation.findUnique({
+    where: { id: row.conversationId },
+    select: { organizationId: true },
+  });
+  if (!conv || conv.organizationId !== organizationId) return null;
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    toolCallId: row.toolCallId,
+    toolName: row.toolName,
+    input: row.input,
+    summary: row.summary as unknown as ToolPreview,
+    status: row.status,
+    expiresAt: row.expiresAt,
+  };
+};
+
+export const markPendingAction = async (
+  actionId: string,
+  status: 'CONFIRMED' | 'REJECTED',
+  organizationId: string,
+  userId: string
+): Promise<PendingActionRecord> => {
+  const row = await getPendingActionForOrg(actionId, organizationId);
+  if (!row) throw new HttpError(404, '待确认操作不存在');
+
+  const conv = await prisma.aiConversation.findUnique({
+    where: { id: row.conversationId },
+    select: { userId: true },
+  });
+  if (!conv) throw new HttpError(404, '会话不存在');
+  if (conv.userId !== userId) throw new HttpError(403, '无权操作该会话');
+
+  if (row.status !== 'PENDING') {
+    throw new HttpError(400, `该待确认操作当前状态为 ${row.status}，无法处理`);
+  }
+  if (row.expiresAt.getTime() < Date.now()) {
+    throw new HttpError(400, '该待确认操作已过期');
+  }
+
+  const updated = await prisma.aiPendingAction.update({
+    where: { id: actionId },
+    data: { status },
+  });
+  return {
+    id: updated.id,
+    conversationId: updated.conversationId,
+    toolCallId: updated.toolCallId,
+    toolName: updated.toolName,
+    input: updated.input,
+    summary: updated.summary as unknown as ToolPreview,
+    status: updated.status,
+    expiresAt: updated.expiresAt,
+  };
+};
+
+export const archiveConversation = async (
+  conversationId: string,
+  organizationId: string,
+  userId: string
+): Promise<void> => {
+  const conv = await ensureConversationOwnership(
+    conversationId,
+    organizationId,
+    userId
+  );
+  await prisma.aiConversation.update({
+    where: { id: conv.id },
+    data: { status: 'ARCHIVED' },
+  });
 };

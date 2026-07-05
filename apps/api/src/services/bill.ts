@@ -1,7 +1,11 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
-import { calculateUtilityLineAmounts, refreshBillTotals } from './billing.js';
+import {
+  calculateUtilityLineAmounts,
+  refreshBillTotals,
+  retryPostpaidBillAndMonthlyBill,
+} from './billing.js';
 
 /**
  * 查询账单列表
@@ -312,6 +316,64 @@ export const createMeterReading = async (data: {
   note?: string;
 }) => {
   return prisma.meterReading.create({ data });
+};
+
+/**
+ * 为房间录入一次水电抄表，并尝试完成该房间待出账的后付费账单
+ * @param data - 抄表入参
+ * @returns 创建的水表/电表记录与触发的账单补全结果
+ */
+export const recordRoomMeterReading = async (data: {
+  organizationId: string;
+  roomId: string;
+  readingDate: Date;
+  waterValue: number;
+  powerValue: number;
+  note?: string;
+}) => {
+  const room = await findRoomForMeterReading(data.roomId, data.organizationId);
+  if (!room) throw new HttpError(404, '房间不存在');
+  const lease = await findLeaseForMeterReading(
+    room.id,
+    data.organizationId,
+    data.readingDate
+  );
+
+  const baseReading = {
+    organizationId: data.organizationId,
+    apartmentId: room.apartmentId,
+    roomId: room.id,
+    leaseId: lease?.id,
+    readingDate: data.readingDate,
+    note: data.note,
+  };
+
+  const [waterReading, powerReading] = await prisma.$transaction([
+    prisma.meterReading.create({
+      data: { ...baseReading, meterType: 'WATER', value: data.waterValue },
+    }),
+    prisma.meterReading.create({
+      data: { ...baseReading, meterType: 'POWER', value: data.powerValue },
+    }),
+  ]);
+
+  const pendingBills = await findPendingPostpaidBillsByRoom(room.id);
+  const retried = await Promise.all(
+    pendingBills.map((b) =>
+      retryPostpaidBillAndMonthlyBill(b.id).catch(() => null)
+    )
+  );
+
+  return {
+    waterReading,
+    powerReading,
+    lease,
+    room,
+    pendingBillCount: pendingBills.length,
+    completedBillIds: retried
+      .filter((b): b is NonNullable<typeof b> => !!b)
+      .map((b) => b!.id),
+  };
 };
 
 /**

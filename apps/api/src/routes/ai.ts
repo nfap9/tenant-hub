@@ -9,6 +9,11 @@ import { isAiEnabled } from '../ai/providers/index.js';
 import { listEnabledModels } from '../ai/models.config.js';
 import { runAgent, type AgentEvent } from '../ai/agent.js';
 import {
+  confirmPendingAction,
+  rejectPendingAction,
+} from '../ai/pendingAction.js';
+import {
+  archiveConversation,
   createConversation,
   ensureConversationOwnership,
   listConversations,
@@ -145,5 +150,56 @@ aiRouter.post(
     });
 
     res.end();
+  })
+);
+
+/**
+ * POST /api/ai/action/confirm
+ * 确认并执行一个待确认操作
+ */
+aiRouter.post(
+  '/action/confirm',
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({ actionId: z.string().min(1) })
+      .parse(req.body ?? {});
+    const result = await confirmPendingAction({
+      actionId: input.actionId,
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+      permissions: req.permissions ?? [],
+    });
+    ok(res, result);
+  })
+);
+
+/**
+ * POST /api/ai/action/reject
+ * 拒绝一个待确认操作
+ */
+aiRouter.post(
+  '/action/reject',
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({ actionId: z.string().min(1) })
+      .parse(req.body ?? {});
+    await rejectPendingAction({
+      actionId: input.actionId,
+      organizationId: req.organizationId!,
+      userId: req.user!.id,
+    });
+    ok(res, { rejected: true });
+  })
+);
+
+/**
+ * DELETE /api/ai/conversations/:id
+ * 归档会话
+ */
+aiRouter.delete(
+  '/conversations/:id',
+  asyncHandler(async (req, res) => {
+    await archiveConversation(req.params.id, req.organizationId!, req.user!.id);
+    ok(res, { archived: true });
   })
 );

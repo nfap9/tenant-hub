@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
-import { prisma } from '../config/prisma.js';
 import {
   requireAuth,
   requireOrg,
@@ -23,13 +22,11 @@ import {
   findLeaseById,
   listMeterReadings,
   listMeterReadingRooms,
-  findRoomForMeterReading,
-  findLeaseForMeterReading,
-  findPendingPostpaidBillsByRoom,
   applyUtilityReadingToBill,
   getBillForRetry,
   getBillById,
   deleteBillWithPayments,
+  recordRoomMeterReading,
 } from '../services/bill.js';
 
 export const billRouter = Router();
@@ -169,44 +166,17 @@ billRouter.post(
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const input = meterReadingInput.parse(req.body);
-    const room = await findRoomForMeterReading(
-      input.roomId,
-      req.organizationId!
+    ok(
+      res,
+      await recordRoomMeterReading({
+        organizationId: req.organizationId!,
+        roomId: input.roomId,
+        readingDate: input.readingDate,
+        waterValue: input.waterValue,
+        powerValue: input.powerValue,
+        note: input.note,
+      })
     );
-    if (!room) throw new HttpError(404, '房间不存在');
-    const lease = await findLeaseForMeterReading(
-      room.id,
-      req.organizationId!,
-      input.readingDate
-    );
-
-    const baseReading = {
-      organizationId: req.organizationId!,
-      apartmentId: room.apartmentId,
-      roomId: room.id,
-      leaseId: lease?.id,
-      readingDate: input.readingDate,
-      note: input.note,
-    };
-
-    const [waterReading, powerReading] = await prisma.$transaction([
-      prisma.meterReading.create({
-        data: { ...baseReading, meterType: 'WATER', value: input.waterValue },
-      }),
-      prisma.meterReading.create({
-        data: { ...baseReading, meterType: 'POWER', value: input.powerValue },
-      }),
-    ]);
-
-    // 尝试自动完成该房间所有待出账的后付费账单
-    const pendingBills = await findPendingPostpaidBillsByRoom(room.id);
-    await Promise.all(
-      pendingBills.map((b) =>
-        retryPostpaidBillAndMonthlyBill(b.id).catch(() => null)
-      )
-    );
-
-    ok(res, { waterReading, powerReading });
   })
 );
 

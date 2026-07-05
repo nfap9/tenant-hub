@@ -7,6 +7,7 @@ import {
   message,
   Modal,
   Avatar,
+  Button,
   type MenuProps,
 } from 'antd';
 import {
@@ -17,6 +18,7 @@ import {
   TeamOutlined,
   DownOutlined,
   BellOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo, useState, useEffect } from 'react';
@@ -27,6 +29,7 @@ import {
   getParentKeys,
   flattenMenu,
 } from './menuUtils';
+import AssistantDrawer from '@/pages/ai-assistant/AssistantDrawer';
 import styles from './MainLayout.module.scss';
 
 const { Header, Sider, Content } = Layout;
@@ -140,6 +143,7 @@ export default function MainLayout() {
     [selectedKey]
   );
   const [openKeys, setOpenKeys] = useState(defaultOpenKeys);
+  const [aiOpen, setAiOpen] = useState(false);
 
   useEffect(() => {
     setOpenKeys((prev) => {
@@ -241,6 +245,28 @@ export default function MainLayout() {
           )}
         </Content>
       </Layout>
+
+      {!noOrg && (
+        <>
+          <Button
+            type="primary"
+            shape="circle"
+            size="large"
+            icon={<RobotOutlined />}
+            onClick={() => setAiOpen(true)}
+            style={{
+              position: 'fixed',
+              right: 24,
+              bottom: 24,
+              width: 52,
+              height: 52,
+              zIndex: 100,
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
+            }}
+          />
+          <AssistantDrawer open={aiOpen} onClose={() => setAiOpen(false)} />
+        </>
+      )}
     </Layout>
   );
 }

@@ -17,6 +17,7 @@ import {
   ensureConversationOwnership,
   historyToChatMessages,
   listMessages,
+  createPendingAction,
 } from './storage.js';
 import { buildSystemPromptForTools } from './systemPrompt.js';
 import { recordUsage } from './usage.js';
@@ -25,7 +26,7 @@ import {
   selectToolsForUser,
   toToolDefinition,
 } from './tools/index.js';
-import type { ToolContext } from './tools/index.js';
+import type { ToolContext, ToolPreview } from './tools/index.js';
 
 export interface AgentContext {
   organizationId: string;
@@ -36,11 +37,20 @@ export interface AgentContext {
   roleName: string;
 }
 
+export interface PendingActionEvent {
+  id: string;
+  conversationId: string;
+  toolCallId: string;
+  toolName: string;
+  summary: ToolPreview;
+  expiresAt: string;
+}
+
 export type AgentEvent =
   | { type: 'text_delta'; delta: string }
   | { type: 'assistant_message'; text: string }
   | { type: 'tool_call'; name: string; summary: string }
-  | { type: 'pending_action'; action: unknown }
+  | { type: 'pending_action'; action: PendingActionEvent }
   | { type: 'error'; message: string }
   | { type: 'done' };
 
@@ -114,7 +124,7 @@ const chatWithFallback = async (
   throw lastError instanceof Error ? lastError : new Error('模型调用失败');
 };
 
-const runToolCall = async (
+const runReadToolCall = async (
   call: { id: string; name: string; arguments: Record<string, unknown> },
   toolCtx: ToolContext,
   messageId: string
@@ -161,6 +171,60 @@ const runToolCall = async (
       },
     });
     return `工具执行失败：${message}`;
+  }
+};
+
+const createPendingForWriteTool = async (
+  call: { id: string; name: string; arguments: Record<string, unknown> },
+  toolCtx: ToolContext,
+  conversationId: string
+): Promise<{ summary: string; pending: PendingActionEvent | null }> => {
+  const tool = findTool(call.name);
+  if (!tool) return { summary: `工具不存在：${call.name}`, pending: null };
+  if (tool.permission && !toolCtx.permissions.includes('*')) {
+    if (!toolCtx.permissions.includes(tool.permission)) {
+      return {
+        summary: `权限不足：调用 ${call.name} 需要 ${tool.permission}`,
+        pending: null,
+      };
+    }
+  }
+  if (!tool.preview) {
+    return {
+      summary: `工具 ${call.name} 未提供 preview，无法生成待确认操作`,
+      pending: null,
+    };
+  }
+  const parsed = tool.inputSchema.safeParse(call.arguments);
+  if (!parsed.success) {
+    return {
+      summary: `参数校验失败：${parsed.error.issues.map((i) => i.message).join('; ')}`,
+      pending: null,
+    };
+  }
+  try {
+    const preview = await tool.preview(parsed.data, toolCtx);
+    const record = await createPendingAction({
+      conversationId,
+      toolCallId: call.id,
+      toolName: call.name,
+      input: parsed.data,
+      summary: preview,
+    });
+    return {
+      summary: `已生成待确认操作（${preview.title}），等待用户在前端确认后执行。actionId=${record.id}`,
+      pending: {
+        id: record.id,
+        conversationId: record.conversationId,
+        toolCallId: record.toolCallId,
+        toolName: record.toolName,
+        summary: record.summary,
+        expiresAt: record.expiresAt.toISOString(),
+      },
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '生成待确认操作失败';
+    return { summary: `生成待确认操作失败：${message}`, pending: null };
   }
 };
 
@@ -250,15 +314,41 @@ export const runAgent = async (params: RunAgentParams): Promise<void> => {
       }
 
       for (const call of result.toolCalls) {
-        onEvent({ type: 'tool_call', name: call.name, summary: '' });
-        const summary = await runToolCall(call, toolCtx, assistantDbMessage.id);
-        onEvent({ type: 'tool_call', name: call.name, summary });
-        await appendToolMessage(conversationId, call.id, summary);
-        messages.push({
-          role: 'tool',
-          toolCallId: call.id,
-          content: summary,
-        });
+        const tool = findTool(call.name);
+        if (tool?.isWrite) {
+          onEvent({
+            type: 'tool_call',
+            name: call.name,
+            summary: '生成待确认操作…',
+          });
+          const { summary, pending } = await createPendingForWriteTool(
+            call,
+            toolCtx,
+            conversationId
+          );
+          if (pending) onEvent({ type: 'pending_action', action: pending });
+          onEvent({ type: 'tool_call', name: call.name, summary });
+          await appendToolMessage(conversationId, call.id, summary);
+          messages.push({
+            role: 'tool',
+            toolCallId: call.id,
+            content: summary,
+          });
+        } else {
+          onEvent({ type: 'tool_call', name: call.name, summary: '' });
+          const summary = await runReadToolCall(
+            call,
+            toolCtx,
+            assistantDbMessage.id
+          );
+          onEvent({ type: 'tool_call', name: call.name, summary });
+          await appendToolMessage(conversationId, call.id, summary);
+          messages.push({
+            role: 'tool',
+            toolCallId: call.id,
+            content: summary,
+          });
+        }
       }
     }
     onEvent({ type: 'error', message: '达到最大迭代次数' });
