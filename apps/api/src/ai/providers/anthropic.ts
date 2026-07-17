@@ -19,8 +19,17 @@ export class AnthropicProvider implements ModelProvider {
 
   private client: Anthropic;
 
-  constructor(apiKey: string, baseURL?: string) {
-    this.client = new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}) });
+  constructor(apiKey: string, baseURL?: string, authHeader?: string) {
+    const effectiveHeader = authHeader ?? 'x-api-key';
+    const defaultHeaders =
+      effectiveHeader !== 'x-api-key'
+        ? { [effectiveHeader]: apiKey }
+        : undefined;
+    this.client = new Anthropic({
+      apiKey,
+      ...(baseURL ? { baseURL } : {}),
+      ...(defaultHeaders ? { defaultHeaders } : {}),
+    });
   }
 
   async chat(req: ChatRequest): Promise<ChatResult> {

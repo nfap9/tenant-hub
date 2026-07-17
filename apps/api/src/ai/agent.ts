@@ -1,8 +1,7 @@
-import { env } from '../config/env.js';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import type { ModelConfig } from './models.config.js';
-import { findModel } from './models.config.js';
+import { findModel, resolveDefaultModel } from './models.config.js';
 import { getProvider } from './providers/index.js';
 import type {
   ChatMessage,
@@ -65,21 +64,8 @@ export interface RunAgentParams {
   signal?: AbortSignal;
 }
 
-const MODEL_PREFERENCE = [
-  'claude-sonnet-4-6',
-  'gpt-4o',
-  'deepseek-chat',
-  'claude-haiku-4-5',
-  'qwen-plus',
-  'moonshot-v1-8k',
-];
-
-const resolveDefault = (): ModelConfig | undefined => {
-  const explicit = findModel(env.AI_DEFAULT_MODEL_ID);
-  if (explicit?.enabled) return explicit;
-  return MODEL_PREFERENCE.map((id) => findModel(id)).find(
-    (m): m is ModelConfig => !!m && m.enabled
-  );
+const resolveDefault = (): ModelConfig => {
+  return resolveDefaultModel();
 };
 
 const resolveModelChain = (modelId?: string): ModelConfig[] => {
@@ -268,10 +254,10 @@ export const runAgent = async (params: RunAgentParams): Promise<void> => {
     prisma,
   };
 
-  const maxIterations = env.AI_MAX_ITERATIONS;
+  const MAX_ITERATIONS = 8;
 
   try {
-    for (let i = 0; i < maxIterations; i++) {
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
       const { result, model } = await chatWithFallback(chain, {
         model: '',
         messages,

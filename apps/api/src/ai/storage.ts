@@ -1,6 +1,5 @@
 import type { AiConversation, AiMessage, Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
-import { env } from '../config/env.js';
 import { HttpError } from '../utils/http.js';
 import type { ChatMessage, ChatRole, ToolCall } from './types.js';
 import { findModel, resolveDefaultModel } from './models.config.js';
@@ -12,6 +11,9 @@ export interface ConversationOwnership {
   userId: string;
   modelId: string;
 }
+
+const HISTORY_MAX_TURNS = 20;
+const PENDING_ACTION_TTL_MIN = 10;
 
 export const ensureConversationOwnership = async (
   conversationId: string,
@@ -64,7 +66,7 @@ export const listMessages = async (
   return prisma.aiMessage.findMany({
     where: { conversationId },
     orderBy: { createdAt: 'asc' },
-    take: env.AI_HISTORY_MAX_TURNS * 2,
+    take: HISTORY_MAX_TURNS * 2,
   });
 };
 
@@ -165,7 +167,7 @@ export interface PendingActionRecord {
   expiresAt: Date;
 }
 
-const pendingTtlMs = () => env.AI_PENDING_ACTION_TTL_MIN * 60_000;
+const pendingTtlMs = () => PENDING_ACTION_TTL_MIN * 60_000;
 
 export const createPendingAction = async (params: {
   conversationId: string;

@@ -17,8 +17,17 @@ export class OpenAIProvider implements ModelProvider {
 
   protected client: OpenAI;
 
-  constructor(apiKey: string, baseURL?: string) {
-    this.client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
+  constructor(apiKey: string, baseURL?: string, authHeader?: string) {
+    const effectiveHeader = authHeader ?? 'Authorization';
+    const defaultHeaders =
+      effectiveHeader !== 'Authorization'
+        ? { [effectiveHeader]: apiKey }
+        : undefined;
+    this.client = new OpenAI({
+      apiKey,
+      ...(baseURL ? { baseURL } : {}),
+      ...(defaultHeaders ? { defaultHeaders } : {}),
+    });
   }
 
   async chat(req: ChatRequest): Promise<ChatResult> {

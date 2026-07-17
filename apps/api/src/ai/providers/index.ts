@@ -7,10 +7,12 @@ import { OpenAICompatProvider, OpenAIProvider } from './openai.js';
 
 const cache = new Map<string, ModelProvider>();
 
+const isSet = (v: string | undefined): boolean => !!v && v.length > 0;
+
 const resolveApiKey = (cfg: ModelConfig): string => {
-  const value = process.env[cfg.apiKeyEnv] ?? cfg.apiKeyFallback;
+  const value = env.AI_API_KEY ?? cfg.apiKeyFallback;
   if (!value) {
-    throw new HttpError(500, `模型 ${cfg.id} 缺少 API 密钥：${cfg.apiKeyEnv}`);
+    throw new HttpError(500, `模型 ${cfg.id} 缺少 API 密钥：AI_API_KEY`);
   }
   return value;
 };
@@ -19,16 +21,20 @@ export const getProvider = (cfg: ModelConfig): ModelProvider => {
   const cached = cache.get(cfg.id);
   if (cached) return cached;
 
+  const apiKey = resolveApiKey(cfg);
+  const authHeader =
+    cfg.authHeader ??
+    (cfg.provider === 'anthropic' ? 'x-api-key' : 'Authorization');
   let provider: ModelProvider;
   switch (cfg.provider) {
     case 'anthropic':
-      provider = new AnthropicProvider(resolveApiKey(cfg), cfg.baseURL);
+      provider = new AnthropicProvider(apiKey, cfg.baseURL, authHeader);
       break;
     case 'openai':
-      provider = new OpenAIProvider(resolveApiKey(cfg), cfg.baseURL);
+      provider = new OpenAIProvider(apiKey, cfg.baseURL, authHeader);
       break;
     case 'openai-compat':
-      provider = new OpenAICompatProvider(resolveApiKey(cfg), cfg.baseURL);
+      provider = new OpenAICompatProvider(apiKey, cfg.baseURL, authHeader);
       break;
     default:
       throw new HttpError(500, `未知 Provider：${cfg.provider}`);
@@ -39,4 +45,4 @@ export const getProvider = (cfg: ModelConfig): ModelProvider => {
 
 export const clearProviderCache = () => cache.clear();
 
-export const isAiEnabled = () => env.AI_ENABLED;
+export const isAiEnabled = () => isSet(env.AI_API_KEY);
