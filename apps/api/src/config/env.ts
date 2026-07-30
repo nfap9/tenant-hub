@@ -20,19 +20,10 @@ const envSchema = z
       .enum(['development', 'test', 'production'])
       .default('development'),
 
-    // AI 配置
-    AI_MODEL_NAME: z.string().default('claude-sonnet-4-6'),
-    AI_API_FORMAT: z
-      .enum(['anthropic', 'openai', 'openai-compatible'])
-      .optional(),
-    AI_MAX_CONTEXT_TOKENS: z.coerce.number().default(8192),
-    AI_ALLOW_LOCAL: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
-    AI_API_URL: z.string().optional(),
+    // AI 配置：模型列表（JSON 数组，格式见 apps/api/src/ai/models/types.ts）
+    AI_MODELS: z.string().optional(),
+    // 通用 API 密钥，模型未单独配置 apiKey 时使用
     AI_API_KEY: z.string().optional(),
-    AI_AUTH_HEADER: z.string().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;

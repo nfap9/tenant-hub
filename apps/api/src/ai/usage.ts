@@ -1,6 +1,6 @@
 import { prisma } from '../config/prisma.js';
-import type { ChatUsage } from './types.js';
-import type { ModelConfig } from './models.config.js';
+import type { ChatUsage } from './llm/types.js';
+import type { ModelConfig } from './models/types.js';
 
 const utcDate = () => {
   const now = new Date();

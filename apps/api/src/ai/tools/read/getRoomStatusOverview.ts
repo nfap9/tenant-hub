@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
-import { prisma } from '../../config/prisma.js';
-import type { ToolMeta } from './types.js';
+import { PERMISSIONS } from '../../../services/roles.js';
+import { prisma } from '../../../config/prisma.js';
+import type { ToolMeta } from '../types.js';
 
 const input = z.object({
   apartmentId: z.string().optional().describe('按公寓筛选，不传则统计整个组织'),

@@ -1,12 +1,12 @@
-import { prisma } from '../config/prisma.js';
-import { HttpError } from '../utils/http.js';
-import { findTool } from './tools/index.js';
-import type { ToolContext } from './tools/index.js';
+import { prisma } from '../../config/prisma.js';
+import { HttpError } from '../../utils/http.js';
+import { findTool } from '../tools/index.js';
+import type { ToolContext } from '../tools/index.js';
+import { appendUserMessage } from '../storage/messages.js';
 import {
-  appendUserMessage,
   getPendingActionForOrg,
   markPendingAction,
-} from './storage.js';
+} from '../storage/pendingActionRecords.js';
 
 export interface ConfirmActionResult {
   actionId: string;

@@ -1,29 +1,34 @@
 import type { ToolMeta } from './types.js';
-import { queryApartmentsTool } from './queryApartments.js';
-import { queryRoomsTool } from './queryRooms.js';
-import { queryLeasesTool } from './queryLeases.js';
-import { queryBillsTool } from './queryBills.js';
-import { getOverdueSummaryTool } from './getOverdueSummary.js';
-import { getRoomStatusOverviewTool } from './getRoomStatusOverview.js';
-import { queryMeterReadingsTool } from './queryMeterReadings.js';
-import { recordMeterReadingTool } from './recordMeterReading.js';
-import { generateBillsTool } from './generateBills.js';
-import { voidBillTool } from './voidBill.js';
-import { recordPaymentTool } from './recordPayment.js';
-import { createLeaseTool } from './createLease.js';
-import { updateLeaseStatusTool } from './updateLeaseStatus.js';
-import { createApartmentTool } from './createApartment.js';
+import { queryApartmentsTool } from './read/queryApartments.js';
+import { queryRoomsTool } from './read/queryRooms.js';
+import { queryLeasesTool } from './read/queryLeases.js';
+import { queryBillsTool } from './read/queryBills.js';
+import { queryMeterReadingsTool } from './read/queryMeterReadings.js';
+import { getOverdueSummaryTool } from './read/getOverdueSummary.js';
+import { getRoomStatusOverviewTool } from './read/getRoomStatusOverview.js';
+import { recordMeterReadingTool } from './write/recordMeterReading.js';
+import { generateBillsTool } from './write/generateBills.js';
+import { voidBillTool } from './write/voidBill.js';
+import { recordPaymentTool } from './write/recordPayment.js';
+import { createLeaseTool } from './write/createLease.js';
+import { updateLeaseStatusTool } from './write/updateLeaseStatus.js';
+import { createApartmentTool } from './write/createApartment.js';
 
 export type AnyTool = ToolMeta<any, any>;
 
-export const ALL_TOOLS: AnyTool[] = [
+/** 只读工具：直接执行并返回结果（read/） */
+const READ_TOOLS: AnyTool[] = [
   queryApartmentsTool,
   queryRoomsTool,
   queryLeasesTool,
   queryBillsTool,
+  queryMeterReadingsTool,
   getOverdueSummaryTool,
   getRoomStatusOverviewTool,
-  queryMeterReadingsTool,
+];
+
+/** 写工具：生成待确认操作，用户确认后才真正执行（write/） */
+const WRITE_TOOLS: AnyTool[] = [
   recordMeterReadingTool,
   generateBillsTool,
   voidBillTool,
@@ -32,6 +37,8 @@ export const ALL_TOOLS: AnyTool[] = [
   updateLeaseStatusTool,
   createApartmentTool,
 ];
+
+export const ALL_TOOLS: AnyTool[] = [...READ_TOOLS, ...WRITE_TOOLS];
 
 const hasPermission = (permissions: string[], required?: string): boolean => {
   if (!required) return true;

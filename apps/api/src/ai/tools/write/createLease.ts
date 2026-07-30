@@ -1,19 +1,19 @@
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
-import { PERMISSIONS } from '../../services/roles.js';
+import { PERMISSIONS } from '../../../services/roles.js';
 import {
   calculateKeyDepositAmount,
   createLeaseWithDeposit,
   createLeaseWithoutDeposit,
   findRoomById,
   updateRoomStatus,
-} from '../../services/lease.js';
-import { getRoomByIdRaw } from '../../services/apartment.js';
-import { generateLeaseBills } from '../../services/billing.js';
-import { startOfLeaseDay } from '../../services/leaseLifecycle.js';
-import { createLeaseInput } from '../../routes/leases.js';
-import { prisma } from '../../config/prisma.js';
-import type { ToolMeta } from './types.js';
+} from '../../../services/lease.js';
+import { getRoomByIdRaw } from '../../../services/apartment.js';
+import { generateLeaseBills } from '../../../services/billing.js';
+import { startOfLeaseDay } from '../../../services/leaseLifecycle.js';
+import { createLeaseInput } from '../../../routes/leases.js';
+import { prisma } from '../../../config/prisma.js';
+import type { ToolMeta } from '../types.js';
 
 // 与路由层创建租约入参同源，去掉 AI 场景不适用的历史账单补录字段
 const input = createLeaseInput

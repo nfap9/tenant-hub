@@ -8,7 +8,7 @@ import {
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import { PERMISSIONS } from '../services/roles.js';
-import { findEnabledModel } from '../ai/models.config.js';
+import { findEnabledModel } from '../ai/models/registry.js';
 import {
   listUserOrganizations,
   createOrganization,

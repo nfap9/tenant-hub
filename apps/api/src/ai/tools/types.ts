@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { Permission } from '../../services/roles.js';
-import type { ToolDefinition } from '../types.js';
+import type { ToolDefinition } from '../llm/types.js';
 
 export interface ToolContext {
   organizationId: string;

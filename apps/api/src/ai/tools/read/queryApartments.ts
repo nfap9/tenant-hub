@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
-import { listApartmentsRaw } from '../../services/apartment.js';
-import type { ToolMeta } from './types.js';
+import { PERMISSIONS } from '../../../services/roles.js';
+import { listApartmentsRaw } from '../../../services/apartment.js';
+import type { ToolMeta } from '../types.js';
 
 const input = z.object({
   keyword: z.string().optional().describe('公寓名或地址模糊匹配关键词'),

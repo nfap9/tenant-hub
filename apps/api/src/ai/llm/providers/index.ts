@@ -1,22 +1,21 @@
-import { env } from '../../config/env.js';
-import { HttpError } from '../../utils/http.js';
+import { env } from '../../../config/env.js';
+import { HttpError } from '../../../utils/http.js';
 import type { ModelProvider } from '../types.js';
-import type { ModelConfig } from '../models.config.js';
+import type { ModelConfig } from '../../models/types.js';
+import { listEnabledModels } from '../../models/registry.js';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatProvider, OpenAIProvider } from './openai.js';
 
 const cache = new Map<string, ModelProvider>();
 
-const isSet = (v: string | undefined): boolean => !!v && v.length > 0;
-
 const resolveApiKey = (cfg: ModelConfig): string => {
-  // 优先模型专属密钥（如 DEEPSEEK_API_KEY），其次通用 AI_API_KEY，最后兜底值
-  const value =
-    (cfg.apiKeyEnv ? process.env[cfg.apiKeyEnv] : undefined) ??
-    env.AI_API_KEY ??
-    cfg.apiKeyFallback;
+  // 优先模型自身配置的 apiKey，其次通用 AI_API_KEY
+  const value = cfg.apiKey ?? env.AI_API_KEY;
   if (!value) {
-    throw new HttpError(500, `模型 ${cfg.id} 缺少 API 密钥：${cfg.apiKeyEnv}`);
+    throw new HttpError(
+      500,
+      `模型 ${cfg.id} 缺少 API 密钥：请在 AI_MODELS 中为该模型配置 apiKey，或设置通用 AI_API_KEY`
+    );
   }
   return value;
 };
@@ -49,4 +48,4 @@ export const getProvider = (cfg: ModelConfig): ModelProvider => {
 
 export const clearProviderCache = () => cache.clear();
 
-export const isAiEnabled = () => isSet(env.AI_API_KEY);
+export const isAiEnabled = () => listEnabledModels().length > 0;

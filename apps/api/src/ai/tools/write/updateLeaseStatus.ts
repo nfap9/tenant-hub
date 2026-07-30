@@ -1,15 +1,18 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
+import { PERMISSIONS } from '../../../services/roles.js';
 import {
   activateLease,
   findRoomById,
   getLeaseWithFees,
   updateRoomStatus,
-} from '../../services/lease.js';
-import { generateLeaseBills } from '../../services/billing.js';
-import { hasExpired, startOfLeaseDay } from '../../services/leaseLifecycle.js';
-import { prisma } from '../../config/prisma.js';
-import type { ToolMeta } from './types.js';
+} from '../../../services/lease.js';
+import { generateLeaseBills } from '../../../services/billing.js';
+import {
+  hasExpired,
+  startOfLeaseDay,
+} from '../../../services/leaseLifecycle.js';
+import { prisma } from '../../../config/prisma.js';
+import type { ToolMeta } from '../types.js';
 
 const input = z.object({
   leaseId: z.string().describe('租约ID'),

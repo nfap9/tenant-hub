@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
-import { voidBill } from '../../services/billing.js';
-import { getBillById } from '../../services/bill.js';
-import type { ToolMeta } from './types.js';
+import { PERMISSIONS } from '../../../services/roles.js';
+import { voidBill } from '../../../services/billing.js';
+import { getBillById } from '../../../services/bill.js';
+import type { ToolMeta } from '../types.js';
 
 const input = z.object({
   billId: z.string().describe('账单ID'),

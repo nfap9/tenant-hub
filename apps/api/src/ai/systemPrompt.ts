@@ -1,4 +1,4 @@
-import type { ToolDefinition } from './types.js';
+import type { ToolDefinition } from './llm/types.js';
 
 export interface SystemPromptContext {
   orgName: string;

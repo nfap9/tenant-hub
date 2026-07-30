@@ -5,21 +5,22 @@ import { aiRateLimiter } from '../middleware/aiRateLimit.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import { prisma } from '../config/prisma.js';
-import { isAiEnabled } from '../ai/providers/index.js';
-import { listEnabledModels } from '../ai/models.config.js';
-import { runAgent, type AgentEvent } from '../ai/agent.js';
+import { isAiEnabled } from '../ai/llm/providers/index.js';
+import { listEnabledModels } from '../ai/models/registry.js';
+import { runAgent } from '../ai/agent/runAgent.js';
+import type { AgentEvent } from '../ai/agent/events.js';
 import {
   confirmPendingAction,
   rejectPendingAction,
-} from '../ai/pendingAction.js';
+} from '../ai/actions/pendingActions.js';
 import {
   archiveConversation,
   createConversation,
   ensureConversationOwnership,
   listConversations,
-  listMessages,
-  listPendingActions,
-} from '../ai/storage.js';
+} from '../ai/storage/conversations.js';
+import { listMessages } from '../ai/storage/messages.js';
+import { listPendingActions } from '../ai/storage/pendingActionRecords.js';
 
 export const aiRouter = Router();
 

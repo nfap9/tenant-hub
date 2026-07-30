@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
+import { PERMISSIONS } from '../../../services/roles.js';
 import {
   findRoomForMeterReading,
   recordRoomMeterReading,
-} from '../../services/bill.js';
-import { prisma } from '../../config/prisma.js';
-import type { ToolMeta } from './types.js';
+} from '../../../services/bill.js';
+import { prisma } from '../../../config/prisma.js';
+import type { ToolMeta } from '../types.js';
 
 const input = z.object({
   roomId: z.string().describe('房间ID'),

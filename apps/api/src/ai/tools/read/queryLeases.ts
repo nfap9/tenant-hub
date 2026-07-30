@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
-import { listLeasesRaw } from '../../services/lease.js';
-import type { ToolMeta } from './types.js';
+import { PERMISSIONS } from '../../../services/roles.js';
+import { listLeasesRaw } from '../../../services/lease.js';
+import type { ToolMeta } from '../types.js';
 
 const input = z.object({
   status: z

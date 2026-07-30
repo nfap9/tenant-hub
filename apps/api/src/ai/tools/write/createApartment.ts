@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
-import { createApartment } from '../../services/apartment.js';
-import { apartmentInput } from '../../routes/apartments.js';
-import { prisma } from '../../config/prisma.js';
-import type { ToolMeta } from './types.js';
+import { PERMISSIONS } from '../../../services/roles.js';
+import { createApartment } from '../../../services/apartment.js';
+import { apartmentInput } from '../../../routes/apartments.js';
+import { prisma } from '../../../config/prisma.js';
+import type { ToolMeta } from '../types.js';
 
 // 与路由层创建公寓入参同源
 const input = apartmentInput;

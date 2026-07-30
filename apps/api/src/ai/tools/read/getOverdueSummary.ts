@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { PERMISSIONS } from '../../services/roles.js';
-import { prisma } from '../../config/prisma.js';
-import type { ToolMeta } from './types.js';
+import { PERMISSIONS } from '../../../services/roles.js';
+import { prisma } from '../../../config/prisma.js';
+import type { ToolMeta } from '../types.js';
 
 const input = z.object({
   asOf: z.coerce.date().optional().describe('统计基准日期，默认今天'),
