@@ -8,6 +8,7 @@ import {
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import { PERMISSIONS } from '../services/roles.js';
+import { findEnabledModel } from '../ai/models.config.js';
 import {
   listUserOrganizations,
   createOrganization,
@@ -100,7 +101,7 @@ orgRouter.post(
 
 /**
  * PUT /api/organizations/:organizationId
- * 更新组织基本信息（需要组织管理权限）
+ * 更新组织基本信息（需要组织管理权限；aiModelDefault 仅所有者可改）
  */
 orgRouter.put(
   '/:organizationId',
@@ -108,8 +109,22 @@ orgRouter.put(
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
-      .object({ name: z.string().min(1), description: z.string().optional() })
+      .object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        aiModelDefault: z.string().min(1).nullable().optional(),
+      })
       .parse(req.body);
+    if (input.aiModelDefault !== undefined) {
+      const org = await getOrganizationById(req.organizationId!);
+      if (org.ownerId !== req.user!.id)
+        throw new HttpError(403, '仅所有者可修改默认 AI 模型');
+      if (
+        input.aiModelDefault !== null &&
+        !findEnabledModel(input.aiModelDefault)
+      )
+        throw new HttpError(400, '模型不存在或未启用');
+    }
     ok(res, await updateOrganization(req.organizationId!, input));
   })
 );

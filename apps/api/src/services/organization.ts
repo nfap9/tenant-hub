@@ -22,6 +22,7 @@ export const listUserOrganizations = async (userId: string) => {
           inviteCode: true,
           description: true,
           ownerId: true,
+          aiModelDefault: true,
         },
       },
       role: true,
@@ -167,7 +168,7 @@ export const getOrganizationUsage = async (organizationId: string) => {
  */
 export const updateOrganization = async (
   organizationId: string,
-  data: { name?: string; description?: string }
+  data: { name?: string; description?: string; aiModelDefault?: string | null }
 ) => {
   return prisma.organization.update({
     where: { id: organizationId },

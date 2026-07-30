@@ -10,9 +10,13 @@ const cache = new Map<string, ModelProvider>();
 const isSet = (v: string | undefined): boolean => !!v && v.length > 0;
 
 const resolveApiKey = (cfg: ModelConfig): string => {
-  const value = env.AI_API_KEY ?? cfg.apiKeyFallback;
+  // 优先模型专属密钥（如 DEEPSEEK_API_KEY），其次通用 AI_API_KEY，最后兜底值
+  const value =
+    (cfg.apiKeyEnv ? process.env[cfg.apiKeyEnv] : undefined) ??
+    env.AI_API_KEY ??
+    cfg.apiKeyFallback;
   if (!value) {
-    throw new HttpError(500, `模型 ${cfg.id} 缺少 API 密钥：AI_API_KEY`);
+    throw new HttpError(500, `模型 ${cfg.id} 缺少 API 密钥：${cfg.apiKeyEnv}`);
   }
   return value;
 };

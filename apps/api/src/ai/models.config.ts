@@ -10,7 +10,10 @@ export interface ModelConfig {
   baseURL?: string;
   apiKeyEnv: string;
   apiKeyFallback?: string;
+  /** 单次请求的最大输出 token 数（传给 provider 的 max_tokens） */
   maxTokens: number;
+  /** 模型上下文窗口大小（token），仅作元数据，供后续历史截断使用 */
+  contextWindowTokens: number;
   temperature?: number;
   enabled: boolean;
   tags: string[];
@@ -41,8 +44,9 @@ const KNOWN_MODELS: Record<string, ModelDefaults> = {
     provider: 'anthropic',
     providerModel: 'claude-sonnet-4-6',
     baseURL: 'https://api.anthropic.com',
-    apiKeyEnv: 'AI_API_KEY',
+    apiKeyEnv: 'ANTHROPIC_API_KEY',
     maxTokens: 8192,
+    contextWindowTokens: 200_000,
     temperature: 0.3,
     tags: ['chat', 'strong'],
     costPerMtu: { input: 3, output: 15 },
@@ -54,8 +58,9 @@ const KNOWN_MODELS: Record<string, ModelDefaults> = {
     provider: 'anthropic',
     providerModel: 'claude-haiku-4-5-20251001',
     baseURL: 'https://api.anthropic.com',
-    apiKeyEnv: 'AI_API_KEY',
+    apiKeyEnv: 'ANTHROPIC_API_KEY',
     maxTokens: 4096,
+    contextWindowTokens: 200_000,
     temperature: 0.2,
     tags: ['chat', 'cheap'],
     costPerMtu: { input: 0.8, output: 4 },
@@ -66,8 +71,9 @@ const KNOWN_MODELS: Record<string, ModelDefaults> = {
     provider: 'openai',
     providerModel: 'gpt-4o',
     baseURL: 'https://api.openai.com/v1',
-    apiKeyEnv: 'AI_API_KEY',
+    apiKeyEnv: 'OPENAI_API_KEY',
     maxTokens: 4096,
+    contextWindowTokens: 128_000,
     temperature: 0.3,
     tags: ['chat', 'strong'],
     costPerMtu: { input: 2.5, output: 10 },
@@ -78,8 +84,9 @@ const KNOWN_MODELS: Record<string, ModelDefaults> = {
     provider: 'openai-compat',
     providerModel: 'deepseek-chat',
     baseURL: 'https://api.deepseek.com/v1',
-    apiKeyEnv: 'AI_API_KEY',
+    apiKeyEnv: 'DEEPSEEK_API_KEY',
     maxTokens: 4096,
+    contextWindowTokens: 64_000,
     temperature: 0.3,
     tags: ['chat', 'cheap'],
     costPerMtu: { input: 0.14, output: 0.28 },
@@ -90,8 +97,9 @@ const KNOWN_MODELS: Record<string, ModelDefaults> = {
     provider: 'openai-compat',
     providerModel: 'qwen-plus',
     baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    apiKeyEnv: 'AI_API_KEY',
+    apiKeyEnv: 'DASHSCOPE_API_KEY',
     maxTokens: 4096,
+    contextWindowTokens: 128_000,
     temperature: 0.3,
     tags: ['chat', 'cheap'],
   },
@@ -101,8 +109,9 @@ const KNOWN_MODELS: Record<string, ModelDefaults> = {
     provider: 'openai-compat',
     providerModel: 'moonshot-v1-8k',
     baseURL: 'https://api.moonshot.cn/v1',
-    apiKeyEnv: 'AI_API_KEY',
+    apiKeyEnv: 'MOONSHOT_API_KEY',
     maxTokens: 4096,
+    contextWindowTokens: 8_000,
     temperature: 0.3,
     tags: ['chat', 'cheap'],
   },
@@ -112,35 +121,66 @@ const KNOWN_MODELS: Record<string, ModelDefaults> = {
     provider: 'openai-compat',
     providerModel: 'qwen2.5:14b',
     baseURL: 'http://localhost:11434/v1',
-    apiKeyEnv: 'AI_API_KEY',
+    apiKeyEnv: 'OLLAMA_API_KEY',
     apiKeyFallback: 'ollama',
     maxTokens: 4096,
+    contextWindowTokens: 32_000,
     temperature: 0.3,
     tags: ['chat', 'local'],
   },
 };
 
-const buildActiveModel = (): ModelConfig | undefined => {
-  const apiKey = env.AI_API_KEY;
-  if (!isSet(apiKey)) return undefined;
+/**
+ * 用户显式设置 AI_MAX_CONTEXT_TOKENS 时覆盖激活模型的上下文窗口元数据。
+ * 注意它与 maxTokens（最大输出 token）是两个概念，互不影响。
+ */
+const contextWindowOverride = (): number | undefined =>
+  isSet(process.env.AI_MAX_CONTEXT_TOKENS)
+    ? env.AI_MAX_CONTEXT_TOKENS
+    : undefined;
 
-  const known = KNOWN_MODELS[env.AI_MODEL_NAME];
+/**
+ * 构建内置模型的运行时配置。
+ * enabled 判定：
+ * - 本地模型（tags 含 local）：仅当 AI_ALLOW_LOCAL=true
+ * - env 激活模型（AI_MODEL_NAME 指向它且 AI_API_KEY 已设置）：启用，并应用
+ *   AI_API_FORMAT / AI_API_URL / AI_AUTH_HEADER 覆盖
+ * - 其他模型：对应的 apiKeyEnv 存在即启用
+ */
+const buildKnownModel = (def: ModelDefaults): ModelConfig => {
+  const isLocal = def.tags.includes('local');
+  const isActive = def.id === env.AI_MODEL_NAME && isSet(env.AI_API_KEY);
+  const enabled = isLocal
+    ? env.AI_ALLOW_LOCAL
+    : isActive || isSet(process.env[def.apiKeyEnv]);
+
+  const provider =
+    isActive && env.AI_API_FORMAT
+      ? parseApiFormat(env.AI_API_FORMAT)
+      : def.provider;
+
+  return {
+    ...def,
+    provider,
+    baseURL: isActive ? (env.AI_API_URL ?? def.baseURL) : def.baseURL,
+    contextWindowTokens:
+      (isActive ? contextWindowOverride() : undefined) ??
+      def.contextWindowTokens,
+    authHeader:
+      (isActive ? env.AI_AUTH_HEADER : undefined) ??
+      defaultAuthHeader(provider),
+    enabled,
+  };
+};
+
+/** AI_MODEL_NAME 不是内置模型时，按自定义模型注册（兼容旧单模型配置方式） */
+const buildCustomModel = (): ModelConfig | undefined => {
+  if (KNOWN_MODELS[env.AI_MODEL_NAME] || !isSet(env.AI_API_KEY)) {
+    return undefined;
+  }
   const provider = env.AI_API_FORMAT
     ? parseApiFormat(env.AI_API_FORMAT)
-    : (known?.provider ?? 'anthropic');
-  const authHeader = env.AI_AUTH_HEADER ?? defaultAuthHeader(provider);
-
-  if (known) {
-    return {
-      ...known,
-      provider,
-      baseURL: env.AI_API_URL ?? known.baseURL,
-      authHeader,
-      maxTokens: env.AI_MAX_CONTEXT_TOKENS,
-      enabled: true,
-    };
-  }
-
+    : 'anthropic';
   return {
     id: env.AI_MODEL_NAME,
     displayName: env.AI_MODEL_NAME,
@@ -149,20 +189,31 @@ const buildActiveModel = (): ModelConfig | undefined => {
     baseURL: env.AI_API_URL,
     apiKeyEnv: 'AI_API_KEY',
     apiKeyFallback: 'ollama',
-    maxTokens: env.AI_MAX_CONTEXT_TOKENS,
+    maxTokens: 4096,
+    contextWindowTokens: env.AI_MAX_CONTEXT_TOKENS,
     temperature: 0.3,
     enabled: true,
     tags: ['chat'],
-    authHeader,
+    authHeader: env.AI_AUTH_HEADER ?? defaultAuthHeader(provider),
   };
 };
 
-const activeModel = buildActiveModel();
+const customModel = buildCustomModel();
 
-export const MODEL_REGISTRY: ModelConfig[] = activeModel ? [activeModel] : [];
+/** 全量模型注册表：包含所有内置模型，是否可用由 enabled 标记决定 */
+export const MODEL_REGISTRY: ModelConfig[] = [
+  ...Object.values(KNOWN_MODELS).map(buildKnownModel),
+  ...(customModel ? [customModel] : []),
+];
 
 export const findModel = (id: string): ModelConfig | undefined =>
   MODEL_REGISTRY.find((m) => m.id === id);
+
+/** 仅在模型存在且已启用时返回，fallback 链与组织默认模型都应使用它 */
+export const findEnabledModel = (id: string): ModelConfig | undefined => {
+  const model = findModel(id);
+  return model?.enabled ? model : undefined;
+};
 
 export const listEnabledModels = (): ModelConfig[] =>
   MODEL_REGISTRY.filter((m) => m.enabled);

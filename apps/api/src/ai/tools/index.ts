@@ -10,6 +10,9 @@ import { recordMeterReadingTool } from './recordMeterReading.js';
 import { generateBillsTool } from './generateBills.js';
 import { voidBillTool } from './voidBill.js';
 import { recordPaymentTool } from './recordPayment.js';
+import { createLeaseTool } from './createLease.js';
+import { updateLeaseStatusTool } from './updateLeaseStatus.js';
+import { createApartmentTool } from './createApartment.js';
 
 export type AnyTool = ToolMeta<any, any>;
 
@@ -25,6 +28,9 @@ export const ALL_TOOLS: AnyTool[] = [
   generateBillsTool,
   voidBillTool,
   recordPaymentTool,
+  createLeaseTool,
+  updateLeaseStatusTool,
+  createApartmentTool,
 ];
 
 const hasPermission = (permissions: string[], required?: string): boolean => {

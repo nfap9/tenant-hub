@@ -2,7 +2,11 @@ import type { AiConversation, AiMessage, Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
 import type { ChatMessage, ChatRole, ToolCall } from './types.js';
-import { findModel, resolveDefaultModel } from './models.config.js';
+import {
+  findEnabledModel,
+  findModel,
+  resolveDefaultModel,
+} from './models.config.js';
 import type { ToolPreview } from './tools/types.js';
 
 export interface ConversationOwnership {
@@ -34,11 +38,28 @@ export const createConversation = async (params: {
   userId: string;
   modelId?: string;
 }): Promise<AiConversation> => {
-  const model = params.modelId
-    ? findModel(params.modelId)
-    : resolveDefaultModel();
-  if (!model) throw new HttpError(400, '模型不存在或未启用');
-  if (!model.enabled) throw new HttpError(400, `模型 ${model.id} 未启用`);
+  let model;
+  if (params.modelId) {
+    model = findModel(params.modelId);
+    if (!model) throw new HttpError(400, '模型不存在或未启用');
+    if (!model.enabled) throw new HttpError(400, `模型 ${model.id} 未启用`);
+  } else {
+    // 未显式指定模型时，优先用组织级默认模型（须已启用），否则回落到注册表默认模型
+    const org = await prisma.organization.findUnique({
+      where: { id: params.organizationId },
+      select: { aiModelDefault: true },
+    });
+    model = org?.aiModelDefault
+      ? findEnabledModel(org.aiModelDefault)
+      : undefined;
+    if (!model) {
+      try {
+        model = resolveDefaultModel();
+      } catch {
+        throw new HttpError(400, '无可用的 AI 模型');
+      }
+    }
+  }
 
   return prisma.aiConversation.create({
     data: {
@@ -63,11 +84,13 @@ export const listConversations = async (
 export const listMessages = async (
   conversationId: string
 ): Promise<AiMessage[]> => {
-  return prisma.aiMessage.findMany({
+  // 取最新的 N 条（避免长会话丢掉最近对话），再反转为时间正序
+  const messages = await prisma.aiMessage.findMany({
     where: { conversationId },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: 'desc' },
     take: HISTORY_MAX_TURNS * 2,
   });
+  return messages.reverse();
 };
 
 export const appendUserMessage = async (
@@ -165,6 +188,7 @@ export interface PendingActionRecord {
   summary: ToolPreview;
   status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'EXPIRED';
   expiresAt: Date;
+  createdAt?: Date;
 }
 
 const pendingTtlMs = () => PENDING_ACTION_TTL_MIN * 60_000;
@@ -223,6 +247,26 @@ export const getPendingActionForOrg = async (
     status: row.status,
     expiresAt: row.expiresAt,
   };
+};
+
+export const listPendingActions = async (
+  conversationId: string
+): Promise<PendingActionRecord[]> => {
+  const rows = await prisma.aiPendingAction.findMany({
+    where: { conversationId },
+    orderBy: { createdAt: 'asc' },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    conversationId: row.conversationId,
+    toolCallId: row.toolCallId,
+    toolName: row.toolName,
+    input: row.input,
+    summary: row.summary as unknown as ToolPreview,
+    status: row.status,
+    expiresAt: row.expiresAt,
+    createdAt: row.createdAt,
+  }));
 };
 
 export const markPendingAction = async (

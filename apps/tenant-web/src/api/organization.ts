@@ -9,6 +9,7 @@ export type CreateOrganizationInput = {
 export type UpdateOrganizationInput = {
   name: string;
   description?: string;
+  aiModelDefault?: string | null;
 };
 
 export type JoinOrganizationInput = {

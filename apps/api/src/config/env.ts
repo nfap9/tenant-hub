@@ -26,6 +26,10 @@ const envSchema = z
       .enum(['anthropic', 'openai', 'openai-compatible'])
       .optional(),
     AI_MAX_CONTEXT_TOKENS: z.coerce.number().default(8192),
+    AI_ALLOW_LOCAL: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     AI_API_URL: z.string().optional(),
     AI_API_KEY: z.string().optional(),
     AI_AUTH_HEADER: z.string().optional(),

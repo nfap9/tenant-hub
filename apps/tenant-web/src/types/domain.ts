@@ -6,6 +6,7 @@ export type Membership = {
     inviteCode?: string;
     description?: string;
     ownerId: string;
+    aiModelDefault?: string | null;
   };
   role: { id: string; code: string; name: string; permissions: string[] };
 };

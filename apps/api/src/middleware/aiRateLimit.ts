@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { HttpError } from '../utils/http.js';
-import { getTodayUsage } from '../ai/usage.js';
+import { getOrgTodayUsage } from '../ai/usage.js';
 import { prisma } from '../config/prisma.js';
 
 interface Bucket {
@@ -10,14 +10,20 @@ interface Bucket {
 
 const buckets = new Map<string, Bucket>();
 
-const DAILY_BUDGET_WARN_ONLY_USD = 100;
-
 const RATE_LIMIT_PER_MIN = 20;
+
+/** 惰性清理已过期的窗口 bucket，避免 Map 无限增长 */
+const pruneBuckets = (now: number) => {
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) buckets.delete(key);
+  }
+};
 
 /**
  * AI 接口限流中间件
  * - 滑动窗口：每用户每分钟 N 次
- * - 每日预算：若组织设置了 aiDailyBudgetUsd 且当日累计已超，则拒绝
+ * - 每日预算：只要组织设置了 aiDailyBudgetUsd 就强制执行，
+ *   按组织级当日累计用量（跨所有用户）判断
  */
 export const aiRateLimiter = async (
   req: Request,
@@ -31,8 +37,9 @@ export const aiRateLimiter = async (
   const key = `${req.user.id}:${req.organizationId}`;
   const now = Date.now();
   const limit = RATE_LIMIT_PER_MIN;
+  pruneBuckets(now);
   const bucket = buckets.get(key);
-  if (!bucket || bucket.resetAt <= now) {
+  if (!bucket) {
     buckets.set(key, { count: 1, resetAt: now + 60_000 });
   } else {
     bucket.count += 1;
@@ -50,8 +57,8 @@ export const aiRateLimiter = async (
 
   if (org.aiDailyBudgetUsd) {
     const budget = Number(org.aiDailyBudgetUsd);
-    if (budget > 0 && budget < DAILY_BUDGET_WARN_ONLY_USD) {
-      const usage = await getTodayUsage(req.organizationId, req.user.id);
+    if (budget > 0) {
+      const usage = await getOrgTodayUsage(req.organizationId);
       if (usage.totalCostUsd >= budget) {
         throw new HttpError(429, '已达当日 AI 使用预算上限');
       }

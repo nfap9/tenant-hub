@@ -48,6 +48,19 @@ export type PendingActionEvent = {
   expiresAt: string;
 };
 
+export type AiPendingActionStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'REJECTED'
+  | 'EXPIRED';
+
+/** 历史回放用的待确认操作记录（含已处理终态） */
+export type AiPendingActionRecord = PendingActionEvent & {
+  input?: unknown;
+  status: AiPendingActionStatus;
+  createdAt: string;
+};
+
 export type AgentEvent =
   | { type: 'text_delta'; delta: string }
   | { type: 'assistant_message'; text: string }
@@ -86,6 +99,14 @@ export async function listAiMessages(
 ): Promise<AiMessageRecord[]> {
   return apiClient<AiMessageRecord[]>(
     `/ai/conversations/${conversationId}/messages`
+  );
+}
+
+export async function listAiPendingActions(
+  conversationId: string
+): Promise<AiPendingActionRecord[]> {
+  return apiClient<AiPendingActionRecord[]>(
+    `/ai/conversations/${conversationId}/pending-actions`
   );
 }
 

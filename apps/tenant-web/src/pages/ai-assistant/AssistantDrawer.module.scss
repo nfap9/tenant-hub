@@ -1,0 +1,60 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.drawer-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-icon {
+  color: $th-primary;
+}
+
+.toolbar {
+  padding: $th-space-2 $th-space-3;
+  border-bottom: 1px solid $th-border-light;
+  display: flex;
+  gap: $th-space-2;
+  align-items: center;
+}
+
+.model-select {
+  flex: 1;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $th-space-2;
+  min-width: 220px;
+}
+
+.menu-item-title {
+  @include text-ellipsis;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: $th-space-3 $th-space-4;
+  background: $th-bg;
+}
+
+.history-loading {
+  text-align: center;
+  padding: $th-space-6;
+}
+
+.composer {
+  padding: $th-space-3;
+  border-top: 1px solid $th-border-light;
+}
+
+.composer-actions {
+  margin-top: $th-space-2;
+  display: flex;
+  justify-content: flex-end;
+  gap: $th-space-2;
+}

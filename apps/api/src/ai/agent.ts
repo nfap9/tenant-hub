@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import type { ModelConfig } from './models.config.js';
-import { findModel, resolveDefaultModel } from './models.config.js';
+import { findEnabledModel, resolveDefaultModel } from './models.config.js';
 import { getProvider } from './providers/index.js';
 import type {
   ChatMessage,
@@ -64,17 +64,14 @@ export interface RunAgentParams {
   signal?: AbortSignal;
 }
 
-const resolveDefault = (): ModelConfig => {
-  return resolveDefaultModel();
-};
-
 const resolveModelChain = (modelId?: string): ModelConfig[] => {
-  const primary = (modelId && findModel(modelId)) || resolveDefault();
-  if (!primary) throw new Error('无可用的 AI 模型');
+  // 主模型与 fallback 链都只在已启用模型中解析
+  const requested = modelId ? findEnabledModel(modelId) : undefined;
+  const primary = requested ?? resolveDefaultModel();
   const chain = [primary];
   for (const id of primary.fallbackTo ?? []) {
-    const m = findModel(id);
-    if (m && m.enabled && !chain.includes(m)) chain.push(m);
+    const m = findEnabledModel(id);
+    if (m && !chain.includes(m)) chain.push(m);
   }
   return chain;
 };

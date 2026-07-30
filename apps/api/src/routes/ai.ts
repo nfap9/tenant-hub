@@ -18,6 +18,7 @@ import {
   ensureConversationOwnership,
   listConversations,
   listMessages,
+  listPendingActions,
 } from '../ai/storage.js';
 
 export const aiRouter = Router();
@@ -89,6 +90,23 @@ aiRouter.get(
     );
     const messages = await listMessages(req.params.id);
     ok(res, messages);
+  })
+);
+
+/**
+ * GET /api/ai/conversations/:id/pending-actions
+ * 取会话的全部待确认操作记录（含已处理），供前端历史回放
+ */
+aiRouter.get(
+  '/conversations/:id/pending-actions',
+  asyncHandler(async (req, res) => {
+    await ensureConversationOwnership(
+      req.params.id,
+      req.organizationId!,
+      req.user!.id
+    );
+    const actions = await listPendingActions(req.params.id);
+    ok(res, actions);
   })
 );
 

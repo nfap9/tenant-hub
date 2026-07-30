@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Form,
   Input,
@@ -14,6 +14,7 @@ import {
   Card,
   Descriptions,
   Checkbox,
+  Spin,
 } from 'antd';
 import {
   SaveOutlined,
@@ -27,6 +28,7 @@ import {
   ExclamationCircleOutlined,
   SafetyCertificateOutlined,
   PlusOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
@@ -40,6 +42,7 @@ import {
   updateOrganizationRole,
   deleteOrganizationRole,
 } from '@/api/organization';
+import { listAiModels, type AiModelOption } from '@/api/ai';
 import {
   PERMISSIONS,
   PERMISSION_LABELS,
@@ -84,6 +87,18 @@ export default function OrganizationPage() {
   const [removeLoading, setRemoveLoading] = useState<Record<string, boolean>>(
     {}
   );
+  const [aiModels, setAiModels] = useState<AiModelOption[]>([]);
+  const [aiModelsLoading, setAiModelsLoading] = useState(false);
+  const [aiModelSaving, setAiModelSaving] = useState(false);
+
+  useEffect(() => {
+    if (!currentMembership) return;
+    setAiModelsLoading(true);
+    listAiModels()
+      .then(setAiModels)
+      .catch(() => setAiModels([]))
+      .finally(() => setAiModelsLoading(false));
+  }, [currentMembership]);
 
   if (!currentMembership) {
     return (
@@ -109,6 +124,28 @@ export default function OrganizationPage() {
     value: m.userId,
     label: `${m.user.username} (${m.user.phone})`,
   }));
+
+  const currentAiModel = aiModels.find((m) => m.id === org.aiModelDefault);
+  const currentAiModelLabel = org.aiModelDefault
+    ? (currentAiModel?.displayName ?? org.aiModelDefault)
+    : '系统默认';
+
+  const handleAiModelChange = async (value: string | null) => {
+    setAiModelSaving(true);
+    try {
+      await updateOrganization(org.id, {
+        name: org.name,
+        description: org.description,
+        aiModelDefault: value,
+      });
+      message.success('AI 默认模型已更新');
+      await reload();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '更新失败');
+    } finally {
+      setAiModelSaving(false);
+    }
+  };
 
   const handleEditOpen = () => {
     editForm.setFieldsValue({
@@ -465,6 +502,54 @@ export default function OrganizationPage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <DetailSection
+        title={
+          <span className={styles.sectionTitle}>
+            <RobotOutlined />
+            AI 助手
+          </span>
+        }
+      >
+        {aiModelsLoading ? (
+          <Spin />
+        ) : aiModels.length === 0 ? (
+          <EmptyState
+            size="small"
+            title="暂无可用模型"
+            description="尚未配置任何已启用的模型，请联系管理员配置模型密钥后再设置默认模型"
+          />
+        ) : (
+          <Row gutter={[24, 0]} align="middle">
+            <Col>
+              {isOwner ? (
+                <Select
+                  value={org.aiModelDefault ?? undefined}
+                  options={aiModels.map((m) => ({
+                    value: m.id,
+                    label: m.displayName,
+                  }))}
+                  placeholder="跟随系统默认"
+                  allowClear
+                  loading={aiModelSaving}
+                  disabled={aiModelSaving}
+                  onChange={(value?: string) =>
+                    handleAiModelChange(value ?? null)
+                  }
+                  style={{ minWidth: 240 }}
+                />
+              ) : (
+                <span>{currentAiModelLabel}</span>
+              )}
+            </Col>
+            <Col>
+              <span className={styles.aiModelHint}>
+                组织内 AI 助手默认使用的模型，清除后将回落到系统默认模型
+              </span>
+            </Col>
+          </Row>
+        )}
+      </DetailSection>
 
       <DetailSection
         title={

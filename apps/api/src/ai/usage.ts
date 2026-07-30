@@ -29,41 +29,30 @@ export const recordUsage = async (
       : 0;
 
   const date = utcDate();
-  const existing = await db.aiUsageDaily.findUnique({
-    where: {
-      organizationId_userId_modelId_date: {
-        organizationId: params.organizationId,
-        userId: params.userId,
-        modelId: params.model.id,
-        date,
-      },
+  const key = {
+    organizationId: params.organizationId,
+    userId: params.userId,
+    modelId: params.model.id,
+    date,
+  };
+
+  // upsert 避免并发下 findUnique 后分支 update/create 撞唯一键
+  await db.aiUsageDaily.upsert({
+    where: { organizationId_userId_modelId_date: key },
+    create: {
+      ...key,
+      inputTokens,
+      outputTokens,
+      estimatedCostUsd: cost,
+      requestCount: 1,
+    },
+    update: {
+      inputTokens: { increment: inputTokens },
+      outputTokens: { increment: outputTokens },
+      estimatedCostUsd: { increment: cost },
+      requestCount: { increment: 1 },
     },
   });
-
-  if (existing) {
-    await db.aiUsageDaily.update({
-      where: { id: existing.id },
-      data: {
-        inputTokens: { increment: inputTokens },
-        outputTokens: { increment: outputTokens },
-        estimatedCostUsd: { increment: cost },
-        requestCount: { increment: 1 },
-      },
-    });
-  } else {
-    await db.aiUsageDaily.create({
-      data: {
-        organizationId: params.organizationId,
-        userId: params.userId,
-        modelId: params.model.id,
-        date,
-        inputTokens,
-        outputTokens,
-        estimatedCostUsd: cost,
-        requestCount: 1,
-      },
-    });
-  }
 };
 
 export const getTodayUsage = async (
@@ -82,4 +71,19 @@ export const getTodayUsage = async (
     },
     { totalCostUsd: 0, totalRequests: 0 }
   );
+};
+
+/** 组织级当日用量聚合（跨所有用户与模型），用于日预算强制执行 */
+export const getOrgTodayUsage = async (
+  organizationId: string
+): Promise<{ totalCostUsd: number; totalRequests: number }> => {
+  const date = utcDate();
+  const agg = await prisma.aiUsageDaily.aggregate({
+    where: { organizationId, date },
+    _sum: { estimatedCostUsd: true, requestCount: true },
+  });
+  return {
+    totalCostUsd: Number(agg._sum.estimatedCostUsd ?? 0),
+    totalRequests: agg._sum.requestCount ?? 0,
+  };
 };
