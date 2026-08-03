@@ -2,12 +2,15 @@
 
 ## 项目概述
 
-Tenant Hub（租务通）是一个轻量化的公寓租赁管理系统，采用 **pnpm monorepo** 架构。项目包含两个应用：
+Tenant Hub（租务通）是一个轻量化的公寓租赁管理系统，采用 **pnpm monorepo** 架构。项目包含三个应用：
 
 - **`apps/api`** — 后端 API 服务（Node.js 22 + Express 4 + Prisma 5 + PostgreSQL 16）
 - **`apps/tenant-web`** — Web 管理后台（React 18 + Vite 6 + Ant Design 5）
+- **`apps/mobile`** — 移动端 App（Expo SDK 57 + expo-router + zustand），以 AI agent 对话为核心入口
 
 Web 端面向公寓运营方，仅保留核心租赁业务功能：组织管理、房源管理、房间管理、租约管理、账单与收款、水电抄表。
+
+移动端首页即 AI 助手（复用后端 `/api/ai/*` 的 SSE 流式对话与写操作人工确认），另配资产、财务、抄表三个业务页（只读为主 + 抄表录入）；UI 风格与组件参考 tenant-assis 项目（白底、靛蓝 `#4F46E5` 主色、卡片式、无第三方组件库）。移动端启动：`pnpm dev:mobile`（iOS 模拟器默认 `http://localhost:4000/api`，真机/Android 需修改 `apps/mobile/app.json` 的 `extra.apiBaseUrl`，详见 `apps/mobile/README.md`）。
 
 ---
 
@@ -31,6 +34,7 @@ Web 端面向公寓运营方，仅保留核心租赁业务功能：组织管理�
 | ------------------- | ---------------------------------------- |
 | `pnpm install`      | 安装所有 workspace 依赖                  |
 | `pnpm dev`          | 并行启动 `api` + `tenant-web` 开发服务   |
+| `pnpm dev:mobile`   | 启动移动端 Expo 开发服务                 |
 | `pnpm dev:all`      | 一键启动本地开发（基础设施和项目代码）   |
 | `pnpm dev:infra`    | 启动 Docker 基础设施                     |
 | `pnpm build`        | 递归构建所有应用                         |
