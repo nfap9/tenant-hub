@@ -12,16 +12,17 @@ export type AiConversationSummary = {
   title?: string | null;
 };
 
-export type AiMessageRole = 'SYSTEM' | 'USER' | 'ASSISTANT' | 'TOOL';
-
-export type AiMessageRecord = {
+/** LangGraph 图状态中的序列化消息（GET state / SSE message 事件） */
+export type SerializedMessage = {
   id: string;
-  role: AiMessageRole;
-  content: unknown;
-  modelId?: string | null;
-  tokensInput?: number | null;
-  tokensOutput?: number | null;
-  createdAt: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string;
+  /** assistant 消息携带的工具调用记录 */
+  toolCalls?: { id: string; name: string; args: Record<string, unknown> }[];
+  /** tool 消息对应的工具调用 id */
+  toolCallId?: string;
+  /** tool 消息的工具名 */
+  name?: string;
 };
 
 export type ToolPreviewDiff = {
@@ -37,7 +38,8 @@ export type ToolPreview = {
   description: string;
 };
 
-export type PendingActionEvent = {
+/** interrupt 产生的待确认操作 */
+export type PendingActionPayload = {
   id: string;
   conversationId: string;
   toolCallId: string;
@@ -52,25 +54,26 @@ export type AiPendingActionStatus =
   | 'REJECTED'
   | 'EXPIRED';
 
-/** 历史回放用的待确认操作记录（含已处理终态） */
-export type AiPendingActionRecord = PendingActionEvent & {
+/** 审计表全量记录（含已处理终态），历史回放用 */
+export type PendingActionRecord = PendingActionPayload & {
   input?: unknown;
   status: AiPendingActionStatus;
   createdAt: string;
 };
 
+/** GET /conversations/:id/state 的响应 */
+export type AiConversationState = {
+  messages: SerializedMessage[];
+  /** 当前仍可操作的待确认操作 */
+  interrupts: PendingActionPayload[];
+  /** 审计表全量记录（含终态） */
+  actions: PendingActionRecord[];
+};
+
 export type AgentEvent =
   | { type: 'text_delta'; delta: string }
-  | { type: 'assistant_message'; text: string }
+  | { type: 'message'; message: SerializedMessage }
   | { type: 'tool_call'; name: string; summary: string }
-  | { type: 'pending_action'; action: PendingActionEvent }
+  | { type: 'interrupt'; action: PendingActionPayload }
   | { type: 'error'; message: string }
   | { type: 'done' };
-
-export type ConfirmActionResult = {
-  actionId: string;
-  toolName: string;
-  ok: boolean;
-  summary: string;
-  data?: unknown;
-};

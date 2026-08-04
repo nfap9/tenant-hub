@@ -1,27 +1,23 @@
 import { create } from 'zustand';
 import {
   archiveConversation,
-  confirmAction,
   createConversation,
+  getConversationState,
   listConversations,
-  listMessages,
   listModels,
-  listPendingActions,
-  rejectAction,
 } from '@/api/ai/rest';
-import { streamAiChat } from '@/api/ai/stream';
+import { streamAiChat, streamAiResume } from '@/api/ai/stream';
 import { useSessionStore } from '@/store/sessionStore';
 import type {
   AgentEvent,
-  AiMessageRecord,
   AiModel,
   Conversation,
-  PendingAction,
-  ToolCallRecord,
+  PendingActionRecord,
+  SerializedMessage,
 } from '@/api/ai/types';
 
 /** UI 侧的待确认操作：在后端记录基础上附带确认执行的结果摘要 */
-export type UiPendingAction = PendingAction & { resultSummary?: string };
+export type UiPendingAction = PendingActionRecord & { resultSummary?: string };
 
 export type ChatItem =
   | {
@@ -38,67 +34,54 @@ export type ChatItem =
 let localSeq = 0;
 const uid = () => `local-${Date.now()}-${(localSeq += 1)}`;
 
-export const isActionExpired = (a: { expiresAt: string }) =>
-  new Date(a.expiresAt).getTime() < Date.now();
-
-/** 操作是否仍处于待处理（PENDING 且未过期） */
-export const isActionPending = (a: UiPendingAction) =>
-  a.status === 'PENDING' && !isActionExpired(a);
+/** 操作是否仍可处理：id 在后端返回的 interrupt 集合中（替代旧的 status/过期判断） */
+export const isActionPending = (a: UiPendingAction, interruptIds: string[]) =>
+  interruptIds.includes(a.id);
 
 const truncate = (s: string, max = 160) =>
   s.length > max ? `${s.slice(0, max)}…` : s;
 
-/** 历史消息记录 → 聊天条目（ASSISTANT 的 toolCalls 与 TOOL 消息渲染为小字工具记录） */
-const itemsFromMessage = (record: AiMessageRecord): ChatItem[] => {
-  if (record.role === 'USER') {
+/** 序列化消息 → 聊天条目（assistant 的 toolCalls 与 tool 消息渲染为小字工具记录） */
+const itemsFromMessage = (record: SerializedMessage): ChatItem[] => {
+  if (record.role === 'user') {
     return [
       {
         kind: 'message',
-        id: record.id,
+        id: record.id || uid(),
         role: 'user',
-        content: typeof record.content === 'string' ? record.content : '',
+        content: record.content,
       },
     ];
   }
-  if (record.role === 'ASSISTANT') {
-    let text = '';
-    let toolCalls: ToolCallRecord[] = [];
-    if (typeof record.content === 'string') {
-      text = record.content;
-    } else if (record.content && typeof record.content === 'object') {
-      const obj = record.content as {
-        text?: string;
-        toolCalls?: ToolCallRecord[];
-      };
-      text = obj.text ?? '';
-      toolCalls = obj.toolCalls ?? [];
+  if (record.role === 'assistant') {
+    const items: ChatItem[] = [];
+    if (record.content) {
+      items.push({
+        kind: 'message',
+        id: record.id || uid(),
+        role: 'assistant',
+        content: record.content,
+      });
     }
-    const items: ChatItem[] = [
-      { kind: 'message', id: record.id, role: 'assistant', content: text },
-    ];
-    toolCalls.forEach((tc, i) => {
-      const name = tc?.name ?? `tool-${i}`;
+    (record.toolCalls ?? []).forEach((tc, i) => {
       items.push({
         kind: 'tool',
         id: `${record.id}-tc-${i}`,
-        name,
-        summary: `已调用 ${name}`,
+        name: tc.name,
+        summary: `已调用 ${tc.name}`,
       });
     });
     return items;
   }
-  if (record.role === 'TOOL') {
-    const obj = (record.content ?? {}) as { content?: string };
-    return [
-      {
-        kind: 'tool',
-        id: record.id,
-        name: 'tool',
-        summary: truncate(obj.content ?? ''),
-      },
-    ];
-  }
-  return [];
+  // role === 'tool'
+  return [
+    {
+      kind: 'tool',
+      id: record.id || uid(),
+      name: record.name ?? 'tool',
+      summary: truncate(record.content),
+    },
+  ];
 };
 
 type ChatState = {
@@ -108,6 +91,8 @@ type ChatState = {
   conversationId: string | null;
   items: ChatItem[];
   pendingActions: Record<string, UiPendingAction>;
+  /** 当前仍可操作的待确认操作 id（后端 state.interrupts） */
+  interruptIds: string[];
   models: AiModel[];
   selectedModelId: string | null;
   init: () => Promise<void>;
@@ -125,6 +110,8 @@ type ChatState = {
 
 /** 进行中的 SSE 请求控制器（不放进 state，避免触发渲染） */
 let abortController: AbortController | null = null;
+/** 当前流式助手气泡 id；text_delta 归属它，message 事件定稿后清空 */
+let currentAssistantId: string | null = null;
 
 const initialState = {
   ready: false,
@@ -133,6 +120,7 @@ const initialState = {
   conversationId: null as string | null,
   items: [] as ChatItem[],
   pendingActions: {} as Record<string, UiPendingAction>,
+  interruptIds: [] as string[],
   models: [] as AiModel[],
   selectedModelId: null as string | null,
 };
@@ -151,6 +139,57 @@ export const useChatStore = create<ChatState>((set, get) => {
       ),
     }));
 
+  /** 没有流式气泡时补一个（resume 流出的 text_delta / error 用） */
+  const ensureAssistantBubble = () => {
+    if (!currentAssistantId) {
+      currentAssistantId = uid();
+      const id = currentAssistantId;
+      set((s) => ({
+        items: [
+          ...s.items,
+          {
+            kind: 'message',
+            id,
+            role: 'assistant',
+            content: '',
+            streaming: true,
+          },
+        ],
+      }));
+    }
+    return currentAssistantId;
+  };
+
+  /** 流结束：定稿流式气泡；空气泡（纯工具/中断运行）直接移除 */
+  const finalizeAssistant = () => {
+    const id = currentAssistantId;
+    currentAssistantId = null;
+    if (!id) return;
+    set((s) => ({
+      items: s.items.flatMap((it) =>
+        it.kind === 'message' && it.id === id
+          ? it.content || it.error
+            ? [{ ...it, streaming: false }]
+            : []
+          : [it]
+      ),
+    }));
+  };
+
+  /** 追加工具记录，按 id 去重（interrupt 恢复后 tools 节点重跑会重复产出同一 toolCallId 的事件） */
+  const appendToolItems = (
+    toolItems: Extract<ChatItem, { kind: 'tool' }>[]
+  ) => {
+    if (toolItems.length === 0) return;
+    set((s) => {
+      const existing = new Set(
+        s.items.filter((it) => it.kind === 'tool').map((it) => it.id)
+      );
+      const fresh = toolItems.filter((it) => !existing.has(it.id));
+      return fresh.length ? { items: [...s.items, ...fresh] } : s;
+    });
+  };
+
   const refreshConversations = async () => {
     try {
       const conversations = await listConversations();
@@ -160,59 +199,220 @@ export const useChatStore = create<ChatState>((set, get) => {
     }
   };
 
-  const applyEvent = (event: AgentEvent, assistantId: string) => {
+  /** 拉取会话完整状态并重建时间线（打开会话回放 / resume 结束后全量刷新） */
+  const loadState = async (id: string) => {
+    const state = await getConversationState(id);
+
+    // 消息按序展开；操作卡片锚定到对应 toolCall 的消息之后（SerializedMessage 无时间戳，
+    // 无法与 actions.createdAt 直接交错排序），无法锚定的追加到末尾
+    const items: ChatItem[] = [];
+    const placed = new Set<string>();
+    for (const m of state.messages) {
+      items.push(...itemsFromMessage(m));
+      const callIds = new Set<string>();
+      if (m.role === 'assistant') {
+        m.toolCalls?.forEach((tc) => tc.id && callIds.add(tc.id));
+      }
+      if (m.role === 'tool' && m.toolCallId) callIds.add(m.toolCallId);
+      for (const a of state.actions) {
+        if (!placed.has(a.id) && callIds.has(a.toolCallId)) {
+          placed.add(a.id);
+          items.push({ kind: 'action', id: `action-${a.id}`, actionId: a.id });
+        }
+      }
+    }
+    for (const a of state.actions) {
+      if (!placed.has(a.id)) {
+        items.push({ kind: 'action', id: `action-${a.id}`, actionId: a.id });
+      }
+    }
+
+    const toolMsgByCallId = new Map(
+      state.messages
+        .filter((m) => m.role === 'tool' && m.toolCallId)
+        .map((m) => [m.toolCallId as string, m])
+    );
+    const map: Record<string, UiPendingAction> = {};
+    for (const a of state.actions) {
+      const toolMsg = toolMsgByCallId.get(a.toolCallId);
+      map[a.id] = {
+        ...a,
+        resultSummary:
+          a.status === 'CONFIRMED' && toolMsg
+            ? truncate(toolMsg.content)
+            : undefined,
+      };
+    }
+    // interrupt 中可能还有尚未落审计记录的载荷，补齐为 PENDING 卡片数据
+    const interruptIds: string[] = [];
+    for (const p of state.interrupts) {
+      interruptIds.push(p.id);
+      if (!map[p.id]) {
+        map[p.id] = { ...p, status: 'PENDING', createdAt: p.expiresAt };
+      }
+    }
+    set({ items, pendingActions: map, interruptIds });
+  };
+
+  /** chat 与 resume 共用的事件处理：resume 后图继续执行，协议一致 */
+  const applyEvent = (event: AgentEvent) => {
     switch (event.type) {
-      case 'text_delta':
-        patchAssistant(assistantId, (m) => ({
-          content: m.content + event.delta,
-        }));
+      case 'text_delta': {
+        const id = ensureAssistantBubble();
+        patchAssistant(id, (m) => ({ content: m.content + event.delta }));
         break;
-      case 'assistant_message':
-        patchAssistant(assistantId, () => ({
-          content: event.text,
-          streaming: false,
-        }));
-        break;
-      case 'tool_call':
-        set((s) => ({
-          items: [
-            ...s.items,
-            {
-              kind: 'tool',
-              id: uid(),
-              name: event.name,
-              summary: event.summary,
-            },
-          ],
-        }));
-        break;
-      case 'pending_action':
-        set((s) => ({
-          pendingActions: {
-            ...s.pendingActions,
-            [event.action.id]: {
-              ...event.action,
-              status: 'PENDING',
-              createdAt: new Date().toISOString(),
-            },
+      }
+      case 'message': {
+        const msg = event.message;
+        if (msg.role === 'user') break; // 用户消息本地已回显
+        if (msg.role === 'assistant') {
+          if (msg.content) {
+            if (currentAssistantId) {
+              // 定稿当前流式气泡；后续 text_delta 会落到新气泡
+              const id = currentAssistantId;
+              currentAssistantId = null;
+              patchAssistant(id, () => ({
+                content: msg.content,
+                streaming: false,
+              }));
+            } else {
+              set((s) => ({
+                items: [
+                  ...s.items,
+                  {
+                    kind: 'message',
+                    id: msg.id || uid(),
+                    role: 'assistant',
+                    content: msg.content,
+                  },
+                ],
+              }));
+            }
+          }
+          // 空文本 + toolCalls 的消息渲染为工具调用记录
+          appendToolItems(
+            (msg.toolCalls ?? []).map((tc, i) => ({
+              kind: 'tool' as const,
+              id: tc.id ? `tc-${tc.id}` : `${msg.id}-tc-${i}`,
+              name: tc.name,
+              summary: `已调用 ${tc.name}`,
+            }))
+          );
+          break;
+        }
+        // role === 'tool'：与 assistant toolCalls 记录共用 tc- 前缀去重
+        appendToolItems([
+          {
+            kind: 'tool',
+            id: msg.toolCallId ? `tc-${msg.toolCallId}` : `tm-${msg.id}`,
+            name: msg.name ?? 'tool',
+            summary: truncate(msg.content),
           },
-          items: [
-            ...s.items,
-            { kind: 'action', id: uid(), actionId: event.action.id },
-          ],
-        }));
+        ]);
         break;
-      case 'error':
-        patchAssistant(assistantId, (m) => ({
+      }
+      case 'tool_call':
+        // 无 toolCallId 可去重，按 名称+内容 去重（resume 重跑会原样重发）
+        appendToolItems([
+          {
+            kind: 'tool',
+            id: `tcall-${event.name}-${event.summary}`,
+            name: event.name,
+            summary: event.summary,
+          },
+        ]);
+        break;
+      case 'interrupt':
+        set((s) => {
+          const existing = s.pendingActions[event.action.id];
+          const hasCard = s.items.some(
+            (it) => it.kind === 'action' && it.actionId === event.action.id
+          );
+          return {
+            pendingActions: {
+              ...s.pendingActions,
+              [event.action.id]: {
+                ...existing,
+                ...event.action,
+                status: existing?.status ?? 'PENDING',
+                createdAt: existing?.createdAt ?? new Date().toISOString(),
+              },
+            },
+            interruptIds: s.interruptIds.includes(event.action.id)
+              ? s.interruptIds
+              : [...s.interruptIds, event.action.id],
+            items: hasCard
+              ? s.items
+              : [
+                  ...s.items,
+                  {
+                    kind: 'action',
+                    id: `action-${event.action.id}`,
+                    actionId: event.action.id,
+                  },
+                ],
+          };
+        });
+        break;
+      case 'error': {
+        const id = ensureAssistantBubble();
+        patchAssistant(id, (m) => ({
           streaming: false,
           error: true,
           content: m.content || event.message,
         }));
+        currentAssistantId = null;
         break;
+      }
       case 'done':
-        patchAssistant(assistantId, () => ({ streaming: false }));
+        finalizeAssistant();
         break;
     }
+  };
+
+  /** 确认/拒绝待确认操作：走 resume SSE，事件继续渲染进当前会话 */
+  const resume = (actionId: string, decision: 'approve' | 'reject') => {
+    const conversationId = get().conversationId;
+    if (
+      !conversationId ||
+      get().sending ||
+      !get().interruptIds.includes(actionId)
+    ) {
+      return;
+    }
+    set({ sending: true });
+
+    abortController = streamAiResume({
+      conversationId,
+      actionId,
+      decision,
+      onEvent: applyEvent,
+      onError: (err) => {
+        set((s) => ({
+          sending: false,
+          items: [
+            ...s.items,
+            {
+              kind: 'message',
+              id: uid(),
+              role: 'assistant',
+              error: true,
+              content: err.message,
+            },
+          ],
+        }));
+      },
+      onClose: () => {
+        abortController = null;
+        finalizeAssistant();
+        set({ sending: false });
+        // 流结束后全量刷新会话状态，保证卡片终态与后端一致
+        if (get().conversationId === conversationId) {
+          loadState(conversationId).catch(() => undefined);
+        }
+        void refreshConversations();
+      },
+    });
   };
 
   return {
@@ -221,6 +421,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     reset: () => {
       abortController?.abort();
       abortController = null;
+      currentAssistantId = null;
       set({ ...initialState });
     },
 
@@ -228,6 +429,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       // 每次初始化先清空上一组织/上一会话残留的数据
       abortController?.abort();
       abortController = null;
+      currentAssistantId = null;
       set({ ...initialState });
       try {
         const [models, conversations] = await Promise.all([
@@ -251,31 +453,18 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     openConversation: async (id) => {
       get().stop();
-      set({ conversationId: id, items: [], pendingActions: {}, ready: false });
+      currentAssistantId = null;
+      set({
+        conversationId: id,
+        items: [],
+        pendingActions: {},
+        interruptIds: [],
+        ready: false,
+      });
       try {
-        const [messages, actions] = await Promise.all([
-          listMessages(id),
-          listPendingActions(id),
-        ]);
-        // 消息与操作卡片按时间交错回放；PENDING 卡片同时进入固定面板
-        const timed: { at: string; item: ChatItem }[] = [];
-        for (const m of messages) {
-          for (const item of itemsFromMessage(m)) {
-            timed.push({ at: m.createdAt, item });
-          }
-        }
-        const map: Record<string, UiPendingAction> = {};
-        for (const a of actions) {
-          map[a.id] = a;
-          timed.push({
-            at: a.createdAt,
-            item: { kind: 'action', id: `action-${a.id}`, actionId: a.id },
-          });
-        }
-        timed.sort((x, y) => x.at.localeCompare(y.at));
-        set({ items: timed.map((t) => t.item), pendingActions: map });
+        await loadState(id);
       } catch {
-        set({ items: [], pendingActions: {} });
+        set({ items: [], pendingActions: {}, interruptIds: [] });
       } finally {
         set({ ready: true });
       }
@@ -283,8 +472,14 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     newConversation: () => {
       get().stop();
+      currentAssistantId = null;
       // 不立即 POST 创建：等首次 send 时再真正建会话
-      set({ conversationId: null, items: [], pendingActions: {} });
+      set({
+        conversationId: null,
+        items: [],
+        pendingActions: {},
+        interruptIds: [],
+      });
     },
 
     send: async (text) => {
@@ -321,6 +516,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
 
       const assistantId = uid();
+      currentAssistantId = assistantId;
       set((s) => ({
         items: [
           ...s.items,
@@ -339,21 +535,26 @@ export const useChatStore = create<ChatState>((set, get) => {
         conversationId,
         message,
         modelId: get().selectedModelId ?? undefined,
-        onEvent: (event) => applyEvent(event, assistantId),
+        onEvent: applyEvent,
         onError: (err) => {
-          patchAssistant(assistantId, (m) => ({
-            streaming: false,
-            error: true,
-            content: m.content || err.message,
+          finalizeAssistant();
+          set((s) => ({
+            sending: false,
+            items: [
+              ...s.items,
+              {
+                kind: 'message',
+                id: uid(),
+                role: 'assistant',
+                error: true,
+                content: err.message,
+              },
+            ],
           }));
-          set({ sending: false });
         },
         onClose: () => {
           abortController = null;
-          patchAssistant(assistantId, (m) => ({
-            streaming: false,
-            content: m.content || '已中止',
-          }));
+          finalizeAssistant();
           set({ sending: false });
           void refreshConversations();
         },
@@ -366,35 +567,11 @@ export const useChatStore = create<ChatState>((set, get) => {
     },
 
     confirm: async (actionId) => {
-      const result = await confirmAction(actionId);
-      set((s) => {
-        const action = s.pendingActions[actionId];
-        if (!action) return s;
-        return {
-          pendingActions: {
-            ...s.pendingActions,
-            [actionId]: {
-              ...action,
-              status: 'CONFIRMED',
-              resultSummary: result.summary,
-            },
-          },
-        };
-      });
+      resume(actionId, 'approve');
     },
 
     reject: async (actionId) => {
-      await rejectAction(actionId);
-      set((s) => {
-        const action = s.pendingActions[actionId];
-        if (!action) return s;
-        return {
-          pendingActions: {
-            ...s.pendingActions,
-            [actionId]: { ...action, status: 'REJECTED' },
-          },
-        };
-      });
+      resume(actionId, 'reject');
     },
 
     archive: async (id) => {

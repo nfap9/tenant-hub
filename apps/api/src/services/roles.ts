@@ -13,6 +13,7 @@ export const PERMISSIONS = {
   DEPOSIT_MANAGE: 'deposit:manage',
   ORG_MANAGE: 'org:manage',
   MEMBER_MANAGE: 'member:manage',
+  AI_MODEL_MANAGE: 'aiModel:manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

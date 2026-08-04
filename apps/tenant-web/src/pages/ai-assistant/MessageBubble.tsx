@@ -78,18 +78,22 @@ export default function MessageBubble({
         >
           {roleLabel[message.role]}
         </div>
-        <div
-          style={{
-            padding: '8px 12px',
-            borderRadius: 8,
-            background: isUser ? '#2563eb' : '#f5f7fa',
-            color: isUser ? '#fff' : '#1f1f1f',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}
-        >
-          {message.text || (message.pending ? '思考中…' : '')}
-        </div>
+        {(message.text ||
+          message.pending ||
+          (!message.toolCalls?.length && !message.pendingActions?.length)) && (
+          <div
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: isUser ? '#2563eb' : '#f5f7fa',
+              color: isUser ? '#fff' : '#1f1f1f',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          >
+            {message.text || (message.pending ? '思考中…' : '')}
+          </div>
+        )}
 
         {message.toolCalls && message.toolCalls.length > 0 && (
           <Collapse

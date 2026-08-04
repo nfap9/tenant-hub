@@ -121,7 +121,7 @@ orgRouter.put(
         throw new HttpError(403, '仅所有者可修改默认 AI 模型');
       if (
         input.aiModelDefault !== null &&
-        !findEnabledModel(input.aiModelDefault)
+        !(await findEnabledModel(input.aiModelDefault))
       )
         throw new HttpError(400, '模型不存在或未启用');
     }

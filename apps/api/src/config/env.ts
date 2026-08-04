@@ -19,11 +19,6 @@ const envSchema = z
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
-
-    // AI 配置：模型列表（JSON 数组，格式见 apps/api/src/ai/models/types.ts）
-    AI_MODELS: z.string().optional(),
-    // 通用 API 密钥，模型未单独配置 apiKey 时使用
-    AI_API_KEY: z.string().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;

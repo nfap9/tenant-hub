@@ -1,61 +1,49 @@
-import { z } from 'zod';
-import { env } from '../../config/env.js';
-import {
-  modelConfigSchema,
-  type ModelConfig,
-  type ProviderKind,
-} from './types.js';
+import { prisma } from '../../config/prisma.js';
+import { aiModelRowToConfig, type ModelConfig } from './types.js';
 
-const defaultAuthHeader = (provider: ProviderKind): string =>
-  provider === 'anthropic' ? 'x-api-key' : 'Authorization';
+/** 进程内全量模型缓存（数据库为准；CRUD 后失效） */
+let modelCache: ModelConfig[] | null = null;
 
-/**
- * 解析 AI_MODELS 环境变量（JSON 数组）为模型注册表。
- * 配置不合法时直接抛错，让服务在启动阶段就暴露问题。
- */
-const parseModels = (raw?: string): ModelConfig[] => {
-  if (!raw || raw.trim().length === 0) return [];
-
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    throw new Error('AI_MODELS 不是合法的 JSON');
-  }
-
-  const parsed = z.array(modelConfigSchema).safeParse(json);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `${i.path.join('.')}: ${i.message}`)
-      .join('; ');
-    throw new Error(`AI_MODELS 配置不合法：${issues}`);
-  }
-
-  return parsed.data.map((m) => ({
-    ...m,
-    authHeader: m.authHeader ?? defaultAuthHeader(m.provider),
-  }));
+/** 使模型缓存失效，下次读取时重新从数据库加载 */
+export const invalidateModelCache = (): void => {
+  modelCache = null;
 };
 
-/** 全量模型注册表：完全来自用户配置（AI_MODELS），无内置模型 */
-export const MODEL_REGISTRY: ModelConfig[] = parseModels(env.AI_MODELS);
+const loadModels = async (): Promise<ModelConfig[]> => {
+  if (!modelCache) {
+    const rows = await prisma.aiModel.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    modelCache = rows.map(aiModelRowToConfig);
+  }
+  return modelCache;
+};
 
-export const findModel = (id: string): ModelConfig | undefined =>
-  MODEL_REGISTRY.find((m) => m.id === id);
+/** 全部模型（含禁用），供管理接口使用 */
+export const listModels = (): Promise<ModelConfig[]> => loadModels();
+
+export const findModel = async (id: string): Promise<ModelConfig | undefined> =>
+  (await loadModels()).find((m) => m.id === id);
 
 /** 仅在模型存在且已启用时返回，fallback 链与组织默认模型都应使用它 */
-export const findEnabledModel = (id: string): ModelConfig | undefined => {
-  const model = findModel(id);
+export const findEnabledModel = async (
+  id: string
+): Promise<ModelConfig | undefined> => {
+  const model = await findModel(id);
   return model?.enabled ? model : undefined;
 };
 
-export const listEnabledModels = (): ModelConfig[] =>
-  MODEL_REGISTRY.filter((m) => m.enabled);
+export const listEnabledModels = async (): Promise<ModelConfig[]> =>
+  (await loadModels()).filter((m) => m.enabled);
 
-export const resolveDefaultModel = (): ModelConfig => {
-  const enabled = listEnabledModels();
+export const resolveDefaultModel = async (): Promise<ModelConfig> => {
+  const enabled = await listEnabledModels();
   if (enabled.length === 0) {
-    throw new Error('AI 未配置：请在环境变量 AI_MODELS 中配置至少一个模型');
+    throw new Error('AI 未配置：请先在模型管理中配置至少一个已启用模型');
   }
   return enabled[0];
 };
+
+/** 是否启用了 AI（至少存在一个已启用模型） */
+export const isAiEnabled = async (): Promise<boolean> =>
+  (await listEnabledModels()).length > 0;

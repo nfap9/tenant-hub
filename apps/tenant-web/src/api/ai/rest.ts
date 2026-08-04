@@ -1,10 +1,8 @@
 import { apiClient } from '../client';
 import type {
+  AiConversationState,
   AiConversationSummary,
-  AiMessageRecord,
   AiModelOption,
-  AiPendingActionRecord,
-  ConfirmActionResult,
 } from './types';
 
 export async function listAiModels(): Promise<AiModelOption[]> {
@@ -24,19 +22,11 @@ export async function createAiConversation(
   });
 }
 
-export async function listAiMessages(
+export async function getAiConversationState(
   conversationId: string
-): Promise<AiMessageRecord[]> {
-  return apiClient<AiMessageRecord[]>(
-    `/ai/conversations/${conversationId}/messages`
-  );
-}
-
-export async function listAiPendingActions(
-  conversationId: string
-): Promise<AiPendingActionRecord[]> {
-  return apiClient<AiPendingActionRecord[]>(
-    `/ai/conversations/${conversationId}/pending-actions`
+): Promise<AiConversationState> {
+  return apiClient<AiConversationState>(
+    `/ai/conversations/${conversationId}/state`
   );
 }
 
@@ -47,20 +37,4 @@ export async function archiveAiConversation(
     `/ai/conversations/${conversationId}`,
     { method: 'DELETE' }
   );
-}
-
-export async function confirmAiAction(
-  actionId: string
-): Promise<ConfirmActionResult> {
-  return apiClient<ConfirmActionResult>('/ai/action/confirm', {
-    method: 'POST',
-    body: { actionId },
-  });
-}
-
-export async function rejectAiAction(actionId: string): Promise<void> {
-  await apiClient<{ rejected: boolean }>('/ai/action/reject', {
-    method: 'POST',
-    body: { actionId },
-  });
 }

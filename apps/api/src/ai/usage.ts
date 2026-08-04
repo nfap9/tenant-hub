@@ -1,6 +1,11 @@
 import { prisma } from '../config/prisma.js';
-import type { ChatUsage } from './llm/types.js';
 import type { ModelConfig } from './models/types.js';
+
+/** 单次模型调用的 token 用量（来自 LangChain AIMessage.usage_metadata） */
+export interface ChatUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
 
 const utcDate = () => {
   const now = new Date();

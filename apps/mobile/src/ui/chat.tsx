@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, radius, spacing } from './theme';
 import { Badge, Button, Card } from './components';
 import { AssistantMarkdown } from './markdown';
-import { isActionPending, type UiPendingAction } from '@/store/chatStore';
+import type { UiPendingAction } from '@/store/chatStore';
 
 /** 简单加粗渲染：支持 **加粗**（仅用户消息气泡用，AI 消息走 markdown） */
 const renderInline = (text: string, baseColor: string) => {
@@ -111,16 +111,21 @@ const formatValue = (v: unknown): string => {
 /** 待确认操作卡片：标题 + 风险 Badge + diff 明细 + 确认/取消 + 状态结果条 */
 export const PendingActionCard = ({
   action,
+  pending,
+  disabled,
   onConfirm,
   onReject,
 }: {
   action: UiPendingAction;
+  /** 是否仍可操作（id 在后端 interrupts 集合中），由调用方依据 store 状态传入 */
+  pending: boolean;
+  /** 流式请求进行中时禁用按钮 */
+  disabled?: boolean;
   onConfirm: () => void;
   onReject: () => void;
 }) => {
   const { summary, status } = action;
   const risk = riskMeta[summary.riskLevel] ?? riskMeta.low;
-  const pending = isActionPending(action);
   const expired = status === 'EXPIRED' || (status === 'PENDING' && !pending);
 
   return (
@@ -160,12 +165,14 @@ export const PendingActionCard = ({
             title="取消"
             variant="ghost"
             onPress={onReject}
+            disabled={disabled}
             style={{ flex: 1 }}
           />
           <Button
             title="确认执行"
             variant={summary.riskLevel === 'high' ? 'danger' : 'primary'}
             onPress={onConfirm}
+            disabled={disabled}
             style={{ flex: 2 }}
           />
         </View>

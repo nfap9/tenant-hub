@@ -1,8 +1,8 @@
 import {
   useCallback,
-  useRef,
   useState,
   type Dispatch,
+  type MutableRefObject,
   type SetStateAction,
 } from 'react';
 import { message } from 'antd';
@@ -22,6 +22,10 @@ type Params = {
   /** 流结束后刷新会话列表（updatedAt 变化） */
   loadConversations: () => Promise<void>;
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
+  /** 与待确认操作的 resume 流共享，保证同一时间只有一条流 */
+  streaming: boolean;
+  setStreaming: (v: boolean) => void;
+  abortRef: MutableRefObject<AbortController | null>;
 };
 
 /** 对话流：输入框、发送（SSE）、中止 */
@@ -31,10 +35,11 @@ export default function useChatStream({
   createConversation,
   loadConversations,
   setMessages,
+  streaming,
+  setStreaming,
+  abortRef,
 }: Params) {
   const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
 
   const send = useCallback(
     async (text: string) => {
@@ -71,9 +76,7 @@ export default function useChatStream({
         message: trimmed,
         modelId,
         onEvent: (event) => {
-          setMessages((prev) =>
-            applyAgentEventToMessages(prev, event, assistantMsg.id)
-          );
+          setMessages((prev) => applyAgentEventToMessages(prev, event));
           if (event.type === 'error') message.error(event.message);
         },
         onError: (error) => {
@@ -96,6 +99,8 @@ export default function useChatStream({
       createConversation,
       loadConversations,
       setMessages,
+      setStreaming,
+      abortRef,
     ]
   );
 
@@ -104,7 +109,7 @@ export default function useChatStream({
     abortRef.current = null;
     setStreaming(false);
     setMessages((prev) => settlePendingMessages(prev));
-  }, [setMessages]);
+  }, [setMessages, setStreaming, abortRef]);
 
-  return { input, setInput, streaming, send, handleAbort };
+  return { input, setInput, send, handleAbort };
 }

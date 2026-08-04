@@ -3,41 +3,38 @@ import { API_BASE } from '@/api/client';
 import { useSessionStore } from '@/store/sessionStore';
 import type { AgentEvent } from './types';
 
-/**
- * 通过 SSE 流式发送消息。返回一个可中止的控制器。
- * Hermes 原生 fetch 不支持流式 body，必须用 expo/fetch（response.body 为 ReadableStream）。
- * 帧解析逻辑与 tenant-web 的 api/ai/stream.ts 保持一致。
- */
-export function streamAiChat(params: {
-  conversationId: string;
-  message: string;
-  modelId?: string;
+type StreamParams = {
   onEvent: (event: AgentEvent) => void;
   onError: (error: Error) => void;
   onClose?: () => void;
-}): AbortController {
+};
+
+/**
+ * 建立一条 SSE 通道（chat 与 resume 共用）。返回一个可中止的控制器。
+ * Hermes 原生 fetch 不支持流式 body，必须用 expo/fetch（response.body 为 ReadableStream）。
+ * 帧解析逻辑与 tenant-web 的 api/ai/stream.ts 保持一致。
+ */
+function streamSse(
+  path: string,
+  body: Record<string, unknown>,
+  params: StreamParams
+): AbortController {
   const controller = new AbortController();
   const { token, currentOrgId } = useSessionStore.getState();
 
   (async () => {
     try {
-      const response = await fetch(
-        `${API_BASE}/ai/conversations/${params.conversationId}/chat`,
-        {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            accept: 'text/event-stream',
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-            ...(currentOrgId ? { 'x-organization-id': currentOrgId } : {}),
-          },
-          body: JSON.stringify({
-            message: params.message,
-            modelId: params.modelId,
-          }),
-          signal: controller.signal,
-        }
-      );
+      const response = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'text/event-stream',
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          ...(currentOrgId ? { 'x-organization-id': currentOrgId } : {}),
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
 
       if (!response.ok || !response.body) {
         if (response.status === 401) {
@@ -86,6 +83,36 @@ export function streamAiChat(params: {
   })();
 
   return controller;
+}
+
+/** 发送消息并以 SSE 流式接收 Agent 输出 */
+export function streamAiChat(
+  args: {
+    conversationId: string;
+    message: string;
+    modelId?: string;
+  } & StreamParams
+): AbortController {
+  return streamSse(
+    `/ai/conversations/${args.conversationId}/chat`,
+    { message: args.message, modelId: args.modelId },
+    args
+  );
+}
+
+/** 对待确认操作 approve / reject 后恢复 graph 执行，事件协议与 chat 相同 */
+export function streamAiResume(
+  args: {
+    conversationId: string;
+    actionId: string;
+    decision: 'approve' | 'reject';
+  } & StreamParams
+): AbortController {
+  return streamSse(
+    `/ai/conversations/${args.conversationId}/resume`,
+    { actionId: args.actionId, decision: args.decision },
+    args
+  );
 }
 
 const parseSseFrame = (frame: string): AgentEvent | null => {

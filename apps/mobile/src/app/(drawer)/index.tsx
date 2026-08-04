@@ -35,6 +35,7 @@ export default function AssistantScreen() {
     sending,
     items,
     pendingActions,
+    interruptIds,
     models,
     selectedModelId,
     init,
@@ -70,7 +71,7 @@ export default function AssistantScreen() {
 
   // 待确认操作：固定在输入框上方，不随对话流滚动
   const pendingList = Object.values(pendingActions)
-    .filter(isActionPending)
+    .filter((a) => isActionPending(a, interruptIds))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
   const doSend = (text: string) => {
@@ -99,10 +100,11 @@ export default function AssistantScreen() {
     if (item.kind === 'action') {
       const action = pendingActions[item.actionId];
       // 待确认卡片只出现在固定面板，消息流里不重复渲染
-      if (!action || isActionPending(action)) return null;
+      if (!action || isActionPending(action, interruptIds)) return null;
       return (
         <PendingActionCard
           action={action}
+          pending={false}
           onConfirm={() => {}}
           onReject={() => {}}
         />
@@ -211,6 +213,8 @@ export default function AssistantScreen() {
               <PendingActionCard
                 key={a.id}
                 action={a}
+                pending
+                disabled={sending}
                 onConfirm={() => doConfirm(a.id)}
                 onReject={() => doReject(a.id)}
               />

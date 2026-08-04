@@ -19,6 +19,7 @@ import {
   DownOutlined,
   BellOutlined,
   RobotOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import { useMemo, useState, useEffect } from 'react';
@@ -98,6 +99,12 @@ export default function MainLayout() {
         icon: <TeamOutlined />,
         label: '组织设置',
         onClick: () => navigate('/organization'),
+      });
+      items.push({
+        key: 'ai-models',
+        icon: <ApiOutlined />,
+        label: 'AI 模型管理',
+        onClick: () => navigate('/ai-models'),
       });
     }
     items.push({ type: 'divider' });

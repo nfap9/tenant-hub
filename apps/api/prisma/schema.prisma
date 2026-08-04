@@ -297,6 +297,28 @@ model MeterReading {
 
 // ==================== AI ====================
 
+// AI 模型注册表：全局（不属组织），id 为用户定义字符串（创建后不可改），
+// AiConversation.modelId 与 Organization.aiModelDefault 均按 id 引用。
+// apiKey 明文存储但永不通过 API 回传。
+model AiModel {
+  id                  String   @id
+  displayName         String
+  provider            String // anthropic | openai | openai-compat
+  providerModel       String
+  baseURL             String?
+  apiKey              String?
+  maxTokens           Int      @default(4096)
+  contextWindowTokens Int      @default(128000)
+  temperature         Float    @default(0.3)
+  tags                String[] @default(["chat"])
+  costPerMtu          Json? // { input: number, output: number }（美元/百万 token）
+  fallbackTo          String[] @default([])
+  authHeader          String?
+  enabled             Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
 model AiConversation {
   id             String              @id @default(cuid())
   organizationId String
@@ -308,31 +330,17 @@ model AiConversation {
   updatedAt      DateTime            @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messages       AiMessage[]
+  toolCalls      AiToolCall[]
 
   @@index([organizationId, userId, updatedAt])
 }
 
-model AiMessage {
-  id             String   @id @default(cuid())
-  conversationId String
-  role           AiRole
-  content        Json
-  modelId        String?
-  tokensInput    Int?
-  tokensOutput   Int?
-  parentId       String?
-  createdAt      DateTime @default(now())
-
-  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  toolCalls      AiToolCall[]
-
-  @@index([conversationId, createdAt])
-}
-
+// 会话消息历史由 LangGraph PostgresSaver checkpointer 承载（thread_id = conversationId），
+// 本表仅记录工具调用的业务审计信息。
 model AiToolCall {
   id             String   @id @default(cuid())
-  messageId      String
+  conversationId String
+  toolCallId     String
   toolName       String
   input          Json
   output         Json?
@@ -344,9 +352,9 @@ model AiToolCall {
   confirmedAt    DateTime?
   createdAt      DateTime @default(now())
 
-  message        AiMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  @@index([messageId])
+  @@index([conversationId, createdAt])
   @@index([toolName, createdAt])
 }
 
@@ -452,13 +460,6 @@ enum MeterType {
 enum AiConversationStatus {
   ACTIVE
   ARCHIVED
-}
-
-enum AiRole {
-  SYSTEM
-  USER
-  ASSISTANT
-  TOOL
 }
 
 enum AiToolCallStatus {

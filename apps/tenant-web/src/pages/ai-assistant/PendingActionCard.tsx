@@ -32,9 +32,10 @@ export default function PendingActionCard({
   onReject,
   busy,
 }: Props) {
-  const { summary, state, resultSummary } = action;
+  const { summary, state, resultSummary, actionable } = action;
   const resolved =
     state === 'confirmed' || state === 'rejected' || state === 'expired';
+  const deciding = state === 'confirming' || state === 'rejecting';
 
   return (
     <Card
@@ -104,12 +105,13 @@ export default function PendingActionCard({
         />
       )}
 
-      {!resolved && (
+      {actionable && !resolved && (
         <Space style={{ marginTop: 4 }}>
           <Button
             type="primary"
             icon={<CheckOutlined />}
-            loading={state === 'confirming' || busy}
+            loading={state === 'confirming'}
+            disabled={deciding || busy}
             onClick={() => onConfirm(action)}
             danger={summary.riskLevel === 'high'}
           >
@@ -117,7 +119,8 @@ export default function PendingActionCard({
           </Button>
           <Button
             icon={<CloseOutlined />}
-            disabled={state === 'confirming'}
+            loading={state === 'rejecting'}
+            disabled={deciding || busy}
             onClick={() => onReject(action)}
           >
             拒绝

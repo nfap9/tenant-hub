@@ -1,5 +1,3 @@
-import type { ToolDefinition } from './llm/types.js';
-
 export interface SystemPromptContext {
   orgName: string;
   username: string;
@@ -8,7 +6,7 @@ export interface SystemPromptContext {
   toolNames: string[];
 }
 
-const buildSystemPrompt = (
+export const buildSystemPrompt = (
   ctx: SystemPromptContext
 ): string => `你是「租务通」的租务助手，服务于公寓运营人员。
 
@@ -27,8 +25,3 @@ const buildSystemPrompt = (
 
 可用工具：${ctx.toolNames.join('、')}
 `;
-
-export const buildSystemPromptForTools = (
-  ctx: SystemPromptContext,
-  _tools: ToolDefinition[]
-): string => buildSystemPrompt(ctx);

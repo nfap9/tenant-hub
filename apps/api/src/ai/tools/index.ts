@@ -58,4 +58,3 @@ export type {
   ToolResult,
   ToolPreview,
 } from './types.js';
-export { toToolDefinition } from './types.js';

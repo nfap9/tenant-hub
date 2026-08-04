@@ -30,6 +30,7 @@ const MeterReadingListPage = lazy(
 const OrganizationPage = lazy(
   () => import('@/pages/settings/OrganizationPage')
 );
+const AiModelsPage = lazy(() => import('@/pages/settings/AiModelsPage'));
 const AccountPage = lazy(() => import('@/pages/settings/AccountPage'));
 
 function PageLoading() {
@@ -183,6 +184,14 @@ export default function AppRouter() {
             element={
               <RequireOrg>
                 <OrganizationPage />
+              </RequireOrg>
+            }
+          />
+          <Route
+            path="/ai-models"
+            element={
+              <RequireOrg>
+                <AiModelsPage />
               </RequireOrg>
             }
           />

@@ -11,6 +11,7 @@ export const PERMISSIONS = {
   DEPOSIT_MANAGE: 'deposit:manage',
   ORG_MANAGE: 'org:manage',
   MEMBER_MANAGE: 'member:manage',
+  AI_MODEL_MANAGE: 'aiModel:manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -28,6 +29,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [PERMISSIONS.DEPOSIT_MANAGE]: '管理押金',
   [PERMISSIONS.ORG_MANAGE]: '组织管理',
   [PERMISSIONS.MEMBER_MANAGE]: '成员管理',
+  [PERMISSIONS.AI_MODEL_MANAGE]: 'AI 模型管理',
 };
 
 export function hasPermission(

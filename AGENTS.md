@@ -12,6 +12,18 @@ Web 端面向公寓运营方，仅保留核心租赁业务功能：组织管理�
 
 移动端首页即 AI 助手（复用后端 `/api/ai/*` 的 SSE 流式对话与写操作人工确认），另配资产、财务、抄表三个业务页（只读为主 + 抄表录入）；UI 风格与组件参考 tenant-assis 项目（白底、靛蓝 `#4F46E5` 主色、卡片式、无第三方组件库）。移动端启动：`pnpm dev:mobile`（iOS 模拟器默认 `http://localhost:4000/api`，真机/Android 需修改 `apps/mobile/app.json` 的 `extra.apiBaseUrl`，详见 `apps/mobile/README.md`）。
 
+### AI Agent 架构（LangGraph）
+
+后端 AI 模块（`apps/api/src/ai/`）基于 **LangGraph JS** 构建：
+
+- `ai/graph/` — 核心：`StateGraph`（`MessagesAnnotation`）双节点（`agent` 调模型 ⇄ `tools` 执行工具），`PostgresSaver` checkpointer 持久化会话状态（`thread_id = conversationId`，消息历史存 checkpoints 表，不再有 AiMessage 表）
+- 模型层：`@langchain/openai` / `@langchain/anthropic`，多模型 fallback 用 `withFallbacks()`；模型注册表存于数据库 `AiModel` 表（`ai/models/registry.ts` 异步 DB 版 + 进程内缓存），通过 Web 端「AI 模型管理」页（`/api/ai-models` CRUD，需 `aiModel:manage` 权限）维护，无环境变量配置入口
+- 工具集（`ai/tools/`）：7 读 + 7 写共 14 个 `ToolMeta`（zod schema + execute/preview + 权限）；读工具直接执行，写工具在 tools 节点 preview 后 `interrupt()` 暂停图，等待人工确认
+- SSE 协议（chat / resume 共用）：`text_delta`（真流式）、`message`（消息快照）、`tool_call`、`interrupt`（待确认操作）、`error`、`done`
+- 写操作确认：`POST /api/ai/conversations/:id/resume`（`{ actionId, decision: 'approve'|'reject' }`），以 `Command` 恢复图并 SSE 流出后续执行
+- 历史回放：`GET /api/ai/conversations/:id/state`（图状态消息 + 待处理 interrupts + 审计记录）
+- 审计表（Prisma）：`AiToolCall`（工具调用记录）、`AiPendingAction`（待确认操作审计）、`AiUsageDaily`（用量记账）
+
 ---
 
 ## 技术栈与运行时架构

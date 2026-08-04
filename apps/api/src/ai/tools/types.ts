@@ -1,8 +1,6 @@
 import type { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { Permission } from '../../services/roles.js';
-import type { ToolDefinition } from '../llm/types.js';
 
 export interface ToolContext {
   organizationId: string;
@@ -34,11 +32,3 @@ export interface ToolMeta<TInput, TOutput> {
   execute: (input: TInput, ctx: ToolContext) => Promise<ToolResult<TOutput>>;
   preview?: (input: TInput, ctx: ToolContext) => Promise<ToolPreview>;
 }
-
-export const toToolDefinition = (
-  tool: ToolMeta<unknown, unknown>
-): ToolDefinition => ({
-  name: tool.name,
-  description: tool.description,
-  parameters: zodToJsonSchema(tool.inputSchema, { target: 'openAi' }) as object,
-});

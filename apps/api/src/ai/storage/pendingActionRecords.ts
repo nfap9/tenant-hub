@@ -50,6 +50,29 @@ export const createPendingAction = async (params: {
   };
 };
 
+/**
+ * 按 toolCallId 查找待确认操作（toolCallId 唯一）。
+ * LangGraph interrupt 恢复后节点会从头重跑，用它避免重复落库。
+ */
+export const findPendingActionByToolCallId = async (
+  toolCallId: string
+): Promise<PendingActionRecord | null> => {
+  const row = await prisma.aiPendingAction.findUnique({
+    where: { toolCallId },
+  });
+  if (!row) return null;
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    toolCallId: row.toolCallId,
+    toolName: row.toolName,
+    input: row.input,
+    summary: row.summary as unknown as ToolPreview,
+    status: row.status,
+    expiresAt: row.expiresAt,
+  };
+};
+
 export const getPendingActionForOrg = async (
   actionId: string,
   organizationId: string

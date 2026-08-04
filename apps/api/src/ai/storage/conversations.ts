@@ -12,6 +12,7 @@ export interface ConversationOwnership {
   organizationId: string;
   userId: string;
   modelId: string;
+  title: string | null;
 }
 
 export const ensureConversationOwnership = async (
@@ -21,7 +22,13 @@ export const ensureConversationOwnership = async (
 ): Promise<ConversationOwnership> => {
   const conv = await prisma.aiConversation.findFirst({
     where: { id: conversationId, organizationId },
-    select: { id: true, organizationId: true, userId: true, modelId: true },
+    select: {
+      id: true,
+      organizationId: true,
+      userId: true,
+      modelId: true,
+      title: true,
+    },
   });
   if (!conv) throw new HttpError(404, '会话不存在');
   if (conv.userId !== userId) throw new HttpError(403, '无权访问该会话');
@@ -35,7 +42,7 @@ export const createConversation = async (params: {
 }): Promise<AiConversation> => {
   let model;
   if (params.modelId) {
-    model = findModel(params.modelId);
+    model = await findModel(params.modelId);
     if (!model) throw new HttpError(400, '模型不存在或未启用');
     if (!model.enabled) throw new HttpError(400, `模型 ${model.id} 未启用`);
   } else {
@@ -45,11 +52,11 @@ export const createConversation = async (params: {
       select: { aiModelDefault: true },
     });
     model = org?.aiModelDefault
-      ? findEnabledModel(org.aiModelDefault)
+      ? await findEnabledModel(org.aiModelDefault)
       : undefined;
     if (!model) {
       try {
-        model = resolveDefaultModel();
+        model = await resolveDefaultModel();
       } catch {
         throw new HttpError(400, '无可用的 AI 模型');
       }

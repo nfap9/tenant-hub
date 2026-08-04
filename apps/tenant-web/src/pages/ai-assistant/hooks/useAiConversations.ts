@@ -9,13 +9,12 @@ import { message } from 'antd';
 import {
   archiveAiConversation,
   createAiConversation,
+  getAiConversationState,
   listAiConversations,
-  listAiMessages,
-  listAiPendingActions,
   type AiConversationSummary,
 } from '@/api/ai';
 import type { ChatMessage } from '../types';
-import { attachPendingActions, messageFromRecord } from '../utils/messages';
+import { messagesFromState } from '../utils/messages';
 
 type Params = {
   open: boolean;
@@ -52,6 +51,15 @@ export default function useAiConversations({
     if (open) loadConversations();
   }, [open, loadConversations]);
 
+  /** 拉取会话图状态并全量刷新消息列表（历史回放 / resume 后校准共用） */
+  const reloadState = useCallback(
+    async (conversationId: string) => {
+      const state = await getAiConversationState(conversationId);
+      setMessages(messagesFromState(state));
+    },
+    [setMessages]
+  );
+
   /** 创建会话并置为当前会话（同时加入列表顶部）。失败时抛给调用方处理 */
   const createConversation = useCallback(async (forModelId?: string) => {
     const conv = await createAiConversation(forModelId);
@@ -79,20 +87,14 @@ export default function useAiConversations({
       setModelId(conv.modelId);
       setLoadingHistory(true);
       try {
-        const [records, actions] = await Promise.all([
-          listAiMessages(conv.id),
-          listAiPendingActions(conv.id),
-        ]);
-        setMessages(
-          attachPendingActions(records.map(messageFromRecord), actions)
-        );
+        await reloadState(conv.id);
       } catch (e) {
         message.error(e instanceof Error ? e.message : '加载历史失败');
       } finally {
         setLoadingHistory(false);
       }
     },
-    [setModelId, setMessages]
+    [setModelId, reloadState]
   );
 
   const handleArchive = useCallback(
@@ -121,5 +123,6 @@ export default function useAiConversations({
     startNewConversation,
     selectConversation,
     handleArchive,
+    reloadState,
   };
 }

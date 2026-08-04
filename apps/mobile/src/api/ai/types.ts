@@ -15,21 +15,15 @@ export type Conversation = {
   updatedAt: string;
 };
 
-export type AiMessageRole = 'SYSTEM' | 'USER' | 'ASSISTANT' | 'TOOL';
-
-/** 历史消息记录：content 结构随 role 不同（见 apps/api/src/ai/storage/messages.ts） */
-export type AiMessageRecord = {
+/** 序列化后的会话消息（SSE message 事件与会话状态接口共用） */
+export type SerializedMessage = {
   id: string;
-  role: AiMessageRole;
-  content: unknown;
-  modelId?: string | null;
-  tokensInput?: number | null;
-  tokensOutput?: number | null;
-  createdAt: string;
-};
-
-export type ToolCallRecord = {
-  id?: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string;
+  toolCalls?: { id: string; name: string; args: Record<string, unknown> }[];
+  /** role=tool 时对应的工具调用 id */
+  toolCallId?: string;
+  /** role=tool 时的工具名 */
   name?: string;
 };
 
@@ -46,7 +40,8 @@ export type ToolPreview = {
   description: string;
 };
 
-export type PendingActionEvent = {
+/** 写操作待确认载荷（interrupt 事件与 graph state 中的 interrupt value） */
+export type PendingActionPayload = {
   id: string;
   conversationId: string;
   toolCallId: string;
@@ -61,25 +56,24 @@ export type PendingActionStatus =
   | 'REJECTED'
   | 'EXPIRED';
 
-/** 历史回放用的待确认操作记录（含已处理终态） */
-export type PendingAction = PendingActionEvent & {
+/** 待确认操作审计记录（含已处理终态，供回放卡片） */
+export type PendingActionRecord = PendingActionPayload & {
   input?: unknown;
   status: PendingActionStatus;
   createdAt: string;
 };
 
+/** GET /conversations/:id/state 返回的会话完整状态 */
+export type ConversationState = {
+  messages: SerializedMessage[];
+  interrupts: PendingActionPayload[];
+  actions: PendingActionRecord[];
+};
+
 export type AgentEvent =
   | { type: 'text_delta'; delta: string }
-  | { type: 'assistant_message'; text: string }
+  | { type: 'message'; message: SerializedMessage }
   | { type: 'tool_call'; name: string; summary: string }
-  | { type: 'pending_action'; action: PendingActionEvent }
+  | { type: 'interrupt'; action: PendingActionPayload }
   | { type: 'error'; message: string }
   | { type: 'done' };
-
-export type ConfirmActionResult = {
-  actionId: string;
-  toolName: string;
-  ok: boolean;
-  summary: string;
-  data?: unknown;
-};

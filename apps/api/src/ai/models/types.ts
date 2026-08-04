@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import type { AiModel } from '@prisma/client';
 
 export type ProviderKind = 'anthropic' | 'openai' | 'openai-compat';
 
 /**
- * 单个模型的配置格式（AI_MODELS 环境变量 JSON 数组的元素）。
+ * 单个模型的配置格式（管理接口 / 模型管理页面的输入）。
  * 所有模型均由用户配置，系统不内置任何模型。
  */
 export const modelConfigSchema = z.object({
@@ -16,7 +17,7 @@ export const modelConfigSchema = z.object({
   /** 供应商侧的模型名 */
   providerModel: z.string().min(1),
   baseURL: z.string().optional(),
-  /** 模型 API 密钥；缺省时回落到通用 AI_API_KEY */
+  /** 模型 API 密钥（本地 Ollama 等无密钥场景可填任意占位串） */
   apiKey: z.string().optional(),
   /** 单次请求的最大输出 token 数（传给 provider 的 max_tokens） */
   maxTokens: z.number().int().positive().default(4096),
@@ -31,6 +32,27 @@ export const modelConfigSchema = z.object({
   /** 认证字段名；缺省时按 provider 推导（anthropic → x-api-key，其他 → Authorization） */
   authHeader: z.string().optional(),
   enabled: z.boolean().default(true),
+  /** DB 行的更新时间（ISO 字符串），仅由 mapper 附加，用于 ChatModel 缓存失效 */
+  updatedAt: z.string().optional(),
 });
 
 export type ModelConfig = z.infer<typeof modelConfigSchema>;
+
+/** 数据库 AiModel 行 → 运行时模型配置 */
+export const aiModelRowToConfig = (row: AiModel): ModelConfig => ({
+  id: row.id,
+  displayName: row.displayName,
+  provider: row.provider as ProviderKind,
+  providerModel: row.providerModel,
+  baseURL: row.baseURL ?? undefined,
+  apiKey: row.apiKey ?? undefined,
+  maxTokens: row.maxTokens,
+  contextWindowTokens: row.contextWindowTokens,
+  temperature: row.temperature,
+  tags: row.tags,
+  costPerMtu: (row.costPerMtu as ModelConfig['costPerMtu']) ?? undefined,
+  fallbackTo: row.fallbackTo,
+  authHeader: row.authHeader ?? undefined,
+  enabled: row.enabled,
+  updatedAt: row.updatedAt.toISOString(),
+});
