@@ -287,6 +287,22 @@ leaseRouter.post(
   })
 );
 
+export const updateLeaseInput = z.object({
+  rentAmount: amountSchema.optional().describe('月租金'),
+  waterUnitPrice: amountSchema.optional().describe('水费单价'),
+  powerUnitPrice: amountSchema.optional().describe('电费单价'),
+  fees: z
+    .array(
+      z.object({
+        type: feeItemTypeSchema.describe('费用类型'),
+        name: z.string().min(1).describe('费用名称'),
+        amount: amountSchema.describe('金额'),
+      })
+    )
+    .optional()
+    .describe('附加费用列表'),
+});
+
 /**
  * PUT /api/leases/:id
  * 更新有效租约的租金、水电单价和附加费用
@@ -295,22 +311,7 @@ leaseRouter.put(
   '/:id',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        rentAmount: amountSchema.optional(),
-        waterUnitPrice: amountSchema.optional(),
-        powerUnitPrice: amountSchema.optional(),
-        fees: z
-          .array(
-            z.object({
-              type: feeItemTypeSchema,
-              name: z.string().min(1),
-              amount: amountSchema,
-            })
-          )
-          .optional(),
-      })
-      .parse(req.body);
+    const input = updateLeaseInput.parse(req.body);
 
     const lease = await getLeaseById(req.params.id, req.organizationId!);
     if (!lease) throw new HttpError(404, '租约不存在');

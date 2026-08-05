@@ -69,6 +69,21 @@ export const leasePaymentInput = z.object({
   paidAt: z.coerce.date().optional().describe('收款时间'),
 });
 
+export const billListQuery = z.object({
+  status: z
+    .enum(['UNPAID', 'PAID', 'VOID', 'PENDING'])
+    .optional()
+    .describe('账单状态筛选'),
+});
+
+export const meterReadingListQuery = z.object({
+  roomId: z.string().optional().describe('房间ID'),
+  apartmentId: z.string().optional().describe('公寓ID'),
+  meterType: z.enum(['WATER', 'POWER']).optional().describe('表类型'),
+  startDate: z.coerce.date().optional().describe('抄表日期起'),
+  endDate: z.coerce.date().optional().describe('抄表日期止'),
+});
+
 /**
  * GET /api/bills
  * 获取当前组织下的账单列表（可按状态筛选）
@@ -77,10 +92,7 @@ billRouter.get(
   '/',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
-    const status = z
-      .enum(['UNPAID', 'PAID', 'VOID', 'PENDING'])
-      .optional()
-      .parse(req.query.status);
+    const { status } = billListQuery.parse(req.query);
     ok(res, await listBills(req.organizationId!, status));
   })
 );
@@ -124,14 +136,8 @@ billRouter.get(
   '/meter-readings',
   requirePermission(PERMISSIONS.BILL_VIEW),
   asyncHandler(async (req, res) => {
-    const roomId = z.string().optional().parse(req.query.roomId);
-    const apartmentId = z.string().optional().parse(req.query.apartmentId);
-    const meterType = z
-      .enum(['WATER', 'POWER'])
-      .optional()
-      .parse(req.query.meterType);
-    const startDate = z.coerce.date().optional().parse(req.query.startDate);
-    const endDate = z.coerce.date().optional().parse(req.query.endDate);
+    const { roomId, apartmentId, meterType, startDate, endDate } =
+      meterReadingListQuery.parse(req.query);
     ok(
       res,
       await listMeterReadings(req.organizationId!, {

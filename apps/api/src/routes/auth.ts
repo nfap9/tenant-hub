@@ -13,8 +13,39 @@ import {
 
 export const authRouter = Router();
 
-const phoneSchema = z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确');
-const passwordSchema = z.string().min(8, '密码至少 8 位');
+const phoneSchema = z
+  .string()
+  .regex(/^1[3-9]\d{9}$/, '手机号格式不正确')
+  .describe('手机号');
+const passwordSchema = z.string().min(8, '密码至少 8 位').describe('密码');
+
+export const registerInput = z
+  .object({
+    phone: phoneSchema,
+    username: z.string().min(1).max(24).describe('用户名'),
+    password: passwordSchema,
+    confirmPassword: passwordSchema.describe('确认密码'),
+  })
+  .refine(
+    (value) => value.password === value.confirmPassword,
+    '两次密码不一致'
+  );
+
+export const loginInput = z.object({
+  phone: phoneSchema,
+  password: z.string().min(1).describe('密码'),
+});
+
+export const updatePasswordInput = z
+  .object({
+    currentPassword: z.string().min(1, '请输入当前密码').describe('当前密码'),
+    newPassword: passwordSchema.describe('新密码'),
+    confirmPassword: passwordSchema.describe('确认新密码'),
+  })
+  .refine(
+    (value) => value.newPassword === value.confirmPassword,
+    '两次密码不一致'
+  );
 
 /**
  * POST /api/auth/register
@@ -23,18 +54,7 @@ const passwordSchema = z.string().min(8, '密码至少 8 位');
 authRouter.post(
   '/register',
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        phone: phoneSchema,
-        username: z.string().min(1).max(24),
-        password: passwordSchema,
-        confirmPassword: passwordSchema,
-      })
-      .refine(
-        (value) => value.password === value.confirmPassword,
-        '两次密码不一致'
-      )
-      .parse(req.body);
+    const input = registerInput.parse(req.body);
 
     const existed = await findUserByPhone(input.phone);
     if (existed) throw new HttpError(409, '手机号已注册');
@@ -55,9 +75,7 @@ authRouter.post(
 authRouter.post(
   '/login',
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({ phone: phoneSchema, password: z.string().min(1) })
-      .parse(req.body);
+    const input = loginInput.parse(req.body);
     const user = await findUserByPhone(input.phone);
     if (!user) throw new HttpError(401, '手机号或密码不正确');
     const { matched } = await verifyPassword(user.id, input.password);
@@ -87,17 +105,7 @@ authRouter.put(
   '/password',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        currentPassword: z.string().min(1, '请输入当前密码'),
-        newPassword: passwordSchema,
-        confirmPassword: passwordSchema,
-      })
-      .refine(
-        (value) => value.newPassword === value.confirmPassword,
-        '两次密码不一致'
-      )
-      .parse(req.body);
+    const input = updatePasswordInput.parse(req.body);
 
     if (input.currentPassword === input.newPassword) {
       throw new HttpError(400, '新密码不能与当前密码相同');

@@ -19,6 +19,20 @@ import {
 
 export const aiRouter = Router();
 
+export const createConversationInput = z.object({
+  modelId: z.string().optional().describe('模型ID（不填则使用组织默认模型）'),
+});
+
+export const chatInput = z.object({
+  message: z.string().min(1).describe('用户消息'),
+  modelId: z.string().optional().describe('模型ID（不填则使用会话/组织默认）'),
+});
+
+export const resumeInput = z.object({
+  actionId: z.string().min(1).describe('待确认操作ID'),
+  decision: z.enum(['approve', 'reject']).describe('确认结果：批准或拒绝'),
+});
+
 aiRouter.use(
   asyncHandler(async (_req, _res, next) => {
     if (!(await isAiEnabled())) throw new HttpError(503, 'AI 功能未启用');
@@ -88,9 +102,7 @@ aiRouter.get(
 aiRouter.post(
   '/conversations',
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({ modelId: z.string().optional() })
-      .parse(req.body ?? {});
+    const input = createConversationInput.parse(req.body ?? {});
     const conv = await createConversation({
       organizationId: req.organizationId!,
       userId: req.user!.id,
@@ -135,12 +147,7 @@ aiRouter.get(
 aiRouter.post(
   '/conversations/:id/chat',
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        message: z.string().min(1),
-        modelId: z.string().optional(),
-      })
-      .parse(req.body ?? {});
+    const input = chatInput.parse(req.body ?? {});
 
     const ctx = await buildAgentContext(req);
     const { send, signal } = initSse(req, res);
@@ -165,12 +172,7 @@ aiRouter.post(
 aiRouter.post(
   '/conversations/:id/resume',
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        actionId: z.string().min(1),
-        decision: z.enum(['approve', 'reject']),
-      })
-      .parse(req.body ?? {});
+    const input = resumeInput.parse(req.body ?? {});
 
     const ctx = await buildAgentContext(req);
     const { send, signal } = initSse(req, res);

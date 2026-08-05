@@ -104,6 +104,7 @@ Web 端面向公寓运营方，仅保留核心租赁业务功能：组织管理�
 ## 命名与模块约定
 
 - API 路由按资源命名：`/api/auth`, `/api/organizations`, `/api/apartments`, `/api/leases`, `/api/bills`
+- API 文档（Swagger UI）：`http://localhost:4000/api-docs`（原始 spec 在 `/api-docs.json`）；由 `apps/api/src/openapi/` 基于 zod schema 生成，请求 schema 以路由文件导出的 zod const 为单一事实来源，新增/修改端点需同步维护 `openapi/docs/` 下对应注册文件
 - TypeScript 路径别名：`@/` → `src/`
 - API 与 Web 端均使用 ESM
 

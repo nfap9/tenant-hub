@@ -1,7 +1,9 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import { corsOrigins, env } from './config/env.js';
+import { openApiDocument } from './openapi/index.js';
 import { apartmentRouter } from './routes/apartments.js';
 import { authRouter } from './routes/auth.js';
 import { billRouter } from './routes/bills.js';
@@ -13,7 +15,17 @@ import { errorHandler } from './middleware/error.js';
 
 export const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        // Swagger UI 依赖内联脚本/样式渲染，需放宽 CSP
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  })
+);
 app.use(
   cors({
     /**
@@ -42,6 +54,11 @@ app.use(express.json({ limit: '2mb' }));
  * 健康检查端点
  */
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// OpenAPI 文档：/api-docs 为 Swagger UI，/api-docs.json 为原始 spec
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+app.get('/api-docs.json', (_req, res) => res.json(openApiDocument));
+
 app.use('/api/auth', authRouter);
 app.use('/api/organizations', orgRouter);
 app.use('/api/apartments', apartmentRouter);

@@ -35,6 +35,44 @@ import {
 
 export const orgRouter = Router();
 
+export const createOrganizationInput = z.object({
+  name: z.string().min(1).describe('组织名称'),
+  description: z.string().optional().describe('组织描述'),
+});
+
+export const joinOrganizationInput = z.object({
+  inviteCode: z.string().min(6).describe('组织邀请码'),
+});
+
+export const updateOrganizationInput = z.object({
+  name: z.string().min(1).describe('组织名称'),
+  description: z.string().optional().describe('组织描述'),
+  aiModelDefault: z
+    .string()
+    .min(1)
+    .nullable()
+    .optional()
+    .describe('组织默认 AI 模型 ID（null 表示清除；仅所有者可修改）'),
+});
+
+export const deleteOrganizationInput = z.object({
+  confirmName: z.string().describe('二次确认：需与组织名称完全一致'),
+});
+
+export const roleInput = z.object({
+  name: z.string().min(1).describe('角色名称'),
+  description: z.string().optional().describe('角色描述'),
+  permissions: z.array(z.string()).describe('权限字符串列表'),
+});
+
+export const updateMemberRoleInput = z.object({
+  roleId: z.string().describe('目标角色ID'),
+});
+
+export const transferOwnerInput = z.object({
+  userId: z.string().describe('新所有者的用户ID'),
+});
+
 orgRouter.use(requireAuth);
 
 /**
@@ -55,9 +93,7 @@ orgRouter.get(
 orgRouter.post(
   '/',
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({ name: z.string().min(1), description: z.string().optional() })
-      .parse(req.body);
+    const input = createOrganizationInput.parse(req.body);
     ok(res, await createOrganization({ ...input, userId: req.user!.id }));
   })
 );
@@ -69,7 +105,7 @@ orgRouter.post(
 orgRouter.post(
   '/join',
   asyncHandler(async (req, res) => {
-    const input = z.object({ inviteCode: z.string().min(6) }).parse(req.body);
+    const input = joinOrganizationInput.parse(req.body);
     const organization = await findOrganizationByInviteCode(input.inviteCode);
     if (!organization) throw new HttpError(404, '邀请码不存在');
     if (organization.status !== 'ACTIVE')
@@ -108,13 +144,7 @@ orgRouter.put(
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-        aiModelDefault: z.string().min(1).nullable().optional(),
-      })
-      .parse(req.body);
+    const input = updateOrganizationInput.parse(req.body);
     if (input.aiModelDefault !== undefined) {
       const org = await getOrganizationById(req.organizationId!);
       if (org.ownerId !== req.user!.id)
@@ -138,7 +168,7 @@ orgRouter.delete(
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ confirmName: z.string() }).parse(req.body);
+    const input = deleteOrganizationInput.parse(req.body);
     const org = await getOrganizationById(req.organizationId!);
     if (!org) throw new HttpError(404, '组织不存在');
     if (org.ownerId !== req.user!.id)
@@ -172,13 +202,7 @@ orgRouter.post(
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-        permissions: z.array(z.string()),
-      })
-      .parse(req.body);
+    const input = roleInput.parse(req.body);
     ok(
       res,
       await createRole({
@@ -203,13 +227,7 @@ orgRouter.put(
     if (!role || role.system || role.organizationId !== req.organizationId) {
       throw new HttpError(404, '角色不存在或不可编辑');
     }
-    const input = z
-      .object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-        permissions: z.array(z.string()),
-      })
-      .parse(req.body);
+    const input = roleInput.parse(req.body);
     ok(res, await updateRole(roleId, input));
   })
 );
@@ -272,7 +290,7 @@ orgRouter.put(
   requireOrg,
   requirePermission(PERMISSIONS.MEMBER_MANAGE),
   asyncHandler(async (req, res) => {
-    const input = z.object({ roleId: z.string() }).parse(req.body);
+    const input = updateMemberRoleInput.parse(req.body);
     const member = await getOrgMemberWithRole(req.params.memberId);
     const ownerRole = await findRoleByCode('owner');
     if (input.roleId === ownerRole.id)
@@ -291,7 +309,7 @@ orgRouter.post(
   '/:organizationId/transfer-owner',
   requireOrg,
   asyncHandler(async (req, res) => {
-    const input = z.object({ userId: z.string() }).parse(req.body);
+    const input = transferOwnerInput.parse(req.body);
     const org = await getOrganizationById(req.organizationId!);
     if (org.ownerId !== req.user!.id)
       throw new HttpError(403, '仅所有者可转移所有者身份');
