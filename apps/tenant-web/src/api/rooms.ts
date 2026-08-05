@@ -63,16 +63,16 @@ export async function updateRoom(
     status?: string;
   }
 ) {
-  return apiClient<void>(`/apartments/rooms/${roomId}`, {
-    method: 'PUT',
+  return apiClient<void>(`/apartments/rooms/${roomId}/update`, {
+    method: 'POST',
     body: payload,
     organizationId,
   });
 }
 
 export async function deleteRoom(organizationId: string, roomId: string) {
-  return apiClient<void>(`/apartments/rooms/${roomId}`, {
-    method: 'DELETE',
+  return apiClient<void>(`/apartments/rooms/${roomId}/delete`, {
+    method: 'POST',
     organizationId,
   });
 }

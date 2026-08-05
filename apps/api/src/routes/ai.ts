@@ -191,11 +191,11 @@ aiRouter.post(
 );
 
 /**
- * DELETE /api/ai/conversations/:id
+ * POST /api/ai/conversations/:id/archive
  * 归档会话
  */
-aiRouter.delete(
-  '/conversations/:id',
+aiRouter.post(
+  '/conversations/:id/archive',
   asyncHandler(async (req, res) => {
     await archiveConversation(req.params.id, req.organizationId!, req.user!.id);
     ok(res, { archived: true });

@@ -13,9 +13,12 @@ export const createConversation = (modelId?: string) =>
   });
 
 export const archiveConversation = (conversationId: string) =>
-  apiClient<{ archived: boolean }>(`/ai/conversations/${conversationId}`, {
-    method: 'DELETE',
-  });
+  apiClient<{ archived: boolean }>(
+    `/ai/conversations/${conversationId}/archive`,
+    {
+      method: 'POST',
+    }
+  );
 
 /** 会话完整状态：消息历史 + 当前待处理 interrupt + 待确认操作审计记录 */
 export const getConversationState = (conversationId: string) =>

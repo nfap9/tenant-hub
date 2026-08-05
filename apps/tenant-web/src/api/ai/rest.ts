@@ -34,7 +34,7 @@ export async function archiveAiConversation(
   conversationId: string
 ): Promise<void> {
   await apiClient<{ archived: boolean }>(
-    `/ai/conversations/${conversationId}`,
-    { method: 'DELETE' }
+    `/ai/conversations/${conversationId}/archive`,
+    { method: 'POST' }
   );
 }

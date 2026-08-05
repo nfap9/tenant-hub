@@ -20,7 +20,7 @@ export class HttpError extends Error {
 }
 
 export type ApiOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST';
   body?: Record<string, unknown>;
   headers?: Record<string, string>;
   /** 默认取 sessionStore 的 currentOrgId，可用此参数覆盖 */

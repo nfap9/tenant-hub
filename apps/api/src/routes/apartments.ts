@@ -151,11 +151,11 @@ apartmentRouter.post(
 );
 
 /**
- * PUT /api/apartments/:id
+ * POST /api/apartments/:id/update
  * 更新指定公寓的基本信息
  */
-apartmentRouter.put(
-  '/:id',
+apartmentRouter.post(
+  '/:id/update',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
     const input = apartmentInput.partial().parse(req.body);
@@ -165,11 +165,11 @@ apartmentRouter.put(
 );
 
 /**
- * DELETE /api/apartments/:id
+ * POST /api/apartments/:id/delete
  * 删除指定公寓（存在活跃租约时禁止删除）
  */
-apartmentRouter.delete(
-  '/:id',
+apartmentRouter.post(
+  '/:id/delete',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
   asyncHandler(async (req, res) => {
     await ensureApartmentInOrg(req.params.id, req.organizationId!);
@@ -201,11 +201,11 @@ apartmentRouter.post(
 );
 
 /**
- * PUT /api/apartments/rooms/:roomId
+ * POST /api/apartments/rooms/:roomId/update
  * 更新指定房间的信息和状态
  */
-apartmentRouter.put(
-  '/rooms/:roomId',
+apartmentRouter.post(
+  '/rooms/:roomId/update',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
     const input = updateRoomInput.parse(req.body);
@@ -252,11 +252,11 @@ apartmentRouter.get(
 );
 
 /**
- * DELETE /api/apartments/rooms/:roomId
+ * POST /api/apartments/rooms/:roomId/delete
  * 删除指定房间（存在活跃租约时禁止删除）
  */
-apartmentRouter.delete(
-  '/rooms/:roomId',
+apartmentRouter.post(
+  '/rooms/:roomId/delete',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
   asyncHandler(async (req, res) => {
     await ensureRoomInOrg(req.params.roomId, req.organizationId!);

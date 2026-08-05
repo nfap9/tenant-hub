@@ -304,11 +304,11 @@ export const updateLeaseInput = z.object({
 });
 
 /**
- * PUT /api/leases/:id
+ * POST /api/leases/:id/update
  * 更新有效租约的租金、水电单价和附加费用
  */
-leaseRouter.put(
-  '/:id',
+leaseRouter.post(
+  '/:id/update',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
   asyncHandler(async (req, res) => {
     const input = updateLeaseInput.parse(req.body);

@@ -291,12 +291,12 @@ billRouter.post(
 );
 
 /**
- * DELETE /api/bills/:id
+ * POST /api/bills/:id/delete
  * 删除指定账单及其付款记录
  * 未付款账单可直接删除；金额为 0 且没有实际收款的已结清账单也允许删除
  */
-billRouter.delete(
-  '/:id',
+billRouter.post(
+  '/:id/delete',
   requirePermission(PERMISSIONS.BILL_MANAGE),
   asyncHandler(async (req, res) => {
     const bill = await getBillById(req.params.id, req.organizationId!);

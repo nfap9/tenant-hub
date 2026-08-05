@@ -99,8 +99,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'put',
-  path: '/api/leases/{id}',
+  method: 'post',
+  path: '/api/leases/{id}/update',
   tags: [tag],
   summary: '更新租约',
   description:

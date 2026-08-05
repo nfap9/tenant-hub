@@ -105,8 +105,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'put',
-  path: '/api/apartments/{id}',
+  method: 'post',
+  path: '/api/apartments/{id}/update',
   tags: [tag],
   summary: '更新公寓',
   description: '更新指定公寓的基本信息（需要权限 `apartment:manage`）',
@@ -133,8 +133,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/apartments/{id}',
+  method: 'post',
+  path: '/api/apartments/{id}/delete',
   tags: [tag],
   summary: '删除公寓',
   description:
@@ -186,8 +186,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'put',
-  path: '/api/apartments/rooms/{roomId}',
+  method: 'post',
+  path: '/api/apartments/rooms/{roomId}/update',
   tags: [tag],
   summary: '更新房间',
   description:
@@ -234,8 +234,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/apartments/rooms/{roomId}',
+  method: 'post',
+  path: '/api/apartments/rooms/{roomId}/delete',
   tags: [tag],
   summary: '删除房间',
   description: '删除指定房间（需要权限 `room:manage`；存在活跃租约时禁止删除）',

@@ -48,7 +48,7 @@ export async function getMe() {
 
 export async function updatePassword(input: UpdatePasswordInput) {
   return apiClient<{ message: string }>('/auth/password', {
-    method: 'PUT',
+    method: 'POST',
     body: input as Record<string, unknown>,
   });
 }

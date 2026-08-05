@@ -22,7 +22,10 @@ export async function getBillDetail(organizationId: string, billId: string) {
 }
 
 export async function deleteBill(organizationId: string, id: string) {
-  return apiClient<void>(`/bills/${id}`, { method: 'DELETE', organizationId });
+  return apiClient<void>(`/bills/${id}/delete`, {
+    method: 'POST',
+    organizationId,
+  });
 }
 
 export async function retryBillBilling(organizationId: string, billId: string) {

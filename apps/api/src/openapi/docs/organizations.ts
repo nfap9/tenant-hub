@@ -140,8 +140,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'put',
-  path: '/api/organizations/{organizationId}',
+  method: 'post',
+  path: '/api/organizations/{organizationId}/update',
   tags: [tag],
   summary: '更新组织信息',
   description:
@@ -169,8 +169,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/organizations/{organizationId}',
+  method: 'post',
+  path: '/api/organizations/{organizationId}/delete',
   tags: [tag],
   summary: '删除组织',
   description:
@@ -245,8 +245,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'put',
-  path: '/api/organizations/{organizationId}/roles/{roleId}',
+  method: 'post',
+  path: '/api/organizations/{organizationId}/roles/{roleId}/update',
   tags: [tag],
   summary: '更新自定义角色',
   description: '更新组织自定义角色（需要权限 `org:manage`；系统角色不可编辑）',
@@ -271,8 +271,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/organizations/{organizationId}/roles/{roleId}',
+  method: 'post',
+  path: '/api/organizations/{organizationId}/roles/{roleId}/delete',
   tags: [tag],
   summary: '删除自定义角色',
   description:
@@ -322,8 +322,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/organizations/{organizationId}/members/{memberId}',
+  method: 'post',
+  path: '/api/organizations/{organizationId}/members/{memberId}/disable',
   tags: [tag],
   summary: '禁用组织成员',
   description: '禁用组织成员（需要权限 `member:manage`，所有者不可被移除）',
@@ -344,8 +344,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'put',
-  path: '/api/organizations/{organizationId}/members/{memberId}/role',
+  method: 'post',
+  path: '/api/organizations/{organizationId}/members/{memberId}/change-role',
   tags: [tag],
   summary: '修改成员角色',
   description:

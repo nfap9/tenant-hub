@@ -63,14 +63,14 @@ export async function updateAiModel(
   id: string,
   input: UpdateAiModelInput
 ): Promise<ManagedAiModel> {
-  return apiClient<ManagedAiModel>(`/ai-models/${id}`, {
-    method: 'PATCH',
+  return apiClient<ManagedAiModel>(`/ai-models/${id}/update`, {
+    method: 'POST',
     body: input as Record<string, unknown>,
   });
 }
 
 export async function deleteAiModel(id: string): Promise<void> {
-  await apiClient<{ deleted: boolean }>(`/ai-models/${id}`, {
-    method: 'DELETE',
+  await apiClient<{ deleted: boolean }>(`/ai-models/${id}/delete`, {
+    method: 'POST',
   });
 }

@@ -85,7 +85,7 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'put',
+  method: 'post',
   path: '/api/auth/password',
   tags: [tag],
   summary: '修改密码',

@@ -201,8 +201,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/ai/conversations/{id}',
+  method: 'post',
+  path: '/api/ai/conversations/{id}/archive',
   tags: [tag],
   summary: '归档会话',
   description: '归档会话',

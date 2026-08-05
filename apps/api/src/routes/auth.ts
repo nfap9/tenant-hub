@@ -98,10 +98,10 @@ authRouter.get(
 );
 
 /**
- * PUT /api/auth/password
+ * POST /api/auth/password
  * 修改当前登录用户密码
  */
-authRouter.put(
+authRouter.post(
   '/password',
   requireAuth,
   asyncHandler(async (req, res) => {

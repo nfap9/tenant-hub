@@ -136,11 +136,11 @@ orgRouter.post(
 );
 
 /**
- * PUT /api/organizations/:organizationId
+ * POST /api/organizations/:organizationId/update
  * 更新组织基本信息（需要组织管理权限；aiModelDefault 仅所有者可改）
  */
-orgRouter.put(
-  '/:organizationId',
+orgRouter.post(
+  '/:organizationId/update',
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
@@ -160,11 +160,11 @@ orgRouter.put(
 );
 
 /**
- * DELETE /api/organizations/:organizationId
+ * POST /api/organizations/:organizationId/delete
  * 软删除组织（需要组织管理权限且仅所有者可操作）
  */
-orgRouter.delete(
-  '/:organizationId',
+orgRouter.post(
+  '/:organizationId/delete',
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
@@ -214,11 +214,11 @@ orgRouter.post(
 );
 
 /**
- * PUT /api/organizations/:organizationId/roles/:roleId
+ * POST /api/organizations/:organizationId/roles/:roleId/update
  * 更新组织自定义角色
  */
-orgRouter.put(
-  '/:organizationId/roles/:roleId',
+orgRouter.post(
+  '/:organizationId/roles/:roleId/update',
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
@@ -233,11 +233,11 @@ orgRouter.put(
 );
 
 /**
- * DELETE /api/organizations/:organizationId/roles/:roleId
+ * POST /api/organizations/:organizationId/roles/:roleId/delete
  * 删除组织自定义角色
  */
-orgRouter.delete(
-  '/:organizationId/roles/:roleId',
+orgRouter.post(
+  '/:organizationId/roles/:roleId/delete',
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
@@ -264,11 +264,11 @@ orgRouter.get(
 );
 
 /**
- * DELETE /api/organizations/:organizationId/members/:memberId
+ * POST /api/organizations/:organizationId/members/:memberId/disable
  * 禁用组织成员（需要成员管理权限，所有者不可被移除）
  */
-orgRouter.delete(
-  '/:organizationId/members/:memberId',
+orgRouter.post(
+  '/:organizationId/members/:memberId/disable',
   requireOrg,
   requirePermission(PERMISSIONS.MEMBER_MANAGE),
   asyncHandler(async (req, res) => {
@@ -282,11 +282,11 @@ orgRouter.delete(
 );
 
 /**
- * PUT /api/organizations/:organizationId/members/:memberId/role
+ * POST /api/organizations/:organizationId/members/:memberId/change-role
  * 修改组织成员角色（需要成员管理权限）
  */
-orgRouter.put(
-  '/:organizationId/members/:memberId/role',
+orgRouter.post(
+  '/:organizationId/members/:memberId/change-role',
   requireOrg,
   requirePermission(PERMISSIONS.MEMBER_MANAGE),
   asyncHandler(async (req, res) => {

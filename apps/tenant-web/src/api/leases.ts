@@ -35,8 +35,8 @@ export async function updateLease(
     fees?: Array<{ type: string; name: string; amount: number }>;
   }
 ) {
-  return apiClient<Lease>(`/leases/${leaseId}`, {
-    method: 'PUT',
+  return apiClient<Lease>(`/leases/${leaseId}/update`, {
+    method: 'POST',
     body: payload,
     organizationId,
   });

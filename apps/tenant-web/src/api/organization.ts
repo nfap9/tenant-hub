@@ -37,9 +37,9 @@ export async function updateOrganization(
   input: UpdateOrganizationInput
 ) {
   return apiClient<{ id: string; name: string; description?: string }>(
-    `/organizations/${organizationId}`,
+    `/organizations/${organizationId}/update`,
     {
-      method: 'PUT',
+      method: 'POST',
       body: input as Record<string, unknown>,
       organizationId,
     }
@@ -50,8 +50,8 @@ export async function deleteOrganization(
   organizationId: string,
   confirmName: string
 ) {
-  return apiClient<void>(`/organizations/${organizationId}`, {
-    method: 'DELETE',
+  return apiClient<void>(`/organizations/${organizationId}/delete`, {
+    method: 'POST',
     body: { confirmName } as Record<string, unknown>,
     organizationId,
   });
@@ -99,9 +99,9 @@ export async function disableOrganizationMember(
   memberId: string
 ) {
   return apiClient<void>(
-    `/organizations/${organizationId}/members/${memberId}`,
+    `/organizations/${organizationId}/members/${memberId}/disable`,
     {
-      method: 'DELETE',
+      method: 'POST',
       organizationId,
     }
   );
@@ -113,9 +113,9 @@ export async function updateOrganizationMemberRole(
   roleId: string
 ) {
   return apiClient<void>(
-    `/organizations/${organizationId}/members/${memberId}/role`,
+    `/organizations/${organizationId}/members/${memberId}/change-role`,
     {
-      method: 'PUT',
+      method: 'POST',
       body: { roleId } as Record<string, unknown>,
       organizationId,
     }
@@ -145,9 +145,9 @@ export async function updateOrganizationRole(
   input: CreateRoleInput
 ) {
   return apiClient<OrgRole>(
-    `/organizations/${organizationId}/roles/${roleId}`,
+    `/organizations/${organizationId}/roles/${roleId}/update`,
     {
-      method: 'PUT',
+      method: 'POST',
       body: input as Record<string, unknown>,
       organizationId,
     }
@@ -158,8 +158,11 @@ export async function deleteOrganizationRole(
   organizationId: string,
   roleId: string
 ) {
-  return apiClient<void>(`/organizations/${organizationId}/roles/${roleId}`, {
-    method: 'DELETE',
-    organizationId,
-  });
+  return apiClient<void>(
+    `/organizations/${organizationId}/roles/${roleId}/delete`,
+    {
+      method: 'POST',
+      organizationId,
+    }
+  );
 }

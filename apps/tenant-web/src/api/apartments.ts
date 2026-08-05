@@ -39,16 +39,16 @@ export async function updateApartment(
     floors?: number;
   }
 ) {
-  return apiClient<Apartment>(`/apartments/${id}`, {
-    method: 'PUT',
+  return apiClient<Apartment>(`/apartments/${id}/update`, {
+    method: 'POST',
     body: payload,
     organizationId,
   });
 }
 
 export async function deleteApartment(organizationId: string, id: string) {
-  return apiClient<void>(`/apartments/${id}`, {
-    method: 'DELETE',
+  return apiClient<void>(`/apartments/${id}/delete`, {
+    method: 'POST',
     organizationId,
   });
 }

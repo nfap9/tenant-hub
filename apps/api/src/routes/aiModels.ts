@@ -82,11 +82,11 @@ aiModelsRouter.post(
 );
 
 /**
- * PATCH /api/ai-models/:id
+ * POST /api/ai-models/:id/update
  * 更新模型（不允许改 id；apiKey 不传或为空字符串时保持原值不变）
  */
-aiModelsRouter.patch(
-  '/:id',
+aiModelsRouter.post(
+  '/:id/update',
   asyncHandler(async (req, res) => {
     const input = modelConfigSchema
       .omit({ id: true, updatedAt: true })
@@ -108,11 +108,11 @@ aiModelsRouter.patch(
 );
 
 /**
- * DELETE /api/ai-models/:id
+ * POST /api/ai-models/:id/delete
  * 删除模型；仍被会话或组织默认配置引用时拒绝删除
  */
-aiModelsRouter.delete(
-  '/:id',
+aiModelsRouter.post(
+  '/:id/delete',
   asyncHandler(async (req, res) => {
     const id = req.params.id;
     const [orgCount, conversationCount] = await Promise.all([

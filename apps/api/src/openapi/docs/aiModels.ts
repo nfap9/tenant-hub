@@ -84,8 +84,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'patch',
-  path: '/api/ai-models/{id}',
+  method: 'post',
+  path: '/api/ai-models/{id}/update',
   tags: [tag],
   summary: '更新模型',
   description: `更新模型（不允许改 id；apiKey 不传或为空字符串时保持原值不变）${permissionNote}`,
@@ -118,8 +118,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/ai-models/{id}',
+  method: 'post',
+  path: '/api/ai-models/{id}/delete',
   tags: [tag],
   summary: '删除模型',
   description: `删除模型；仍被会话或组织默认配置引用时拒绝删除${permissionNote}`,

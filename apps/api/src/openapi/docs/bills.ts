@@ -296,8 +296,8 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/api/bills/{id}',
+  method: 'post',
+  path: '/api/bills/{id}/delete',
   tags: [tag],
   summary: '删除账单',
   description:
