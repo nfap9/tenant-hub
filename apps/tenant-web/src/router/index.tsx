@@ -3,7 +3,9 @@ import { Suspense, lazy } from 'react';
 import { Spin, Empty, Button, Space } from 'antd';
 import { BuildOutlined, UserAddOutlined } from '@ant-design/icons';
 import MainLayout from '@/layout/MainLayout';
+import SystemLayout from '@/layout/SystemLayout';
 import { useAppSession } from '@/context/AppSessionContext';
+import { isSystemAdmin } from '@/utils/permissions';
 import styles from './router.module.scss';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -30,8 +32,18 @@ const MeterReadingListPage = lazy(
 const OrganizationPage = lazy(
   () => import('@/pages/settings/OrganizationPage')
 );
-const AiModelsPage = lazy(() => import('@/pages/settings/AiModelsPage'));
 const AccountPage = lazy(() => import('@/pages/settings/AccountPage'));
+
+// 系统管理页面
+const AdminDashboardPage = lazy(
+  () => import('@/pages/admin/AdminDashboardPage')
+);
+const AiModelsPage = lazy(() => import('@/pages/settings/AiModelsPage'));
+const PresetRolesPage = lazy(() => import('@/pages/admin/PresetRolesPage'));
+const OrganizationsPage = lazy(
+  () => import('@/pages/admin/OrganizationsPage')
+);
+const UsersPage = lazy(() => import('@/pages/admin/UsersPage'));
 
 function PageLoading() {
   return (
@@ -41,6 +53,7 @@ function PageLoading() {
   );
 }
 
+/** 已登录守卫：无 token 跳转登录 */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAppSession();
 
@@ -55,6 +68,37 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** 系统角色守卫：非系统管理员/运营人员跳转业务工作台 */
+function RequireSystemRole({ children }: { children: React.ReactNode }) {
+  const { systemRole, loading } = useAppSession();
+
+  if (loading) {
+    return <PageLoading />;
+  }
+
+  if (!systemRole) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+/** 仅系统管理员守卫 */
+function RequireSystemAdmin({ children }: { children: React.ReactNode }) {
+  const { systemRole, loading } = useAppSession();
+
+  if (loading) {
+    return <PageLoading />;
+  }
+
+  if (!isSystemAdmin(systemRole)) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+/** 组织守卫：无组织时引导创建或加入 */
 function RequireOrg({ children }: { children: React.ReactNode }) {
   const { memberships, loading } = useAppSession();
   const navigate = useNavigate();
@@ -94,7 +138,10 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<PageLoading />}>
       <Routes>
+        {/* 公开路由 */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* 已登录路由 */}
         <Route
           element={
             <RequireAuth>
@@ -102,6 +149,10 @@ export default function AppRouter() {
             </RequireAuth>
           }
         >
+          {/* 个人中心 - 所有登录用户可访问 */}
+          <Route path="/account" element={<AccountPage />} />
+
+          {/* 业务路由 - 需要组织 */}
           <Route
             path="/"
             element={
@@ -110,7 +161,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-
           <Route
             path="/apartments"
             element={
@@ -127,7 +177,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-
           <Route
             path="/leases"
             element={
@@ -144,7 +193,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-
           <Route
             path="/rooms"
             element={
@@ -161,7 +209,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-
           <Route
             path="/bills"
             element={
@@ -178,7 +225,6 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-
           <Route
             path="/organization"
             element={
@@ -187,12 +233,34 @@ export default function AppRouter() {
               </RequireOrg>
             }
           />
-          <Route
-            path="/ai-models"
-            element={<AiModelsPage />}
-          />
-          <Route path="/account" element={<AccountPage />} />
         </Route>
+
+        {/* 系统管理路由 - 需要系统角色 */}
+        <Route
+          element={
+            <RequireAuth>
+              <RequireSystemRole>
+                <SystemLayout />
+              </RequireSystemRole>
+            </RequireAuth>
+          }
+        >
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/ai-models" element={<AiModelsPage />} />
+          <Route path="/admin/preset-roles" element={<PresetRolesPage />} />
+          <Route path="/admin/organizations" element={<OrganizationsPage />} />
+          <Route
+            path="/admin/users"
+            element={
+              <RequireSystemAdmin>
+                <UsersPage />
+              </RequireSystemAdmin>
+            }
+          />
+        </Route>
+
+        {/* 兜底重定向 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

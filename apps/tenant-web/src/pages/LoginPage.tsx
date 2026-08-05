@@ -55,7 +55,9 @@ export default function LoginPage() {
 
       await signIn(result);
       message.success(isRegister ? '注册成功' : '登录成功');
-      navigate('/', { replace: true });
+      // 系统管理员/运营人员进入系统工作台，普通用户进入业务工作台
+      const target = result.user.systemRole ? '/admin' : '/';
+      navigate(target, { replace: true });
     } catch (e) {
       message.error(e instanceof Error ? e.message : '操作失败');
     } finally {

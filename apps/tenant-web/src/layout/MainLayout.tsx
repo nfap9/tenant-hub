@@ -50,8 +50,7 @@ export default function MainLayout() {
   } = useAppSession();
 
   const noOrg = memberships.length === 0;
-  const canManageAiModels =
-    systemRole === 'SYSTEM_ADMIN' || systemRole === 'OPERATOR';
+  const hasSystemRole = Boolean(systemRole);
 
   const selectedKey = useMemo(
     () => getKeyFromPath(bizMenuConfig, location.pathname, location.search),
@@ -104,12 +103,12 @@ export default function MainLayout() {
         onClick: () => navigate('/organization'),
       });
     }
-    if (canManageAiModels) {
+    if (hasSystemRole) {
       items.push({
-        key: 'ai-models',
+        key: 'system-workspace',
         icon: <ApiOutlined />,
-        label: 'AI 模型管理',
-        onClick: () => navigate('/ai-models'),
+        label: '系统管理控制台',
+        onClick: () => navigate('/admin'),
       });
     }
     items.push({ type: 'divider' });
