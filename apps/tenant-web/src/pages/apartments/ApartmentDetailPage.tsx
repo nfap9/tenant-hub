@@ -85,7 +85,7 @@ export default function ApartmentDetailPage() {
     try {
       await deleteApartment(currentOrgId, apartment.id);
       message.success('公寓已删除');
-      navigate('/apartments');
+      navigate('/biz/apartments');
     } catch (e) {
       message.error(e instanceof Error ? e.message : '删除公寓失败');
     }
@@ -97,7 +97,7 @@ export default function ApartmentDetailPage() {
         <PageHeader
           back="/apartments"
           breadcrumb={[
-            { label: '公寓管理', path: '/apartments' },
+            { label: '公寓管理', path: '/biz/apartments' },
             { label: '公寓详情' },
           ]}
         />
@@ -114,7 +114,7 @@ export default function ApartmentDetailPage() {
       <PageHeader
         back="/apartments"
         breadcrumb={[
-          { label: '公寓管理', path: '/apartments' },
+          { label: '公寓管理', path: '/biz/apartments' },
           { label: apartment.name },
         ]}
       />

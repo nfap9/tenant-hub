@@ -28,8 +28,6 @@ export function getKeyFromPath(
     .sort((a, b) => b.path.length - a.path.length);
   if (prefixMatches.length > 0) return prefixMatches[0].key;
 
-  if (pathname.startsWith('/ops')) return 'ops-dashboard';
-
   return 'dashboard';
 }
 

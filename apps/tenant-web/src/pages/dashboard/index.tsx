@@ -110,7 +110,7 @@ export default function DashboardPage() {
           )}`,
           badge: '收款',
           tone: 'red' as const,
-          onClick: () => navigate('/bills'),
+          onClick: () => navigate('/biz/bills'),
         }
       : undefined,
     vacantCount
@@ -120,7 +120,7 @@ export default function DashboardPage() {
           detail: `${vacantCount} 间空房可继续签约，当前出租率 ${occupancyRate}%`,
           badge: '招租',
           tone: 'green' as const,
-          onClick: () => navigate('/rooms'),
+          onClick: () => navigate('/biz/rooms'),
         }
       : undefined,
   ].filter(Boolean) as {

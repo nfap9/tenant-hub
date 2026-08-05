@@ -4,6 +4,7 @@ import { Spin, Empty, Button, Space } from 'antd';
 import { BuildOutlined, UserAddOutlined } from '@ant-design/icons';
 import MainLayout from '@/layout/MainLayout';
 import SystemLayout from '@/layout/SystemLayout';
+import AccountLayout from '@/layout/AccountLayout';
 import { useAppSession } from '@/context/AppSessionContext';
 import { isSystemAdmin } from '@/utils/permissions';
 import styles from './router.module.scss';
@@ -57,14 +58,8 @@ function PageLoading() {
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAppSession();
 
-  if (loading) {
-    return <PageLoading />;
-  }
-
-  if (!session?.token) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (loading) return <PageLoading />;
+  if (!session?.token) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
@@ -72,14 +67,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function RequireSystemRole({ children }: { children: React.ReactNode }) {
   const { systemRole, loading } = useAppSession();
 
-  if (loading) {
-    return <PageLoading />;
-  }
-
-  if (!systemRole) {
-    return <Navigate to="/" replace />;
-  }
-
+  if (loading) return <PageLoading />;
+  if (!systemRole) return <Navigate to="/biz" replace />;
   return <>{children}</>;
 }
 
@@ -87,14 +76,8 @@ function RequireSystemRole({ children }: { children: React.ReactNode }) {
 function RequireSystemAdmin({ children }: { children: React.ReactNode }) {
   const { systemRole, loading } = useAppSession();
 
-  if (loading) {
-    return <PageLoading />;
-  }
-
-  if (!isSystemAdmin(systemRole)) {
-    return <Navigate to="/admin" replace />;
-  }
-
+  if (loading) return <PageLoading />;
+  if (!isSystemAdmin(systemRole)) return <Navigate to="/admin" replace />;
   return <>{children}</>;
 }
 
@@ -103,9 +86,7 @@ function RequireOrg({ children }: { children: React.ReactNode }) {
   const { memberships, loading } = useAppSession();
   const navigate = useNavigate();
 
-  if (loading) {
-    return <PageLoading />;
-  }
+  if (loading) return <PageLoading />;
 
   if (memberships.length === 0) {
     return (
@@ -138,10 +119,21 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<PageLoading />}>
       <Routes>
-        {/* 公开路由 */}
+        {/* ── 公开路由 ── */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* 已登录路由 */}
+        {/* ── 个人中心（独立布局，所有登录用户） ── */}
+        <Route
+          element={
+            <RequireAuth>
+              <AccountLayout />
+            </RequireAuth>
+          }
+        >
+          <Route path="/account" element={<AccountPage />} />
+        </Route>
+
+        {/* ── 业务工作台（RequireOrg + MainLayout） ── */}
         <Route
           element={
             <RequireAuth>
@@ -149,12 +141,8 @@ export default function AppRouter() {
             </RequireAuth>
           }
         >
-          {/* 个人中心 - 所有登录用户可访问 */}
-          <Route path="/account" element={<AccountPage />} />
-
-          {/* 业务路由 - 需要组织 */}
           <Route
-            path="/"
+            path="/biz"
             element={
               <RequireOrg>
                 <DashboardPage />
@@ -162,7 +150,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/apartments"
+            path="/biz/apartments"
             element={
               <RequireOrg>
                 <ApartmentListPage />
@@ -170,7 +158,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/apartments/:id"
+            path="/biz/apartments/:id"
             element={
               <RequireOrg>
                 <ApartmentDetailPage />
@@ -178,7 +166,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/leases"
+            path="/biz/leases"
             element={
               <RequireOrg>
                 <LeasesPage />
@@ -186,7 +174,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/leases/:id"
+            path="/biz/leases/:id"
             element={
               <RequireOrg>
                 <LeaseDetailPage />
@@ -194,7 +182,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/rooms"
+            path="/biz/rooms"
             element={
               <RequireOrg>
                 <RoomListPage />
@@ -202,7 +190,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/rooms/:id"
+            path="/biz/rooms/:id"
             element={
               <RequireOrg>
                 <RoomDetailPage />
@@ -210,7 +198,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/bills"
+            path="/biz/bills"
             element={
               <RequireOrg>
                 <BillListPage />
@@ -218,7 +206,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/meter-readings"
+            path="/biz/meter-readings"
             element={
               <RequireOrg>
                 <MeterReadingListPage />
@@ -226,7 +214,7 @@ export default function AppRouter() {
             }
           />
           <Route
-            path="/organization"
+            path="/biz/organization"
             element={
               <RequireOrg>
                 <OrganizationPage />
@@ -235,7 +223,7 @@ export default function AppRouter() {
           />
         </Route>
 
-        {/* 系统管理路由 - 需要系统角色 */}
+        {/* ── 系统管理控制台（RequireSystemRole + SystemLayout） ── */}
         <Route
           element={
             <RequireAuth>
@@ -259,8 +247,8 @@ export default function AppRouter() {
           />
         </Route>
 
-        {/* 兜底重定向 */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* ── 兜底重定向 ── */}
+        <Route path="*" element={<Navigate to="/biz" replace />} />
       </Routes>
     </Suspense>
   );

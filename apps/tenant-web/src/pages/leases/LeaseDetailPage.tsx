@@ -140,7 +140,7 @@ export default function LeaseDetailPage() {
         <PageHeader
           back="/leases"
           breadcrumb={[
-            { label: '租务管理', path: '/leases' },
+            { label: '租务管理', path: '/biz/leases' },
             { label: '租约详情' },
           ]}
         />
@@ -148,7 +148,7 @@ export default function LeaseDetailPage() {
           title="租约不存在"
           action={{
             label: '返回租约列表',
-            onClick: () => navigate('/leases'),
+            onClick: () => navigate('/biz/leases'),
           }}
         />
       </div>
@@ -160,7 +160,7 @@ export default function LeaseDetailPage() {
       <PageHeader
         back="/leases"
         breadcrumb={[
-          { label: '租务管理', path: '/leases' },
+          { label: '租务管理', path: '/biz/leases' },
           {
             label: lease?.tenantName
               ? `${lease.tenantName} 的租约`

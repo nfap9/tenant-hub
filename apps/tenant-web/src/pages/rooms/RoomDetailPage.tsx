@@ -112,7 +112,7 @@ export default function RoomDetailPage() {
     try {
       await deleteRoom(currentOrgId, room.id);
       message.success('房间已删除');
-      navigate('/rooms');
+      navigate('/biz/rooms');
     } catch (e) {
       message.error(e instanceof Error ? e.message : '删除房间失败');
     }
@@ -147,7 +147,7 @@ export default function RoomDetailPage() {
           title="房间不存在"
           action={{
             label: '返回房间列表',
-            onClick: () => navigate('/rooms'),
+            onClick: () => navigate('/biz/rooms'),
           }}
         />
       </div>
@@ -159,7 +159,7 @@ export default function RoomDetailPage() {
       <PageHeader
         back={true}
         breadcrumb={[
-          { label: '房间管理', path: '/rooms' },
+          { label: '房间管理', path: '/biz/rooms' },
           { label: room?.roomNo || '房间详情' },
         ]}
       />

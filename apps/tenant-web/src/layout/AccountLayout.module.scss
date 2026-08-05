@@ -1,0 +1,87 @@
+@use '@/styles/variables' as *;
+
+.account-layout {
+  min-height: 100vh;
+  background: $th-bg;
+}
+
+.account-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: $th-surface;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px 0 rgb(0 0 0 / 0.06);
+  height: 64px;
+  line-height: 64px;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: $th-foreground-muted;
+      cursor: pointer;
+      transition: color $th-transition;
+
+      &:hover {
+        color: $th-primary;
+      }
+    }
+
+    .header-title {
+      font-family: $th-font-heading;
+      font-weight: 600;
+      font-size: 18px;
+      color: $th-foreground;
+    }
+  }
+
+  .header-right {
+    .user-trigger {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+
+      .user-avatar {
+        background: #2563eb;
+        font-family: $th-font-heading;
+        font-weight: 600;
+      }
+
+      .user-name {
+        color: $th-foreground;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .user-caret {
+        font-size: 10px;
+        color: $th-foreground-subtle;
+      }
+    }
+  }
+}
+
+.account-content {
+  padding: 28px 32px;
+  background: #ffffff;
+  min-height: calc(100vh - 64px);
+
+  .content-loading {
+    display: flex;
+    justify-content: center;
+    padding: 64px;
+  }
+}

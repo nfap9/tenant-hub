@@ -412,7 +412,7 @@ export default function BillListPage() {
     <div className="page-content">
       <PageHeader
         breadcrumb={[
-          { label: '财务管理', path: '/bills' },
+          { label: '财务管理', path: '/biz/bills' },
           { label: '账单管理' },
         ]}
         actions={

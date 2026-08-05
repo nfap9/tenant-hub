@@ -95,7 +95,7 @@ export default function SystemLayout() {
               key: 'workspace',
               icon: <SwapOutlined />,
               label: '切换到业务工作台',
-              onClick: () => navigate('/'),
+              onClick: () => navigate('/biz'),
             },
           ]
         : []),
@@ -149,7 +149,7 @@ export default function SystemLayout() {
             {memberships.length > 0 && (
               <span
                 className={styles.workspaceSwitch}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/biz')}
               >
                 <SwapOutlined className={styles.switchIcon} />
                 业务工作台

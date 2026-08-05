@@ -100,7 +100,7 @@ export default function MainLayout() {
         key: 'organization',
         icon: <TeamOutlined />,
         label: '组织设置',
-        onClick: () => navigate('/organization'),
+        onClick: () => navigate('/biz/organization'),
       });
     }
     if (hasSystemRole) {

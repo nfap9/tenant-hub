@@ -148,7 +148,7 @@ export default function MeterReadingListPage() {
     <div className="page-content">
       <PageHeader
         breadcrumb={[
-          { label: '租务管理', path: '/leases' },
+          { label: '租务管理', path: '/biz/leases' },
           { label: '水电抄表' },
         ]}
         actions={
