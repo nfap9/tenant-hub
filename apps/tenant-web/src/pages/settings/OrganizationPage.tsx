@@ -6,8 +6,6 @@ import {
   message,
   Modal,
   Space,
-  Row,
-  Col,
   Table,
   Tag,
   Select,
@@ -15,6 +13,7 @@ import {
   Descriptions,
   Checkbox,
   Spin,
+  type MenuProps,
 } from 'antd';
 import {
   SaveOutlined,
@@ -29,6 +28,7 @@ import {
   SafetyCertificateOutlined,
   PlusOutlined,
   RobotOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
 import {
@@ -49,8 +49,8 @@ import {
   hasPermission,
 } from '@/utils/permissions';
 import PageHeader from '@/components/ui/PageHeader';
-import DetailSection from '@/components/ui/DetailSection';
 import EmptyState from '@/components/ui/EmptyState';
+import SettingsLayout from '@/components/ui/SettingsLayout';
 import { nameRule, descriptionRule } from '@/utils/validators';
 import styles from './OrganizationPage.module.scss';
 
@@ -67,6 +67,7 @@ export default function OrganizationPage() {
   const [deleteForm] = Form.useForm();
   const [roleForm] = Form.useForm();
 
+  const [activeSection, setActiveSection] = useState('basic');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -465,187 +466,184 @@ export default function OrganizationPage() {
     },
   ];
 
+  const menuItems: MenuProps['items'] = [
+    { key: 'basic', icon: <InfoCircleOutlined />, label: '基本信息' },
+    { key: 'members', icon: <TeamOutlined />, label: '成员管理' },
+    { key: 'roles', icon: <SafetyCertificateOutlined />, label: '角色权限' },
+    { key: 'ai', icon: <RobotOutlined />, label: 'AI 助手' },
+    ...(isOwner
+      ? [
+          {
+            key: 'danger',
+            icon: <ExclamationCircleOutlined />,
+            label: '危险操作',
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="page-content">
-      <PageHeader
-        breadcrumb={[{ label: '组织设置' }]}
-        actions={
-          canManageOrg && (
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={handleEditOpen}
-            >
-              编辑组织信息
-            </Button>
-          )
-        }
-      />
+      <PageHeader breadcrumb={[{ label: '组织设置' }]} />
 
-      <Card className={styles.orgOverviewCard}>
-        <div className={styles.orgOverviewHeader}>
-          <div className={styles.orgIcon}>
-            <TeamOutlined />
-          </div>
-          <div className={styles.orgMeta}>
-            <div className={styles.orgName}>{org.name}</div>
-            <div className={styles.orgCode}>组织编码：{org.code}</div>
-          </div>
-        </div>
-        <Descriptions column={1} className={styles.orgDescription}>
-          <Descriptions.Item label="组织描述">
-            {org.description || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="所有者">
-            {ownerMember
-              ? `${ownerMember.user.username} (${ownerMember.user.phone})`
-              : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="我的角色">
-            <Tag color="success">{currentMembership.role.name}</Tag>
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
-
-      <DetailSection
-        title={
-          <span className={styles.sectionTitle}>
-            <RobotOutlined />
-            AI 助手
-          </span>
-        }
+      <SettingsLayout
+        menuItems={menuItems}
+        activeKey={activeSection}
+        onMenuClick={setActiveSection}
       >
-        {aiModelsLoading ? (
-          <Spin />
-        ) : aiModels.length === 0 ? (
-          <EmptyState
-            size="small"
-            title="暂无可用模型"
-            description="尚未配置任何已启用的模型，请联系管理员配置模型密钥后再设置默认模型"
-          />
-        ) : (
-          <Row gutter={[24, 0]} align="middle">
-            <Col>
-              {isOwner ? (
-                <Select
-                  value={org.aiModelDefault ?? undefined}
-                  options={aiModels.map((m) => ({
-                    value: m.id,
-                    label: m.displayName,
-                  }))}
-                  placeholder="跟随系统默认"
-                  allowClear
-                  loading={aiModelSaving}
-                  disabled={aiModelSaving}
-                  onChange={(value?: string) =>
-                    handleAiModelChange(value ?? null)
-                  }
-                  style={{ minWidth: 240 }}
-                />
-              ) : (
-                <span>{currentAiModelLabel}</span>
-              )}
-            </Col>
-            <Col>
-              <span className={styles.aiModelHint}>
-                组织内 AI 助手默认使用的模型，清除后将回落到系统默认模型
-              </span>
-            </Col>
-          </Row>
+        {/* ── 基本信息 ── */}
+        {activeSection === 'basic' && (
+          <>
+            <Card
+              title="组织信息"
+              extra={
+                canManageOrg && (
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={handleEditOpen}
+                  >
+                    编辑
+                  </Button>
+                )
+              }
+              style={{ marginBottom: 16 }}
+            >
+              <Descriptions column={1}>
+                <Descriptions.Item label="组织名称">
+                  {org.name}
+                </Descriptions.Item>
+                <Descriptions.Item label="组织编码">
+                  {org.code}
+                </Descriptions.Item>
+                <Descriptions.Item label="组织描述">
+                  {org.description || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="所有者">
+                  {ownerMember
+                    ? `${ownerMember.user.username} (${ownerMember.user.phone})`
+                    : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="我的角色">
+                  <Tag color="success">{currentMembership.role.name}</Tag>
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+
+            <Card title="邀请码">
+              <div className={styles.inviteRow}>
+                <span className={styles.inviteCode}>
+                  {org.inviteCode || '未生成'}
+                </span>
+                <Space>
+                  {org.inviteCode && (
+                    <Button
+                      icon={<CopyOutlined />}
+                      onClick={handleCopyInviteCode}
+                    >
+                      复制
+                    </Button>
+                  )}
+                  {isOwner && (
+                    <Button
+                      icon={<ReloadOutlined />}
+                      loading={refreshing}
+                      onClick={handleRefreshInviteCode}
+                    >
+                      刷新邀请码
+                    </Button>
+                  )}
+                </Space>
+              </div>
+            </Card>
+          </>
         )}
-      </DetailSection>
 
-      <DetailSection
-        title={
-          <span className={styles.sectionTitle}>
-            <SafetyCertificateOutlined />
-            角色权限
-          </span>
-        }
-        actions={
-          canManageRoles && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleCreateRoleOpen}
-            >
-              创建角色
-            </Button>
-          )
-        }
-      >
-        <Table
-          dataSource={roles}
-          columns={roleColumns}
-          rowKey={(record) => record.id}
-          pagination={false}
-          scroll={{ x: 'max-content' }}
-        />
-      </DetailSection>
+        {/* ── 成员管理 ── */}
+        {activeSection === 'members' && (
+          <Card title="成员管理">
+            <Table
+              dataSource={members}
+              columns={memberColumns}
+              rowKey={(record) => record.id}
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+            />
+          </Card>
+        )}
 
-      <DetailSection
-        title={
-          <span className={styles.sectionTitle}>
-            <TeamOutlined />
-            邀请码
-          </span>
-        }
-      >
-        <Row gutter={[24, 0]} align="middle">
-          <Col>
-            <span className={styles.inviteCode}>
-              {org.inviteCode || '未生成'}
-            </span>
-          </Col>
-          <Col>
-            <Space>
-              {org.inviteCode && (
-                <Button icon={<CopyOutlined />} onClick={handleCopyInviteCode}>
-                  复制
-                </Button>
-              )}
-              {isOwner && (
+        {/* ── 角色权限 ── */}
+        {activeSection === 'roles' && (
+          <Card
+            title="角色权限"
+            extra={
+              canManageRoles && (
                 <Button
-                  icon={<ReloadOutlined />}
-                  loading={refreshing}
-                  onClick={handleRefreshInviteCode}
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreateRoleOpen}
                 >
-                  刷新邀请码
+                  创建角色
                 </Button>
-              )}
-            </Space>
-          </Col>
-        </Row>
-      </DetailSection>
+              )
+            }
+          >
+            <Table
+              dataSource={roles}
+              columns={roleColumns}
+              rowKey={(record) => record.id}
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+            />
+          </Card>
+        )}
 
-      <DetailSection
-        title={
-          <span className={styles.sectionTitle}>
-            <TeamOutlined />
-            成员管理
-          </span>
-        }
-      >
-        <Table
-          dataSource={members}
-          columns={memberColumns}
-          rowKey={(record) => record.id}
-          pagination={false}
-          scroll={{ x: 'max-content' }}
-        />
-      </DetailSection>
+        {/* ── AI 助手 ── */}
+        {activeSection === 'ai' && (
+          <Card title="AI 助手">
+            {aiModelsLoading ? (
+              <Spin />
+            ) : aiModels.length === 0 ? (
+              <EmptyState
+                size="small"
+                title="暂无可用模型"
+                description="尚未配置任何已启用的模型，请联系管理员配置模型密钥后再设置默认模型"
+              />
+            ) : (
+              <div className={styles.aiRow}>
+                {isOwner ? (
+                  <Select
+                    value={org.aiModelDefault ?? undefined}
+                    options={aiModels.map((m) => ({
+                      value: m.id,
+                      label: m.displayName,
+                    }))}
+                    placeholder="跟随系统默认"
+                    allowClear
+                    loading={aiModelSaving}
+                    disabled={aiModelSaving}
+                    onChange={(value?: string) =>
+                      handleAiModelChange(value ?? null)
+                    }
+                    style={{ minWidth: 240 }}
+                  />
+                ) : (
+                  <span className={styles.aiModelLabel}>
+                    {currentAiModelLabel}
+                  </span>
+                )}
+                <span className={styles.aiModelHint}>
+                  组织内 AI 助手默认使用的模型，清除后将回落到系统默认模型
+                </span>
+              </div>
+            )}
+          </Card>
+        )}
 
-      {isOwner && (
-        <DetailSection
-          title={
-            <span className={styles.sectionTitle}>
-              <ExclamationCircleOutlined />
-              危险操作
-            </span>
-          }
-        >
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <Card className={styles.dangerCard} size="small">
+        {/* ── 危险操作 ── */}
+        {activeSection === 'danger' && isOwner && (
+          <Card title="危险操作">
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <div className={styles.dangerItem}>
                 <div>
                   <div className={styles.dangerTitle}>转移组织所有权</div>
@@ -661,8 +659,6 @@ export default function OrganizationPage() {
                   转移所有权
                 </Button>
               </div>
-            </Card>
-            <Card className={styles.dangerCard} size="small">
               <div className={styles.dangerItem}>
                 <div>
                   <div className={styles.dangerTitle}>删除组织</div>
@@ -678,10 +674,10 @@ export default function OrganizationPage() {
                   删除组织
                 </Button>
               </div>
-            </Card>
-          </Space>
-        </DetailSection>
-      )}
+            </Space>
+          </Card>
+        )}
+      </SettingsLayout>
 
       <Modal
         title="编辑组织信息"

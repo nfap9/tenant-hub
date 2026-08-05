@@ -1,25 +1,4 @@
 @use '@/styles/variables' as *;
-@use '@/styles/mixins' as *;
-
-.settings-card--spaced {
-  margin-bottom: 24px;
-}
-
-.settings-card-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: $th-foreground;
-}
-
-.settings-form {
-  max-width: 600px;
-}
-
-.profile-card {
-  margin-bottom: 24px;
-}
 
 .profile-header {
   display: flex;
@@ -46,4 +25,26 @@
 .profile-phone {
   font-size: 14px;
   color: $th-foreground-muted;
+}
+
+.security-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.security-title {
+  font-weight: 600;
+  color: $th-foreground;
+}
+
+.security-desc {
+  font-size: 13px;
+  color: $th-foreground-muted;
+  margin-top: 4px;
+}
+
+.settings-form {
+  max-width: 600px;
 }

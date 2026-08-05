@@ -1,0 +1,31 @@
+@use '@/styles/variables' as *;
+
+.settings-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.settings-sider {
+  width: 200px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 88px;
+}
+
+.settings-menu {
+  border-inline-end: none !important;
+  background: transparent !important;
+
+  :global(.ant-menu-item) {
+    height: 38px;
+    line-height: 38px;
+    border-radius: $th-radius;
+    margin-block: 2px;
+  }
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+}

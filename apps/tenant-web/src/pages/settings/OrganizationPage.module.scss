@@ -1,65 +1,32 @@
 @use '@/styles/variables' as *;
 
-.section-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: $th-foreground;
-}
-
-.org-overview-card {
-  margin-bottom: 24px;
-}
-
-.org-overview-header {
+.invite-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
-}
-
-.org-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  font-size: 24px;
-  color: #fff;
-  background-color: $th-primary;
-}
-
-.org-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.org-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: $th-foreground;
-}
-
-.org-code {
-  font-size: 14px;
-  color: $th-foreground-muted;
-}
-
-.org-description {
-  :global(.ant-descriptions-item-label) {
-    color: $th-foreground-muted;
-  }
 }
 
 .invite-code {
-  padding: 6px 12px;
+  padding: 8px 16px;
   border-radius: $th-radius;
   font-family: monospace;
   font-size: 16px;
   background-color: $th-bg-elevated;
+  color: $th-foreground;
+  border: 1px solid $th-border;
+}
+
+.ai-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ai-model-label {
+  font-size: 14px;
+  font-weight: 500;
   color: $th-foreground;
 }
 
@@ -72,16 +39,14 @@
   max-width: 600px;
 }
 
-.danger-card {
-  background-color: $th-bg-elevated;
-  border-color: $th-border-light;
-}
-
 .danger-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 16px 20px;
+  border-radius: $th-radius-lg;
+  background-color: $th-danger-bg;
 }
 
 .danger-title {
@@ -92,6 +57,7 @@
 .danger-desc {
   font-size: 13px;
   color: $th-foreground-muted;
+  margin-top: 4px;
 }
 
 .delete-hint {

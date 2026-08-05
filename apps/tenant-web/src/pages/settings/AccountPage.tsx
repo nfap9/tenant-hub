@@ -13,6 +13,7 @@ import {
   Tag,
   Avatar,
   Card,
+  type MenuProps,
 } from 'antd';
 import {
   SaveOutlined,
@@ -29,9 +30,9 @@ import { useAppSession } from '@/context/AppSessionContext';
 import { updatePassword } from '@/api/auth';
 import { createOrganization, joinOrganization } from '@/api/organization';
 import PageHeader from '@/components/ui/PageHeader';
-import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
 import EmptyState from '@/components/ui/EmptyState';
+import SettingsLayout from '@/components/ui/SettingsLayout';
 import {
   usernameRule,
   passwordRule,
@@ -49,6 +50,8 @@ export default function AccountPage() {
   const [passwordForm] = Form.useForm();
   const [createForm] = Form.useForm();
   const [joinForm] = Form.useForm();
+
+  const [activeSection, setActiveSection] = useState('profile');
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -70,8 +73,10 @@ export default function AccountPage() {
   useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'create') {
+      setActiveSection('organizations');
       setCreateModalOpen(true);
     } else if (action === 'join') {
+      setActiveSection('organizations');
       setJoinModalOpen(true);
     }
     if (action) {
@@ -205,104 +210,121 @@ export default function AccountPage() {
     },
   ];
 
+  const menuItems: MenuProps['items'] = [
+    { key: 'profile', icon: <UserOutlined />, label: '个人资料' },
+    { key: 'security', icon: <LockOutlined />, label: '安全设置' },
+    { key: 'organizations', icon: <TeamOutlined />, label: '我的组织' },
+  ];
+
   return (
     <div className="page-content">
       <PageHeader breadcrumb={[{ label: '个人中心' }]} />
 
-      <Card className={styles.profileCard}>
-        <div className={styles.profileHeader}>
-          <Avatar
-            size={72}
-            icon={<UserOutlined />}
-            className={styles.profileAvatar}
-          />
-          <div className={styles.profileInfo}>
-            <div className={styles.profileName}>
-              {session?.user?.username || session?.user?.phone}
-            </div>
-            <div className={styles.profilePhone}>
-              {session?.user?.phone || '-'}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <DetailSection
-        title={
-          <span className={styles.settingsCardTitle}>
-            <UserOutlined />
-            帐户信息
-          </span>
-        }
-        actions={
-          <Space>
-            <Button
-              icon={<EditOutlined />}
-              onClick={() => setProfileModalOpen(true)}
-            >
-              编辑个人信息
-            </Button>
-            <Button
-              type="primary"
-              icon={<LockOutlined />}
-              onClick={() => setPasswordModalOpen(true)}
-            >
-              修改密码
-            </Button>
-          </Space>
-        }
+      <SettingsLayout
+        menuItems={menuItems}
+        activeKey={activeSection}
+        onMenuClick={setActiveSection}
       >
-        <Row gutter={[24, 0]}>
-          <Col span={12}>
-            <DetailItem label="用户名">
-              {session?.user?.username || '-'}
-            </DetailItem>
-          </Col>
-          <Col span={12}>
-            <DetailItem label="手机号">
-              {session?.user?.phone || '-'}
-            </DetailItem>
-          </Col>
-        </Row>
-      </DetailSection>
-
-      <DetailSection
-        title={
-          <span className={styles.settingsCardTitle}>
-            <TeamOutlined />
-            加入的组织
-          </span>
-        }
-        actions={
-          <Space>
-            <Button
-              icon={<UserAddOutlined />}
-              onClick={() => setJoinModalOpen(true)}
-            >
-              加入组织
-            </Button>
-            <Button
-              type="primary"
-              icon={<BuildOutlined />}
-              onClick={() => setCreateModalOpen(true)}
-            >
-              创建组织
-            </Button>
-          </Space>
-        }
-      >
-        {memberships.length > 0 ? (
-          <Table
-            dataSource={memberships}
-            columns={orgColumns}
-            rowKey={(record) => record.organization.id}
-            pagination={false}
-            scroll={{ x: 'max-content' }}
-          />
-        ) : (
-          <EmptyState description="暂未加入任何组织" />
+        {/* ── 个人资料 ── */}
+        {activeSection === 'profile' && (
+          <Card
+            title="个人资料"
+            extra={
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => setProfileModalOpen(true)}
+              >
+                编辑
+              </Button>
+            }
+          >
+            <div className={styles.profileHeader}>
+              <Avatar
+                size={72}
+                icon={<UserOutlined />}
+                className={styles.profileAvatar}
+              />
+              <div className={styles.profileInfo}>
+                <div className={styles.profileName}>
+                  {session?.user?.username || session?.user?.phone}
+                </div>
+                <div className={styles.profilePhone}>
+                  {session?.user?.phone || '-'}
+                </div>
+              </div>
+            </div>
+            <Row gutter={[24, 0]} style={{ marginTop: 24 }}>
+              <Col span={12}>
+                <DetailItem label="用户名">
+                  {session?.user?.username || '-'}
+                </DetailItem>
+              </Col>
+              <Col span={12}>
+                <DetailItem label="手机号">
+                  {session?.user?.phone || '-'}
+                </DetailItem>
+              </Col>
+            </Row>
+          </Card>
         )}
-      </DetailSection>
+
+        {/* ── 安全设置 ── */}
+        {activeSection === 'security' && (
+          <Card title="安全设置">
+            <div className={styles.securityItem}>
+              <div>
+                <div className={styles.securityTitle}>登录密码</div>
+                <div className={styles.securityDesc}>
+                  定期修改密码可以保护账户安全，建议每 90 天更换一次。
+                </div>
+              </div>
+              <Button
+                type="primary"
+                icon={<LockOutlined />}
+                onClick={() => setPasswordModalOpen(true)}
+              >
+                修改密码
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* ── 我的组织 ── */}
+        {activeSection === 'organizations' && (
+          <Card
+            title="我的组织"
+            extra={
+              <Space>
+                <Button
+                  icon={<UserAddOutlined />}
+                  onClick={() => setJoinModalOpen(true)}
+                >
+                  加入组织
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<BuildOutlined />}
+                  onClick={() => setCreateModalOpen(true)}
+                >
+                  创建组织
+                </Button>
+              </Space>
+            }
+          >
+            {memberships.length > 0 ? (
+              <Table
+                dataSource={memberships}
+                columns={orgColumns}
+                rowKey={(record) => record.organization.id}
+                pagination={false}
+                scroll={{ x: 'max-content' }}
+              />
+            ) : (
+              <EmptyState description="暂未加入任何组织" />
+            )}
+          </Card>
+        )}
+      </SettingsLayout>
 
       <Modal
         title="编辑个人信息"
