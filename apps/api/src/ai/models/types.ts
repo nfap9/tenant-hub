@@ -21,7 +21,7 @@ export const modelConfigSchema = z.object({
   apiKey: z.string().optional(),
   /** 单次请求的最大输出 token 数（传给 provider 的 max_tokens） */
   maxTokens: z.number().int().positive().default(4096),
-  /** 模型上下文窗口大小（token），仅作元数据，供后续历史截断使用 */
+  /** 模型上下文窗口大小（token），agent 节点据此裁剪历史消息（见 graph/contextWindow.ts） */
   contextWindowTokens: z.number().int().positive().default(128_000),
   temperature: z.number().min(0).max(2).default(0.3),
   tags: z.array(z.string()).default(['chat']),

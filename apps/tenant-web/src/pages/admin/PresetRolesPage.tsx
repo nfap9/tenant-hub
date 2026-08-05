@@ -16,10 +16,7 @@ import {
   updatePresetRole,
   type PresetRole,
 } from '@/api/admin';
-import {
-  PERMISSIONS,
-  PERMISSION_LABELS,
-} from '@/utils/permissions';
+import { PERMISSIONS, PERMISSION_LABELS } from '@/utils/permissions';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { nameRule, descriptionRule } from '@/utils/validators';
@@ -142,9 +139,7 @@ export default function PresetRolesPage() {
 
   return (
     <div className="page-content">
-      <PageHeader
-        breadcrumb={[{ label: '系统管理' }, { label: '预设角色' }]}
-      />
+      <PageHeader breadcrumb={[{ label: '系统管理' }, { label: '预设角色' }]} />
 
       {!loading && roles.length === 0 ? (
         <EmptyState

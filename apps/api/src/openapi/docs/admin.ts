@@ -38,7 +38,8 @@ registry.registerPath({
   path: '/api/admin/preset-roles',
   tags: [tag],
   summary: '获取系统预设角色列表',
-  description: '获取系统预设组织角色列表（需要系统权限 `system:org_role:manage`）',
+  description:
+    '获取系统预设组织角色列表（需要系统权限 `system:org_role:manage`）',
   security: bearerSecurity,
   responses: {
     200: {

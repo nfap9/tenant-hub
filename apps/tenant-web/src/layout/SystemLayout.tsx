@@ -1,5 +1,14 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Layout, Menu, Dropdown, Avatar, Spin, message, Modal, type MenuProps } from 'antd';
+import {
+  Layout,
+  Menu,
+  Dropdown,
+  Avatar,
+  Spin,
+  message,
+  Modal,
+  type MenuProps,
+} from 'antd';
 import {
   SettingOutlined,
   LogoutOutlined,

@@ -6,7 +6,12 @@ const ORG_KEY = 'tenantHubCurrentOrgId';
 
 type WebSession = {
   token: string;
-  user: { id: string; phone: string; username: string; systemRole?: string | null };
+  user: {
+    id: string;
+    phone: string;
+    username: string;
+    systemRole?: string | null;
+  };
 };
 
 export function getSession(): AppSession | undefined {

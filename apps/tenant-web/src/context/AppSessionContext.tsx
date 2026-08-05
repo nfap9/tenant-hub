@@ -19,7 +19,12 @@ import {
   getOrganizationMembers,
   getOrganizationRoles,
 } from '@/api/organization';
-import type { Membership, OrgMember, OrgRole, SystemRole } from '@/types/domain';
+import type {
+  Membership,
+  OrgMember,
+  OrgRole,
+  SystemRole,
+} from '@/types/domain';
 
 export type AppSession = {
   token: string;

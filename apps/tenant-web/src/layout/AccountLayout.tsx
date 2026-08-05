@@ -1,5 +1,13 @@
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Layout, Dropdown, Avatar, Spin, message, Modal, type MenuProps } from 'antd';
+import {
+  Layout,
+  Dropdown,
+  Avatar,
+  Spin,
+  message,
+  Modal,
+  type MenuProps,
+} from 'antd';
 import {
   LogoutOutlined,
   DownOutlined,

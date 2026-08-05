@@ -249,7 +249,8 @@ registry.registerPath({
   path: '/api/organizations/{organizationId}/roles/{roleId}/update',
   tags: [tag],
   summary: '更新自定义角色',
-  description: '更新组织自定义角色（需要权限 `org_role:manage`；系统预设角色不可编辑）',
+  description:
+    '更新组织自定义角色（需要权限 `org_role:manage`；系统预设角色不可编辑）',
   security: bearerSecurity,
   request: {
     params: orgRoleParams,

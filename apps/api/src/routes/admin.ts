@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { SystemRole } from '@prisma/client';
-import {
-  requireAuth,
-  requireSystemPermission,
-} from '../middleware/auth.js';
+import { requireAuth, requireSystemPermission } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import { prisma } from '../config/prisma.js';

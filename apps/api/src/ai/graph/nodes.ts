@@ -22,6 +22,7 @@ import {
   type PendingActionRecord,
 } from '../storage/pendingActionRecords.js';
 import { buildModelChain } from './chatModel.js';
+import { trimHistoryToFit } from './contextWindow.js';
 import { executeReadTool, getGraphConfig, toLangChainTool } from './tools.js';
 import { serializeMessage, type PendingActionPayload } from './events.js';
 
@@ -48,8 +49,11 @@ export const agentNode = async (
     tools.map(toLangChainTool)
   );
 
+  const systemPrompt = buildSystemPrompt(promptCtx);
+  // 历史只裁本次调用的输入，checkpoint 仍保留完整消息（回放/审计不受影响）
+  const history = await trimHistoryToFit(state.messages, primary, systemPrompt);
   const response = await runnable.invoke(
-    [new SystemMessage(buildSystemPrompt(promptCtx)), ...state.messages],
+    [new SystemMessage(systemPrompt), ...history],
     config
   );
 

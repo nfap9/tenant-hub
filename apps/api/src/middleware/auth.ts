@@ -4,7 +4,10 @@ import type { StringValue } from 'ms';
 import { env } from '../config/env.js';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
-import { getSystemPermissions, isSystemAdmin } from '../services/systemRoles.js';
+import {
+  getSystemPermissions,
+  isSystemAdmin,
+} from '../services/systemRoles.js';
 
 export type AuthUser = {
   id: string;

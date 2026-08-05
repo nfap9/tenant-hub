@@ -41,9 +41,7 @@ const AdminDashboardPage = lazy(
 );
 const AiModelsPage = lazy(() => import('@/pages/settings/AiModelsPage'));
 const PresetRolesPage = lazy(() => import('@/pages/admin/PresetRolesPage'));
-const OrganizationsPage = lazy(
-  () => import('@/pages/admin/OrganizationsPage')
-);
+const OrganizationsPage = lazy(() => import('@/pages/admin/OrganizationsPage'));
 const UsersPage = lazy(() => import('@/pages/admin/UsersPage'));
 
 function PageLoading() {

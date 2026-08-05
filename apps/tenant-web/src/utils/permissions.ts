@@ -76,4 +76,3 @@ export function hasSystemPermission(
 export function isSystemAdmin(systemRole: string | null | undefined): boolean {
   return systemRole === 'SYSTEM_ADMIN';
 }
-
