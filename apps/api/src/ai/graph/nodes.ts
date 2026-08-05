@@ -271,8 +271,10 @@ const runOneToolCall = async (
 };
 
 /**
- * tools 节点：顺序处理最后一条 AIMessage 的 tool_calls。
- * 读工具直接执行；写工具生成待确认操作后 interrupt 等待用户 approve/reject。
+ * tools 节点：处理最后一条 AIMessage 的 tool_calls。
+ * 分段执行：连续的读工具并行（纯查询无副作用）；写工具严格串行——
+ * 既保持业务顺序（如先建租约再出账），也满足 interrupt 一次只挂起一个
+ * 待确认操作的协议。未知工具按读段处理（仅返回错误文本，无副作用）。
  */
 export const toolsNode = async (
   state: GraphState,
@@ -283,16 +285,39 @@ export const toolsNode = async (
   const last = state.messages[state.messages.length - 1];
   const calls = last instanceof AIMessage ? (last.tool_calls ?? []) : [];
 
-  const results: ToolMessage[] = [];
-  for (const call of calls) {
-    const content = await runOneToolCall(call, toolCtx, conversationId, writer);
-    results.push(
-      new ToolMessage({
-        content,
-        tool_call_id: call.id ?? '',
-        name: call.name,
+  const isWriteCall = (call: ModelToolCall): boolean =>
+    findTool(call.name)?.isWrite ?? false;
+  const toToolMessage = (call: ModelToolCall, content: string): ToolMessage =>
+    new ToolMessage({ content, tool_call_id: call.id ?? '', name: call.name });
+
+  const results: ToolMessage[] = new Array(calls.length);
+  let i = 0;
+  while (i < calls.length) {
+    if (isWriteCall(calls[i])) {
+      const content = await runOneToolCall(
+        calls[i],
+        toolCtx,
+        conversationId,
+        writer
+      );
+      results[i] = toToolMessage(calls[i], content);
+      i += 1;
+      continue;
+    }
+    let j = i + 1;
+    while (j < calls.length && !isWriteCall(calls[j])) j += 1;
+    await Promise.all(
+      calls.slice(i, j).map(async (call, k) => {
+        const content = await runOneToolCall(
+          call,
+          toolCtx,
+          conversationId,
+          writer
+        );
+        results[i + k] = toToolMessage(call, content);
       })
     );
+    i = j;
   }
   for (const m of results) {
     writer?.({ type: 'message', message: serializeMessage(m) });
