@@ -6,6 +6,7 @@ import {
   ApartmentOutlined,
   AccountBookOutlined,
   ThunderboltOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 
 export interface MenuItemConfig {
@@ -87,5 +88,12 @@ export const bizMenuConfig: MenuItemConfig[] = [
         requireOrg: true,
       },
     ],
+  },
+  {
+    key: 'organization',
+    label: '组织设置',
+    path: '/biz/organization',
+    icon: TeamOutlined,
+    requireOrg: true,
   },
 ];

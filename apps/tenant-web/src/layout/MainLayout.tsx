@@ -15,7 +15,6 @@ import {
   SwapOutlined,
   LogoutOutlined,
   UserOutlined,
-  TeamOutlined,
   DownOutlined,
   BellOutlined,
   RobotOutlined,
@@ -95,14 +94,6 @@ export default function MainLayout() {
         onClick: () => navigate('/account'),
       },
     ];
-    if (!noOrg) {
-      items.push({
-        key: 'organization',
-        icon: <TeamOutlined />,
-        label: '组织设置',
-        onClick: () => navigate('/biz/organization'),
-      });
-    }
     if (hasSystemRole) {
       items.push({
         key: 'system-workspace',
@@ -119,7 +110,7 @@ export default function MainLayout() {
       onClick: handleSignOut,
     });
     return items;
-  }, [navigate, noOrg]);
+  }, [navigate, hasSystemRole, handleSignOut]);
 
   const bizMenuItems = useMemo(() => {
     function buildItems(
@@ -190,6 +181,40 @@ export default function MainLayout() {
             />
           </div>
         </div>
+
+        {!noOrg && currentMembership && (
+          <div className={styles.siderFooter}>
+            {memberships.length > 1 ? (
+              <Dropdown
+                menu={{
+                  items: orgOptions,
+                  selectable: true,
+                  selectedKeys: currentOrgId ? [currentOrgId] : [],
+                  onClick: (e) => setCurrentOrgId(e.key),
+                }}
+              >
+                <div className={styles.orgCard}>
+                  <div className={styles.orgName}>
+                    <SwapOutlined className={styles.orgSwitchIcon} />
+                    {currentMembership.organization.name}
+                  </div>
+                  <div className={styles.orgRole}>
+                    {currentMembership.role.name}
+                  </div>
+                </div>
+              </Dropdown>
+            ) : (
+              <div className={styles.orgCard}>
+                <div className={styles.orgName}>
+                  {currentMembership.organization.name}
+                </div>
+                <div className={styles.orgRole}>
+                  {currentMembership.role.name}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Sider>
 
       <Layout className={styles.mainContentLayout}>
@@ -203,28 +228,6 @@ export default function MainLayout() {
               className={styles.headerIconBtn}
               onClick={() => message.warning('暂无通知')}
             />
-
-            {memberships.length > 1 ? (
-              <Dropdown
-                menu={{
-                  items: orgOptions,
-                  selectable: true,
-                  selectedKeys: currentOrgId ? [currentOrgId] : [],
-                  onClick: (e) => setCurrentOrgId(e.key),
-                }}
-              >
-                <span className={styles.orgSwitcher}>
-                  <SwapOutlined className={styles.switcherIcon} />
-                  {currentMembership?.organization.name || '选择组织'}
-                  <DownOutlined className={styles.switcherCaret} />
-                </span>
-              </Dropdown>
-            ) : (
-              <span className={styles.orgNameStatic}>
-                {currentMembership?.organization.name ||
-                  (noOrg ? '未加入组织' : '')}
-              </span>
-            )}
 
             <Dropdown menu={{ items: userMenuItems }}>
               <span className={styles.userTrigger}>
