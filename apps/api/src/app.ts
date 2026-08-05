@@ -11,6 +11,7 @@ import { leaseRouter } from './routes/leases.js';
 import { orgRouter } from './routes/organizations.js';
 import { aiRouter } from './routes/ai.js';
 import { aiModelsRouter } from './routes/aiModels.js';
+import { adminRouter } from './routes/admin.js';
 import { errorHandler } from './middleware/error.js';
 
 export const app = express();
@@ -66,4 +67,5 @@ app.use('/api/leases', leaseRouter);
 app.use('/api/bills', billRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/ai-models', aiModelsRouter);
+app.use('/api/admin', adminRouter);
 app.use(errorHandler);

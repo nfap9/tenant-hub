@@ -1,33 +1,20 @@
 import { Router } from 'express';
-import type { NextFunction, Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import type { AiModel } from '@prisma/client';
-import { requireAuth, requireOrg } from '../middleware/auth.js';
+import { requireAuth, requireSystemPermission } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import { prisma } from '../config/prisma.js';
-import { PERMISSIONS } from '../services/roles.js';
+import { SYSTEM_PERMISSIONS } from '../services/systemRoles.js';
 import { modelConfigSchema } from '../ai/models/types.js';
 import { invalidateModelCache } from '../ai/models/registry.js';
 
 export const aiModelsRouter = Router();
 
-/** 模型管理权限校验（* 或 aiModel:manage） */
-const requireModelManage = (
-  req: Request,
-  _res: Response,
-  next: NextFunction
-) => {
-  if (
-    !req.permissions?.includes('*') &&
-    !req.permissions?.includes(PERMISSIONS.AI_MODEL_MANAGE)
-  ) {
-    throw new HttpError(403, '无模型管理权限');
-  }
-  next();
-};
-
-aiModelsRouter.use(requireAuth, requireOrg, requireModelManage);
+aiModelsRouter.use(
+  requireAuth,
+  requireSystemPermission(SYSTEM_PERMISSIONS.SYSTEM_AI_MODEL_MANAGE)
+);
 
 /** 出参脱敏：剥离 apiKey，附加 hasApiKey 标记 */
 const toPublicModel = (row: AiModel) => {

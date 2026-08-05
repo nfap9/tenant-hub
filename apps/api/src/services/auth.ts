@@ -7,7 +7,16 @@ import { generateInviteCode } from './orgInvites.js';
  * 根据手机号查找用户
  */
 export const findUserByPhone = async (phone: string) => {
-  return prisma.user.findUnique({ where: { phone } });
+  return prisma.user.findUnique({
+    where: { phone },
+    select: {
+      id: true,
+      phone: true,
+      username: true,
+      systemRole: true,
+      passwordHash: true,
+    },
+  });
 };
 
 /**
@@ -19,13 +28,14 @@ export const isFirstUser = async () => {
 };
 
 /**
- * 创建新用户
+ * 创建新用户。首个注册用户自动成为系统管理员。
  */
 export const createUser = async (data: {
   phone: string;
   username: string;
   password: string;
 }) => {
+  const isFirst = await isFirstUser();
   return prisma.user.create({
     data: {
       phone: data.phone,
@@ -34,8 +44,9 @@ export const createUser = async (data: {
         data.password,
         env.BCRYPT_PASSWORD_SALT_ROUNDS
       ),
+      systemRole: isFirst ? 'SYSTEM_ADMIN' : null,
     },
-    select: { id: true, phone: true, username: true },
+    select: { id: true, phone: true, username: true, systemRole: true },
   });
 };
 
@@ -70,12 +81,12 @@ export const updateUserPassword = async (
 };
 
 /**
- * 获取用户及其所属组织成员信息
+ * 获取用户及其所属组织成员信息（含系统角色）
  */
 export const getUserWithMemberships = async (userId: string) => {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, phone: true, username: true },
+    select: { id: true, phone: true, username: true, systemRole: true },
   });
   const memberships = await prisma.orgMember.findMany({
     where: { userId, status: 'ACTIVE' },

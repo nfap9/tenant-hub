@@ -74,6 +74,10 @@ export const userSchema = z
     id: z.string().describe('用户ID'),
     phone: z.string().describe('手机号'),
     username: z.string().describe('用户名'),
+    systemRole: z
+      .enum(['SYSTEM_ADMIN', 'OPERATOR'])
+      .nullable()
+      .describe('系统角色（null 表示普通用户）'),
     createdAt: z.string().describe('创建时间（ISO 8601）'),
   })
   .openapi('User');

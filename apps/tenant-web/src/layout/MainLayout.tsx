@@ -44,11 +44,14 @@ export default function MainLayout() {
     currentMembership,
     currentOrgId,
     setCurrentOrgId,
+    systemRole,
     signOut,
     loading,
   } = useAppSession();
 
   const noOrg = memberships.length === 0;
+  const canManageAiModels =
+    systemRole === 'SYSTEM_ADMIN' || systemRole === 'OPERATOR';
 
   const selectedKey = useMemo(
     () => getKeyFromPath(bizMenuConfig, location.pathname, location.search),
@@ -100,6 +103,8 @@ export default function MainLayout() {
         label: '组织设置',
         onClick: () => navigate('/organization'),
       });
+    }
+    if (canManageAiModels) {
       items.push({
         key: 'ai-models',
         icon: <ApiOutlined />,

@@ -7,14 +7,14 @@ import {
   dataResponse,
   forbiddenResponse,
   notFoundResponse,
-  organizationIdHeader,
   registry,
   unauthorizedResponse,
 } from '../registry.js';
 
 const tag = 'AI 模型管理';
 
-const permissionNote = '（需要权限 `aiModel:manage`）';
+const permissionNote =
+  '（需要系统权限 `system:ai_model:manage`，即系统管理员或运营人员）';
 
 const modelIdParams = z.object({ id: z.string().describe('模型ID') });
 
@@ -43,7 +43,6 @@ registry.registerPath({
   summary: '获取全部模型',
   description: `返回全部模型（含禁用），apiKey 永不回传${permissionNote}`,
   security: bearerSecurity,
-  request: { headers: organizationIdHeader },
   responses: {
     200: {
       description: '模型列表',
@@ -66,7 +65,6 @@ registry.registerPath({
   description: `创建模型（id 由用户定义，创建后不可改）${permissionNote}`,
   security: bearerSecurity,
   request: {
-    headers: organizationIdHeader,
     body: { content: { 'application/json': { schema: modelConfigSchema } } },
   },
   responses: {
@@ -92,7 +90,6 @@ registry.registerPath({
   security: bearerSecurity,
   request: {
     params: modelIdParams,
-    headers: organizationIdHeader,
     body: {
       content: {
         'application/json': {
@@ -124,7 +121,7 @@ registry.registerPath({
   summary: '删除模型',
   description: `删除模型；仍被会话或组织默认配置引用时拒绝删除${permissionNote}`,
   security: bearerSecurity,
-  request: { params: modelIdParams, headers: organizationIdHeader },
+  request: { params: modelIdParams },
   responses: {
     200: {
       description: '删除成功',

@@ -11,7 +11,7 @@ export type ApiOptions = {
 
 export type Session = {
   token?: string;
-  user?: { id: string; phone: string; username: string };
+  user?: { id: string; phone: string; username: string; systemRole?: string | null };
 };
 
 const SESSION_KEY = 'tenantHubSession';

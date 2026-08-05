@@ -195,12 +195,12 @@ orgRouter.get(
 
 /**
  * POST /api/organizations/:organizationId/roles
- * 创建组织自定义角色
+ * 创建组织自定义角色（需要权限 `org_role:manage`）
  */
 orgRouter.post(
   '/:organizationId/roles',
   requireOrg,
-  requirePermission(PERMISSIONS.ORG_MANAGE),
+  requirePermission(PERMISSIONS.ORG_ROLE_MANAGE),
   asyncHandler(async (req, res) => {
     const input = roleInput.parse(req.body);
     ok(
@@ -215,12 +215,12 @@ orgRouter.post(
 
 /**
  * POST /api/organizations/:organizationId/roles/:roleId/update
- * 更新组织自定义角色
+ * 更新组织自定义角色（需要权限 `org_role:manage`；系统预设角色不可编辑）
  */
 orgRouter.post(
   '/:organizationId/roles/:roleId/update',
   requireOrg,
-  requirePermission(PERMISSIONS.ORG_MANAGE),
+  requirePermission(PERMISSIONS.ORG_ROLE_MANAGE),
   asyncHandler(async (req, res) => {
     const roleId = req.params.roleId;
     const role = await getRoleById(roleId);
@@ -234,12 +234,12 @@ orgRouter.post(
 
 /**
  * POST /api/organizations/:organizationId/roles/:roleId/delete
- * 删除组织自定义角色
+ * 删除组织自定义角色（需要权限 `org_role:manage`；系统预设角色不可删除）
  */
 orgRouter.post(
   '/:organizationId/roles/:roleId/delete',
   requireOrg,
-  requirePermission(PERMISSIONS.ORG_MANAGE),
+  requirePermission(PERMISSIONS.ORG_ROLE_MANAGE),
   asyncHandler(async (req, res) => {
     const roleId = req.params.roleId;
     const role = await getRoleById(roleId);

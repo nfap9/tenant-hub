@@ -12,16 +12,16 @@ export const PERMISSIONS = {
   DEPOSIT_VIEW: 'deposit:view',
   DEPOSIT_MANAGE: 'deposit:manage',
   ORG_MANAGE: 'org:manage',
+  ORG_ROLE_MANAGE: 'org_role:manage',
   MEMBER_MANAGE: 'member:manage',
-  AI_MODEL_MANAGE: 'aiModel:manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 /**
- * 确保系统预设角色已创建或更新
+ * 确保系统预设角色已创建
  * 检查数据库中是否已存在 owner、manager、readonly 三个系统角色，
- * 不存在则创建，存在则更新名称、描述和权限列表
+ * 不存在则创建（含默认权限），存在则不覆盖（权限可由系统管理员通过后台调整）
  * @param db - Prisma 客户端实例（仅需包含 role 模型），默认使用全局 prisma
  * @returns 无返回值
  */
@@ -74,7 +74,6 @@ export const ensureSystemRoles = async (
         update: {
           name: role.name,
           description: role.description,
-          permissions: role.permissions,
           system: true,
         },
       })

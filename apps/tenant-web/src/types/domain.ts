@@ -1,3 +1,5 @@
+export type SystemRole = 'SYSTEM_ADMIN' | 'OPERATOR' | null;
+
 export type Membership = {
   organization: {
     id: string;

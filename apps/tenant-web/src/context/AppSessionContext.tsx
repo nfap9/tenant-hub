@@ -19,15 +19,16 @@ import {
   getOrganizationMembers,
   getOrganizationRoles,
 } from '@/api/organization';
-import type { Membership, OrgMember, OrgRole } from '@/types/domain';
+import type { Membership, OrgMember, OrgRole, SystemRole } from '@/types/domain';
 
 export type AppSession = {
   token: string;
-  user: { id: string; phone: string; username: string };
+  user: { id: string; phone: string; username: string; systemRole: SystemRole };
 };
 
 type AppSessionContextType = {
   session: AppSession | undefined;
+  systemRole: SystemRole;
   memberships: Membership[];
   currentMembership: Membership | undefined;
   currentOrgId: string | undefined;
@@ -181,6 +182,7 @@ export function AppSessionProvider({
   const value = useMemo(
     () => ({
       session,
+      systemRole: session?.user?.systemRole ?? null,
       memberships,
       currentMembership,
       currentOrgId,

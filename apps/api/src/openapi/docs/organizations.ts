@@ -224,7 +224,7 @@ registry.registerPath({
   path: '/api/organizations/{organizationId}/roles',
   tags: [tag],
   summary: '创建自定义角色',
-  description: '创建组织自定义角色（需要权限 `org:manage`）',
+  description: '创建组织自定义角色（需要权限 `org_role:manage`）',
   security: bearerSecurity,
   request: {
     params: orgIdParams,
@@ -249,7 +249,7 @@ registry.registerPath({
   path: '/api/organizations/{organizationId}/roles/{roleId}/update',
   tags: [tag],
   summary: '更新自定义角色',
-  description: '更新组织自定义角色（需要权限 `org:manage`；系统角色不可编辑）',
+  description: '更新组织自定义角色（需要权限 `org_role:manage`；系统预设角色不可编辑）',
   security: bearerSecurity,
   request: {
     params: orgRoleParams,
@@ -276,7 +276,7 @@ registry.registerPath({
   tags: [tag],
   summary: '删除自定义角色',
   description:
-    '删除组织自定义角色（需要权限 `org:manage`；系统角色及仍被成员使用的角色不可删除）',
+    '删除组织自定义角色（需要权限 `org_role:manage`；系统预设角色及仍被成员使用的角色不可删除）',
   security: bearerSecurity,
   request: { params: orgRoleParams, headers: organizationIdHeader },
   responses: {

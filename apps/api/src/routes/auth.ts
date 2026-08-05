@@ -49,7 +49,8 @@ export const updatePasswordInput = z
 
 /**
  * POST /api/auth/register
- * 用户注册：校验手机号、用户名和密码，创建用户并返回登录 token
+ * 用户注册：校验手机号、用户名和密码，创建用户并返回登录 token。
+ * 首个注册用户自动成为系统管理员。
  */
 authRouter.post(
   '/register',
@@ -80,7 +81,12 @@ authRouter.post(
     if (!user) throw new HttpError(401, '手机号或密码不正确');
     const { matched } = await verifyPassword(user.id, input.password);
     if (!matched) throw new HttpError(401, '手机号或密码不正确');
-    const payload = { id: user.id, phone: user.phone, username: user.username };
+    const payload = {
+      id: user.id,
+      phone: user.phone,
+      username: user.username,
+      systemRole: user.systemRole,
+    };
     ok(res, { user: payload, token: signToken(payload) });
   })
 );

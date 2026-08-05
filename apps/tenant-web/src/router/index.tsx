@@ -189,11 +189,7 @@ export default function AppRouter() {
           />
           <Route
             path="/ai-models"
-            element={
-              <RequireOrg>
-                <AiModelsPage />
-              </RequireOrg>
-            }
+            element={<AiModelsPage />}
           />
           <Route path="/account" element={<AccountPage />} />
         </Route>

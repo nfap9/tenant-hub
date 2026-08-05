@@ -9,6 +9,7 @@ import './docs/leases.js';
 import './docs/bills.js';
 import './docs/ai.js';
 import './docs/aiModels.js';
+import './docs/admin.js';
 
 // 从 package.json 读取版本号（dev 与构建产物下路径一致）
 const { version } = createRequire(import.meta.url)('../../package.json') as {

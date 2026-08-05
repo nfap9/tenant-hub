@@ -15,6 +15,7 @@ model User {
   username      String
   passwordHash  String
   passwordChangedAt DateTime?
+  systemRole    SystemRole?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -388,6 +389,11 @@ model AiUsageDaily {
 }
 
 // ==================== Enums ====================
+
+enum SystemRole {
+  SYSTEM_ADMIN
+  OPERATOR
+}
 
 enum OrgStatus {
   ACTIVE

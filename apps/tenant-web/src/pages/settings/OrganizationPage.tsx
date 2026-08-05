@@ -113,6 +113,10 @@ export default function OrganizationPage() {
   const userPermissions = currentMembership.role.permissions ?? [];
   const isOwner = session?.user.id === org.ownerId;
   const canManageOrg = hasPermission(userPermissions, PERMISSIONS.ORG_MANAGE);
+  const canManageRoles = hasPermission(
+    userPermissions,
+    PERMISSIONS.ORG_ROLE_MANAGE
+  );
   const canManageMembers = hasPermission(
     userPermissions,
     PERMISSIONS.MEMBER_MANAGE
@@ -434,7 +438,7 @@ export default function OrganizationPage() {
       title: '操作',
       key: 'action',
       render: (_: unknown, record: (typeof roles)[0]) => {
-        if (record.system || !canManageOrg) return '-';
+        if (record.system || !canManageRoles) return '-';
         return (
           <Space>
             <Button
@@ -559,7 +563,7 @@ export default function OrganizationPage() {
           </span>
         }
         actions={
-          canManageOrg && (
+          canManageRoles && (
             <Button
               type="primary"
               icon={<PlusOutlined />}

@@ -30,7 +30,7 @@ import {
   type AiModelProvider,
   type ManagedAiModel,
 } from '@/api/aiModels';
-import { PERMISSIONS, hasPermission } from '@/utils/permissions';
+import { hasSystemPermission, SYSTEM_PERMISSIONS } from '@/utils/permissions';
 import { requiredRule, nameRule } from '@/utils/validators';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
@@ -67,7 +67,7 @@ type ModelFormValues = {
 };
 
 export default function AiModelsPage() {
-  const { currentMembership } = useAppSession();
+  const { systemRole } = useAppSession();
   const [form] = Form.useForm<ModelFormValues>();
 
   const [models, setModels] = useState<ManagedAiModel[]>([]);
@@ -83,9 +83,9 @@ export default function AiModelsPage() {
     {}
   );
 
-  const canManage = hasPermission(
-    currentMembership?.role.permissions,
-    PERMISSIONS.AI_MODEL_MANAGE
+  const canManage = hasSystemPermission(
+    systemRole,
+    SYSTEM_PERMISSIONS.SYSTEM_AI_MODEL_MANAGE
   );
 
   const providerValue = Form.useWatch('provider', form);
@@ -114,22 +114,13 @@ export default function AiModelsPage() {
     }
   }, [canManage, load]);
 
-  if (!currentMembership) {
-    return (
-      <div className="page-content">
-        <PageHeader breadcrumb={[{ label: 'AI 模型管理' }]} />
-        <EmptyState description="尚未加入任何组织，请先在个人中心创建或加入组织" />
-      </div>
-    );
-  }
-
   if (!canManage || forbidden) {
     return (
       <div className="page-content">
         <PageHeader breadcrumb={[{ label: 'AI 模型管理' }]} />
         <EmptyState
           title="无访问权限"
-          description="需要「AI 模型管理」权限才能访问本页，请联系组织管理员"
+          description="需要系统管理员或运营人员权限才能访问本页"
         />
       </div>
     );

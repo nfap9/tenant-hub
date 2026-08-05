@@ -4,16 +4,18 @@ import type { StringValue } from 'ms';
 import { env } from '../config/env.js';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
+import { getSystemPermissions, isSystemAdmin } from '../services/systemRoles.js';
 
 export type AuthUser = {
   id: string;
   phone: string;
   username: string;
+  systemRole: import('@prisma/client').SystemRole | null;
 };
 
 /**
  * 为用户信息签发 JWT
- * @param user - 用户信息（id、phone、username）
+ * @param user - 用户信息（id、phone、username、systemRole）
  * @returns JWT 字符串
  */
 export const signToken = (user: AuthUser) =>
@@ -42,7 +44,8 @@ const isJwtError = (error: unknown) =>
   );
 
 /**
- * 校验请求头中的 JWT，将当前用户挂载到 req.user
+ * 校验请求头中的 JWT，将当前用户（含系统角色）挂载到 req.user，
+ * 并将系统权限挂载到 req.systemPermissions
  * @param req - Express 请求对象
  * @param _res - Express 响应对象
  * @param next - Express 下一个中间件函数
@@ -66,13 +69,20 @@ export const requireAuth = (
           phone: true,
           username: true,
           passwordChangedAt: true,
+          systemRole: true,
         },
       });
       if (!user) throw new HttpError(401, '登录已过期');
       const issuedAt = payload.iat ? new Date(payload.iat * 1000) : undefined;
       if (isTokenStaleForPasswordChange(issuedAt, user.passwordChangedAt))
         throw new HttpError(401, '登录已过期');
-      req.user = { id: user.id, phone: user.phone, username: user.username };
+      req.user = {
+        id: user.id,
+        phone: user.phone,
+        username: user.username,
+        systemRole: user.systemRole,
+      };
+      req.systemPermissions = getSystemPermissions(user.systemRole);
       next();
     })
     .catch((error) => {
@@ -85,7 +95,8 @@ export const requireAuth = (
 };
 
 /**
- * 校验当前用户是否属于指定组织，并将 organizationId 和权限挂载到请求对象
+ * 校验当前用户是否属于指定组织，并将 organizationId 和权限挂载到请求对象。
+ * 系统管理员（system:*）可跳过成员检查，自动获得全部组织权限。
  * @param req - Express 请求对象
  * @param _res - Express 响应对象
  * @param next - Express 下一个中间件函数
@@ -101,6 +112,14 @@ export const requireOrg = (
       const organizationId =
         req.header('x-organization-id') || req.params.organizationId;
       if (!organizationId) throw new HttpError(400, '缺少组织');
+
+      // 系统管理员跳过成员检查，拥有全部组织权限
+      if (isSystemAdmin(req.user.systemRole)) {
+        req.organizationId = organizationId;
+        req.permissions = ['*'];
+        next();
+        return;
+      }
 
       const member = await prisma.orgMember.findUnique({
         where: {
@@ -119,18 +138,40 @@ export const requireOrg = (
 };
 
 /**
- * 校验当前用户是否拥有指定权限（或通配符 *）
+ * 校验当前用户是否拥有指定组织权限。
+ * 系统管理员（system:*）自动通过所有组织权限检查。
  * @param permission - 需要校验的权限字符串
  * @returns Express 中间件函数
  */
 export const requirePermission =
   (permission: string) =>
   (req: Request, _res: Response, next: NextFunction) => {
+    if (isSystemAdmin(req.user?.systemRole)) {
+      next();
+      return;
+    }
     if (
       !req.permissions?.includes('*') &&
       !req.permissions?.includes(permission)
     ) {
       throw new HttpError(403, '无操作权限');
+    }
+    next();
+  };
+
+/**
+ * 校验当前用户是否拥有指定系统权限。
+ * @param permission - 需要校验的系统权限字符串
+ * @returns Express 中间件函数
+ */
+export const requireSystemPermission =
+  (permission: string) =>
+  (req: Request, _res: Response, next: NextFunction) => {
+    if (
+      !req.systemPermissions?.includes('system:*') &&
+      !req.systemPermissions?.includes(permission)
+    ) {
+      throw new HttpError(403, '无系统操作权限');
     }
     next();
   };
