@@ -52,6 +52,8 @@ interface StreamParams {
   input: { messages: BaseMessage[] } | Command;
   onEvent: (e: AgentEvent) => void;
   signal?: AbortSignal;
+  /** LangSmith trace 名称（chat / resume） */
+  runName: string;
 }
 
 /** 跑 graph stream 并把 chunk 翻译成 SSE 事件 */
@@ -67,6 +69,15 @@ const streamGraph = async (params: StreamParams): Promise<void> => {
     recursionLimit: RECURSION_LIMIT,
     streamMode: ['messages', 'custom'],
     signal: params.signal,
+    // LangSmith trace 元数据：未配置 LANGSMITH_* 环境变量时不影响任何行为
+    runName: params.runName,
+    tags: ['tenant-hub', params.runName],
+    metadata: {
+      conversationId: params.conversationId,
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      modelId: params.modelId ?? null,
+    },
   });
 
   for await (const [mode, chunk] of stream) {
@@ -121,6 +132,7 @@ export const runGraphChat = async (params: {
       input: { messages: [new HumanMessage(userMessage)] },
       onEvent,
       signal: params.signal,
+      runName: 'ai-chat',
     });
     onEvent({ type: 'done' });
   } catch (err) {
@@ -171,6 +183,7 @@ export const runGraphResume = async (params: {
       input: new Command({ resume: { decision: params.decision } }),
       onEvent,
       signal: params.signal,
+      runName: 'ai-resume',
     });
     onEvent({ type: 'done' });
   } catch (err) {

@@ -22,6 +22,8 @@ Web 端面向公寓运营方，仅保留核心租赁业务功能：组织管理�
 - SSE 协议（chat / resume 共用）：`text_delta`（真流式）、`message`（消息快照）、`tool_call`、`interrupt`（待确认操作）、`error`、`done`
 - 写操作确认：`POST /api/ai/conversations/:id/resume`（`{ actionId, decision: 'approve'|'reject' }`），以 `Command` 恢复图并 SSE 流出后续执行
 - 历史回放：`GET /api/ai/conversations/:id/state`（图状态消息 + 待处理 interrupts + 审计记录）
+- 上下文窗口管理：agent 节点调用模型前按 `AiModel.contextWindowTokens` 裁剪历史（`ai/graph/contextWindow.ts`，只裁输入不动 checkpoint）
+- 可观测性（可选）：配置 `LANGSMITH_TRACING=true` 等环境变量后，LangSmith 自动追踪图/模型/工具调用，trace 带 `conversationId`/`organizationId`/`userId` 元数据（见 `.env.example`，trace 含完整对话内容，注意数据合规）
 - 审计表（Prisma）：`AiToolCall`（工具调用记录）、`AiPendingAction`（待确认操作审计）、`AiUsageDaily`（用量记账）
 
 ---
