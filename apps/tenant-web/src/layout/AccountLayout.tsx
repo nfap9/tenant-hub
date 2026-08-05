@@ -29,14 +29,7 @@ export default function AccountLayout() {
   };
 
   const goBack = () => {
-    // 系统角色优先回到系统管理，否则回业务工作台
-    if (systemRole) {
-      navigate('/admin');
-    } else if (memberships.length > 0) {
-      navigate('/biz');
-    } else {
-      navigate('/login');
-    }
+    navigate(-1);
   };
 
   const userMenuItems = useMemo<MenuProps['items']>(

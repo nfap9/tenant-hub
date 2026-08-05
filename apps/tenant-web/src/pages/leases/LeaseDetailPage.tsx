@@ -138,7 +138,7 @@ export default function LeaseDetailPage() {
     return (
       <div className="page-content">
         <PageHeader
-          back="/leases"
+          back={true}
           breadcrumb={[
             { label: '租务管理', path: '/biz/leases' },
             { label: '租约详情' },
@@ -158,7 +158,7 @@ export default function LeaseDetailPage() {
   return (
     <div className="page-content">
       <PageHeader
-        back="/leases"
+        back={true}
         breadcrumb={[
           { label: '租务管理', path: '/biz/leases' },
           {
@@ -218,7 +218,7 @@ export default function LeaseDetailPage() {
                         </Col>
                         <Col span={8}>
                           <DetailItem label="房间号">
-                            <Link to={`/rooms/${lease.roomId}`}>
+                            <Link to={`/biz/rooms/${lease.roomId}`}>
                               {lease.room?.roomNo ?? '-'}
                             </Link>
                           </DetailItem>

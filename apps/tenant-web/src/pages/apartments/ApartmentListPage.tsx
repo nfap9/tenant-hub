@@ -84,7 +84,7 @@ export default function ApartmentListPage() {
                 <Card
                   key={apt.id}
                   hoverable
-                  onClick={() => navigate(`/apartments/${apt.id}`)}
+                  onClick={() => navigate(`/biz/apartments/${apt.id}`)}
                   title={
                     <div className={styles.cardTitle}>
                       <HomeOutlined className="text-primary" />

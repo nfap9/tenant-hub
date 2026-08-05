@@ -264,7 +264,7 @@ export default function LeasesPage() {
                       type="link"
                       size="small"
                       icon={<EyeOutlined />}
-                      onClick={() => navigate(`/leases/${row.id}`)}
+                      onClick={() => navigate(`/biz/leases/${row.id}`)}
                     >
                       查看详情
                     </Button>

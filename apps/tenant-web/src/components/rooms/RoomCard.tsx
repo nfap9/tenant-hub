@@ -62,7 +62,7 @@ export default function RoomCard({
     if (onSign) {
       onSign(room.id);
     } else {
-      navigate(`/rooms/${room.id}?action=sign`);
+      navigate(`/biz/rooms/${room.id}?action=sign`);
     }
   };
 
@@ -76,7 +76,7 @@ export default function RoomCard({
       className={styles.roomCard}
       size={size}
       hoverable
-      onClick={() => navigate(`/rooms/${room.id}`)}
+      onClick={() => navigate(`/biz/rooms/${room.id}`)}
       title={
         <div className="flex-between">
           <span className={styles.roomTitle}>{room.roomNo}</span>

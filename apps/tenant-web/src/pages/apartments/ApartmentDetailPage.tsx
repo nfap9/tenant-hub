@@ -95,7 +95,7 @@ export default function ApartmentDetailPage() {
     return (
       <div className="page-content">
         <PageHeader
-          back="/apartments"
+          back={true}
           breadcrumb={[
             { label: '公寓管理', path: '/biz/apartments' },
             { label: '公寓详情' },
@@ -112,7 +112,7 @@ export default function ApartmentDetailPage() {
   return (
     <div className="page-content">
       <PageHeader
-        back="/apartments"
+        back={true}
         breadcrumb={[
           { label: '公寓管理', path: '/biz/apartments' },
           { label: apartment.name },
