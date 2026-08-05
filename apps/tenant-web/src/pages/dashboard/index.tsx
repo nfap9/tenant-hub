@@ -1,45 +1,22 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Progress, Button, Tag, Space, Spin, message } from 'antd';
+import { Card, Button, Tag, Space, Spin, message } from 'antd';
 import {
-  FileTextOutlined,
-  WalletOutlined,
   ReloadOutlined,
   RightOutlined,
-  ThunderboltOutlined,
   CheckCircleOutlined,
-  EditOutlined,
-  PlusOutlined,
   ExclamationCircleOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import PageHeader from '@/components/ui/PageHeader';
-import PaymentDialog from '@/components/PaymentDialog';
-import ReadingDrawer from '@/pages/bills/components/ReadingDrawer';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getApartments } from '@/api/apartments';
 import { getRooms } from '@/api/rooms';
-import { getBills, getBillsByStatus } from '@/api/bills';
-import {
-  compactMoney,
-  isThisMonth,
-  daysUntil,
-  monthlyAmount,
-} from '@/utils/format';
-import type { Apartment, Room, Lease, Bill } from '@/types/domain';
-import Overview from './OverviewCard';
+import { getBills } from '@/api/bills';
+import { compactMoney } from '@/utils/format';
+import type { Room } from '@/types/domain';
+import { groupBills, type BillGroup } from '@/pages/bills/utils';
 import styles from './index.module.scss';
 import clsx from 'clsx';
-
-const leaseMonthlyIncome = (lease: Lease) => {
-  const rent = monthlyAmount(lease.rentAmount, lease.cycle);
-  const fees = (lease.fees ?? []).reduce(
-    (sum, fee) => sum + monthlyAmount(fee.amount, lease.cycle),
-    0
-  );
-  return rent + fees;
-};
-
-import { groupBills, type BillGroup } from '@/pages/bills/utils';
 
 const isUnpaid = (group: BillGroup) =>
   group.status !== 'PAID' && group.status !== 'VOID';
@@ -56,11 +33,6 @@ const todoToneMap: Record<
     bg: 'rgba(220, 38, 38, 0.08)',
     icon: <ExclamationCircleOutlined />,
   },
-  orange: {
-    color: '#EA580C',
-    bg: 'rgba(234, 88, 12, 0.08)',
-    icon: <EditOutlined />,
-  },
   green: {
     color: 'var(--th-success)',
     bg: 'rgba(34, 197, 94, 0.08)',
@@ -71,29 +43,20 @@ const todoToneMap: Record<
 export default function DashboardPage() {
   const { currentOrgId } = useAppSession();
   const navigate = useNavigate();
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [readingOpen, setReadingOpen] = useState(false);
-  const [apartments, setApartments] = useState<Apartment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [billGroups, setBillGroups] = useState<BillGroup[]>([]);
-  const [reviewBills, setReviewBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentOrgId) return;
     setLoading(true);
     try {
-      const [nextApartments, nextRooms, allBills, billingBills] =
-        await Promise.all([
-          getApartments(currentOrgId),
-          getRooms(currentOrgId),
-          getBills(currentOrgId),
-          getBillsByStatus(currentOrgId, 'BILLING'),
-        ]);
-      setApartments(nextApartments);
+      const [nextRooms, allBills] = await Promise.all([
+        getRooms(currentOrgId),
+        getBills(currentOrgId),
+      ]);
       setRooms(nextRooms);
       setBillGroups(groupBills(allBills));
-      setReviewBills(billingBills.filter((bill) => bill.mode === 'POSTPAID'));
     } catch (e) {
       message.error(e instanceof Error ? e.message : '首页数据加载失败');
     } finally {
@@ -105,13 +68,6 @@ export default function DashboardPage() {
     loadData();
   }, [loadData]);
 
-  const activeLeases = useMemo(
-    () =>
-      rooms
-        .flatMap((room) => room.leases ?? [])
-        .filter((lease) => lease.status === 'ACTIVE'),
-    [rooms]
-  );
   const rentableRooms = rooms.filter((room) => room.status !== 'SELF_USE');
   const occupiedCount = rentableRooms.filter(
     (room) => room.status === 'OCCUPIED'
@@ -136,25 +92,10 @@ export default function DashboardPage() {
     );
   }, [rooms]);
 
-  const monthlyIncome = activeLeases.reduce(
-    (sum, lease) => sum + leaseMonthlyIncome(lease),
-    0
-  );
-  const thisMonthExpense = apartments
-    .flatMap((apartment) => apartment.expenses ?? [])
-    .filter((expense) => isThisMonth(expense.spentAt))
-    .reduce((sum, expense) => sum + Number(expense.amount ?? 0), 0);
   const unpaidTotal = billGroups
     .filter(isUnpaid)
     .reduce((sum, group) => sum + group.totalAmount - group.paidAmount, 0);
-  const paidThisMonth = billGroups
-    .filter((group) => isThisMonth(group.billingDate))
-    .reduce((sum, group) => sum + group.paidAmount, 0);
   const overdueBills = billGroups.filter(isOverdue);
-  const expiringLeases = activeLeases
-    .map((lease) => ({ lease, remainingDays: daysUntil(lease.endDate) }))
-    .filter((item) => item.remainingDays >= 0 && item.remainingDays <= 30)
-    .sort((left, right) => left.remainingDays - right.remainingDays);
 
   const todos = [
     overdueBills.length
@@ -170,26 +111,6 @@ export default function DashboardPage() {
           badge: '收款',
           tone: 'red' as const,
           onClick: () => navigate('/bills'),
-        }
-      : undefined,
-    reviewBills.length
-      ? {
-          key: 'review',
-          title: '后付费出账处理',
-          detail: `${reviewBills.length} 张水电账单需要补读数或重新出账`,
-          badge: '出账',
-          tone: 'orange' as const,
-          onClick: () => navigate('/bills'),
-        }
-      : undefined,
-    expiringLeases.length
-      ? {
-          key: 'lease',
-          title: '租约即将到期',
-          detail: `${expiringLeases[0].lease.tenantName} ${expiringLeases[0].remainingDays} 天后到期，共 ${expiringLeases.length} 份需跟进`,
-          badge: '续租',
-          tone: 'orange' as const,
-          onClick: () => navigate('/leases'),
         }
       : undefined,
     vacantCount
@@ -216,47 +137,17 @@ export default function DashboardPage() {
       <PageHeader
         breadcrumb={[{ label: '首页' }]}
         actions={
-          <>
-            <Button
-              icon={<ReloadOutlined />}
-              loading={loading}
-              onClick={loadData}
-            >
-              刷新
-            </Button>
-            <Button
-              type="primary"
-              icon={<WalletOutlined />}
-              onClick={() => setPaymentOpen(true)}
-            >
-              登记收款
-            </Button>
-            <Button
-              icon={<FileTextOutlined />}
-              onClick={() => navigate('/rooms')}
-            >
-              签约入住
-            </Button>
-            <Button
-              icon={<ThunderboltOutlined />}
-              onClick={() => setReadingOpen(true)}
-            >
-              抄表录入
-            </Button>
-          </>
+          <Button
+            icon={<ReloadOutlined />}
+            loading={loading}
+            onClick={loadData}
+          >
+            刷新
+          </Button>
         }
       />
 
       <Spin spinning={loading}>
-        {/* 经营概览 */}
-        <Overview
-          monthlyIncome={monthlyIncome}
-          paidThisMonth={paidThisMonth}
-          unpaidTotal={unpaidTotal}
-          thisMonthExpense={thisMonthExpense}
-        ></Overview>
-
-        {/* 出租率 + 待办 */}
         <div className={styles.cardGrid}>
           <Card
             title={<span className={styles.dashboardCardTitle}>出租情况</span>}
@@ -276,13 +167,6 @@ export default function DashboardPage() {
                 <span className={styles.progressLabel}>出租率</span>
                 <span className={styles.progressValue}>{occupancyRate}%</span>
               </div>
-              <Progress
-                percent={occupancyRate}
-                strokeColor="var(--th-primary)"
-                trailColor="var(--th-border)"
-                strokeWidth={12}
-                showInfo={false}
-              />
             </div>
             {vacantLayoutStats.length > 0 && (
               <div className={styles.vacantLayouts}>
@@ -305,6 +189,14 @@ export default function DashboardPage() {
               </span>
             }
           >
+            <div className={styles.overviewStats}>
+              <div className="text-center">
+                <div className={styles.statValueWarning}>
+                  ¥{compactMoney(unpaidTotal)}
+                </div>
+                <div className="text-muted">待收账单</div>
+              </div>
+            </div>
             {todos.length === 0 ? (
               <div className={styles.todoEmpty}>
                 <CheckCircleOutlined className={styles.todoEmptyIcon} />
@@ -320,9 +212,7 @@ export default function DashboardPage() {
                       key={todo.key}
                       size="small"
                       className={styles.todoCard}
-                      style={{
-                        borderLeft: `4px solid ${tone.color}`,
-                      }}
+                      style={{ borderLeft: `4px solid ${tone.color}` }}
                       bodyStyle={{ padding: 16 }}
                       onClick={todo.onClick}
                       onMouseEnter={(e) => {
@@ -369,18 +259,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </Spin>
-
-      <PaymentDialog
-        open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        onSuccess={loadData}
-      />
-
-      <ReadingDrawer
-        open={readingOpen}
-        onClose={() => setReadingOpen(false)}
-        onSuccess={loadData}
-      />
     </div>
   );
 }

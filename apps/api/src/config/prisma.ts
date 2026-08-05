@@ -11,15 +11,16 @@ const SOFT_DELETE_MODELS = [
   'Lease',
   'Bill',
   'BillItem',
-  'MonthlyBill',
-  'Payment',
-  'MeterReading',
-  'ApartmentExpense',
-  'LeaseFee',
-  'LeaseSettlement',
-  'SettlementPayment',
+  'Deposit',
 ];
 
+/**
+ * Prisma 软删除中间件
+ * 对指定模型的 delete/deleteMany 操作转换为更新 deletedAt，
+ * 并在查询时自动过滤已软删除的记录（除非显式指定 deletedAt 条件）
+ * @param params - Prisma 操作参数
+ * @param next - 下一个 Prisma 中间件函数
+ */
 prisma.$use(async (params, next) => {
   if (!params.model || !SOFT_DELETE_MODELS.includes(params.model)) {
     return next(params);

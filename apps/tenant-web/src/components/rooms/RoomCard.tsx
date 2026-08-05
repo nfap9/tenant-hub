@@ -1,17 +1,14 @@
 import { Card, Tag, Button, Space, message } from 'antd';
 import {
   UserAddOutlined,
-  PauseCircleOutlined,
   ToolOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { Room } from '@/types/domain';
 import { statusLabels, toneForStatus } from '@/pages/rooms/constants';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { updateRoom } from '@/api/rooms';
-import { deleteReservation } from '@/api/reservations';
 import styles from './RoomCard.module.scss';
 import clsx from 'clsx';
 
@@ -21,7 +18,6 @@ interface RoomCardProps {
   size?: 'default' | 'small';
   onStatusChange?: () => void;
   onSign?: (roomId: string) => void;
-  onReserve?: (roomId: string) => void;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -38,7 +34,6 @@ export default function RoomCard({
   size = 'default',
   onStatusChange,
   onSign,
-  onReserve,
 }: RoomCardProps) {
   const navigate = useNavigate();
   const { currentOrgId } = useAppSession();
@@ -71,21 +66,8 @@ export default function RoomCard({
     }
   };
 
-  const handleUnreserve = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!currentOrgId) return;
-    try {
-      await deleteReservation(currentOrgId, room.id);
-      message.success('已取消预留');
-      onStatusChange?.();
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '操作失败');
-    }
-  };
-
   const hasActions = canManageRoom || canManageLease;
   const isVacant = room.status === 'VACANT';
-  const isReserved = room.status === 'RESERVED';
   const isMaintenance = room.status === 'MAINTENANCE';
   const isSelfUse = room.status === 'SELF_USE';
 
@@ -108,18 +90,11 @@ export default function RoomCard({
       <div className={styles.roomMeta}>
         {room.layout}
         {room.area ? ` · ${room.area} ㎡` : ''}
+        {room.floor ? ` · ${room.floor}层` : ''}
       </div>
       <div className={clsx(styles.roomFacilities, 'text-subtle')}>
-        {room.facilities?.join('、') || '无设施'}
+        {room.furnishings?.join('、') || '无家具家电'}
       </div>
-
-      {hasActions && !isVacant && !isReserved && !isMaintenance && (
-        <div className={styles.roomActions}>
-          <Button type="link" size="small" icon={<UserAddOutlined />}>
-            查看详情
-          </Button>
-        </div>
-      )}
 
       {hasActions && isSelfUse && canManageRoom && (
         <div className={styles.roomActions}>
@@ -145,54 +120,12 @@ export default function RoomCard({
               签约
             </Button>
             {canManageRoom && (
-              <>
-                <Button
-                  size="small"
-                  icon={<PauseCircleOutlined />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onReserve) {
-                      onReserve(room.id);
-                    } else {
-                      handleStatusChange(e, 'RESERVED', '预留');
-                    }
-                  }}
-                >
-                  预留
-                </Button>
-                <Button
-                  size="small"
-                  icon={<ToolOutlined />}
-                  onClick={(e) => handleStatusChange(e, 'MAINTENANCE', '报修')}
-                >
-                  报修
-                </Button>
-              </>
-            )}
-          </Space>
-        </div>
-      )}
-
-      {hasActions && isReserved && (
-        <div className={styles.roomActions}>
-          <Space>
-            {canManageLease && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<UserAddOutlined />}
-                onClick={handleSign}
-              >
-                签约
-              </Button>
-            )}
-            {canManageRoom && (
               <Button
                 size="small"
-                icon={<CloseCircleOutlined />}
-                onClick={handleUnreserve}
+                icon={<ToolOutlined />}
+                onClick={(e) => handleStatusChange(e, 'MAINTENANCE', '报修')}
               >
-                取消预留
+                报修
               </Button>
             )}
           </Space>

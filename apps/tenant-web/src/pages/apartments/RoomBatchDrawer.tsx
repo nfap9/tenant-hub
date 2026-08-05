@@ -8,6 +8,7 @@ import {
   Checkbox,
   Select,
   Space,
+  Input,
 } from 'antd';
 import { SaveOutlined, BuildOutlined, HomeOutlined } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
@@ -17,8 +18,13 @@ import {
   groupBatchRoomNosByFloor,
   toggleBatchRoomSelection,
 } from '@/utils/batchRooms';
+import {
+  positiveIntegerRule,
+  selectedRoomNosRule,
+  floorRangeRule,
+} from '@/utils/validators';
 import EmptyState from '@/components/ui/EmptyState';
-import { facilityOptions } from '@/constants/facilities';
+import { furnishingOptions } from '@/constants/furnishings';
 import styles from './RoomBatchPage.module.scss';
 
 interface RoomBatchDrawerProps {
@@ -28,6 +34,8 @@ interface RoomBatchDrawerProps {
   onSuccess: () => void;
 }
 
+const MAX_BATCH_ROOM_COUNT = 200;
+
 export default function RoomBatchDrawer({
   open,
   apartmentId,
@@ -36,15 +44,17 @@ export default function RoomBatchDrawer({
 }: RoomBatchDrawerProps) {
   const { currentOrgId } = useAppSession();
   const canManageRoom = useHasPermission('room:manage');
+  const [form] = Form.useForm();
 
-  const [batchStartFloor, setBatchStartFloor] = useState('2');
-  const [batchEndFloor, setBatchEndFloor] = useState('4');
-  const [batchRoomCount, setBatchRoomCount] = useState('4');
   const [selectedBatchRoomNos, setSelectedBatchRoomNos] = useState<string[]>(
     []
   );
-  const [batchFacilities, setBatchFacilities] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const formValues = Form.useWatch([], form);
+  const batchStartFloor = String(formValues?.batchStartFloor ?? '2');
+  const batchEndFloor = String(formValues?.batchEndFloor ?? '4');
+  const batchRoomCount = String(formValues?.batchRoomCount ?? '4');
 
   const generatedBatchRoomNos = useMemo(
     () =>
@@ -70,17 +80,38 @@ export default function RoomBatchDrawer({
   );
 
   useEffect(() => {
-    setSelectedBatchRoomNos(generatedBatchRoomNos);
+    if (open) {
+      form.setFieldsValue({
+        batchStartFloor: 2,
+        batchEndFloor: 4,
+        batchRoomCount: 4,
+        batchFurnishings: [],
+        selectedRoomNos: [],
+      });
+      setSelectedBatchRoomNos([]);
+    }
+  }, [open, form]);
+
+  useEffect(() => {
+    setSelectedBatchRoomNos((prev) =>
+      generatedBatchRoomNos.filter((roomNo) => prev.includes(roomNo))
+    );
   }, [generatedBatchRoomNos]);
 
-  const handleSave = async () => {
+  useEffect(() => {
+    form.setFieldValue('selectedRoomNos', selectedBatchRoomNos);
+  }, [form, selectedBatchRoomNos]);
+
+  const handleSubmit = async (values: {
+    batchStartFloor: number;
+    batchEndFloor: number;
+    batchRoomCount: number;
+    batchFurnishings: string[];
+    selectedRoomNos: string[];
+  }) => {
     if (!currentOrgId || !apartmentId) return;
     if (!canManageRoom) {
       message.warning('当前角色没有管理房间权限');
-      return;
-    }
-    if (selectedGeneratedBatchRoomNos.length === 0) {
-      message.warning('请至少选择一个房间号');
       return;
     }
 
@@ -89,14 +120,18 @@ export default function RoomBatchDrawer({
       await createRoomsBatch(
         currentOrgId,
         apartmentId,
-        selectedGeneratedBatchRoomNos.map((roomNo) => ({
-          roomNo,
-          layout: '未配置',
-          facilities: batchFacilities,
-        }))
+        values.selectedRoomNos.map((roomNo) => {
+          const floor = Number(roomNo.slice(0, -2)) || 1;
+          return {
+            roomNo,
+            floor,
+            layout: '未配置',
+            furnishings: values.batchFurnishings,
+          };
+        })
       );
       message.success(
-        `已提交 ${selectedGeneratedBatchRoomNos.length} 间房间，重复房间会自动跳过`
+        `已提交 ${values.selectedRoomNos.length} 间房间，重复房间会自动跳过`
       );
       onSuccess();
     } catch (e) {
@@ -124,56 +159,86 @@ export default function RoomBatchDrawer({
             type="primary"
             icon={<SaveOutlined />}
             loading={saving}
-            disabled={saving || selectedGeneratedBatchRoomNos.length === 0}
-            onClick={handleSave}
+            disabled={selectedGeneratedBatchRoomNos.length === 0}
+            onClick={() => form.submit()}
           >
             确认添加房间
           </Button>
         </Space>
       }
     >
-      <Form layout="vertical">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{
+          batchStartFloor: 2,
+          batchEndFloor: 4,
+          batchRoomCount: 4,
+          batchFurnishings: [],
+          selectedRoomNos: [],
+        }}
+      >
         <div className={styles.formGrid3}>
-          <Form.Item label="开始楼层">
+          <Form.Item
+            label="开始楼层"
+            name="batchStartFloor"
+            rules={positiveIntegerRule('开始楼层', { max: 999 })}
+          >
             <InputNumber
               min={1}
+              precision={0}
               className="w-full"
               prefix={<BuildOutlined className="text-subtle" />}
-              value={Number(batchStartFloor) || undefined}
-              onChange={(v) => setBatchStartFloor(String(v || 1))}
             />
           </Form.Item>
-          <Form.Item label="结束楼层">
+          <Form.Item
+            label="结束楼层"
+            name="batchEndFloor"
+            rules={[
+              ...positiveIntegerRule('结束楼层', { max: 999 }),
+              floorRangeRule('batchStartFloor', 'batchEndFloor'),
+            ]}
+          >
             <InputNumber
               min={1}
+              precision={0}
               className="w-full"
               prefix={<BuildOutlined className="text-subtle" />}
-              value={Number(batchEndFloor) || undefined}
-              onChange={(v) => setBatchEndFloor(String(v || 1))}
             />
           </Form.Item>
-          <Form.Item label="每层房间数">
+          <Form.Item
+            label="每层房间数"
+            name="batchRoomCount"
+            rules={positiveIntegerRule('每层房间数', {
+              max: MAX_BATCH_ROOM_COUNT,
+            })}
+          >
             <InputNumber
               min={1}
-              max={200}
+              max={MAX_BATCH_ROOM_COUNT}
+              precision={0}
               className="w-full"
               prefix={<HomeOutlined className="text-subtle" />}
-              value={Number(batchRoomCount) || undefined}
-              onChange={(v) => setBatchRoomCount(String(v || 1))}
             />
           </Form.Item>
         </div>
-        <Form.Item label="设施">
+        <Form.Item label="家具家电" name="batchFurnishings">
           <Select
             mode="tags"
-            placeholder="选择或输入设施，如：空调、热水器"
-            value={batchFacilities}
-            onChange={setBatchFacilities}
-            options={facilityOptions.map((f) => ({
+            placeholder="选择或输入家具家电，如：空调、热水器"
+            options={furnishingOptions.map((f) => ({
               label: f,
               value: f,
             }))}
           />
+        </Form.Item>
+        <Form.Item
+          name="selectedRoomNos"
+          hidden
+          rules={[selectedRoomNosRule(selectedBatchRoomNos)]}
+        >
+          <Input type="hidden" />
         </Form.Item>
       </Form>
 

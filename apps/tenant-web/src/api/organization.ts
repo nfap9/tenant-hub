@@ -6,12 +6,20 @@ export type CreateOrganizationInput = {
   description?: string;
 };
 
+export type UpdateOrganizationInput = {
+  name: string;
+  description?: string;
+  aiModelDefault?: string | null;
+};
+
 export type JoinOrganizationInput = {
   inviteCode: string;
 };
 
-export type SubscriptionOverview = {
-  quotaLimitEnabled?: boolean;
+export type CreateRoleInput = {
+  name: string;
+  description?: string;
+  permissions: string[];
 };
 
 export async function createOrganization(input: CreateOrganizationInput) {
@@ -22,6 +30,31 @@ export async function createOrganization(input: CreateOrganizationInput) {
       body: input as Record<string, unknown>,
     }
   );
+}
+
+export async function updateOrganization(
+  organizationId: string,
+  input: UpdateOrganizationInput
+) {
+  return apiClient<{ id: string; name: string; description?: string }>(
+    `/organizations/${organizationId}`,
+    {
+      method: 'PUT',
+      body: input as Record<string, unknown>,
+      organizationId,
+    }
+  );
+}
+
+export async function deleteOrganization(
+  organizationId: string,
+  confirmName: string
+) {
+  return apiClient<void>(`/organizations/${organizationId}`, {
+    method: 'DELETE',
+    body: { confirmName } as Record<string, unknown>,
+    organizationId,
+  });
 }
 
 export async function joinOrganization(input: JoinOrganizationInput) {
@@ -44,10 +77,49 @@ export async function refreshOrganizationInviteCode(organizationId: string) {
   );
 }
 
+export async function transferOrganizationOwnership(
+  organizationId: string,
+  userId: string
+) {
+  return apiClient<void>(`/organizations/${organizationId}/transfer-owner`, {
+    method: 'POST',
+    body: { userId } as Record<string, unknown>,
+    organizationId,
+  });
+}
+
 export async function getOrganizationMembers(organizationId: string) {
   return apiClient<OrgMember[]>(`/organizations/${organizationId}/members`, {
     organizationId,
   });
+}
+
+export async function disableOrganizationMember(
+  organizationId: string,
+  memberId: string
+) {
+  return apiClient<void>(
+    `/organizations/${organizationId}/members/${memberId}`,
+    {
+      method: 'DELETE',
+      organizationId,
+    }
+  );
+}
+
+export async function updateOrganizationMemberRole(
+  organizationId: string,
+  memberId: string,
+  roleId: string
+) {
+  return apiClient<void>(
+    `/organizations/${organizationId}/members/${memberId}/role`,
+    {
+      method: 'PUT',
+      body: { roleId } as Record<string, unknown>,
+      organizationId,
+    }
+  );
 }
 
 export async function getOrganizationRoles(organizationId: string) {
@@ -56,9 +128,38 @@ export async function getOrganizationRoles(organizationId: string) {
   });
 }
 
-export async function getOrganizationSubscription(organizationId: string) {
-  return apiClient<SubscriptionOverview>(
-    `/organizations/${organizationId}/subscription`,
-    { organizationId }
+export async function createOrganizationRole(
+  organizationId: string,
+  input: CreateRoleInput
+) {
+  return apiClient<OrgRole>(`/organizations/${organizationId}/roles`, {
+    method: 'POST',
+    body: input as Record<string, unknown>,
+    organizationId,
+  });
+}
+
+export async function updateOrganizationRole(
+  organizationId: string,
+  roleId: string,
+  input: CreateRoleInput
+) {
+  return apiClient<OrgRole>(
+    `/organizations/${organizationId}/roles/${roleId}`,
+    {
+      method: 'PUT',
+      body: input as Record<string, unknown>,
+      organizationId,
+    }
   );
+}
+
+export async function deleteOrganizationRole(
+  organizationId: string,
+  roleId: string
+) {
+  return apiClient<void>(`/organizations/${organizationId}/roles/${roleId}`, {
+    method: 'DELETE',
+    organizationId,
+  });
 }

@@ -8,7 +8,7 @@ import {
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import { PERMISSIONS } from '../services/roles.js';
-import { isQuotaLimitEnabled } from '../services/quotas.js';
+import { findEnabledModel } from '../ai/models/registry.js';
 import {
   listUserOrganizations,
   createOrganization,
@@ -16,16 +16,8 @@ import {
   joinOrganization,
   getOrganizationById,
   refreshOrganizationInviteCode,
-  listPlans,
-  getOrganizationSubscription,
-  getOrganizationUsage,
-  listOrgQuotaPackages,
-  findPlanById,
-  createSubscription,
   updateOrganization,
-  getOrganizationWithSubscriptions,
   softDeleteOrganization,
-  listRoles,
   listOrgMembers,
   getOrgMemberWithRole,
   disableOrgMember,
@@ -33,11 +25,22 @@ import {
   findRoleByCode,
   transferOrganizationOwnership,
 } from '../services/organization.js';
+import {
+  listRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+  getRoleById,
+} from '../services/roles.js';
 
 export const orgRouter = Router();
 
 orgRouter.use(requireAuth);
 
+/**
+ * GET /api/organizations
+ * 获取当前用户所属的组织列表
+ */
 orgRouter.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -45,6 +48,10 @@ orgRouter.get(
   })
 );
 
+/**
+ * POST /api/organizations
+ * 创建新组织，当前用户自动成为所有者
+ */
 orgRouter.post(
   '/',
   asyncHandler(async (req, res) => {
@@ -55,6 +62,10 @@ orgRouter.post(
   })
 );
 
+/**
+ * POST /api/organizations/join
+ * 通过邀请码加入组织
+ */
 orgRouter.post(
   '/join',
   asyncHandler(async (req, res) => {
@@ -72,6 +83,10 @@ orgRouter.post(
   })
 );
 
+/**
+ * POST /api/organizations/:organizationId/refresh-invite-code
+ * 刷新组织的邀请码（仅所有者可操作）
+ */
 orgRouter.post(
   '/:organizationId/refresh-invite-code',
   requireOrg,
@@ -84,101 +99,144 @@ orgRouter.post(
   })
 );
 
-orgRouter.get(
-  '/plans',
-  asyncHandler(async (_req, res) => {
-    ok(res, await listPlans());
-  })
-);
-
-orgRouter.get(
-  '/:organizationId/subscription',
-  requireOrg,
-  asyncHandler(async (req, res) => {
-    const [subscription, usage, quotaPackages, quotaLimitEnabled] =
-      await Promise.all([
-        getOrganizationSubscription(req.organizationId!),
-        getOrganizationUsage(req.organizationId!),
-        listOrgQuotaPackages(req.organizationId!),
-        isQuotaLimitEnabled(),
-      ]);
-
-    const extraQuota = quotaPackages.reduce(
-      (sum, item) => ({
-        apartmentQuota: sum.apartmentQuota + item.apartmentQuota,
-        roomQuota: sum.roomQuota + item.roomQuota,
-        memberQuota: sum.memberQuota + item.memberQuota,
-      }),
-      { apartmentQuota: 0, roomQuota: 0, memberQuota: 0 }
-    );
-
-    ok(res, {
-      subscription,
-      usage: usage._count,
-      extraQuota,
-      quotaPackages,
-      quotaLimitEnabled,
-    });
-  })
-);
-
-orgRouter.post(
-  '/:organizationId/subscriptions',
-  requireOrg,
-  requirePermission(PERMISSIONS.ORG_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = z.object({ planId: z.string() }).parse(req.body);
-    const plan = await findPlanById(input.planId);
-    if (!plan || !plan.enabled) throw new HttpError(404, '套餐不存在或已停用');
-
-    ok(
-      res,
-      await createSubscription({
-        organizationId: req.organizationId!,
-        planId: plan.id,
-      })
-    );
-  })
-);
-
+/**
+ * PUT /api/organizations/:organizationId
+ * 更新组织基本信息（需要组织管理权限；aiModelDefault 仅所有者可改）
+ */
 orgRouter.put(
   '/:organizationId',
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z
-      .object({ name: z.string().min(1), description: z.string().optional() })
+      .object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        aiModelDefault: z.string().min(1).nullable().optional(),
+      })
       .parse(req.body);
+    if (input.aiModelDefault !== undefined) {
+      const org = await getOrganizationById(req.organizationId!);
+      if (org.ownerId !== req.user!.id)
+        throw new HttpError(403, '仅所有者可修改默认 AI 模型');
+      if (
+        input.aiModelDefault !== null &&
+        !(await findEnabledModel(input.aiModelDefault))
+      )
+        throw new HttpError(400, '模型不存在或未启用');
+    }
     ok(res, await updateOrganization(req.organizationId!, input));
   })
 );
 
+/**
+ * DELETE /api/organizations/:organizationId
+ * 软删除组织（需要组织管理权限且仅所有者可操作）
+ */
 orgRouter.delete(
   '/:organizationId',
   requireOrg,
   requirePermission(PERMISSIONS.ORG_MANAGE),
   asyncHandler(async (req, res) => {
     const input = z.object({ confirmName: z.string() }).parse(req.body);
-    const org = await getOrganizationWithSubscriptions(req.organizationId!);
+    const org = await getOrganizationById(req.organizationId!);
     if (!org) throw new HttpError(404, '组织不存在');
     if (org.ownerId !== req.user!.id)
       throw new HttpError(403, '仅所有者可删除组织');
-    if (org.subscriptions.length > 0)
-      throw new HttpError(400, '组织存在有效订阅，无法删除');
+    if (org.status !== 'ACTIVE')
+      throw new HttpError(400, '组织状态异常，无法删除');
     if (input.confirmName !== org.name)
       throw new HttpError(400, '二次确认不匹配');
     ok(res, await softDeleteOrganization(org.id));
   })
 );
 
+/**
+ * GET /api/organizations/:organizationId/roles
+ * 获取组织可用角色列表（系统角色 + 自定义角色）
+ */
 orgRouter.get(
   '/:organizationId/roles',
   requireOrg,
-  asyncHandler(async (_req, res) => {
-    ok(res, await listRoles());
+  asyncHandler(async (req, res) => {
+    ok(res, await listRoles(req.organizationId!));
   })
 );
 
+/**
+ * POST /api/organizations/:organizationId/roles
+ * 创建组织自定义角色
+ */
+orgRouter.post(
+  '/:organizationId/roles',
+  requireOrg,
+  requirePermission(PERMISSIONS.ORG_MANAGE),
+  asyncHandler(async (req, res) => {
+    const input = z
+      .object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        permissions: z.array(z.string()),
+      })
+      .parse(req.body);
+    ok(
+      res,
+      await createRole({
+        organizationId: req.organizationId!,
+        ...input,
+      })
+    );
+  })
+);
+
+/**
+ * PUT /api/organizations/:organizationId/roles/:roleId
+ * 更新组织自定义角色
+ */
+orgRouter.put(
+  '/:organizationId/roles/:roleId',
+  requireOrg,
+  requirePermission(PERMISSIONS.ORG_MANAGE),
+  asyncHandler(async (req, res) => {
+    const roleId = req.params.roleId;
+    const role = await getRoleById(roleId);
+    if (!role || role.system || role.organizationId !== req.organizationId) {
+      throw new HttpError(404, '角色不存在或不可编辑');
+    }
+    const input = z
+      .object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        permissions: z.array(z.string()),
+      })
+      .parse(req.body);
+    ok(res, await updateRole(roleId, input));
+  })
+);
+
+/**
+ * DELETE /api/organizations/:organizationId/roles/:roleId
+ * 删除组织自定义角色
+ */
+orgRouter.delete(
+  '/:organizationId/roles/:roleId',
+  requireOrg,
+  requirePermission(PERMISSIONS.ORG_MANAGE),
+  asyncHandler(async (req, res) => {
+    const roleId = req.params.roleId;
+    const role = await getRoleById(roleId);
+    if (!role || role.system || role.organizationId !== req.organizationId) {
+      throw new HttpError(404, '角色不存在或不可删除');
+    }
+    await deleteRole(roleId);
+    ok(res, { message: '角色已删除' });
+  })
+);
+
+/**
+ * GET /api/organizations/:organizationId/members
+ * 获取组织成员列表
+ */
 orgRouter.get(
   '/:organizationId/members',
   requireOrg,
@@ -187,6 +245,10 @@ orgRouter.get(
   })
 );
 
+/**
+ * DELETE /api/organizations/:organizationId/members/:memberId
+ * 禁用组织成员（需要成员管理权限，所有者不可被移除）
+ */
 orgRouter.delete(
   '/:organizationId/members/:memberId',
   requireOrg,
@@ -201,6 +263,10 @@ orgRouter.delete(
   })
 );
 
+/**
+ * PUT /api/organizations/:organizationId/members/:memberId/role
+ * 修改组织成员角色（需要成员管理权限）
+ */
 orgRouter.put(
   '/:organizationId/members/:memberId/role',
   requireOrg,
@@ -217,6 +283,10 @@ orgRouter.put(
   })
 );
 
+/**
+ * POST /api/organizations/:organizationId/transfer-owner
+ * 转移组织所有权（仅所有者可操作）
+ */
 orgRouter.post(
   '/:organizationId/transfer-owner',
   requireOrg,

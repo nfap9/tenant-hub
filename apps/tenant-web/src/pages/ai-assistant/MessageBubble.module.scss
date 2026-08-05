@@ -1,0 +1,88 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.tool-row {
+  margin: $th-space-1 0;
+  text-align: center;
+}
+
+.row {
+  display: flex;
+  gap: $th-space-2;
+  margin-bottom: $th-space-3;
+}
+
+.row-user {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: $th-border-light;
+  color: $th-foreground-muted;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar-user {
+  background: $th-primary;
+  color: $th-surface;
+}
+
+.content {
+  max-width: 78%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.content-user {
+  align-items: flex-end;
+}
+
+.role-label {
+  font-size: 11px;
+  color: $th-foreground-subtle;
+  margin-bottom: 2px;
+}
+
+.bubble {
+  padding: $th-space-2 $th-space-3;
+  border-radius: $th-radius;
+  background: $th-surface;
+  color: $th-foreground;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bubble-user {
+  background: $th-primary;
+  color: $th-surface;
+}
+
+.tool-calls {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.tool-call-label {
+  font-size: 12px;
+}
+
+.tool-call-summary {
+  margin: 0;
+}
+
+.pending-actions {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.error-tag {
+  margin-top: $th-space-1;
+}

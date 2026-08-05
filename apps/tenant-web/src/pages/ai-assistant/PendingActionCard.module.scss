@@ -1,0 +1,33 @@
+@use '@/styles/variables' as *;
+
+.card {
+  margin-top: $th-space-2;
+}
+
+.card-low {
+  border-color: $th-success;
+}
+
+.card-medium {
+  border-color: $th-warning;
+}
+
+.card-high {
+  border-color: $th-danger;
+}
+
+.description {
+  margin-bottom: $th-space-2;
+}
+
+.diff-table {
+  margin-bottom: $th-space-2;
+}
+
+.result-alert {
+  margin-bottom: $th-space-2;
+}
+
+.actions {
+  margin-top: $th-space-1;
+}

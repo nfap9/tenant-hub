@@ -6,20 +6,16 @@ import {
   Form,
   Spin,
   message,
-  Checkbox,
   Modal,
+  Checkbox,
 } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useAppSession } from '@/context/AppSessionContext';
-import { getBills, createPayment } from '@/api/bills';
+import { getBills, createLeasePayment } from '@/api/bills';
 import { getLeases } from '@/api/leases';
 import { money, day } from '@/utils/format';
-import {
-  statusLabels,
-  billModeText,
-  billItemTypeText,
-} from '@/pages/bills/constants';
 import { remainingAmount } from '@/pages/bills/utils';
+import { paymentAmountRule } from '@/utils/validators';
 import EmptyState from '@/components/ui/EmptyState';
 import type { Bill, Lease } from '@/types/domain';
 
@@ -44,11 +40,18 @@ export default function PaymentDialog({
   const [selectedLeaseId, setSelectedLeaseId] = useState<string>(
     defaultLeaseId ?? ''
   );
-  const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(
-    new Set()
-  );
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const amountValue = Form.useWatch('amount', form);
+  const waiverChecked = Form.useWatch('waiver', form);
+
+  const round2 = (value: number) => Math.round(value * 100) / 100;
+
+  const paidAmount = useMemo(() => {
+    const num = Number(amountValue);
+    return Number.isFinite(num) ? num : 0;
+  }, [amountValue]);
 
   const loadData = async () => {
     if (!currentOrgId) return;
@@ -75,7 +78,6 @@ export default function PaymentDialog({
       }
     } else {
       setSelectedLeaseId(defaultLeaseId ?? '');
-      setSelectedBillIds(new Set());
       form.resetFields();
     }
   }, [open, defaultLeaseId]);
@@ -84,10 +86,17 @@ export default function PaymentDialog({
     return leases
       .filter((l) => l.status === 'ACTIVE')
       .map((l) => ({
-        label: `${l.tenantName} · ${l.room?.roomNo ?? '房间'}`,
+        label: `${l.room?.apartment?.name ?? '公寓'} · ${
+          l.room?.roomNo ?? '房间'
+        }`,
         value: l.id,
       }));
   }, [leases]);
+
+  const selectedLease = useMemo(
+    () => leases.find((l) => l.id === selectedLeaseId),
+    [leases, selectedLeaseId]
+  );
 
   const leaseBills = useMemo(() => {
     if (!selectedLeaseId) return [];
@@ -99,44 +108,28 @@ export default function PaymentDialog({
       );
   }, [bills, selectedLeaseId]);
 
-  const selectedBills = useMemo(
-    () => leaseBills.filter((b) => selectedBillIds.has(b.id)),
-    [leaseBills, selectedBillIds]
+  const totalRemaining = useMemo(
+    () => leaseBills.reduce((sum, b) => sum + remainingAmount(b), 0),
+    [leaseBills]
   );
 
-  const totalPayable = useMemo(
-    () => selectedBills.reduce((sum, b) => sum + remainingAmount(b), 0),
-    [selectedBills]
-  );
+  const waiverAmount = useMemo(() => {
+    if (!waiverChecked) return 0;
+    return round2(totalRemaining - paidAmount);
+  }, [waiverChecked, totalRemaining, paidAmount]);
 
-  const detailItems = useMemo(() => {
-    const items: { name: string; amount: number }[] = [];
-    for (const bill of selectedBills) {
-      for (const item of bill.items ?? []) {
-        items.push({
-          name: `${bill.billingDate.slice(0, 10)} ${item.name}`,
-          amount: Number(item.amount),
-        });
-      }
-    }
-    return items;
-  }, [selectedBills]);
-
-  const toggleBill = (billId: string) => {
-    setSelectedBillIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(billId)) {
-        next.delete(billId);
-      } else {
-        next.add(billId);
-      }
-      return next;
-    });
-  };
+  const billItemRows = useMemo(() => {
+    return leaseBills.flatMap((bill) =>
+      (bill.items ?? []).map((item) => ({
+        name: item.name,
+        amount: Number(item.amount),
+        period: `${day(item.periodStart)} ~ ${day(item.periodEnd)}`,
+      }))
+    );
+  }, [leaseBills]);
 
   const handleLeaseChange = (leaseId: string) => {
     setSelectedLeaseId(leaseId);
-    setSelectedBillIds(new Set());
     form.setFieldsValue({ amount: undefined });
   };
 
@@ -144,28 +137,23 @@ export default function PaymentDialog({
     amount: string;
     method: string;
     note?: string;
+    waiver?: boolean;
   }) => {
-    if (!currentOrgId || selectedBills.length === 0) return;
+    if (!currentOrgId || !selectedLeaseId) return;
 
-    const paidAmount = Number(values.amount);
-    if (paidAmount !== totalPayable) {
-      message.error(`实付金额必须等于应付金额 ¥${money(totalPayable)}`);
-      return;
-    }
+    const paid = Number(values.amount);
+    const waiver = values.waiver ? round2(totalRemaining - paid) : 0;
 
     setSubmitting(true);
     try {
-      for (const bill of selectedBills) {
-        const billRemaining = remainingAmount(bill);
-        if (billRemaining <= 0) continue;
-        await createPayment(currentOrgId, {
-          billId: bill.id,
-          amount: billRemaining,
-          method: values.method.trim() || '线下收款',
-          note: values.note?.trim() || undefined,
-          paidAt: new Date().toISOString(),
-        });
-      }
+      await createLeasePayment(currentOrgId, {
+        leaseId: selectedLeaseId,
+        amount: paid,
+        waiverAmount: values.waiver ? waiver : undefined,
+        method: values.method.trim() || '线下收款',
+        note: values.note?.trim() || undefined,
+        paidAt: new Date().toISOString(),
+      });
       message.success('收款已登记');
       onSuccess?.();
       onClose();
@@ -194,7 +182,7 @@ export default function PaymentDialog({
             marginTop: 16,
           }}
         >
-          {/* 左侧：租约选择 + 账单选择 */}
+          {/* 左侧：租约选择 + 未付账单列表 */}
           <div>
             <div
               style={{
@@ -203,7 +191,7 @@ export default function PaymentDialog({
                 marginBottom: 16,
               }}
             >
-              选择账单
+              选择租约
             </div>
 
             <Select
@@ -218,79 +206,124 @@ export default function PaymentDialog({
 
             {!selectedLeaseId ? (
               <EmptyState size="small" description="请先选择租约" />
-            ) : leaseBills.length === 0 ? (
-              <EmptyState size="small" description="该租约暂无待支付账单" />
             ) : (
               <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                {leaseBills.map((bill) => {
-                  const checked = selectedBillIds.has(bill.id);
-                  return (
+                {selectedLease && (
+                  <div
+                    style={{
+                      padding: 12,
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 8,
+                      marginBottom: 12,
+                      background: '#fafafa',
+                    }}
+                  >
                     <div
-                      key={bill.id}
-                      onClick={() => toggleBill(bill.id)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: 12,
-                        border: '1px solid #e5e7eb',
-                        borderRadius: 8,
+                        fontWeight: 600,
+                        fontSize: 14,
                         marginBottom: 8,
-                        cursor: 'pointer',
-                        background: checked
-                          ? 'rgba(59, 130, 246, 0.04)'
-                          : undefined,
-                        borderColor: checked ? '#3b82f6' : '#e5e7eb',
                       }}
                     >
-                      <Checkbox checked={checked} />
-                      <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            fontWeight: 500,
-                            fontSize: 14,
-                          }}
-                        >
-                          {bill.billingDate.slice(0, 10)} ·{' '}
-                          {billModeText(bill.mode)}
-                          {bill.items && bill.items.length > 0 && (
-                            <span style={{ color: '#6b7280', fontWeight: 400 }}>
-                              {' '}
-                              ·{' '}
-                              {bill.items
-                                .map((i) => billItemTypeText(i.type))
-                                .join('、')}
-                            </span>
-                          )}
-                        </div>
-                        <div
-                          style={{
-                            color: '#6b7280',
-                            fontSize: 13,
-                            marginTop: 2,
-                          }}
-                        >
-                          {statusLabels[bill.status]} · {day(bill.periodStart)}{' '}
-                          至 {day(bill.periodEnd)}
-                        </div>
+                      租约信息
+                    </div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '4px 16px',
+                        fontSize: 13,
+                        color: '#374151',
+                      }}
+                    >
+                      <div>租客：{selectedLease.tenantName || '未知租客'}</div>
+                      <div>手机：{selectedLease.tenantPhone || '-'}</div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        租金：¥{money(selectedLease.rentAmount)}/月
                       </div>
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          color: '#3b82f6',
-                          fontSize: 14,
-                        }}
-                      >
-                        ¥{money(remainingAmount(bill))}
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        费用项目：
+                        {(selectedLease.fees ?? []).length === 0
+                          ? '无'
+                          : selectedLease.fees
+                              ?.map(
+                                (fee) => `${fee.name} ¥${money(fee.amount)}`
+                              )
+                              .join('、')}
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        租期：{day(selectedLease.startDate)} 至{' '}
+                        {day(selectedLease.endDate)}
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 14,
+                    marginBottom: 8,
+                  }}
+                >
+                  账单信息
+                </div>
+
+                {billItemRows.length === 0 ? (
+                  <EmptyState size="small" description="该租约暂无待支付账单" />
+                ) : (
+                  <div
+                    style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 8,
+                      padding: '0 12px',
+                    }}
+                  >
+                    {billItemRows.map((row, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 16,
+                          padding: '10px 0',
+                          fontSize: 13,
+                          borderBottom:
+                            idx < billItemRows.length - 1
+                              ? '1px solid #e5e7eb'
+                              : undefined,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <span style={{ minWidth: 80 }}>{row.name}</span>
+                        <span
+                          style={{
+                            flex: 1,
+                            textAlign: 'right',
+                            color: '#6b7280',
+                          }}
+                        >
+                          {row.period}
+                        </span>
+                        <span
+                          style={{
+                            minWidth: 80,
+                            textAlign: 'right',
+                            fontWeight: 500,
+                          }}
+                        >
+                          ¥{money(row.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* 右侧：账单明细 + 收款信息 */}
+          {/* 右侧：收款信息 */}
           <div>
             <div
               style={{
@@ -302,101 +335,48 @@ export default function PaymentDialog({
               收款确认
             </div>
 
-            {selectedBills.length === 0 ? (
-              <EmptyState size="small" description="请在左侧选择要收款的账单" />
+            {selectedLeaseId && leaseBills.length === 0 ? (
+              <EmptyState size="small" description="该租约暂无待支付账单" />
+            ) : !selectedLeaseId ? (
+              <EmptyState size="small" description="请先选择租约" />
             ) : (
               <Form form={form} layout="vertical" onFinish={handleSubmit}>
-                {/* 明细 */}
-                <div style={{ marginBottom: 20 }}>
-                  <div
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px 0',
+                    borderBottom: '2px solid #e5e7eb',
+                    marginBottom: 20,
+                  }}
+                >
+                  <span
                     style={{
                       fontWeight: 600,
-                      fontSize: 14,
-                      marginBottom: 10,
+                      fontSize: 15,
                     }}
                   >
-                    账单明细（{selectedBills.length} 笔）
-                  </div>
-                  <div
+                    剩余应收
+                  </span>
+                  <span
                     style={{
-                      maxHeight: 180,
-                      overflowY: 'auto',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      padding: '0 12px',
+                      fontWeight: 700,
+                      fontSize: 20,
+                      color: '#3b82f6',
                     }}
                   >
-                    {detailItems.map((item, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '8px 0',
-                          borderBottom:
-                            idx < detailItems.length - 1
-                              ? '1px solid #e5e7eb'
-                              : undefined,
-                          fontSize: 13,
-                        }}
-                      >
-                        <span>{item.name}</span>
-                        <span style={{ color: '#6b7280' }}>
-                          ¥{money(item.amount)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '12px 0',
-                      borderTop: '2px solid #e5e7eb',
-                      marginTop: 8,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        fontSize: 15,
-                      }}
-                    >
-                      应付金额
-                    </span>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 18,
-                        color: '#3b82f6',
-                      }}
-                    >
-                      ¥{money(totalPayable)}
-                    </span>
-                  </div>
+                    ¥{money(totalRemaining)}
+                  </span>
                 </div>
 
                 {/* 收款信息 */}
                 <Form.Item
                   name="amount"
                   label="实付金额"
-                  rules={[
-                    { required: true, message: '请输入实付金额' },
-                    {
-                      validator: (_, value) => {
-                        if (!value) return Promise.resolve();
-                        const num = Number(value);
-                        if (!Number.isFinite(num) || num <= 0) {
-                          return Promise.reject(new Error('金额必须大于 0'));
-                        }
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
+                  rules={paymentAmountRule(totalRemaining, !!waiverChecked)}
                 >
-                  <Input prefix="¥" placeholder={`${money(totalPayable)}`} />
+                  <Input prefix="¥" placeholder={`${money(totalRemaining)}`} />
                 </Form.Item>
 
                 <Form.Item
@@ -415,6 +395,38 @@ export default function PaymentDialog({
                     ]}
                   />
                 </Form.Item>
+
+                <Form.Item
+                  name="waiver"
+                  valuePropName="checked"
+                  initialValue={false}
+                >
+                  <Checkbox
+                    disabled={totalRemaining <= 0}
+                    onChange={() => form.validateFields(['amount'])}
+                  >
+                    抹零（未收金额最多豁免 1 元并记为已结清）
+                  </Checkbox>
+                </Form.Item>
+
+                {waiverChecked && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px 0',
+                      borderBottom: '1px solid #e5e7eb',
+                      marginBottom: 20,
+                      color: waiverAmount > 1 ? '#ef4444' : undefined,
+                    }}
+                  >
+                    <span style={{ fontWeight: 500 }}>抹零金额</span>
+                    <span style={{ fontWeight: 600, fontSize: 16 }}>
+                      ¥{money(waiverAmount)}
+                    </span>
+                  </div>
+                )}
 
                 <Form.Item name="note" label="备注">
                   <Input.TextArea placeholder="备注（可选）" rows={2} />

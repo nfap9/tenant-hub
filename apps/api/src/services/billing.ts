@@ -7,12 +7,7 @@ import {
   getLeaseBillGenerationEnd,
   type LeaseCycle,
 } from './leaseLifecycle.js';
-import { refreshDepositStatus } from './deposit.js';
 import { HttpError } from '../utils/http.js';
-import {
-  createTransaction,
-  getCategoryFromBillItemType,
-} from './transaction.js';
 
 dayjs.extend(utc);
 
@@ -44,18 +39,18 @@ type PaymentTarget = {
 
 type BillPaymentTarget = PaymentTarget & {
   amount: Prisma.Decimal.Value;
+  waiverAmount?: Prisma.Decimal.Value;
 };
 
 const startOfDay = (date: Date) => dayjs.utc(date).startOf('day');
 
 /**
  * 根据租约信息和计费日期计算预付和后付的计费周期
- * @param params - 计费周期输入参数
- * @param params.leaseStartDate - 租约开始日期
- * @param params.leaseEndDate - 租约结束日期
- * @param params.cycle - 计费周期
- * @param params.billingDate - 计费日期
- * @returns 包含预付和后付周期的对象
+ * @param leaseStartDate - 租约开始日期
+ * @param leaseEndDate - 租约结束日期
+ * @param cycle - 付款周期
+ * @param billingDate - 计费日期
+ * @returns 预付周期和后付周期
  */
 export const calculateBillingPeriods = ({
   leaseStartDate,
@@ -89,10 +84,9 @@ export const calculateBillingPeriods = ({
 
 /**
  * 判断是否需要生成后付账单
- * @param params - 输入参数
- * @param params.leaseStartDate - 租约开始日期
- * @param params.billingDate - 计费日期
- * @returns 若计费日期在租约开始日期之后则返回 true
+ * @param leaseStartDate - 租约开始日期
+ * @param billingDate - 计费日期
+ * @returns 计费日期晚于租约开始日期时返回 true
  */
 export const shouldGeneratePostpaidBill = ({
   leaseStartDate,
@@ -102,11 +96,10 @@ export const shouldGeneratePostpaidBill = ({
 
 /**
  * 获取从租约开始到指定日期之间的所有计费日期
- * @param params - 输入参数
- * @param params.leaseStartDate - 租约开始日期
- * @param params.leaseEndDate - 租约结束日期
- * @param params.cycle - 计费周期
- * @param params.today - 截止日期，默认为当前日期
+ * @param leaseStartDate - 租约开始日期
+ * @param leaseEndDate - 租约结束日期
+ * @param cycle - 付款周期
+ * @param today - 判断基准日期，默认为当前日期
  * @returns 计费日期数组
  */
 export const getBillingDatesThrough = ({
@@ -132,8 +125,8 @@ export const getBillingDatesThrough = ({
 
 /**
  * 获取当前月份的账单窗口
- * @param today - 当前日期，默认为系统当前日期
- * @returns 包含窗口开始和结束日期的对象
+ * @param today - 基准日期，默认为当前日期
+ * @returns 账单窗口的开始和结束日期
  */
 export const getCurrentMonthBillWindow = (today = new Date()) => ({
   start: startOfDay(today).startOf('month').toDate(),
@@ -143,7 +136,7 @@ export const getCurrentMonthBillWindow = (today = new Date()) => ({
 /**
  * 根据计费日期生成账单月份标签
  * @param billingDate - 计费日期
- * @returns 格式为"YYYY年MM月"的字符串
+ * @returns 如 "2024年6月" 的字符串
  */
 export const getBillMonthLabel = (billingDate: Date) => {
   const date = startOfDay(billingDate);
@@ -152,15 +145,14 @@ export const getBillMonthLabel = (billingDate: Date) => {
 
 /**
  * 计算水电总费用
- * @param params - 水电读数及单价参数
- * @param params.previousWater - 上期水表读数
- * @param params.currentWater - 本期水表读数
- * @param params.waterUnitPrice - 水费单价
- * @param params.previousPower - 上期电表读数
- * @param params.currentPower - 本期电表读数
- * @param params.powerUnitPrice - 电费单价
+ * @param previousWater - 上期水表读数
+ * @param currentWater - 本期水表读数
+ * @param waterUnitPrice - 水费单价
+ * @param previousPower - 上期电表读数
+ * @param currentPower - 本期电表读数
+ * @param powerUnitPrice - 电费单价
  * @returns 水电总费用
- * @throws 若读数小于上期读数则抛出错误
+ * @throws 当本期读数小于上期读数时抛出错误
  */
 export const calculateUtilityAmount = ({
   previousWater,
@@ -181,15 +173,13 @@ export const calculateUtilityAmount = ({
 
 /**
  * 分别计算水费和电费金额
- * @param params - 水电读数及单价参数
- * @param params.previousWater - 上期水表读数
- * @param params.currentWater - 本期水表读数
- * @param params.waterUnitPrice - 水费单价
- * @param params.previousPower - 上期电表读数
- * @param params.currentPower - 本期电表读数
- * @param params.powerUnitPrice - 电费单价
- * @returns 包含水费金额和电费金额的对象
- * @throws 若读数小于上期读数则抛出错误
+ * @param previousWater - 上期水表读数
+ * @param currentWater - 本期水表读数
+ * @param waterUnitPrice - 水费单价
+ * @param previousPower - 上期电表读数
+ * @param currentPower - 本期电表读数
+ * @param powerUnitPrice - 电费单价
+ * @returns 水费金额和电费金额
  */
 export const calculateUtilityLineAmounts = ({
   previousWater,
@@ -222,98 +212,105 @@ const remainingAmountFor = ({ totalAmount, paidAmount }: PaymentTarget) =>
 
 /**
  * 断言账单允许收款操作
- * @param params - 账单收款目标参数
- * @param params.status - 账单状态
- * @param params.totalAmount - 账单总金额
- * @param params.paidAmount - 已付金额
- * @param params.amount - 本次收款金额
- * @throws 若账单状态不允许收款或金额不合法则抛出 HttpError
+ * @param status - 账单状态
+ * @param totalAmount - 账单总金额
+ * @param paidAmount - 已付金额
+ * @param amount - 本次收款金额
+ * @param waiverAmount - 本次抹零金额（可选）
+ * @throws 当不允许收款时抛出 HttpError
  */
 export const assertBillPaymentAllowed = ({
   status,
   totalAmount,
   paidAmount,
   amount,
+  waiverAmount,
 }: BillPaymentTarget) => {
-  if (status === 'PAID' || status === 'VOID' || status === 'REFUNDED')
+  if (status === 'PAID' || status === 'VOID')
     throw new HttpError(400, '该账单已结清或作废，不能继续收款');
-  if (status === 'BILLING')
-    throw new HttpError(400, '该账单尚未出账完成，不能收款');
+  if (status === 'PENDING')
+    throw new HttpError(400, '该账单水电数据待补齐，暂时不能收款');
   const paymentAmount = new Prisma.Decimal(amount);
   if (paymentAmount.lessThanOrEqualTo(0))
     throw new HttpError(400, '收款金额必须大于 0');
+  const waiver = new Prisma.Decimal(waiverAmount ?? 0);
+  if (waiver.lessThan(0) || waiver.greaterThan(1))
+    throw new HttpError(400, '抹零金额必须在 0~1 元之间');
   const remaining = remainingAmountFor({ status, totalAmount, paidAmount });
-  if (paymentAmount.greaterThan(remaining))
+  const total = paymentAmount.plus(waiver);
+  if (total.greaterThan(remaining))
     throw new HttpError(
       400,
-      `收款金额不能超过剩余应收 ¥${remaining.toFixed(2)}`
+      `收款金额加抹零金额不能超过剩余应收 ¥${remaining.toFixed(2)}`
     );
+  if (waiver.greaterThan(0) && !total.equals(remaining))
+    throw new HttpError(400, '使用抹零时，实收金额加抹零金额必须等于剩余应收');
 };
 
 const BILL_OPERATION_GUARDS: Record<
   string,
-  { allowVoid: boolean; allowRefund: boolean; allowDelete: boolean }
+  { allowVoid: boolean; allowDelete: boolean }
 > = {
-  UNPAID: { allowVoid: true, allowRefund: false, allowDelete: true },
-  BILLING: { allowVoid: true, allowRefund: false, allowDelete: true },
-  PAID: { allowVoid: false, allowRefund: true, allowDelete: false },
-  REFUNDED: { allowVoid: false, allowRefund: false, allowDelete: false },
-  VOID: { allowVoid: false, allowRefund: false, allowDelete: false },
+  UNPAID: { allowVoid: true, allowDelete: true },
+  PAID: { allowVoid: false, allowDelete: false },
+  VOID: { allowVoid: false, allowDelete: false },
+  PENDING: { allowVoid: true, allowDelete: true },
 };
 
 /**
  * 断言账单允许指定的操作
  * @param status - 账单状态
- * @param operation - 操作类型：void（作废）、refund（退款）、delete（删除）
- * @throws 若当前状态不允许该操作则抛出 HttpError
+ * @param operation - 操作类型：void 或 delete
+ * @throws 当当前状态不允许该操作时抛出 HttpError
  */
 export const assertBillOperation = (
   status: string,
-  operation: 'void' | 'refund' | 'delete'
+  operation: 'void' | 'delete'
 ) => {
   const guard = BILL_OPERATION_GUARDS[status];
   if (!guard) throw new HttpError(400, '未知账单状态');
-  if (
-    !guard[
-      `allow${operation.charAt(0).toUpperCase() + operation.slice(1)}` as keyof typeof guard
-    ]
-  )
-    throw new HttpError(400, `当前账单状态不允许此操作`);
+  const key =
+    `allow${operation.charAt(0).toUpperCase() + operation.slice(1)}` as keyof typeof guard;
+  if (!guard[key]) throw new HttpError(400, `当前账单状态不允许此操作`);
 };
 
 /**
  * 作废账单
  * @param billId - 账单 ID
  * @param organizationId - 组织 ID
- * @returns 作废后的账单（包含明细项）
- * @throws 若账单不存在或为退租结算账单则抛出 HttpError
+ * @returns 作废后的账单（含账单项目）
+ * @throws 当账单不存在或状态不允许作废时抛出 HttpError
  */
 export const voidBill = async (billId: string, organizationId: string) => {
   const bill = await prisma.bill.findFirst({
     where: { id: billId, organizationId },
   });
   if (!bill) throw new HttpError(404, '账单不存在');
-  if (bill.note === 'LEASE_SETTLEMENT')
-    throw new HttpError(400, '退租结算账单不能作废，请通过退租流程处理');
-  assertBillOperation(bill.status, 'void');
+
+  const isZeroAmountPaid =
+    bill.status === 'PAID' &&
+    new Prisma.Decimal(bill.totalAmount).equals(0) &&
+    new Prisma.Decimal(bill.paidAmount).equals(0);
+
+  if (!isZeroAmountPaid) {
+    assertBillOperation(bill.status, 'void');
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.billItem.updateMany({
       where: { billId },
-      data: { status: 'VOID', amount: 0 },
+      data: { amount: 0 },
     });
     await tx.bill.update({
       where: { id: billId },
-      data: { status: 'VOID', totalAmount: 0, failureReason: null },
+      data: { status: 'VOID', totalAmount: 0 },
     });
 
-    if (bill.mode === 'DEPOSIT') {
-      const deposit = await tx.deposit.findUnique({
-        where: { billId },
-      });
-      if (deposit && deposit.status === 'UNPAID') {
-        await tx.deposit.delete({ where: { id: deposit.id } });
-      }
+    const deposit = await tx.deposit.findUnique({
+      where: { billId },
+    });
+    if (deposit && deposit.status === 'UNPAID') {
+      await tx.deposit.delete({ where: { id: deposit.id } });
     }
   });
 
@@ -324,105 +321,8 @@ export const voidBill = async (billId: string, organizationId: string) => {
 };
 
 /**
- * 退款账单
- * @param params - 退款参数
- * @param params.billId - 账单 ID
- * @param params.organizationId - 组织 ID
- * @param params.userId - 操作用户 ID
- * @param params.amount - 退款金额
- * @param params.method - 退款方式
- * @param params.note - 备注（可选）
- * @returns 退款后的账单（包含明细项和支付记录）
- * @throws 若账单不存在或退款金额不合法则抛出 HttpError
- */
-export const refundBill = async ({
-  billId,
-  organizationId,
-  userId,
-  amount,
-  method,
-  note,
-}: {
-  billId: string;
-  organizationId: string;
-  userId: string;
-  amount: Prisma.Decimal.Value;
-  method: string;
-  note?: string;
-}) => {
-  const bill = await prisma.bill.findFirst({
-    where: { id: billId, organizationId },
-  });
-  if (!bill) throw new HttpError(404, '账单不存在');
-  assertBillOperation(bill.status, 'refund');
-
-  const refundAmount = new Prisma.Decimal(amount);
-  if (refundAmount.lessThanOrEqualTo(0))
-    throw new HttpError(400, '退款金额必须大于 0');
-  const netPaid = new Prisma.Decimal(bill.paidAmount);
-  if (refundAmount.greaterThan(netPaid))
-    throw new HttpError(400, '退款金额不能超过已付金额');
-
-  const payment = await prisma.payment.create({
-    data: {
-      billId,
-      userId,
-      type: 'REFUND',
-      amount: refundAmount,
-      method,
-      note,
-      status: 'COMPLETED',
-    },
-  });
-
-  // 创建收支记录
-  const billWithLease = await prisma.bill.findUnique({
-    where: { id: billId },
-    include: {
-      items: true,
-      lease: { include: { room: { include: { apartment: true } } } },
-    },
-  });
-  if (billWithLease) {
-    const category = 'BILL_REFUND';
-    const description = `${billWithLease.lease.room.apartment.name} - ${billWithLease.lease.room.roomNo} 账单退款`;
-
-    await createTransaction({
-      organizationId: billWithLease.organizationId,
-      type: 'EXPENSE',
-      category,
-      amount: refundAmount,
-      method,
-      description,
-      note,
-      operatorId: userId,
-      sourceType: 'BILL_PAYMENT',
-      sourceId: payment.id,
-      billId,
-      leaseId: billWithLease.leaseId,
-      apartmentId: billWithLease.lease.room.apartmentId,
-    });
-  }
-
-  await refreshBillTotals(billId);
-
-  return prisma.bill.findUnique({
-    where: { id: billId },
-    include: { items: true, payments: true },
-  });
-};
-
-const classifyFeeItemType = (name: string) => {
-  if (name.includes('网')) return 'NETWORK' as const;
-  if (name.includes('物业') || name.includes('管理'))
-    return 'MANAGEMENT' as const;
-  return 'OTHER' as const;
-};
-
-/**
  * 刷新账单总金额、已付金额和状态
  * @param billId - 账单 ID
- * @returns 无返回值
  */
 export const refreshBillTotals = async (billId: string) => {
   const bill = await prisma.bill.findUnique({
@@ -431,38 +331,21 @@ export const refreshBillTotals = async (billId: string) => {
   });
   if (!bill) return;
 
-  // 退租结算账单手动管理状态，跳过自动计算
-  if (bill.note === 'LEASE_SETTLEMENT') return;
-
   const totalAmount = bill.items.reduce(
     (sum, item) => sum.plus(item.amount),
     new Prisma.Decimal(0)
   );
   const netPaidAmount = bill.payments.reduce(
-    (sum, payment) =>
-      payment.type === 'REFUND'
-        ? sum.minus(payment.amount)
-        : sum.plus(payment.amount),
+    (sum, payment) => sum.plus(payment.amount).plus(payment.waiverAmount),
     new Prisma.Decimal(0)
   );
-  const totalRefunded = bill.payments
-    .filter((p) => p.type === 'REFUND')
-    .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0));
 
   const status =
-    bill.status === 'VOID'
-      ? 'VOID'
-      : totalRefunded.greaterThanOrEqualTo(
-            bill.payments
-              .filter((p) => p.type === 'RECEIVE')
-              .reduce((sum, p) => sum.plus(p.amount), new Prisma.Decimal(0))
-          ) && totalRefunded.greaterThan(0)
-        ? 'REFUNDED'
-        : netPaidAmount.greaterThanOrEqualTo(totalAmount)
-          ? 'PAID'
-          : bill.items.some((item) => item.status === 'BILLING')
-            ? 'BILLING'
-            : 'UNPAID';
+    bill.status === 'VOID' || bill.status === 'PENDING'
+      ? bill.status
+      : netPaidAmount.greaterThanOrEqualTo(totalAmount)
+        ? 'PAID'
+        : 'UNPAID';
 
   await prisma.bill.update({
     where: { id: billId },
@@ -470,6 +353,14 @@ export const refreshBillTotals = async (billId: string) => {
   });
 };
 
+/**
+ * 查找指定日期或之前的最近一条抄表记录
+ * @param organizationId - 组织 ID
+ * @param roomId - 房间 ID
+ * @param meterType - 表类型
+ * @param date - 查询日期
+ * @returns 最近的抄表记录，不存在返回 null
+ */
 const findReadingAtOrBefore = async ({
   organizationId,
   roomId,
@@ -487,81 +378,123 @@ const findReadingAtOrBefore = async ({
       roomId,
       meterType,
       readingDate: { lte: startOfDay(date).endOf('day').toDate() },
-      status: { not: 'VOID' },
     },
     orderBy: { readingDate: 'desc' },
   });
 
-const failPostpaidBill = async (billId: string, failureReason: string) => {
-  await prisma.bill.update({
-    where: { id: billId },
-    data: {
-      status: 'BILLING',
-      failureReason,
-      items: {
-        updateMany: { where: {}, data: { status: 'BILLING', amount: 0 } },
-      },
-    },
-  });
+type UtilityReadingsForPeriod = {
+  previousWater: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+  currentWater: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+  previousPower: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+  currentPower: Awaited<ReturnType<typeof findReadingAtOrBefore>>;
+};
+
+/**
+ * 查询指定后付周期内的水电表读数
+ */
+const findUtilityReadingsForPeriod = async ({
+  organizationId,
+  roomId,
+  periodStart,
+  periodEnd,
+}: {
+  organizationId: string;
+  roomId: string;
+  periodStart: Date;
+  periodEnd: Date;
+}): Promise<UtilityReadingsForPeriod> => {
+  const [previousWater, currentWater, previousPower, currentPower] =
+    await Promise.all([
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'WATER',
+        date: periodStart,
+      }),
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'WATER',
+        date: periodEnd,
+      }),
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'POWER',
+        date: periodStart,
+      }),
+      findReadingAtOrBefore({
+        organizationId,
+        roomId,
+        meterType: 'POWER',
+        date: periodEnd,
+      }),
+    ]);
+
+  return {
+    previousWater,
+    currentWater,
+    previousPower,
+    currentPower,
+  };
+};
+
+type CompleteUtilityReadingsForPeriod = {
+  [K in keyof UtilityReadingsForPeriod]: NonNullable<
+    UtilityReadingsForPeriod[K]
+  >;
+};
+
+/**
+ * 判断水电表读数是否足够计算本期水电费
+ * 要求：周期开始和结束都有读数，且结束读数必须晚于开始读数（有新记录）
+ */
+const hasCompleteUtilityReadings = (
+  readings: UtilityReadingsForPeriod
+): readings is CompleteUtilityReadingsForPeriod => {
+  const { previousWater, currentWater, previousPower, currentPower } = readings;
+  return (
+    !!previousWater &&
+    !!currentWater &&
+    previousWater.id !== currentWater.id &&
+    !!previousPower &&
+    !!currentPower &&
+    previousPower.id !== currentPower.id
+  );
 };
 
 /**
  * 根据水电表读数完成后付账单
  * @param billId - 账单 ID
- * @returns 完成后的账单（包含明细项）
+ * @returns 更新后的账单（含账单项目），若读数不足则返回原账单
  */
 export const completePostpaidBillFromReadings = async (billId: string) => {
   const bill = await prisma.bill.findUnique({
     where: { id: billId },
     include: { lease: { include: { room: true } }, items: true },
   });
-  if (!bill || bill.mode !== 'POSTPAID') return bill;
+  if (!bill) return bill;
 
-  const [previousWater, currentWater, previousPower, currentPower] =
-    await Promise.all([
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'WATER',
-        date: bill.periodStart,
-      }),
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'WATER',
-        date: bill.periodEnd,
-      }),
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'POWER',
-        date: bill.periodStart,
-      }),
-      findReadingAtOrBefore({
-        organizationId: bill.organizationId,
-        roomId: bill.lease.roomId,
-        meterType: 'POWER',
-        date: bill.periodEnd,
-      }),
-    ]);
+  const waterItem = bill.items.find(
+    (item) => item.category === 'UTILITY' && item.name === '水费'
+  );
+  const powerItem = bill.items.find(
+    (item) => item.category === 'UTILITY' && item.name === '电费'
+  );
+  if (!waterItem || !powerItem) return bill;
 
-  if (!previousWater || !currentWater || !previousPower || !currentPower) {
-    await failPostpaidBill(bill.id, '缺少本期水电起止读数');
-    return prisma.bill.findUnique({
-      where: { id: bill.id },
-      include: { items: true },
-    });
+  const readings = await findUtilityReadingsForPeriod({
+    organizationId: bill.organizationId,
+    roomId: bill.lease.roomId,
+    periodStart: waterItem.periodStart,
+    periodEnd: waterItem.periodEnd,
+  });
+
+  if (!hasCompleteUtilityReadings(readings)) {
+    return bill;
   }
-  if (
-    previousWater.id === currentWater.id ||
-    previousPower.id === currentPower.id
-  ) {
-    await failPostpaidBill(bill.id, '缺少本期水电期末读数');
-    return prisma.bill.findUnique({
-      where: { id: bill.id },
-      include: { items: true },
-    });
-  }
+
+  const { previousWater, currentWater, previousPower, currentPower } = readings;
 
   try {
     calculateUtilityAmount({
@@ -572,15 +505,8 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
       currentPower: currentPower.value,
       powerUnitPrice: bill.lease.powerUnitPrice,
     });
-  } catch (error) {
-    await failPostpaidBill(
-      bill.id,
-      error instanceof Error ? error.message : '水电出账失败'
-    );
-    return prisma.bill.findUnique({
-      where: { id: bill.id },
-      include: { items: true },
-    });
+  } catch {
+    return bill;
   }
 
   const { waterAmount, powerAmount } = calculateUtilityLineAmounts({
@@ -593,29 +519,17 @@ export const completePostpaidBillFromReadings = async (billId: string) => {
   });
 
   await prisma.$transaction([
-    prisma.billItem.updateMany({
-      where: { billId: bill.id, type: 'WATER' },
-      data: {
-        amount: waterAmount,
-        status: 'UNPAID',
-        previousWater: previousWater.value,
-        currentWater: currentWater.value,
-        waterUnitPrice: bill.lease.waterUnitPrice,
-      },
+    prisma.billItem.update({
+      where: { id: waterItem.id },
+      data: { amount: waterAmount },
     }),
-    prisma.billItem.updateMany({
-      where: { billId: bill.id, type: 'POWER' },
-      data: {
-        amount: powerAmount,
-        status: 'UNPAID',
-        previousPower: previousPower.value,
-        currentPower: currentPower.value,
-        powerUnitPrice: bill.lease.powerUnitPrice,
-      },
+    prisma.billItem.update({
+      where: { id: powerItem.id },
+      data: { amount: powerAmount },
     }),
     prisma.bill.update({
       where: { id: bill.id },
-      data: { status: 'UNPAID', failureReason: null },
+      data: { status: 'UNPAID' },
     }),
   ]);
   await refreshBillTotals(bill.id);
@@ -630,135 +544,127 @@ type LeaseWithRoomAndFees = Prisma.LeaseGetPayload<{
   include: { fees: true; room: { include: { apartment: true } } };
 }>;
 
+const feeItemCategory = (type: string): 'FEE' | 'OTHER' =>
+  type === 'OTHER' ? 'OTHER' : 'FEE';
+
 /**
- * 为指定计费日生成预付账单，必要时生成后付费账单
- * @param lease - 租约对象（含费用、房间、公寓）
- * @param billingDate - 计费日
- * @param billingEnd - 账单生成截止日期
- * @returns 生成的预付账单与可选的后付费账单
+ * 为指定计费日生成账单，包含预付项（房租、杂费）与后付项（水电）
+ * @param lease - 租约信息（含费用、房间、公寓）
+ * @param billingDate - 计费日期
+ * @param billingEnd - 账单生成结束日期
+ * @returns 生成的账单（含账单项目）
  */
 const generateBillForBillingDate = async (
   lease: LeaseWithRoomAndFees,
   billingDate: Date,
   billingEnd: Date
 ) => {
+  // 押金账单可能与首期账单使用同一计费日，不能把它当成已存在的房租/费用账单
+  // 已作废的账单视为不存在，允许重新生成
+  const existing = await prisma.bill.findFirst({
+    where: {
+      leaseId: lease.id,
+      billingDate: startOfDay(billingDate).toDate(),
+      deletedAt: null,
+      status: { not: 'VOID' },
+      items: { some: { category: { not: 'DEPOSIT' } } },
+    },
+    include: { items: true },
+  });
+  if (existing) {
+    return existing;
+  }
+
   const periods = calculateBillingPeriods({
     leaseStartDate: lease.startDate,
     leaseEndDate: billingEnd,
-    cycle: lease.cycle,
+    cycle: lease.rentCycle,
     billingDate,
   });
   const dueDate = startOfDay(billingDate).toDate();
-  const prepaidResult = await prisma.bill.upsert({
-    where: {
-      leaseId_billingDate_mode_depositType: {
-        leaseId: lease.id,
-        billingDate: startOfDay(billingDate).toDate(),
-        mode: 'PREPAID',
-        depositType: 'NONE',
-      },
-    },
-    create: {
-      organizationId: lease.organizationId,
-      leaseId: lease.id,
-      mode: 'PREPAID',
-      billingDate: startOfDay(billingDate).toDate(),
+
+  const baseItems: Prisma.BillItemCreateWithoutBillInput[] = [
+    {
+      category: 'RENT',
+      name: '房租',
+      amount: lease.rentAmount,
       periodStart: periods.prepaid.start,
       periodEnd: periods.prepaid.end,
-      dueDate,
-      status: 'UNPAID',
-      items: {
-        create: [
-          {
-            type: 'RENT',
-            name: '房租',
-            amount: lease.rentAmount,
-            status: 'UNPAID',
-          },
-          ...lease.fees.map((fee) => ({
-            type:
-              fee.type === 'OTHER' ? classifyFeeItemType(fee.name) : fee.type,
-            name: fee.name,
-            amount: fee.amount,
-            status: 'UNPAID' as const,
-          })),
-        ],
-      },
     },
-    update: {},
-  });
-  await refreshBillTotals(prepaidResult.id);
-  const prepaid = await prisma.bill.findUnique({
-    where: { id: prepaidResult.id },
-  });
-  if (!prepaid) {
-    throw new Error('Failed to refresh prepaid bill');
-  }
+    ...lease.fees.map((fee) => ({
+      category: feeItemCategory(fee.type),
+      name: fee.name,
+      amount: fee.amount,
+      periodStart: periods.prepaid.start,
+      periodEnd: periods.prepaid.end,
+    })),
+  ];
 
-  let postpaid: Awaited<ReturnType<typeof prisma.bill.findUnique>> = null;
-  if (
-    shouldGeneratePostpaidBill({
-      leaseStartDate: lease.startDate,
-      billingDate,
-    })
-  ) {
-    const postpaidResult = await prisma.bill.upsert({
-      where: {
-        leaseId_billingDate_mode_depositType: {
-          leaseId: lease.id,
-          billingDate: startOfDay(billingDate).toDate(),
-          mode: 'POSTPAID',
-          depositType: 'NONE',
-        },
-      },
-      create: {
-        organizationId: lease.organizationId,
-        leaseId: lease.id,
-        mode: 'POSTPAID',
-        billingDate: startOfDay(billingDate).toDate(),
+  const hasPostpaid = shouldGeneratePostpaidBill({
+    leaseStartDate: lease.startDate,
+    billingDate,
+  });
+
+  // 后付账单需要水电表有新读数才能出账；读数不足时仍生成账单，但标记为 PENDING
+  let utilityPending = false;
+  if (hasPostpaid) {
+    baseItems.push(
+      {
+        category: 'UTILITY',
+        name: '水费',
+        amount: 0,
         periodStart: periods.postpaid.start,
         periodEnd: periods.postpaid.end,
-        dueDate,
-        status: 'BILLING',
-        items: {
-          create: [
-            {
-              type: 'WATER',
-              name: '水费',
-              amount: 0,
-              status: 'BILLING',
-              waterUnitPrice: lease.waterUnitPrice,
-            },
-            {
-              type: 'POWER',
-              name: '电费',
-              amount: 0,
-              status: 'BILLING',
-              powerUnitPrice: lease.powerUnitPrice,
-            },
-          ],
-        },
       },
-      update: {},
+      {
+        category: 'UTILITY',
+        name: '电费',
+        amount: 0,
+        periodStart: periods.postpaid.start,
+        periodEnd: periods.postpaid.end,
+      }
+    );
+
+    const readings = await findUtilityReadingsForPeriod({
+      organizationId: lease.organizationId,
+      roomId: lease.room.id,
+      periodStart: periods.postpaid.start,
+      periodEnd: periods.postpaid.end,
     });
-    if (postpaidResult.status === 'BILLING') {
-      await completePostpaidBillFromReadings(postpaidResult.id);
-    }
-    postpaid = await prisma.bill.findUnique({
-      where: { id: postpaidResult.id },
-    });
+    utilityPending = !hasCompleteUtilityReadings(readings);
   }
 
-  return { prepaid, postpaid };
+  const billResult = await prisma.bill.create({
+    data: {
+      organizationId: lease.organizationId,
+      leaseId: lease.id,
+      billingMethod: 'AUTO',
+      billingDate: startOfDay(billingDate).toDate(),
+      dueDate,
+      status: utilityPending ? 'PENDING' : 'UNPAID',
+      items: { create: baseItems },
+    },
+  });
+
+  if (hasPostpaid && !utilityPending) {
+    await completePostpaidBillFromReadings(billResult.id);
+  }
+
+  // 重新计算总金额与状态；无应收金额的账单应直接标记为已结清
+  await refreshBillTotals(billResult.id);
+
+  return prisma.bill.findUnique({
+    where: { id: billResult.id },
+    include: { items: true },
+  });
 };
 
 /**
  * 为租约生成账单
  * @param leaseId - 租约 ID
- * @param today - 当前日期，默认为系统当前日期
- * @param options - 可选配置
- * @param options.onlyCurrentPeriod - 是否仅生成当前周期账单
- * @returns 生成的账单 ID 数组
+ * @param today - 账单生成基准日期，默认为当前日期
+ * @param options - 可选配置（是否仅生成当前周期）
+ * @returns 生成的账单 ID 列表
  */
 export const generateLeaseBills = async (
   leaseId: string,
@@ -780,24 +686,24 @@ export const generateLeaseBills = async (
   const billingDates = getBillingDatesThrough({
     leaseStartDate: lease.startDate,
     leaseEndDate: billingEnd,
-    cycle: lease.cycle,
+    cycle: lease.rentCycle,
     today,
   });
   const datesToGenerate =
     options?.onlyCurrentPeriod && billingDates.length > 0
       ? [billingDates[billingDates.length - 1]]
       : billingDates;
+  const existingBillIds = new Set(lease.bills.map((b) => b.id));
   const generatedIds: string[] = [];
 
   for (const billingDate of datesToGenerate) {
-    const { prepaid, postpaid } = await generateBillForBillingDate(
+    const bill = await generateBillForBillingDate(
       lease,
       billingDate,
       billingEnd
     );
-    generatedIds.push(prepaid.id);
-    if (postpaid) {
-      generatedIds.push(postpaid.id);
+    if (bill && !existingBillIds.has(bill.id)) {
+      generatedIds.push(bill.id);
     }
   }
 
@@ -814,9 +720,9 @@ export type HistoricalBillRow = {
 /**
  * 根据用户填写的历史账单记录生成历史账单，并自动处理结清
  * @param leaseId - 租约 ID
- * @param rows - 历史账单行
- * @param userId - 操作人 ID
- * @returns 无返回值
+ * @param rows - 历史账单行数据
+ * @param base - 水表和电表的初始底数
+ * @param userId - 操作用户 ID
  */
 export const generateHistoricalLeaseBills = async (
   leaseId: string,
@@ -855,9 +761,6 @@ export const generateHistoricalLeaseBills = async (
         meterType: 'WATER',
         readingDate: leaseStart,
         value: base.baseWater,
-        source: 'MANUAL',
-        status: 'NORMAL',
-        createdById: userId,
       },
       {
         organizationId: lease.organizationId,
@@ -867,9 +770,6 @@ export const generateHistoricalLeaseBills = async (
         meterType: 'POWER',
         readingDate: leaseStart,
         value: base.basePower,
-        source: 'MANUAL',
-        status: 'NORMAL',
-        createdById: userId,
       },
     ],
   });
@@ -879,7 +779,7 @@ export const generateHistoricalLeaseBills = async (
     const periods = calculateBillingPeriods({
       leaseStartDate: lease.startDate,
       leaseEndDate: billingEnd,
-      cycle: lease.cycle,
+      cycle: lease.rentCycle,
       billingDate,
     });
 
@@ -899,9 +799,6 @@ export const generateHistoricalLeaseBills = async (
           meterType: 'WATER',
           readingDate: periods.postpaid.start,
           value: previousWater,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
         },
         {
           organizationId: lease.organizationId,
@@ -911,9 +808,6 @@ export const generateHistoricalLeaseBills = async (
           meterType: 'POWER',
           readingDate: periods.postpaid.start,
           value: previousPower,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
         }
       );
     }
@@ -926,9 +820,6 @@ export const generateHistoricalLeaseBills = async (
         meterType: 'WATER',
         readingDate: periods.postpaid.end,
         value: row.currentWater,
-        source: 'MANUAL',
-        status: 'NORMAL',
-        createdById: userId,
       },
       {
         organizationId: lease.organizationId,
@@ -938,38 +829,25 @@ export const generateHistoricalLeaseBills = async (
         meterType: 'POWER',
         readingDate: periods.postpaid.end,
         value: row.currentPower,
-        source: 'MANUAL',
-        status: 'NORMAL',
-        createdById: userId,
       }
     );
     await prisma.meterReading.createMany({ data: readings });
 
-    const { prepaid, postpaid } = await generateBillForBillingDate(
+    const bill = await generateBillForBillingDate(
       lease,
       billingDate,
       billingEnd
     );
 
-    if (row.settled) {
+    if (row.settled && bill) {
       const method = '历史结清';
       const note = '签约时历史账单已结清';
-      if (new Prisma.Decimal(prepaid.totalAmount).greaterThan(0)) {
+      if (new Prisma.Decimal(bill.totalAmount).greaterThan(0)) {
         await recordBillPayment({
-          billId: prepaid.id,
+          billId: bill.id,
           organizationId: lease.organizationId,
           userId,
-          amount: prepaid.totalAmount,
-          method,
-          note,
-        });
-      }
-      if (postpaid && new Prisma.Decimal(postpaid.totalAmount).greaterThan(0)) {
-        await recordBillPayment({
-          billId: postpaid.id,
-          organizationId: lease.organizationId,
-          userId,
-          amount: postpaid.totalAmount,
+          amount: bill.totalAmount,
           method,
           note,
         });
@@ -1001,9 +879,9 @@ const defaultCurrentLeaseBillDependencies: CurrentLeaseBillDependencies = {
 /**
  * 为当前组织的所有活跃租约生成账单
  * @param organizationId - 组织 ID
- * @param today - 当前日期，默认为系统当前日期
- * @param dependencies - 依赖注入配置
- * @returns 包含租约数量和账单 ID 数组的对象
+ * @param today - 账单生成基准日期，默认为当前日期
+ * @param dependencies - 依赖注入（用于测试）
+ * @returns 生成的租约数量和账单 ID 列表
  */
 export const generateCurrentLeaseBills = async (
   organizationId: string,
@@ -1024,9 +902,8 @@ export const generateCurrentLeaseBills = async (
 };
 
 /**
- * 为活跃自动续租租约生成账单
+ * 为活跃租约生成账单（保留旧别名）
  * @param organizationId - 组织 ID
- * @returns 无返回值
  */
 export const generateActiveAutoRenewBills = async (organizationId: string) => {
   await generateCurrentLeaseBills(organizationId);
@@ -1035,38 +912,235 @@ export const generateActiveAutoRenewBills = async (organizationId: string) => {
 /**
  * 重试后付账单和月账单
  * @param billId - 账单 ID
- * @returns 重试后的账单（包含明细项）
+ * @returns 更新后的账单
  */
 export const retryPostpaidBillAndMonthlyBill = async (billId: string) => {
   return completePostpaidBillFromReadings(billId);
 };
 
 /**
+ * 按租约记录收款，系统自动按账单账期顺序销账
+ * @param leaseId - 租约 ID
+ * @param organizationId - 组织 ID
+ * @param userId - 收款用户 ID
+ * @param amount - 收款金额
+ * @param waiverAmount - 抹零金额（可选）
+ * @param method - 收款方式
+ * @param note - 备注（可选）
+ * @param paidAt - 收款时间（可选）
+ * @returns 创建的付款记录列表
+ * @throws 当租约不存在或收款不合法时抛出 HttpError
+ */
+export const recordLeasePayment = async ({
+  leaseId,
+  organizationId,
+  userId,
+  amount,
+  waiverAmount,
+  method,
+  note,
+  paidAt,
+}: {
+  leaseId: string;
+  organizationId: string;
+  userId: string;
+  amount: Prisma.Decimal.Value;
+  waiverAmount?: Prisma.Decimal.Value;
+  method: string;
+  note?: string;
+  paidAt?: Date;
+}) => {
+  const lease = await prisma.lease.findFirst({
+    where: { id: leaseId, organizationId },
+    select: { id: true },
+  });
+  if (!lease) throw new HttpError(404, '租约不存在');
+
+  const bills = await prisma.bill.findMany({
+    where: {
+      leaseId,
+      organizationId,
+      status: { notIn: ['VOID', 'PENDING'] },
+      deletedAt: null,
+    },
+    orderBy: { billingDate: 'asc' },
+  });
+
+  const totalRemaining = bills.reduce(
+    (sum, bill) => sum.plus(bill.totalAmount).minus(bill.paidAmount),
+    new Prisma.Decimal(0)
+  );
+
+  const paymentAmount = new Prisma.Decimal(amount);
+  const waiver = new Prisma.Decimal(waiverAmount ?? 0);
+  if (paymentAmount.lessThanOrEqualTo(0))
+    throw new HttpError(400, '收款金额必须大于 0');
+  if (waiver.lessThan(0) || waiver.greaterThan(1))
+    throw new HttpError(400, '抹零金额必须在 0~1 元之间');
+
+  const totalSettlement = paymentAmount.plus(waiver);
+  if (totalSettlement.greaterThan(totalRemaining))
+    throw new HttpError(
+      400,
+      `收款金额加抹零金额不能超过剩余应收 ¥${totalRemaining.toFixed(2)}`
+    );
+  if (waiver.greaterThan(0) && !totalSettlement.equals(totalRemaining))
+    throw new HttpError(400, '使用抹零时，实收金额加抹零金额必须等于剩余应收');
+
+  type Allocation = {
+    billId: string;
+    amount: Prisma.Decimal;
+    waiver: Prisma.Decimal;
+  };
+
+  const allocations: Allocation[] = [];
+  const fullyPaidBillIds: string[] = [];
+  let remainingPayment = paymentAmount;
+  let remainingWaiver = waiver;
+
+  for (const bill of bills) {
+    const billRemaining = new Prisma.Decimal(bill.totalAmount).minus(
+      bill.paidAmount
+    );
+    if (billRemaining.lessThanOrEqualTo(0)) {
+      if (bill.status !== 'PAID' && bill.status !== 'VOID') {
+        fullyPaidBillIds.push(bill.id);
+      }
+      continue;
+    }
+    if (
+      remainingPayment.lessThanOrEqualTo(0) &&
+      remainingWaiver.lessThanOrEqualTo(0)
+    )
+      continue;
+
+    let applyAmount = new Prisma.Decimal(0);
+    let applyWaiver = new Prisma.Decimal(0);
+
+    if (remainingPayment.greaterThan(0)) {
+      applyAmount = Prisma.Decimal.min(remainingPayment, billRemaining);
+      remainingPayment = remainingPayment.minus(applyAmount);
+      const afterPayment = billRemaining.minus(applyAmount);
+      if (remainingWaiver.greaterThan(0) && afterPayment.greaterThan(0)) {
+        applyWaiver = Prisma.Decimal.min(remainingWaiver, afterPayment);
+        remainingWaiver = remainingWaiver.minus(applyWaiver);
+      }
+    } else if (remainingWaiver.greaterThan(0)) {
+      applyWaiver = Prisma.Decimal.min(remainingWaiver, billRemaining);
+      remainingWaiver = remainingWaiver.minus(applyWaiver);
+    }
+
+    if (applyAmount.greaterThan(0) || applyWaiver.greaterThan(0)) {
+      allocations.push({
+        billId: bill.id,
+        amount: applyAmount,
+        waiver: applyWaiver,
+      });
+    }
+  }
+
+  const payments = await prisma.$transaction(async (tx) => {
+    const created: Awaited<ReturnType<typeof tx.payment.create>>[] = [];
+    for (const {
+      billId,
+      amount: applyAmount,
+      waiver: applyWaiver,
+    } of allocations) {
+      const payment = await tx.payment.create({
+        data: {
+          billId,
+          userId,
+          amount: applyAmount,
+          waiverAmount: applyWaiver,
+          method,
+          note,
+          paidAt,
+        },
+      });
+      created.push(payment);
+
+      const bill = await tx.bill.findUnique({
+        where: { id: billId },
+        include: { payments: true },
+      });
+      if (bill) {
+        const newPaidAmount = bill.payments.reduce(
+          (sum, p) => sum.plus(p.amount).plus(p.waiverAmount),
+          new Prisma.Decimal(0)
+        );
+        const newStatus = newPaidAmount.greaterThanOrEqualTo(bill.totalAmount)
+          ? 'PAID'
+          : 'UNPAID';
+        await tx.bill.update({
+          where: { id: billId },
+          data: { paidAmount: newPaidAmount, status: newStatus },
+        });
+      }
+
+      const deposit = await tx.deposit.findUnique({ where: { billId } });
+      if (deposit) {
+        const newDepositPaid = deposit.paidAmount
+          .plus(applyAmount)
+          .plus(applyWaiver);
+        await tx.deposit.update({
+          where: { id: deposit.id },
+          data: {
+            paidAmount: newDepositPaid,
+            status: newDepositPaid.greaterThanOrEqualTo(deposit.amount)
+              ? 'PAID'
+              : 'UNPAID',
+          },
+        });
+      }
+    }
+
+    // 对剩余应收为 0 但未标记为已结清的账单进行修正
+    for (const billId of fullyPaidBillIds) {
+      const bill = await tx.bill.findUnique({ where: { id: billId } });
+      if (bill && bill.status !== 'PAID' && bill.status !== 'VOID') {
+        await tx.bill.update({
+          where: { id: billId },
+          data: { paidAmount: bill.totalAmount, status: 'PAID' },
+        });
+      }
+    }
+
+    return created;
+  });
+
+  return payments;
+};
+
+/**
  * 记录账单收款
- * @param params - 收款参数
- * @param params.billId - 账单 ID
- * @param params.organizationId - 组织 ID
- * @param params.userId - 操作用户 ID
- * @param params.amount - 收款金额
- * @param params.method - 收款方式
- * @param params.note - 备注（可选）
- * @returns 创建的支付记录
- * @throws 若账单不存在或收款金额不合法则抛出 HttpError
+ * @param billId - 账单 ID
+ * @param organizationId - 组织 ID
+ * @param userId - 收款用户 ID
+ * @param amount - 收款金额
+ * @param waiverAmount - 抹零金额（可选）
+ * @param method - 收款方式
+ * @param note - 备注（可选）
+ * @returns 创建的付款记录
+ * @throws 当账单不存在或收款不合法时抛出 HttpError
  */
 export const recordBillPayment = async ({
   billId,
   organizationId,
   userId,
   amount,
+  waiverAmount,
   method,
   note,
+  paidAt,
 }: {
   billId: string;
   organizationId: string;
   userId: string;
   amount: Prisma.Decimal.Value;
+  waiverAmount?: Prisma.Decimal.Value;
   method: string;
   note?: string;
+  paidAt?: Date;
 }) => {
   const bill = await prisma.bill.findFirst({
     where: { id: billId, organizationId },
@@ -1076,91 +1150,36 @@ export const recordBillPayment = async ({
     },
   });
   if (!bill) throw new HttpError(404, '账单不存在');
-  assertBillPaymentAllowed({ ...bill, amount });
+  assertBillPaymentAllowed({ ...bill, amount, waiverAmount });
 
   const payment = await prisma.payment.create({
-    data: { billId, userId, amount, method, note, status: 'COMPLETED' },
+    data: {
+      billId,
+      userId,
+      amount,
+      waiverAmount: waiverAmount ?? 0,
+      method,
+      note,
+      paidAt,
+    },
   });
 
-  // 创建收支记录（按账单明细项拆分）
-  if (
-    bill.items.length > 0 &&
-    new Prisma.Decimal(bill.totalAmount).greaterThan(0)
-  ) {
-    const totalAmount = new Prisma.Decimal(bill.totalAmount);
-    const paymentAmount = new Prisma.Decimal(amount);
-    const apartmentName = bill.lease.room.apartment.name;
-    const roomNo = bill.lease.room.roomNo;
+  await refreshBillTotals(billId);
 
-    for (const item of bill.items) {
-      const itemAmount = new Prisma.Decimal(item.amount);
-      if (itemAmount.lessThanOrEqualTo(0)) continue;
-
-      // 按金额比例拆分
-      const splitAmount = itemAmount
-        .div(totalAmount)
-        .mul(paymentAmount)
-        .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-
-      if (splitAmount.lessThanOrEqualTo(0)) continue;
-
-      const category = getCategoryFromBillItemType(item.type);
-      const description =
-        bill.note === 'LEASE_SETTLEMENT'
-          ? `${apartmentName} - ${roomNo} 退租结算${item.name}`
-          : `${apartmentName} - ${roomNo} ${item.name}`;
-
-      await createTransaction({
-        organizationId: bill.organizationId,
-        type: 'INCOME',
-        category,
-        amount: splitAmount,
-        method,
-        description,
-        note,
-        operatorId: userId,
-        sourceType: 'BILL_PAYMENT',
-        sourceId: payment.id,
-        billId,
-        leaseId: bill.leaseId,
-        apartmentId: bill.lease.room.apartmentId,
-      });
-    }
-  }
-
-  // 退租结算账单手动管理状态
-  if (bill.note === 'LEASE_SETTLEMENT') {
-    const updatedBill = await prisma.bill.findUnique({
-      where: { id: billId },
+  const deposit = await prisma.deposit.findUnique({
+    where: { billId: bill.id },
+  });
+  if (deposit) {
+    const paidAmount = deposit.paidAmount.plus(amount).plus(waiverAmount ?? 0);
+    await prisma.deposit.update({
+      where: { id: deposit.id },
+      data: {
+        paidAmount,
+        status: paidAmount.greaterThanOrEqualTo(deposit.amount)
+          ? 'PAID'
+          : 'UNPAID',
+      },
     });
-    if (updatedBill) {
-      const newPaidAmount = updatedBill.paidAmount.plus(amount);
-      const isPaid = newPaidAmount.greaterThanOrEqualTo(
-        updatedBill.totalAmount
-      );
-      await prisma.bill.update({
-        where: { id: billId },
-        data: {
-          paidAmount: newPaidAmount,
-          status: isPaid ? 'PAID' : 'UNPAID',
-        },
-      });
-    }
-  } else {
-    await refreshBillTotals(billId);
-  }
-
-  if (bill.mode === 'DEPOSIT') {
-    const deposit = await prisma.deposit.findUnique({
-      where: { billId: bill.id },
-    });
-    if (deposit) {
-      await prisma.deposit.update({
-        where: { id: deposit.id },
-        data: { paidAmount: deposit.paidAmount.plus(amount) },
-      });
-      await refreshDepositStatus(deposit.id);
-    }
   }
 
   return payment;

@@ -13,21 +13,16 @@ import {
   recordBillPayment,
 } from '../services/billing.js';
 import {
-  assertExpiredTerminationAllowed,
   startOfLeaseDay,
   withLeaseLifecycle,
 } from '../services/leaseLifecycle.js';
-import {
-  createLeaseSettlement,
-  getLeaseSettlementPreview,
-  recordSettlementPayment,
-} from '../services/leaseSettlement.js';
 import { PERMISSIONS } from '../services/roles.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError, ok } from '../utils/http.js';
 import {
   listLeases,
   getLeaseById,
+  getLeaseDetail,
   findRoomById,
   createLeaseWithDeposit,
   createLeaseWithoutDeposit,
@@ -35,8 +30,7 @@ import {
   updateLease,
   getLeaseWithFees,
   activateLease,
-  getLeaseEndDate,
-  listLeaseSettlements,
+  calculateKeyDepositAmount,
 } from '../services/lease.js';
 
 export const leaseRouter = Router();
@@ -61,14 +55,24 @@ export const createLeaseInput = z
     tenantPhone: z.string().optional().describe('租户手机号'),
     startDate: z.coerce.date().describe('租约开始日期'),
     endDate: z.coerce.date().describe('租约结束日期'),
-    cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).describe('付款周期'),
+    rentCycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).describe('付款周期'),
     rentAmount: amountSchema.describe('月租金'),
     roomDepositAmount: amountSchema.default(0).describe('房间押金'),
+    keyDepositAmount: amountSchema.optional().describe('钥匙押金'),
     keyQuantity: z.coerce.number().int().min(0).default(0).describe('钥匙数量'),
     keyUnitPrice: amountSchema.default(0).describe('钥匙单价'),
-    waterUnitPrice: amountSchema.describe('水费单价'),
-    powerUnitPrice: amountSchema.describe('电费单价'),
-    autoRenew: z.boolean().default(false).describe('是否自动续约'),
+    waterUnitPrice: amountSchema.default(0).describe('水费单价'),
+    powerUnitPrice: amountSchema.default(0).describe('电费单价'),
+    initialWaterReading: z.coerce
+      .number()
+      .min(0)
+      .default(0)
+      .describe('初始水表读数'),
+    initialPowerReading: z.coerce
+      .number()
+      .min(0)
+      .default(0)
+      .describe('初始电表读数'),
     status: z.enum(['DRAFT', 'ACTIVE']).default('ACTIVE').describe('状态'),
     fees: z
       .array(
@@ -116,37 +120,10 @@ export const createLeaseInput = z
     message: '租约结束日期不能早于开始日期',
   });
 
-export const terminateLeaseInput = z.object({
-  type: z.enum(['EXPIRED', 'NEGOTIATED', 'BREACH']).describe('退租类型'),
-  reason: z.string().optional().describe('退租原因'),
-  terminatedAt: z.coerce.date().default(new Date()).describe('退租日期'),
-  rentAdjustmentAmount: z.coerce.number().default(0).describe('租金调整金额'),
-  currentWater: amountSchema.describe('退租时水表读数'),
-  currentPower: amountSchema.describe('退租时电表读数'),
-  otherFeeAmount: amountSchema.default(0).describe('其他费用金额'),
-  otherFeeReason: z.string().optional().describe('其他费用原因'),
-  penaltyAmount: amountSchema.default(0).describe('违约金'),
-  penaltyReason: z.string().optional().describe('违约金原因'),
-  compensationAmount: amountSchema.default(0).describe('赔偿金'),
-  compensationReason: z.string().optional().describe('赔偿金原因'),
-  roomDepositRefundAmount: amountSchema.default(0).describe('房间押金退还金额'),
-  keyDepositRefundAmount: amountSchema.default(0).describe('钥匙押金退还金额'),
-  roomDepositDeductionAmount: amountSchema
-    .default(0)
-    .describe('房间押金扣款金额'),
-  keyDepositDeductionAmount: amountSchema
-    .default(0)
-    .describe('钥匙押金扣款金额'),
-  depositDeductionReason: z.string().optional().describe('押金扣款原因'),
-});
-
-export const settlementPaymentInput = z.object({
-  direction: z.enum(['RECEIVE', 'REFUND']).describe('收退方向'),
-  amount: z.coerce.number().positive().describe('金额'),
-  method: z.string().min(1).describe('方式'),
-  note: z.string().optional().describe('备注'),
-});
-
+/**
+ * GET /api/leases
+ * 获取当前组织下的租约列表
+ */
 leaseRouter.get(
   '/',
   requirePermission(PERMISSIONS.LEASE_VIEW),
@@ -155,6 +132,24 @@ leaseRouter.get(
   })
 );
 
+/**
+ * GET /api/leases/:id
+ * 获取指定租约的详细信息
+ */
+leaseRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.LEASE_VIEW),
+  asyncHandler(async (req, res) => {
+    const lease = await getLeaseDetail(req.params.id, req.organizationId!);
+    if (!lease) throw new HttpError(404, '租约不存在');
+    ok(res, lease);
+  })
+);
+
+/**
+ * POST /api/leases
+ * 创建新租约，支持草稿和直接激活，可一并处理历史账单和押金结清
+ */
 leaseRouter.post(
   '/',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
@@ -168,6 +163,12 @@ leaseRouter.post(
       historicalBaseWater,
       historicalBasePower,
       depositSettled,
+      roomDepositAmount,
+      keyDepositAmount,
+      keyQuantity,
+      keyUnitPrice,
+      initialWaterReading,
+      initialPowerReading,
       ...leaseData
     } = input;
     const room = await findRoomById(roomId, req.organizationId!);
@@ -177,39 +178,60 @@ leaseRouter.post(
 
     if (room.status === 'SELF_USE')
       throw new HttpError(400, '自用房间不可签约');
-    if (!isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
-      throw new HttpError(400, '仅空闲或已预留房间可以签约');
-    if (isDraft && room.status !== 'VACANT' && room.status !== 'RESERVED')
-      throw new HttpError(400, '仅空闲或已预留房间可以保存草稿');
+    if (!isDraft && room.status !== 'VACANT')
+      throw new HttpError(400, '仅空闲房间可以签约');
+    if (isDraft && room.status !== 'VACANT')
+      throw new HttpError(400, '仅空闲房间可以保存草稿');
 
-    const roomDepositAmount = new Prisma.Decimal(leaseData.roomDepositAmount);
-    const keyDepositAmount = new Prisma.Decimal(leaseData.keyQuantity).mul(
-      new Prisma.Decimal(leaseData.keyUnitPrice)
-    );
-    const depositAmount = roomDepositAmount.plus(keyDepositAmount);
+    const roomDeposit = new Prisma.Decimal(roomDepositAmount);
+    const keyDeposit =
+      keyDepositAmount !== undefined
+        ? new Prisma.Decimal(keyDepositAmount)
+        : calculateKeyDepositAmount(keyQuantity, keyUnitPrice);
+    const depositAmount = roomDeposit.plus(keyDeposit);
 
     const createFn = depositAmount.greaterThan(0)
       ? createLeaseWithDeposit
       : createLeaseWithoutDeposit;
 
-    const lease = await createFn({
+    const lease = (await createFn({
       leaseData: {
         ...leaseData,
         rentAmount: new Prisma.Decimal(leaseData.rentAmount),
         depositAmount,
-        roomDepositAmount,
-        keyQuantity: leaseData.keyQuantity,
-        keyUnitPrice: new Prisma.Decimal(leaseData.keyUnitPrice),
+        keyDepositAmount: keyDeposit,
         waterUnitPrice: new Prisma.Decimal(leaseData.waterUnitPrice),
         powerUnitPrice: new Prisma.Decimal(leaseData.powerUnitPrice),
       },
       roomId,
       organizationId: req.organizationId!,
-      userId: req.user!.id,
       fees: fees.map((fee) => ({
         ...fee,
         amount: new Prisma.Decimal(fee.amount),
       })),
+    })) as Awaited<ReturnType<typeof createLeaseWithDeposit>>;
+
+    await prisma.meterReading.createMany({
+      data: [
+        {
+          organizationId: req.organizationId!,
+          apartmentId: lease.room.apartmentId,
+          roomId: lease.roomId,
+          leaseId: lease.id,
+          meterType: 'WATER',
+          readingDate: startOfLeaseDay(lease.startDate).toDate(),
+          value: initialWaterReading,
+        },
+        {
+          organizationId: req.organizationId!,
+          apartmentId: lease.room.apartmentId,
+          roomId: lease.roomId,
+          leaseId: lease.id,
+          meterType: 'POWER',
+          readingDate: startOfLeaseDay(lease.startDate).toDate(),
+          value: initialPowerReading,
+        },
+      ],
     });
 
     if (!isDraft) {
@@ -265,6 +287,10 @@ leaseRouter.post(
   })
 );
 
+/**
+ * PUT /api/leases/:id
+ * 更新有效租约的租金、水电单价和附加费用
+ */
 leaseRouter.put(
   '/:id',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
@@ -272,9 +298,6 @@ leaseRouter.put(
     const input = z
       .object({
         rentAmount: amountSchema.optional(),
-        roomDepositAmount: amountSchema.optional(),
-        keyQuantity: z.coerce.number().int().min(0).optional(),
-        keyUnitPrice: amountSchema.optional(),
         waterUnitPrice: amountSchema.optional(),
         powerUnitPrice: amountSchema.optional(),
         fees: z
@@ -300,15 +323,6 @@ leaseRouter.put(
         ...(leaseData.rentAmount !== undefined && {
           rentAmount: new Prisma.Decimal(leaseData.rentAmount),
         }),
-        ...(leaseData.roomDepositAmount !== undefined && {
-          roomDepositAmount: new Prisma.Decimal(leaseData.roomDepositAmount),
-        }),
-        ...(leaseData.keyQuantity !== undefined && {
-          keyQuantity: leaseData.keyQuantity,
-        }),
-        ...(leaseData.keyUnitPrice !== undefined && {
-          keyUnitPrice: new Prisma.Decimal(leaseData.keyUnitPrice),
-        }),
         ...(leaseData.waterUnitPrice !== undefined && {
           waterUnitPrice: new Prisma.Decimal(leaseData.waterUnitPrice),
         }),
@@ -326,6 +340,10 @@ leaseRouter.put(
   })
 );
 
+/**
+ * POST /api/leases/:id/activate
+ * 激活草稿状态的租约并生成账单
+ */
 leaseRouter.post(
   '/:id/activate',
   requirePermission(PERMISSIONS.LEASE_MANAGE),
@@ -337,7 +355,7 @@ leaseRouter.post(
 
     const room = await findRoomById(lease.roomId, req.organizationId!);
     if (!room) throw new HttpError(404, '房间不存在');
-    if (room.status !== 'VACANT' && room.status !== 'RESERVED')
+    if (room.status !== 'VACANT')
       throw new HttpError(400, '房间已被占用，无法激活租约');
 
     const activated = await activateLease({
@@ -348,6 +366,34 @@ leaseRouter.post(
 
     await updateRoomStatus(lease.roomId, 'OCCUPIED');
 
+    const existingReadingCount = await prisma.meterReading.count({
+      where: { leaseId: lease.id },
+    });
+    if (existingReadingCount === 0) {
+      await prisma.meterReading.createMany({
+        data: [
+          {
+            organizationId: req.organizationId!,
+            apartmentId: lease.room.apartmentId,
+            roomId: lease.roomId,
+            leaseId: lease.id,
+            meterType: 'WATER',
+            readingDate: startOfLeaseDay(lease.startDate).toDate(),
+            value: 0,
+          },
+          {
+            organizationId: req.organizationId!,
+            apartmentId: lease.room.apartmentId,
+            roomId: lease.roomId,
+            leaseId: lease.id,
+            meterType: 'POWER',
+            readingDate: startOfLeaseDay(lease.startDate).toDate(),
+            value: 0,
+          },
+        ],
+      });
+    }
+
     const isHistorical = startOfLeaseDay(lease.startDate).isBefore(
       startOfLeaseDay(new Date()),
       'day'
@@ -357,78 +403,5 @@ leaseRouter.post(
     });
 
     ok(res, withLeaseLifecycle(activated));
-  })
-);
-
-leaseRouter.post(
-  '/:id/terminate',
-  requirePermission(PERMISSIONS.LEASE_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = terminateLeaseInput.parse(req.body);
-    const current = await getLeaseEndDate(req.params.id, req.organizationId!);
-    if (!current) throw new HttpError(404, '租约不存在');
-    if (input.type === 'EXPIRED') {
-      try {
-        assertExpiredTerminationAllowed(current.endDate, input.terminatedAt);
-      } catch (error) {
-        throw new HttpError(
-          400,
-          error instanceof Error
-            ? error.message
-            : '到期解约的退租日期不能早于原租约结束日期'
-        );
-      }
-    }
-    const result = await createLeaseSettlement({
-      leaseId: req.params.id,
-      organizationId: req.organizationId!,
-      userId: req.user!.id,
-      input,
-    });
-    ok(res, result);
-  })
-);
-
-leaseRouter.get(
-  '/:id/settlement-preview',
-  requirePermission(PERMISSIONS.LEASE_VIEW),
-  asyncHandler(async (req, res) => {
-    const terminatedAt = z.coerce
-      .date()
-      .default(new Date())
-      .parse(req.query.terminatedAt);
-    ok(
-      res,
-      await getLeaseSettlementPreview({
-        leaseId: req.params.id,
-        organizationId: req.organizationId!,
-        terminatedAt,
-      })
-    );
-  })
-);
-
-leaseRouter.get(
-  '/settlements',
-  requirePermission(PERMISSIONS.LEASE_VIEW),
-  asyncHandler(async (req, res) => {
-    ok(res, await listLeaseSettlements(req.organizationId!));
-  })
-);
-
-leaseRouter.post(
-  '/settlements/:id/payments',
-  requirePermission(PERMISSIONS.LEASE_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = settlementPaymentInput.parse(req.body);
-    ok(
-      res,
-      await recordSettlementPayment({
-        settlementId: req.params.id,
-        organizationId: req.organizationId!,
-        userId: req.user!.id,
-        ...input,
-      })
-    );
   })
 );

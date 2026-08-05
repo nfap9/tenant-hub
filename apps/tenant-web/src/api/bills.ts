@@ -1,11 +1,19 @@
 import { apiClient } from './client';
-import type { Bill, Payment } from '@/types/domain';
+import type {
+  Bill,
+  Payment,
+  MeterReading,
+  MeterReadingRoom,
+} from '@/types/domain';
 
 export async function getBills(organizationId: string) {
   return apiClient<Bill[]>('/bills', { organizationId });
 }
 
-export async function getBillsByStatus(organizationId: string, status: string) {
+export async function getBillsByStatus(
+  organizationId: string,
+  status: 'UNPAID' | 'PAID' | 'VOID'
+) {
   return apiClient<Bill[]>(`/bills?status=${status}`, { organizationId });
 }
 
@@ -41,54 +49,18 @@ export async function createPayment(
   });
 }
 
-export async function recordUtilityReading(
-  organizationId: string,
-  billId: string,
-  payload: {
-    previousWater?: number;
-    currentWater?: number;
-    previousPower?: number;
-    currentPower?: number;
-  }
-) {
-  return apiClient<void>(`/bills/${billId}/utility-reading`, {
-    method: 'POST',
-    body: payload,
-    organizationId,
-  });
-}
-
-export async function exportUtilityPendingCsv(organizationId: string) {
-  return apiClient<string>('/bills/utility/pending-export', {
-    organizationId,
-    responseType: 'text',
-  });
-}
-
-export async function importUtilityCsv(
-  organizationId: string,
-  csvText: string
-) {
-  return apiClient<{ count: number }>('/bills/utility/import', {
-    method: 'POST',
-    body: { csv: csvText },
-    organizationId,
-  });
-}
-
-export async function createMeterReading(
+export async function createLeasePayment(
   organizationId: string,
   payload: {
-    apartmentId: string;
-    roomId: string;
-    leaseId?: string;
-    meterType: 'WATER' | 'POWER';
-    readingDate: string;
-    value: number;
+    leaseId: string;
+    amount: number;
+    waiverAmount?: number;
+    paidAt: string;
+    method: string;
     note?: string;
   }
 ) {
-  return apiClient<void>('/bills/meter-readings', {
+  return apiClient<Payment[]>('/bills/payments', {
     method: 'POST',
     body: payload,
     organizationId,
@@ -116,12 +88,66 @@ export async function voidBill(organizationId: string, billId: string) {
   });
 }
 
-export async function refundBill(
+export async function getMeterReadings(
+  organizationId: string,
+  filters?: {
+    roomId?: string;
+    apartmentId?: string;
+    meterType?: 'WATER' | 'POWER';
+    startDate?: string;
+    endDate?: string;
+  }
+) {
+  const params = new URLSearchParams();
+  if (filters?.roomId) params.set('roomId', filters.roomId);
+  if (filters?.apartmentId) params.set('apartmentId', filters.apartmentId);
+  if (filters?.meterType) params.set('meterType', filters.meterType);
+  if (filters?.startDate) params.set('startDate', filters.startDate);
+  if (filters?.endDate) params.set('endDate', filters.endDate);
+  const query = params.toString();
+  return apiClient<MeterReading[]>(
+    `/bills/meter-readings${query ? `?${query}` : ''}`,
+    { organizationId }
+  );
+}
+
+export async function getMeterReadingRooms(organizationId: string) {
+  return apiClient<MeterReadingRoom[]>('/bills/meter-reading-rooms', {
+    organizationId,
+  });
+}
+
+export async function createMeterReading(
+  organizationId: string,
+  payload: {
+    roomId: string;
+    readingDate: string;
+    waterValue: number;
+    powerValue: number;
+    note?: string;
+  }
+) {
+  return apiClient<{ waterReading: MeterReading; powerReading: MeterReading }>(
+    '/bills/meter-readings',
+    {
+      method: 'POST',
+      body: payload,
+      organizationId,
+    }
+  );
+}
+
+export async function recordUtilityReading(
   organizationId: string,
   billId: string,
-  payload: { amount: number; method: string; note?: string }
+  payload: {
+    previousWater: number;
+    currentWater: number;
+    previousPower: number;
+    currentPower: number;
+  }
 ) {
-  return apiClient<Bill>(`/bills/${billId}/refund`, {
+  return apiClient<Bill>(`/bills/${billId}/utility-reading`, {
     method: 'POST',
     body: payload,
     organizationId,

@@ -1,9 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Form, Input, Button, message, Spin } from 'antd';
+import {
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  DatePicker,
+  Button,
+  message,
+  Spin,
+  Row,
+  Col,
+} from 'antd';
 import {
   SaveOutlined,
   HomeOutlined,
   EnvironmentOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  BuildOutlined,
 } from '@ant-design/icons';
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import {
@@ -12,6 +26,15 @@ import {
   getApartments,
 } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
+import dayjs from 'dayjs';
+import {
+  nameRule,
+  addressRule,
+  descriptionRule,
+  moneyRule,
+  positiveIntegerRule,
+  endDateAfterStartRule,
+} from '@/utils/validators';
 import styles from './ApartmentFormPage.module.scss';
 
 interface ApartmentFormModalProps {
@@ -52,7 +75,19 @@ export default function ApartmentFormModal({
     if (open && isEdit && apartment && !initializedRef.current) {
       form.setFieldsValue({
         name: apartment.name,
-        location: apartment.location,
+        address: apartment.address,
+        rentAmount: apartment.rentAmount
+          ? Number(apartment.rentAmount)
+          : undefined,
+        landlordName: apartment.landlordName,
+        landlordPhone: apartment.landlordPhone,
+        contractStart: apartment.contractStart
+          ? dayjs(apartment.contractStart)
+          : undefined,
+        contractEnd: apartment.contractEnd
+          ? dayjs(apartment.contractEnd)
+          : undefined,
+        floors: apartment.floors,
       });
       initializedRef.current = true;
     }
@@ -80,7 +115,27 @@ export default function ApartmentFormModal({
 
     const payload = {
       name: String(values.name).trim(),
-      location: String(values.location).trim(),
+      address: String(values.address).trim(),
+      rentAmount:
+        values.rentAmount !== undefined && values.rentAmount !== ''
+          ? Number(values.rentAmount)
+          : undefined,
+      landlordName: values.landlordName
+        ? String(values.landlordName).trim()
+        : undefined,
+      landlordPhone: values.landlordPhone
+        ? String(values.landlordPhone).trim()
+        : undefined,
+      contractStart: values.contractStart
+        ? dayjs(values.contractStart as string).format('YYYY-MM-DD')
+        : undefined,
+      contractEnd: values.contractEnd
+        ? dayjs(values.contractEnd as string).format('YYYY-MM-DD')
+        : undefined,
+      floors:
+        values.floors !== undefined && values.floors !== ''
+          ? Number(values.floors)
+          : undefined,
     };
 
     setSaving(true);
@@ -108,7 +163,7 @@ export default function ApartmentFormModal({
       open={open}
       onCancel={handleCancel}
       footer={null}
-      width={520}
+      width={640}
       destroyOnClose
     >
       <Spin spinning={loading}>
@@ -118,26 +173,108 @@ export default function ApartmentFormModal({
           onFinish={handleSubmit}
           style={{ marginTop: 16 }}
         >
-          <Form.Item
-            label="公寓名称"
-            name="name"
-            rules={[{ required: true, message: '请输入公寓名称' }]}
-          >
+          <Form.Item label="公寓名称" name="name" rules={nameRule('公寓名称')}>
             <Input
               prefix={<HomeOutlined className="text-subtle" />}
               placeholder="例如 阳光公寓"
+              maxLength={64}
+              showCount
             />
           </Form.Item>
-          <Form.Item
-            label="地址"
-            name="location"
-            rules={[{ required: true, message: '请输入地址' }]}
-          >
+          <Form.Item label="地址" name="address" rules={addressRule}>
             <Input
               prefix={<EnvironmentOutlined className="text-subtle" />}
               placeholder="请输入地址或片区"
+              maxLength={255}
+              showCount
             />
           </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="房东姓名"
+                name="landlordName"
+                rules={[descriptionRule('房东姓名', 64)]}
+              >
+                <Input
+                  prefix={<UserOutlined className="text-subtle" />}
+                  placeholder="选填"
+                  maxLength={64}
+                  showCount
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="联系方式"
+                name="landlordPhone"
+                rules={[
+                  {
+                    pattern: /^1[3-9]\d{9}$/,
+                    message: '请输入有效的手机号',
+                  },
+                ]}
+              >
+                <Input
+                  prefix={<PhoneOutlined className="text-subtle" />}
+                  placeholder="选填"
+                  maxLength={11}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="合同开始" name="contractStart">
+                <DatePicker className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="合同结束"
+                name="contractEnd"
+                rules={[endDateAfterStartRule('contractStart')]}
+              >
+                <DatePicker className="w-full" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="上游租金"
+                name="rentAmount"
+                rules={moneyRule('上游租金', { required: false })}
+              >
+                <InputNumber
+                  min={0}
+                  precision={2}
+                  className="w-full"
+                  prefix="¥"
+                  placeholder="选填"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="楼层数"
+                name="floors"
+                rules={positiveIntegerRule('楼层数', { required: false })}
+              >
+                <InputNumber
+                  min={1}
+                  precision={0}
+                  className="w-full"
+                  prefix={<BuildOutlined className="text-subtle" />}
+                  placeholder="选填"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item>
             <Button
               type="primary"

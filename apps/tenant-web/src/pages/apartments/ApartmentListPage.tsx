@@ -6,7 +6,7 @@ import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getApartments } from '@/api/apartments';
 import type { Apartment } from '@/types/domain';
 import { money, day } from '@/utils/format';
-import { apartmentMonthlyIncome, apartmentMonthlyExpense } from './utils';
+import { apartmentMonthlyIncome } from './utils';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import ApartmentFormModal from './ApartmentFormModal';
@@ -79,7 +79,6 @@ export default function ApartmentListPage() {
               const occupiedCount =
                 apt.rooms?.filter((r) => r.status === 'OCCUPIED').length ?? 0;
               const income = apartmentMonthlyIncome(apt);
-              const expense = apartmentMonthlyExpense(apt);
 
               return (
                 <Card
@@ -94,7 +93,7 @@ export default function ApartmentListPage() {
                   }
                 >
                   <div className={styles.tagRow}>
-                    <Tag color="blue">{apt.location || '未填写地址'}</Tag>
+                    <Tag color="blue">{apt.address || '未填写地址'}</Tag>
                   </div>
                   <div className={styles.statsGrid}>
                     <div>
@@ -116,22 +115,10 @@ export default function ApartmentListPage() {
                         ¥{money(income)}
                       </div>
                     </div>
-                    <div>
-                      <div className={styles.statLabel}>本月支出</div>
-                      <div
-                        className={clsx(
-                          styles.statValue,
-                          styles.statValueDanger
-                        )}
-                      >
-                        ¥{money(expense)}
-                      </div>
-                    </div>
                   </div>
-                  {apt.contract?.contractStart && (
+                  {apt.contractStart && (
                     <div className={styles.contractPeriod}>
-                      合同期：{day(apt.contract.contractStart)} 至{' '}
-                      {day(apt.contract.contractEnd)}
+                      合同期：{day(apt.contractStart)} 至 {day(apt.contractEnd)}
                     </div>
                   )}
                 </Card>

@@ -1,31 +1,48 @@
-import type { BillStatus } from '@/types/domain';
+import type {
+  BillCategory,
+  BillBillingMethod,
+  BillStatus,
+} from '@/types/domain';
 
 export const statusLabels: Record<BillStatus, string> = {
-  BILLING: '出账中',
   UNPAID: '待支付',
   PAID: '已支付',
   VOID: '已作废',
-  REFUNDED: '已退款',
+  PENDING: '待出账',
 };
 
 export const toneForBillStatus = (
   status: BillStatus
-): 'success' | 'warning' | 'error' | 'default' => {
+): 'success' | 'warning' | 'error' | 'default' | 'processing' => {
   if (status === 'PAID') return 'success';
   if (status === 'VOID') return 'error';
-  if (status === 'REFUNDED') return 'default';
-  if (status === 'BILLING') return 'default';
+  if (status === 'PENDING') return 'processing';
   return 'warning';
 };
 
-export const billModeText = (mode: string) => {
-  if (mode === 'PREPAID') return '预付';
-  if (mode === 'POSTPAID') return '后付';
-  if (mode === 'DEPOSIT') return '押金';
-  return mode;
+export const billCategoryText: Record<BillCategory, string> = {
+  RENT: '租金账单',
+  UTILITY: '水电账单',
+  DEPOSIT: '押金账单',
+  FEE: '费用账单',
+  OTHER: '其他账单',
 };
 
-export const billItemTypeText = (type: string) => {
+export const billingMethodText: Record<BillBillingMethod, string> = {
+  AUTO: '自动出账',
+  MANUAL: '手动出账',
+};
+
+export const toneForBillBillingMethod = (
+  method: BillBillingMethod
+): 'processing' | 'default' => {
+  if (method === 'AUTO') return 'processing';
+  return 'default';
+};
+
+export const billItemTypeText = (type: string, name?: string) => {
+  if (name) return name;
+
   const map: Record<string, string> = {
     RENT: '房租',
     UTILITY: '水电费',

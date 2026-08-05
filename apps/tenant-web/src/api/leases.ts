@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Bill, Lease, LeaseSettlement } from '@/types/domain';
+import type { Lease } from '@/types/domain';
 
 export async function createLease(
   organizationId: string,
@@ -9,23 +9,14 @@ export async function createLease(
     tenantPhone?: string;
     startDate: string;
     endDate: string;
-    cycle: string;
+    rentCycle: string;
     rentAmount: number;
     roomDepositAmount?: number;
-    keyQuantity?: number;
-    keyUnitPrice?: number;
+    keyDepositAmount?: number;
     waterUnitPrice?: number;
     powerUnitPrice?: number;
-    autoRenew?: boolean;
-    historicalBills?: Array<{
-      billingDate: string;
-      currentWater: number;
-      currentPower: number;
-      settled: boolean;
-    }>;
-    historicalBaseWater?: number;
-    historicalBasePower?: number;
-    depositSettled?: boolean;
+    initialWaterReading?: number;
+    initialPowerReading?: number;
     fees?: Array<{ type: string; name: string; amount: number }>;
   }
 ) {
@@ -41,11 +32,6 @@ export async function updateLease(
   leaseId: string,
   payload: {
     rentAmount?: number;
-    roomDepositAmount?: number;
-    keyQuantity?: number;
-    keyUnitPrice?: number;
-    waterUnitPrice?: number;
-    powerUnitPrice?: number;
     fees?: Array<{ type: string; name: string; amount: number }>;
   }
 ) {
@@ -56,55 +42,12 @@ export async function updateLease(
   });
 }
 
-export async function getSettlementPreview(
-  organizationId: string,
-  leaseId: string,
-  terminatedAt: string
-) {
-  return apiClient<{
-    previousWater: string | number;
-    previousPower: string | number;
-  }>(
-    `/leases/${leaseId}/settlement-preview?terminatedAt=${encodeURIComponent(terminatedAt)}`,
-    { organizationId }
-  );
-}
-
 export async function getLeases(organizationId: string) {
   return apiClient<Lease[]>('/leases', { organizationId });
 }
 
-export async function terminateLease(
-  organizationId: string,
-  leaseId: string,
-  payload: {
-    type: string;
-    reason?: string;
-    terminatedAt: string;
-    rentAdjustmentAmount?: number;
-    currentWater?: number;
-    currentPower?: number;
-    otherFeeAmount?: number;
-    otherFeeReason?: string;
-    penaltyAmount?: number;
-    penaltyReason?: string;
-    compensationAmount?: number;
-    compensationReason?: string;
-    roomDepositRefundAmount?: number;
-    keyDepositRefundAmount?: number;
-    roomDepositDeductionAmount?: number;
-    keyDepositDeductionAmount?: number;
-    depositDeductionReason?: string;
-  }
-) {
-  return apiClient<{
-    settlement: LeaseSettlement;
-    settlementBill: Bill | null;
-  }>(`/leases/${leaseId}/terminate`, {
-    method: 'POST',
-    body: payload,
-    organizationId,
-  });
+export async function getLease(organizationId: string, leaseId: string) {
+  return apiClient<Lease>(`/leases/${leaseId}`, { organizationId });
 }
 
 export async function activateLease(organizationId: string, leaseId: string) {

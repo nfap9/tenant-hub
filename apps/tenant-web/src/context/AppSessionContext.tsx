@@ -18,17 +18,8 @@ import { getMe } from '@/api/auth';
 import {
   getOrganizationMembers,
   getOrganizationRoles,
-  getOrganizationSubscription,
 } from '@/api/organization';
-import { getPlatformInfo } from '@/api/platform';
 import type { Membership, OrgMember, OrgRole } from '@/types/domain';
-
-export type PlatformInfo = {
-  name: string;
-  logoUrl: string;
-  contactPhone: string;
-  smsConfigured: boolean;
-};
 
 export type AppSession = {
   token: string;
@@ -49,9 +40,6 @@ type AppSessionContextType = {
   signOut: () => void;
   reload: () => Promise<void>;
   loading: boolean;
-  platformInfo: PlatformInfo;
-  quotaLimitEnabled: boolean;
-  platformRole: string | undefined;
 };
 
 const AppSessionContext = createContext<AppSessionContextType | undefined>(
@@ -76,17 +64,6 @@ export function AppSessionProvider({
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const [platformInfo, setPlatformInfo] = useState<PlatformInfo>({
-    name: 'Tenant Hub',
-    logoUrl: '',
-    contactPhone: '',
-    smsConfigured: false,
-  });
-  const [quotaLimitEnabled, setQuotaLimitEnabled] = useState(false);
-  const [platformRole, setPlatformRole] = useState<string | undefined>(
-    undefined
-  );
-
   const token = session?.token;
 
   const currentMembership = useMemo(
@@ -103,7 +80,6 @@ export function AppSessionProvider({
       try {
         const me = await getMe();
         setMemberships(me.memberships);
-        setPlatformRole(me.user.platformRole);
         setCurrentOrgIdState((old) => {
           const validOld =
             old && me.memberships.some((item) => item.organization.id === old);
@@ -125,18 +101,15 @@ export function AppSessionProvider({
       if (!token || !organizationId) {
         setMembers([]);
         setRoles([]);
-        setQuotaLimitEnabled(false);
         return;
       }
       try {
-        const [nextMembers, nextRoles, quotaOverview] = await Promise.all([
+        const [nextMembers, nextRoles] = await Promise.all([
           getOrganizationMembers(organizationId),
           getOrganizationRoles(organizationId),
-          getOrganizationSubscription(organizationId),
         ]);
         setMembers(nextMembers);
         setRoles(nextRoles);
-        setQuotaLimitEnabled(quotaOverview.quotaLimitEnabled ?? false);
       } catch (e) {
         if (e instanceof Error && !e.message.includes('登录已过期')) {
           setNotice(e.message || '加载组织数据失败');
@@ -167,8 +140,6 @@ export function AppSessionProvider({
     setCurrentOrgIdState(undefined);
     setMembers([]);
     setRoles([]);
-    setQuotaLimitEnabled(false);
-    setPlatformRole(undefined);
     navigate('/login', { replace: true });
   }, [navigate]);
 
@@ -182,22 +153,11 @@ export function AppSessionProvider({
     }
   }, [loadMe, loadOrgData]);
 
-  // 启动时：从 storage 恢复 orgId
   useEffect(() => {
     const savedOrgId = getOrgId();
     if (savedOrgId) setCurrentOrgIdState(savedOrgId);
   }, []);
 
-  // 启动时：加载平台信息（无需登录）
-  useEffect(() => {
-    getPlatformInfo()
-      .then((info) => {
-        if (info.name) setPlatformInfo(info);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  // 启动时：检查登录状态
   useEffect(() => {
     const init = async () => {
       const s = getSession();
@@ -214,7 +174,6 @@ export function AppSessionProvider({
     init();
   }, []);
 
-  // token/组织变化时加载组织数据
   useEffect(() => {
     loadOrgData().catch((error) => setNotice(error.message));
   }, [loadOrgData]);
@@ -234,9 +193,6 @@ export function AppSessionProvider({
       signOut,
       reload,
       loading,
-      platformInfo,
-      quotaLimitEnabled,
-      platformRole,
     }),
     [
       session,
@@ -247,9 +203,6 @@ export function AppSessionProvider({
       roles,
       notice,
       loading,
-      platformInfo,
-      quotaLimitEnabled,
-      platformRole,
       setCurrentOrgId,
       signIn,
       signOut,

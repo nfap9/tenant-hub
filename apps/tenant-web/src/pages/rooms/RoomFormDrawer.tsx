@@ -15,9 +15,10 @@ import { getApartments } from '@/api/apartments';
 import { createRoom, updateRoom } from '@/api/rooms';
 import type { Apartment, Room } from '@/types/domain';
 import { optionalNumber } from '@/utils/format';
+import { nameRule, positiveIntegerRule, areaRule } from '@/utils/validators';
 import { emptyRoomForm, roomStatuses, statusLabels } from './constants';
 import { roomLayoutOptions } from '@/pages/apartments/constants';
-import { facilityOptions } from '@/constants/facilities';
+import { furnishingOptions } from '@/constants/furnishings';
 import styles from './RoomFormPage.module.scss';
 
 interface RoomFormDrawerProps {
@@ -69,9 +70,10 @@ export default function RoomFormDrawer({
       form.setFieldsValue({
         apartmentId: editingRoom.apartmentId,
         roomNo: editingRoom.roomNo,
+        floor: editingRoom.floor ? Number(editingRoom.floor) : undefined,
         layout: editingRoom.layout,
         area: editingRoom.area ? Number(editingRoom.area) : undefined,
-        facilities: editingRoom.facilities ?? [],
+        furnishings: editingRoom.furnishings ?? [],
         status: editingRoom.status,
       });
       initializedRef.current = true;
@@ -97,19 +99,15 @@ export default function RoomFormDrawer({
       message.warning('当前角色没有管理房间权限');
       return;
     }
-    if (!values.roomNo || !values.layout) {
-      message.warning('请填写房间号和户型');
-      return;
-    }
-
     setSaving(true);
     try {
       if (isEdit) {
         await updateRoom(currentOrgId, roomId!, {
           roomNo: String(values.roomNo).trim(),
+          floor: optionalNumber(values.floor),
           layout: String(values.layout).trim(),
           area: optionalNumber(values.area),
-          facilities: (values.facilities as string[]) ?? [],
+          furnishings: (values.furnishings as string[]) ?? [],
           status: String(values.status),
         });
         message.success('房间信息已更新');
@@ -121,9 +119,10 @@ export default function RoomFormDrawer({
         }
         await createRoom(currentOrgId, apartmentId, {
           roomNo: String(values.roomNo).trim(),
+          floor: optionalNumber(values.floor),
           layout: String(values.layout).trim(),
           area: optionalNumber(values.area),
-          facilities: (values.facilities as string[]) ?? [],
+          furnishings: (values.furnishings as string[]) ?? [],
         });
         message.success('房间已添加');
       }
@@ -183,31 +182,49 @@ export default function RoomFormDrawer({
           <Form.Item
             label="房号"
             name="roomNo"
-            rules={[{ required: true, message: '请输入房号' }]}
+            rules={nameRule('房号', { max: 32 })}
           >
             <Input
               placeholder="例如 301"
               prefix={<NumberOutlined className="text-subtle" />}
-            />
-          </Form.Item>
-          <Form.Item
-            label="户型"
-            name="layout"
-            rules={[{ required: true, message: '请选择户型' }]}
-          >
-            <Select
-              placeholder="请选择户型"
-              options={roomLayoutOptions.map((l) => ({
-                label: l,
-                value: l,
-              }))}
-              prefix={<BuildOutlined className="text-subtle" />}
+              maxLength={32}
+              showCount
             />
           </Form.Item>
           <div className={styles.formRow}>
-            <Form.Item label="面积（㎡）" name="area">
+            <Form.Item
+              label="楼层"
+              name="floor"
+              rules={positiveIntegerRule('楼层', { required: false })}
+            >
+              <InputNumber
+                min={1}
+                precision={0}
+                className="w-full"
+                prefix={<BuildOutlined className="text-subtle" />}
+                placeholder="选填"
+              />
+            </Form.Item>
+            <Form.Item
+              label="户型"
+              name="layout"
+              rules={[{ required: true, message: '请选择户型' }]}
+            >
+              <Select
+                placeholder="请选择户型"
+                options={roomLayoutOptions.map((l) => ({
+                  label: l,
+                  value: l,
+                }))}
+                prefix={<BuildOutlined className="text-subtle" />}
+              />
+            </Form.Item>
+          </div>
+          <div className={styles.formRow}>
+            <Form.Item label="面积（㎡）" name="area" rules={areaRule}>
               <InputNumber
                 min={0}
+                precision={2}
                 className="w-full"
                 placeholder="请输入面积"
               />
@@ -216,7 +233,7 @@ export default function RoomFormDrawer({
               <Form.Item
                 label="状态"
                 name="status"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: '请选择状态' }]}
               >
                 <Select
                   options={roomStatuses.map((s) => ({
@@ -227,11 +244,11 @@ export default function RoomFormDrawer({
               </Form.Item>
             )}
           </div>
-          <Form.Item label="设施" name="facilities">
+          <Form.Item label="家具家电" name="furnishings">
             <Select
               mode="tags"
-              placeholder="选择或输入设施，如：空调、热水器"
-              options={facilityOptions.map((f) => ({
+              placeholder="选择或输入家具家电，如：空调、热水器"
+              options={furnishingOptions.map((f) => ({
                 label: f,
                 value: f,
               }))}

@@ -1,45 +1,103 @@
 @use '@/styles/variables' as *;
 
-.empty-org-state {
-  text-align: center;
-}
-
-.empty-org-actions {
-  margin-top: 16px;
-}
-
-.settings-form {
-  max-width: 480px;
-}
-
-.invite-code {
-  font-family: monospace;
-  font-size: 16px;
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   color: $th-foreground;
 }
 
-.invite-meta {
-  color: $th-foreground-muted;
-  font-size: 12px;
+.org-overview-card {
+  margin-bottom: 24px;
 }
 
-.invite-card {
-  padding: 16px;
-  background: $th-bg-elevated;
-  border-radius: $th-radius;
-  border: 1px solid $th-border;
+.org-overview-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.invite-label {
+.org-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 24px;
+  color: #fff;
+  background-color: $th-primary;
+}
+
+.org-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.org-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: $th-foreground;
+}
+
+.org-code {
   font-size: 14px;
   color: $th-foreground-muted;
-  margin-bottom: 8px;
 }
 
-.invite-code-row {
+.org-description {
+  :global(.ant-descriptions-item-label) {
+    color: $th-foreground-muted;
+  }
+}
+
+.invite-code {
+  padding: 6px 12px;
+  border-radius: $th-radius;
+  font-family: monospace;
+  font-size: 16px;
+  background-color: $th-bg-elevated;
+  color: $th-foreground;
+}
+
+.ai-model-hint {
+  font-size: 13px;
+  color: $th-foreground-muted;
+}
+
+.org-form {
+  max-width: 600px;
+}
+
+.danger-card {
+  background-color: $th-bg-elevated;
+  border-color: $th-border-light;
+}
+
+.danger-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.danger-title {
+  font-weight: 600;
+  color: $th-foreground;
+}
+
+.danger-desc {
+  font-size: 13px;
+  color: $th-foreground-muted;
+}
+
+.delete-hint {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: $th-radius;
+  background-color: $th-danger-bg;
+  color: $th-danger;
 }

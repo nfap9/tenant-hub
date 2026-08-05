@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "租务通",
+    "slug": "tenant-hub-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "tenanthub",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "http://localhost:4000/api"
+    }
+  }
+}

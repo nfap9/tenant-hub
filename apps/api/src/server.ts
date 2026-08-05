@@ -2,21 +2,19 @@ import { env } from './config/env.js';
 import { prisma } from './config/prisma.js';
 import { app } from './app.js';
 import { ensureSystemRoles } from './services/roles.js';
-import { ensureSystemSettings } from './services/adminInit.js';
-import { startScheduler } from './services/scheduler.js';
 
 await ensureSystemRoles();
-await ensureSystemSettings();
 
 const server = app.listen(env.PORT, () => {
   console.info(`[TenantHub] API listening on http://localhost:${env.PORT}`);
 });
 
-if (env.SCHEDULER_ENABLED === 'true') {
-  startScheduler();
-}
-
 let shuttingDown = false;
+
+/**
+ * 优雅关闭服务器
+ * 关闭 HTTP server 并断开 Prisma 连接
+ */
 const shutdown = async () => {
   if (shuttingDown) return;
   shuttingDown = true;

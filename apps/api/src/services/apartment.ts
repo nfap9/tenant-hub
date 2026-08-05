@@ -1,7 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
-import { enforceOrganizationQuota, type PrismaLike } from './quotas.js';
 
 /**
  * 确保指定公寓属于当前组织，不存在则抛出 404 错误
@@ -36,7 +35,7 @@ export const ensureRoomInOrg = async (
 };
 
 /**
- * 列出组织下的所有公寓，包含房间、租约、账单等关联信息
+ * 列出组织下的所有公寓，包含房间、租约等关联信息
  * @param organizationId - 组织 ID
  * @returns 公寓列表（含关联数据）
  */
@@ -44,10 +43,8 @@ export const listApartments = async (organizationId: string) => {
   return prisma.apartment.findMany({
     where: { organizationId },
     include: {
-      contract: true,
       rooms: {
         include: {
-          reservation: true,
           leases: {
             where: { status: 'ACTIVE' },
             include: {
@@ -60,7 +57,6 @@ export const listApartments = async (organizationId: string) => {
           },
         },
       },
-      expenses: { orderBy: { spentAt: 'desc' } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -74,7 +70,7 @@ type ApartmentWithRoomStats = Prisma.ApartmentGetPayload<{
 }>;
 
 /**
- * 查询公寓原始数据（供 Agent 复用）
+ * 查询公寓原始数据（供复用）
  * @param organizationId - 组织 ID
  * @param options - 可选筛选与统计选项
  * @returns 公寓原始记录列表
@@ -109,7 +105,7 @@ export async function listApartmentsRaw(
         ? {
             OR: [
               { name: { contains: options.keyword, mode: 'insensitive' } },
-              { location: { contains: options.keyword, mode: 'insensitive' } },
+              { address: { contains: options.keyword, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -130,9 +126,7 @@ export const listRooms = async (organizationId: string) => {
     where: { apartment: { organizationId } },
     include: {
       apartment: true,
-      reservation: true,
       leases: {
-        where: { status: 'ACTIVE' },
         include: {
           fees: true,
           deposits: true,
@@ -140,7 +134,7 @@ export const listRooms = async (organizationId: string) => {
             select: { id: true, status: true, billingDate: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { startDate: 'desc' },
       },
     },
     orderBy: [{ apartment: { createdAt: 'desc' } }, { roomNo: 'asc' }],
@@ -148,7 +142,7 @@ export const listRooms = async (organizationId: string) => {
 };
 
 /**
- * 查询房间原始数据（供 Agent 复用）
+ * 查询房间原始数据（供复用）
  * @param organizationId - 组织 ID
  * @param options - 可选筛选条件
  * @returns 房间原始记录列表
@@ -157,7 +151,7 @@ export const listRoomsRaw = async (
   organizationId: string,
   options?: {
     apartmentId?: string;
-    status?: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
+    status?: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
     keyword?: string;
     limit?: number;
   }
@@ -197,7 +191,6 @@ export const getRoomById = async (roomId: string, organizationId: string) => {
     },
     include: {
       apartment: true,
-      reservation: true,
       leases: {
         where: { status: 'ACTIVE' },
         include: {
@@ -214,7 +207,7 @@ export const getRoomById = async (roomId: string, organizationId: string) => {
 };
 
 /**
- * 获取房间原始详情（供 Agent 复用）
+ * 获取房间原始详情（供复用）
  * @param roomId - 房间 ID
  * @param organizationId - 组织 ID
  * @returns 房间原始详情，不存在返回 null
@@ -230,8 +223,7 @@ export const getRoomByIdRaw = async (
       deletedAt: null,
     },
     include: {
-      apartment: { select: { id: true, name: true, location: true } },
-      reservation: true,
+      apartment: { select: { id: true, name: true, address: true } },
       leases: {
         where: { status: 'ACTIVE', deletedAt: null },
         include: { fees: true, deposits: true },
@@ -258,10 +250,9 @@ export const getRoomByIdRaw = async (
 export const ensureApartmentNameUnique = async (
   organizationId: string,
   name: string,
-  excludeId?: string,
-  db: PrismaLike = prisma
+  excludeId?: string
 ) => {
-  const existing = await db.apartment.findFirst({
+  const existing = await prisma.apartment.findFirst({
     where: {
       organizationId,
       name: { equals: name, mode: 'insensitive' },
@@ -273,42 +264,48 @@ export const ensureApartmentNameUnique = async (
   if (existing) throw new HttpError(409, '公寓名称已存在');
 };
 
+type ApartmentEditableFields = Partial<
+  Pick<
+    Prisma.ApartmentCreateInput,
+    | 'name'
+    | 'address'
+    | 'rentAmount'
+    | 'landlordName'
+    | 'landlordPhone'
+    | 'contractStart'
+    | 'contractEnd'
+    | 'floors'
+  >
+>;
+
 /**
- * 创建新公寓（先校验组织配额与名称唯一性）
+ * 创建新公寓
  * @param data - 公寓数据
  * @param data.name - 公寓名称
- * @param data.location - 公寓地址
+ * @param data.address - 公寓地址
  * @param data.organizationId - 所属组织 ID
  * @returns 创建的公寓记录
  */
-export const createApartment = async (data: {
-  name: string;
-  location: string;
-  organizationId: string;
-}) => {
+export const createApartment = async (
+  data: {
+    name: string;
+    address: string;
+    organizationId: string;
+  } & ApartmentEditableFields
+) => {
   return prisma.$transaction(async (tx) => {
-    await ensureApartmentNameUnique(
-      data.organizationId,
-      data.name,
-      undefined,
-      tx
-    );
-    await enforceOrganizationQuota(
-      tx,
-      data.organizationId,
-      'apartment',
-      async () => {
-        const apartmentCount = await tx.apartment.count({
-          where: { organizationId: data.organizationId },
-        });
-        return apartmentCount + 1;
-      }
-    );
+    await ensureApartmentNameUnique(data.organizationId, data.name);
     return tx.apartment.create({
       data: {
         name: data.name,
-        location: data.location,
+        address: data.address,
         organizationId: data.organizationId,
+        rentAmount: data.rentAmount ?? 0,
+        landlordName: data.landlordName,
+        landlordPhone: data.landlordPhone,
+        contractStart: data.contractStart,
+        contractEnd: data.contractEnd,
+        floors: data.floors,
       },
     });
   });
@@ -318,13 +315,13 @@ export const createApartment = async (data: {
  * 更新指定公寓的基本信息
  * @param apartmentId - 公寓 ID
  * @param organizationId - 所属组织 ID
- * @param data - 部分更新的字段（name / location）
+ * @param data - 部分更新的字段
  * @returns 更新后的公寓记录
  */
 export const updateApartment = async (
   apartmentId: string,
   organizationId: string,
-  data: Partial<Pick<Prisma.ApartmentCreateInput, 'name' | 'location'>>
+  data: ApartmentEditableFields
 ) => {
   if (data.name) {
     await ensureApartmentNameUnique(organizationId, data.name, apartmentId);
@@ -364,34 +361,6 @@ export const countActiveLeasesInApartment = async (
 };
 
 /**
- * 创建公寓支出记录
- * @param data - 支出数据
- * @param data.apartmentId - 公寓 ID
- * @param data.name - 支出项目名
- * @param data.amount - 支出金额
- * @param data.spentAt - 支出日期
- * @param data.note - 备注（可选）
- * @returns 创建的支出记录
- */
-export const createApartmentExpense = async (data: {
-  apartmentId: string;
-  name: string;
-  amount: number;
-  spentAt: Date;
-  note?: string;
-}) => {
-  return prisma.apartmentExpense.create({
-    data: {
-      name: data.name,
-      amount: data.amount,
-      spentAt: data.spentAt,
-      note: data.note,
-      apartmentId: data.apartmentId,
-    },
-  });
-};
-
-/**
  * 根据 ID 获取公寓名称
  * @param apartmentId - 公寓 ID
  * @returns 公寓名称，不存在返回 undefined
@@ -405,7 +374,7 @@ export const getApartmentName = async (apartmentId: string) => {
 };
 
 /**
- * 批量创建房间（带配额校验与去重）
+ * 批量创建房间（带去重）
  * @param apartmentId - 所属公寓 ID
  * @param organizationId - 组织 ID
  * @param rooms - 房间列表
@@ -418,25 +387,23 @@ export const batchCreateRooms = async (
     roomNo: string;
     layout: string;
     area?: number;
-    facilities: string[];
+    floor?: number;
+    furnishings: string[];
   }>
 ) => {
   return prisma.$transaction(async (tx) => {
-    await enforceOrganizationQuota(tx, organizationId, 'room', async () => {
-      const existingRooms = await tx.room.findMany({
-        where: { apartment: { organizationId } },
-        select: { apartmentId: true, roomNo: true },
-      });
-      const existingKeys = new Set(
-        existingRooms.map((room) => `${room.apartmentId}:${room.roomNo}`)
-      );
-      const newRoomCount = rooms.filter(
-        (room) => !existingKeys.has(`${apartmentId}:${room.roomNo}`)
-      ).length;
-      return existingRooms.length + newRoomCount;
+    const existingRooms = await tx.room.findMany({
+      where: { apartment: { organizationId } },
+      select: { apartmentId: true, roomNo: true },
     });
+    const existingKeys = new Set(
+      existingRooms.map((room) => `${room.apartmentId}:${room.roomNo}`)
+    );
+    const newRooms = rooms.filter(
+      (room) => !existingKeys.has(`${apartmentId}:${room.roomNo}`)
+    );
     return tx.room.createMany({
-      data: rooms.map((room) => ({
+      data: newRooms.map((room) => ({
         ...room,
         apartmentId,
       })),
@@ -448,7 +415,7 @@ export const batchCreateRooms = async (
 /**
  * 更新指定房间的信息
  * @param roomId - 房间 ID
- * @param data - 部分更新的字段（roomNo / layout / area / facilities / status）
+ * @param data - 部分更新的字段（roomNo / layout / area / floor / furnishings / status）
  * @returns 更新后的房间记录
  */
 export const updateRoom = async (
@@ -457,8 +424,9 @@ export const updateRoom = async (
     roomNo: string;
     layout: string;
     area: number;
-    facilities: string[];
-    status: 'VACANT' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
+    floor: number;
+    furnishings: string[];
+    status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'SELF_USE';
   }>
 ) => {
   return prisma.room.update({

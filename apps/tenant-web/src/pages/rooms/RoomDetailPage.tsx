@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -9,18 +9,14 @@ import {
   Divider,
   Row,
   Col,
+  Table,
+  Space,
 } from 'antd';
-import LeaseEditDrawer from './LeaseEditDrawer';
-import LeaseFormDrawer from './LeaseFormDrawer';
-import RoomFormDrawer from './RoomFormDrawer';
 import {
   EditOutlined,
   DeleteOutlined,
   UserAddOutlined,
-  EditOutlined as EditLeaseIcon,
-  LogoutOutlined,
   PlayCircleOutlined,
-  PauseCircleOutlined,
   ToolOutlined,
   HomeOutlined,
   CheckCircleOutlined,
@@ -28,16 +24,15 @@ import {
 import { useAppSession, useHasPermission } from '@/context/AppSessionContext';
 import { getRoomDetail, deleteRoom, updateRoom } from '@/api/rooms';
 import { activateLease } from '@/api/leases';
-import type { Room } from '@/types/domain';
-import { money, day } from '@/utils/format';
-import { getRoomDeposit, getKeyDeposit } from './utils';
+import type { Room, Lease, LeaseStatus } from '@/types/domain';
+import { money } from '@/utils/format';
 import { statusLabels, toneForStatus, cycleLabels } from './constants';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DetailSection from '@/components/ui/DetailSection';
 import DetailItem from '@/components/ui/DetailItem';
-import LeaseTerminateDrawer from './LeaseTerminateDrawer';
-import styles from './RoomDetailPage.module.scss';
+import RoomFormDrawer from './RoomFormDrawer';
+import LeaseFormDrawer from './LeaseFormDrawer';
 
 const statusColorMap: Record<string, string> = {
   success: 'success',
@@ -45,6 +40,20 @@ const statusColorMap: Record<string, string> = {
   warning: 'warning',
   danger: 'error',
   primary: 'blue',
+};
+
+const leaseStatusLabels: Record<LeaseStatus, string> = {
+  DRAFT: '草稿',
+  ACTIVE: '生效中',
+  TERMINATED: '已终止',
+  EXPIRED: '已到期',
+};
+
+const leaseStatusColors: Record<LeaseStatus, string> = {
+  DRAFT: 'default',
+  ACTIVE: 'success',
+  TERMINATED: 'warning',
+  EXPIRED: 'error',
 };
 
 export default function RoomDetailPage() {
@@ -56,9 +65,7 @@ export default function RoomDetailPage() {
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(false);
-  const [terminateDrawerOpen, setTerminateDrawerOpen] = useState(false);
   const [leaseDrawerOpen, setLeaseDrawerOpen] = useState(false);
-  const [leaseEditDrawerOpen, setLeaseEditDrawerOpen] = useState(false);
   const [roomFormOpen, setRoomFormOpen] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -77,6 +84,24 @@ export default function RoomDetailPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const leases = useMemo(
+    () =>
+      [...(room?.leases ?? [])].sort(
+        (left, right) =>
+          new Date(right.startDate).getTime() -
+          new Date(left.startDate).getTime()
+      ),
+    [room?.leases]
+  );
+  const activeLease = useMemo(
+    () => leases.find((l) => l.status === 'ACTIVE'),
+    [leases]
+  );
+  const draftLease = useMemo(
+    () => leases.find((l) => l.status === 'DRAFT'),
+    [leases]
+  );
 
   const handleDelete = async () => {
     if (!currentOrgId || !room) return;
@@ -129,9 +154,6 @@ export default function RoomDetailPage() {
     );
   }
 
-  const activeLease = room?.leases?.find((l) => l.status === 'ACTIVE');
-  const draftLease = room?.leases?.find((l) => l.status === 'DRAFT');
-
   return (
     <div className="page-content">
       <PageHeader
@@ -153,12 +175,6 @@ export default function RoomDetailPage() {
                     {room.status === 'VACANT' && (
                       <>
                         <Button
-                          icon={<PauseCircleOutlined />}
-                          onClick={() => handleRoomStatus('RESERVED')}
-                        >
-                          预留
-                        </Button>
-                        <Button
                           icon={<ToolOutlined />}
                           onClick={() => handleRoomStatus('MAINTENANCE')}
                         >
@@ -178,14 +194,6 @@ export default function RoomDetailPage() {
                         onClick={() => handleRoomStatus('VACANT')}
                       >
                         改为空闲
-                      </Button>
-                    )}
-                    {room.status === 'RESERVED' && (
-                      <Button
-                        icon={<PauseCircleOutlined />}
-                        onClick={() => handleRoomStatus('VACANT')}
-                      >
-                        取消预留
                       </Button>
                     )}
                     {room.status === 'MAINTENANCE' && (
@@ -248,206 +256,122 @@ export default function RoomDetailPage() {
                   </DetailItem>
                 </Col>
                 <Col span={8}>
-                  <DetailItem label="设施">
-                    {room.facilities?.join('、') || '无设施'}
+                  <DetailItem label="楼层">
+                    {room.floor ? `${room.floor} 层` : '-'}
+                  </DetailItem>
+                </Col>
+                <Col span={8}>
+                  <DetailItem label="家具家电">
+                    {room.furnishings?.join('、') || '无家具家电'}
                   </DetailItem>
                 </Col>
               </Row>
             </DetailSection>
 
-            {activeLease && (
-              <>
-                <Divider />
-                <DetailSection
-                  title="租约信息"
-                  actions={
-                    canManageLease && (
-                      <>
-                        <Button
-                          icon={<EditLeaseIcon />}
-                          onClick={() => setLeaseEditDrawerOpen(true)}
-                        >
-                          编辑租约
-                        </Button>
-                        <Button
-                          danger
-                          icon={<LogoutOutlined />}
-                          onClick={() => setTerminateDrawerOpen(true)}
-                        >
-                          退租
-                        </Button>
-                      </>
-                    )
-                  }
-                >
-                  <Row gutter={[24, 0]}>
-                    <Col span={8}>
-                      <DetailItem label="租客姓名">
-                        {activeLease.tenantName}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="租客电话">
-                        {activeLease.tenantPhone}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="租金">
-                        ¥{money(activeLease.rentAmount)}/
-                        {cycleLabels[activeLease.cycle]}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="总押金">
-                        ¥{money(activeLease.depositAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="房间押金">
-                        ¥{money(getRoomDeposit(activeLease)?.amount ?? 0)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="钥匙押金">
-                        ¥{money(getKeyDeposit(activeLease)?.amount ?? 0)} (
-                        {activeLease.keyQuantity}套)
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="租期">
-                        {day(activeLease.startDate)} 至{' '}
-                        {day(activeLease.endDate)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="水费单价">
-                        ¥{money(activeLease.waterUnitPrice)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="电费单价">
-                        ¥{money(activeLease.powerUnitPrice)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="自动续约">
-                        {activeLease.autoRenew ? '是' : '否'}
-                      </DetailItem>
-                    </Col>
-                  </Row>
-                  {activeLease.fees && activeLease.fees.length > 0 && (
-                    <div className={styles.feeSection}>
-                      <div className={styles.feeTitle}>附加费用</div>
-                      <div className={styles.feeList}>
-                        {activeLease.fees.map((fee) => (
-                          <Tag key={fee.id}>
-                            {fee.name}: ¥{money(fee.amount)}
-                          </Tag>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </DetailSection>
-              </>
-            )}
+            <Divider />
 
-            {draftLease && (
-              <>
-                <Divider />
-                <DetailSection
-                  title={
-                    <span>
-                      <Tag color="default">草稿</Tag>
-                      租约信息
-                    </span>
-                  }
-                  actions={
-                    canManageLease && (
-                      <Popconfirm
-                        title="激活租约"
-                        description="确认激活草稿租约？激活后将开始生成账单。"
-                        onConfirm={() => handleActivate(draftLease.id)}
-                        okText="确认激活"
-                        cancelText="取消"
-                      >
-                        <Button type="primary" icon={<PlayCircleOutlined />}>
-                          激活租约
-                        </Button>
-                      </Popconfirm>
-                    )
-                  }
-                >
-                  <Row gutter={[24, 0]}>
-                    <Col span={8}>
-                      <DetailItem label="租客姓名">
-                        {draftLease.tenantName}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="租客电话">
-                        {draftLease.tenantPhone}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="租金">
-                        ¥{money(draftLease.rentAmount)}/
-                        {cycleLabels[draftLease.cycle]}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="总押金">
-                        ¥{money(draftLease.depositAmount)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="房间押金">
-                        ¥{money(getRoomDeposit(draftLease)?.amount ?? 0)}
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="钥匙押金">
-                        ¥{money(getKeyDeposit(draftLease)?.amount ?? 0)} (
-                        {draftLease.keyQuantity}套)
-                      </DetailItem>
-                    </Col>
-                    <Col span={8}>
-                      <DetailItem label="租期">
-                        {day(draftLease.startDate)} 至 {day(draftLease.endDate)}
-                      </DetailItem>
-                    </Col>
-                  </Row>
-                </DetailSection>
-              </>
-            )}
-
-            {!activeLease &&
-              !draftLease &&
-              canManageLease &&
-              room.status === 'VACANT' && (
-                <>
-                  <Divider />
-                  <DetailSection
-                    title="租约信息"
-                    actions={
-                      <Button
-                        type="primary"
-                        icon={<UserAddOutlined />}
-                        onClick={() => setLeaseDrawerOpen(true)}
-                      >
-                        签约
-                      </Button>
-                    }
+            <DetailSection
+              title="租约记录"
+              actions={
+                canManageLease &&
+                room.status === 'VACANT' &&
+                !activeLease &&
+                !draftLease && (
+                  <Button
+                    type="primary"
+                    icon={<UserAddOutlined />}
+                    onClick={() => setLeaseDrawerOpen(true)}
                   >
-                    <Row gutter={[24, 0]}>
-                      <Col span={24}>
-                        <DetailItem label="状态">
-                          当前房间空闲，暂无租约
-                        </DetailItem>
-                      </Col>
-                    </Row>
-                  </DetailSection>
-                </>
+                    签约
+                  </Button>
+                )
+              }
+            >
+              {leases.length === 0 ? (
+                <EmptyState
+                  title="暂无租约记录"
+                  description="当前房间没有任何租约"
+                />
+              ) : (
+                <Table<Lease>
+                  rowKey="id"
+                  dataSource={leases}
+                  pagination={{ pageSize: 10 }}
+                  scroll={{ x: 'max-content' }}
+                  columns={[
+                    {
+                      title: '租客',
+                      render: (_: unknown, row: Lease) => (
+                        <div>
+                          <div>{row.tenantName || '-'}</div>
+                          <div className="text-muted">
+                            {row.tenantPhone || '-'}
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: '租期',
+                      render: (_: unknown, row: Lease) => (
+                        <div>
+                          <div>
+                            {row.startDate} ~ {row.endDate}
+                          </div>
+                          <div className="text-muted">
+                            {cycleLabels[row.rentCycle]}
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: '租金',
+                      render: (_: unknown, row: Lease) => (
+                        <span>¥{money(row.rentAmount)}</span>
+                      ),
+                    },
+                    {
+                      title: '押金',
+                      render: (_: unknown, row: Lease) => (
+                        <span>¥{money(row.depositAmount)}</span>
+                      ),
+                    },
+                    {
+                      title: '状态',
+                      render: (_: unknown, row: Lease) => (
+                        <Tag color={leaseStatusColors[row.status]}>
+                          {leaseStatusLabels[row.status]}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: '操作',
+                      fixed: 'right',
+                      render: (_: unknown, row: Lease) => (
+                        <Space>
+                          {row.status === 'DRAFT' && canManageLease && (
+                            <Popconfirm
+                              title="激活租约"
+                              description="确认激活草稿租约？激活后将开始生成账单。"
+                              onConfirm={() => handleActivate(row.id)}
+                              okText="确认激活"
+                              cancelText="取消"
+                            >
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<PlayCircleOutlined />}
+                              >
+                                激活
+                              </Button>
+                            </Popconfirm>
+                          )}
+                        </Space>
+                      ),
+                    },
+                  ]}
+                />
               )}
+            </DetailSection>
           </>
         )}
       </Spin>
@@ -467,24 +391,6 @@ export default function RoomDetailPage() {
         onCancel={() => setLeaseDrawerOpen(false)}
         onSuccess={() => {
           setLeaseDrawerOpen(false);
-          loadData();
-        }}
-      />
-      <LeaseEditDrawer
-        open={leaseEditDrawerOpen}
-        roomId={room?.id ?? ''}
-        onCancel={() => setLeaseEditDrawerOpen(false)}
-        onSuccess={() => {
-          setLeaseEditDrawerOpen(false);
-          loadData();
-        }}
-      />
-      <LeaseTerminateDrawer
-        open={terminateDrawerOpen}
-        roomId={room?.id ?? ''}
-        onCancel={() => setTerminateDrawerOpen(false)}
-        onSuccess={() => {
-          setTerminateDrawerOpen(false);
           loadData();
         }}
       />

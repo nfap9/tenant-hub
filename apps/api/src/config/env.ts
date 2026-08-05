@@ -4,7 +4,6 @@ import { fileURLToPath } from 'url';
 import { z } from 'zod';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// Ensure .env is loaded from repo root even when cwd is a workspace (e.g. pnpm -r test)
 config({ path: resolve(__dirname, '../../../../.env') });
 
 const envSchema = z
@@ -14,26 +13,12 @@ const envSchema = z
     JWT_EXPIRES_IN: z.string().default('7d'),
     CORS_ORIGINS: z
       .string()
-      .default(
-        'http://localhost:5174,http://localhost:8081,http://localhost:19006'
-      ),
+      .default('http://localhost:5174,http://localhost:8081'),
     PORT: z.coerce.number().default(4000),
-    OTP_EXPIRES_IN_MINUTES: z.coerce.number().default(5),
-    BCRYPT_OTP_SALT_ROUNDS: z.coerce.number().default(10),
     BCRYPT_PASSWORD_SALT_ROUNDS: z.coerce.number().default(12),
-    INVITE_EXPIRES_IN_HOURS: z.coerce.number().default(24),
-    INVITE_EXPIRES_MAX_HOURS: z.coerce.number().default(168),
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
-
-    SCHEDULER_ENABLED: z.enum(['true', 'false']).default('true'),
-
-    LLM_API_KEY: z.string().optional(),
-    LLM_BASE_URL: z.string().optional(),
-    LLM_MODEL: z.string().default('gpt-4o-mini'),
-    LLM_MAX_TOKENS: z.coerce.number().default(2048),
-    LLM_TEMPERATURE: z.coerce.number().default(0.2),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;

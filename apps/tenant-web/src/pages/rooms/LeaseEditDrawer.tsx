@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Drawer,
   Form,
+  Input,
   InputNumber,
   Button,
   message,
@@ -17,6 +18,7 @@ import { updateLease } from '@/api/leases';
 import type { Room } from '@/types/domain';
 import { selectableFeeTypes, type LeaseFeeFormItem } from './constants';
 import { buildLeaseFeesPayload } from './utils';
+import { moneyRule, feesRule } from '@/utils/validators';
 import styles from './LeaseEditPage.module.scss';
 import clsx from 'clsx';
 
@@ -65,13 +67,6 @@ export default function LeaseEditDrawer({
     if (lease && open && !initializedRef.current) {
       form.setFieldsValue({
         rentAmount: lease.rentAmount ? Number(lease.rentAmount) : undefined,
-        roomDepositAmount: lease.roomDepositAmount
-          ? Number(lease.roomDepositAmount)
-          : undefined,
-        keyQuantity: lease.keyQuantity,
-        keyUnitPrice: lease.keyUnitPrice ? Number(lease.keyUnitPrice) : 0,
-        waterUnitPrice: Number(lease.waterUnitPrice ?? 0),
-        powerUnitPrice: Number(lease.powerUnitPrice ?? 0),
       });
       const leaseFees = lease.fees ?? [];
       setFees(
@@ -136,6 +131,10 @@ export default function LeaseEditDrawer({
     setFees((old) => old.filter((item) => item.id !== feeId));
   };
 
+  useEffect(() => {
+    form.setFieldValue('fees', fees);
+  }, [form, fees]);
+
   const handleCancel = () => {
     form.resetFields();
     initializedRef.current = false;
@@ -157,21 +156,6 @@ export default function LeaseEditDrawer({
           values.rentAmount !== undefined && values.rentAmount !== ''
             ? Number(values.rentAmount)
             : undefined,
-        roomDepositAmount:
-          values.roomDepositAmount !== undefined &&
-          values.roomDepositAmount !== ''
-            ? Number(values.roomDepositAmount)
-            : undefined,
-        keyQuantity:
-          values.keyQuantity !== undefined && values.keyQuantity !== ''
-            ? Number(values.keyQuantity)
-            : undefined,
-        keyUnitPrice:
-          values.keyUnitPrice !== undefined && values.keyUnitPrice !== ''
-            ? Number(values.keyUnitPrice)
-            : undefined,
-        waterUnitPrice: Number(values.waterUnitPrice || 0),
-        powerUnitPrice: Number(values.powerUnitPrice || 0),
         fees: buildLeaseFeesPayload(fees),
       });
       message.success('租约信息已更新');
@@ -210,44 +194,24 @@ export default function LeaseEditDrawer({
       <Spin spinning={loading}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <div className={styles.formGrid2}>
-            <Form.Item label="租金" name="rentAmount">
+            <Form.Item
+              label="租金"
+              name="rentAmount"
+              rules={moneyRule('租金', { required: false })}
+            >
               <InputNumber
                 min={0}
+                precision={2}
                 className="w-full"
                 prefix="¥"
                 placeholder="每期金额"
               />
             </Form.Item>
-            <Form.Item label="房间押金" name="roomDepositAmount">
-              <InputNumber
-                min={0}
-                className="w-full"
-                prefix="¥"
-                placeholder="请输入房间押金"
-              />
-            </Form.Item>
           </div>
-          <div className={styles.formGrid2}>
-            <Form.Item label="钥匙数量" name="keyQuantity">
-              <InputNumber min={0} className="w-full" placeholder="套" />
-            </Form.Item>
-            <Form.Item label="钥匙单价" name="keyUnitPrice">
-              <InputNumber
-                min={0}
-                className="w-full"
-                prefix="¥"
-                placeholder="每套金额"
-              />
-            </Form.Item>
-          </div>
-          <div className={styles.formGrid2}>
-            <Form.Item label="水费单价（元/吨）" name="waterUnitPrice">
-              <InputNumber min={0} className="w-full" />
-            </Form.Item>
-            <Form.Item label="电费单价（元/度）" name="powerUnitPrice">
-              <InputNumber min={0} className="w-full" />
-            </Form.Item>
-          </div>
+
+          <Form.Item name="fees" hidden rules={[feesRule(fees)]}>
+            <Input type="hidden" />
+          </Form.Item>
 
           <Divider orientation="left" className={styles.sectionDivider}>
             费用项目

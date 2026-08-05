@@ -1,6 +1,11 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
-import { calculateUtilityLineAmounts, refreshBillTotals } from './billing.js';
+import {
+  calculateUtilityLineAmounts,
+  refreshBillTotals,
+  retryPostpaidBillAndMonthlyBill,
+} from './billing.js';
 
 /**
  * 查询账单列表
@@ -10,7 +15,7 @@ import { calculateUtilityLineAmounts, refreshBillTotals } from './billing.js';
  */
 export const listBills = async (
   organizationId: string,
-  status?: 'BILLING' | 'UNPAID' | 'PAID' | 'VOID'
+  status?: 'UNPAID' | 'PAID' | 'VOID' | 'PENDING'
 ) => {
   return prisma.bill.findMany({
     where: {
@@ -27,7 +32,7 @@ export const listBills = async (
 };
 
 /**
- * 查询账单原始数据（供 Agent 复用）
+ * 查询账单原始数据（供复用）
  * @param organizationId - 组织ID
  * @param options - 可选筛选条件
  * @returns 账单原始记录列表
@@ -35,9 +40,8 @@ export const listBills = async (
 export const listBillsRaw = async (
   organizationId: string,
   options?: {
-    status?: 'BILLING' | 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOID';
+    status?: 'UNPAID' | 'PAID' | 'VOID' | 'PENDING';
     tenantName?: string;
-    mode?: 'PREPAID' | 'POSTPAID' | 'DEPOSIT';
     limit?: number;
   }
 ) => {
@@ -46,7 +50,6 @@ export const listBillsRaw = async (
       organizationId,
       deletedAt: null,
       ...(options?.status ? { status: options.status } : {}),
-      ...(options?.mode ? { mode: options.mode } : {}),
       ...(options?.tenantName
         ? {
             lease: {
@@ -110,28 +113,44 @@ export const findLeaseById = async (
  * 查询抄表记录列表
  * @param organizationId - 组织ID
  * @param roomId - 房间ID（可选）
- * @returns 抄表记录列表，包含房间、租约和创建者信息
+ * @returns 抄表记录列表，包含房间、租约信息
  */
 export const listMeterReadings = async (
   organizationId: string,
-  roomId?: string
+  filters?: {
+    roomId?: string;
+    apartmentId?: string;
+    meterType?: 'WATER' | 'POWER';
+    startDate?: Date;
+    endDate?: Date;
+  }
 ) => {
   return prisma.meterReading.findMany({
     where: {
       organizationId,
-      ...(roomId ? { roomId } : {}),
+      ...(filters?.roomId ? { roomId: filters.roomId } : {}),
+      ...(filters?.apartmentId ? { apartmentId: filters.apartmentId } : {}),
+      ...(filters?.meterType ? { meterType: filters.meterType } : {}),
+      ...(filters?.startDate || filters?.endDate
+        ? {
+            readingDate: {
+              ...(filters.startDate ? { gte: filters.startDate } : {}),
+              ...(filters.endDate ? { lte: filters.endDate } : {}),
+            },
+          }
+        : {}),
     },
     include: {
       room: true,
       lease: true,
-      createdBy: { select: { id: true, username: true, phone: true } },
+      apartment: true,
     },
     orderBy: { readingDate: 'desc' },
   });
 };
 
 /**
- * 查询抄表记录原始数据（供 Agent 复用）
+ * 查询抄表记录原始数据（供复用）
  * @param organizationId - 组织ID
  * @param options - 可选筛选条件
  * @returns 抄表记录原始列表
@@ -157,10 +176,85 @@ export const listMeterReadingsRaw = async (
           apartment: { select: { name: true } },
         },
       },
-      createdBy: { select: { username: true } },
     },
     take: options?.limit,
     orderBy: { readingDate: 'desc' },
+  });
+};
+
+/**
+ * 查询待抄表房间列表（有活跃租约的房间及其最近一次抄表读数）
+ * @param organizationId - 组织ID
+ * @returns 待抄表房间列表
+ */
+export const listMeterReadingRooms = async (organizationId: string) => {
+  const leases = await prisma.lease.findMany({
+    where: {
+      organizationId,
+      status: 'ACTIVE',
+    },
+    include: {
+      room: {
+        include: { apartment: true },
+      },
+    },
+    orderBy: { startDate: 'desc' },
+  });
+
+  const roomIds = leases.map((lease) => lease.roomId);
+  if (roomIds.length === 0) return [];
+
+  const [latestWaterReadings, latestPowerReadings] = await Promise.all([
+    prisma.meterReading.findMany({
+      where: {
+        organizationId,
+        roomId: { in: roomIds },
+        meterType: 'WATER',
+      },
+      orderBy: [{ roomId: 'asc' }, { readingDate: 'desc' }],
+      distinct: ['roomId'],
+    }),
+    prisma.meterReading.findMany({
+      where: {
+        organizationId,
+        roomId: { in: roomIds },
+        meterType: 'POWER',
+      },
+      orderBy: [{ roomId: 'asc' }, { readingDate: 'desc' }],
+      distinct: ['roomId'],
+    }),
+  ]);
+
+  const readingMap = new Map<
+    string,
+    Map<'WATER' | 'POWER', { readingDate: Date; value: number }>
+  >();
+  for (const reading of [...latestWaterReadings, ...latestPowerReadings]) {
+    if (!readingMap.has(reading.roomId)) {
+      readingMap.set(reading.roomId, new Map());
+    }
+    readingMap.get(reading.roomId)!.set(reading.meterType, {
+      readingDate: reading.readingDate,
+      value: Number(reading.value),
+    });
+  }
+
+  return leases.map((lease) => {
+    const roomReadings = readingMap.get(lease.roomId) ?? new Map();
+    const water = roomReadings.get('WATER');
+    const power = roomReadings.get('POWER');
+    return {
+      leaseId: lease.id,
+      tenantName: lease.tenantName,
+      roomId: lease.roomId,
+      roomNo: lease.room.roomNo,
+      apartmentId: lease.room.apartmentId,
+      apartmentName: lease.room.apartment.name,
+      lastWaterReadingDate: water?.readingDate ?? null,
+      lastWaterValue: water?.value ?? null,
+      lastPowerReadingDate: power?.readingDate ?? null,
+      lastPowerValue: power?.value ?? null,
+    };
   });
 };
 
@@ -208,7 +302,7 @@ export const findLeaseForMeterReading = async (
 
 /**
  * 创建抄表记录
- * @param data - 抄表记录数据，包含组织ID、公寓ID、房间ID、租约ID、表类型、抄表日期、读数、来源、状态和备注
+ * @param data - 抄表记录数据
  * @returns 创建的抄表记录
  */
 export const createMeterReading = async (data: {
@@ -219,12 +313,67 @@ export const createMeterReading = async (data: {
   meterType: 'WATER' | 'POWER';
   readingDate: Date;
   value: number;
-  source: 'MANUAL' | 'IMPORT';
-  status: 'NORMAL' | 'SUSPECTED' | 'CONFIRMED' | 'VOID';
   note?: string;
-  createdById: string;
 }) => {
   return prisma.meterReading.create({ data });
+};
+
+/**
+ * 为房间录入一次水电抄表，并尝试完成该房间待出账的后付费账单
+ * @param data - 抄表入参
+ * @returns 创建的水表/电表记录与触发的账单补全结果
+ */
+export const recordRoomMeterReading = async (data: {
+  organizationId: string;
+  roomId: string;
+  readingDate: Date;
+  waterValue: number;
+  powerValue: number;
+  note?: string;
+}) => {
+  const room = await findRoomForMeterReading(data.roomId, data.organizationId);
+  if (!room) throw new HttpError(404, '房间不存在');
+  const lease = await findLeaseForMeterReading(
+    room.id,
+    data.organizationId,
+    data.readingDate
+  );
+
+  const baseReading = {
+    organizationId: data.organizationId,
+    apartmentId: room.apartmentId,
+    roomId: room.id,
+    leaseId: lease?.id,
+    readingDate: data.readingDate,
+    note: data.note,
+  };
+
+  const [waterReading, powerReading] = await prisma.$transaction([
+    prisma.meterReading.create({
+      data: { ...baseReading, meterType: 'WATER', value: data.waterValue },
+    }),
+    prisma.meterReading.create({
+      data: { ...baseReading, meterType: 'POWER', value: data.powerValue },
+    }),
+  ]);
+
+  const pendingBills = await findPendingPostpaidBillsByRoom(room.id);
+  const retried = await Promise.all(
+    pendingBills.map((b) =>
+      retryPostpaidBillAndMonthlyBill(b.id).catch(() => null)
+    )
+  );
+
+  return {
+    waterReading,
+    powerReading,
+    lease,
+    room,
+    pendingBillCount: pendingBills.length,
+    completedBillIds: retried
+      .filter((b): b is NonNullable<typeof b> => !!b)
+      .map((b) => b!.id),
+  };
 };
 
 /**
@@ -236,8 +385,13 @@ export const findPendingPostpaidBillsByRoom = async (roomId: string) => {
   return prisma.bill.findMany({
     where: {
       lease: { roomId },
-      mode: 'POSTPAID',
-      status: { in: ['BILLING'] },
+      status: { in: ['UNPAID', 'PENDING'] },
+      items: {
+        some: {
+          category: 'UTILITY',
+          amount: 0,
+        },
+      },
     },
     select: { id: true },
   });
@@ -270,10 +424,41 @@ export const getBillWithItemsAndLease = async (
  * @param currentPower - 本期电表读数
  * @returns 更新后的账单（包含账单项目）
  */
+const upsertMeterReading = async (
+  tx: Prisma.TransactionClient,
+  data: {
+    organizationId: string;
+    apartmentId: string;
+    roomId: string;
+    leaseId?: string;
+    meterType: 'WATER' | 'POWER';
+    readingDate: Date;
+    value: number;
+  }
+) => {
+  const existing = await tx.meterReading.findFirst({
+    where: {
+      roomId: data.roomId,
+      meterType: data.meterType,
+      readingDate: data.readingDate,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (existing) {
+    return tx.meterReading.update({
+      where: { id: existing.id },
+      data: { value: data.value },
+    });
+  }
+
+  return tx.meterReading.create({ data });
+};
+
 export const applyUtilityReadingToBill = async ({
   billId,
   organizationId,
-  userId,
+  userId: _userId,
   previousWater,
   currentWater,
   previousPower,
@@ -289,11 +474,12 @@ export const applyUtilityReadingToBill = async ({
 }) => {
   const bill = await getBillWithItemsAndLease(billId, organizationId);
   if (!bill) throw new HttpError(404, '账单不存在');
-  if (bill.mode !== 'POSTPAID')
-    throw new HttpError(400, '仅后付费水电账单可以录入读数');
-
-  const waterItem = bill.items.find((item) => item.type === 'WATER');
-  const powerItem = bill.items.find((item) => item.type === 'POWER');
+  const waterItem = bill.items.find(
+    (item) => item.category === 'UTILITY' && item.name === '水费'
+  );
+  const powerItem = bill.items.find(
+    (item) => item.category === 'UTILITY' && item.name === '电费'
+  );
   if (!waterItem || !powerItem) throw new HttpError(400, '账单缺少水电项目');
   if (currentWater < previousWater)
     throw new HttpError(400, '水表本期读数不能小于上期读数');
@@ -303,112 +489,67 @@ export const applyUtilityReadingToBill = async ({
   const { waterAmount, powerAmount } = calculateUtilityLineAmounts({
     previousWater,
     currentWater,
-    waterUnitPrice: waterItem.waterUnitPrice ?? 0,
+    waterUnitPrice: bill.lease.waterUnitPrice,
     previousPower,
     currentPower,
-    powerUnitPrice: powerItem.powerUnitPrice ?? 0,
+    powerUnitPrice: bill.lease.powerUnitPrice,
   });
 
-  await prisma.$transaction([
-    prisma.billItem.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.billItem.update({
       where: { id: waterItem.id },
-      data: {
-        previousWater,
-        currentWater,
-        amount: waterAmount,
-        status: 'UNPAID',
-      },
-    }),
-    prisma.billItem.update({
+      data: { amount: waterAmount },
+    });
+    await tx.billItem.update({
       where: { id: powerItem.id },
-      data: {
-        previousPower,
-        currentPower,
-        amount: powerAmount,
-        status: 'UNPAID',
-      },
-    }),
-    prisma.bill.update({
+      data: { amount: powerAmount },
+    });
+    await tx.bill.update({
       where: { id: bill.id },
-      data: { status: 'UNPAID', failureReason: null },
-    }),
-    prisma.meterReading.createMany({
-      data: [
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'WATER',
-          readingDate: bill.periodStart,
-          value: previousWater,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'WATER',
-          readingDate: bill.periodEnd,
-          value: currentWater,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'POWER',
-          readingDate: bill.periodStart,
-          value: previousPower,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-        {
-          organizationId: bill.organizationId,
-          apartmentId: bill.lease.room.apartmentId,
-          roomId: bill.lease.roomId,
-          leaseId: bill.leaseId,
-          meterType: 'POWER',
-          readingDate: bill.periodEnd,
-          value: currentPower,
-          source: 'MANUAL',
-          status: 'NORMAL',
-          createdById: userId,
-        },
-      ],
-    }),
-  ]);
+      data: { status: 'UNPAID' },
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'WATER',
+      readingDate: waterItem.periodStart,
+      value: previousWater,
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'WATER',
+      readingDate: waterItem.periodEnd,
+      value: currentWater,
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'POWER',
+      readingDate: powerItem.periodStart,
+      value: previousPower,
+    });
+    await upsertMeterReading(tx, {
+      organizationId: bill.organizationId,
+      apartmentId: bill.lease.room.apartmentId,
+      roomId: bill.lease.roomId,
+      leaseId: bill.leaseId,
+      meterType: 'POWER',
+      readingDate: powerItem.periodEnd,
+      value: currentPower,
+    });
+  });
 
   await refreshBillTotals(bill.id);
   return prisma.bill.findUnique({
     where: { id: bill.id },
     include: { items: true },
-  });
-};
-
-/**
- * 查找待导出的后付费账单
- * @param organizationId - 组织ID
- * @returns 待处理的后付费账单列表，包含租约、房间和账单项目
- */
-export const findPendingPostpaidBillsForExport = async (
-  organizationId: string
-) => {
-  return prisma.bill.findMany({
-    where: {
-      mode: 'POSTPAID',
-      status: { in: ['BILLING'] },
-      organizationId,
-    },
-    include: { lease: { include: { room: true } }, items: true },
-    orderBy: { billingDate: 'asc' },
   });
 };
 
@@ -424,6 +565,7 @@ export const getBillForRetry = async (
 ) => {
   return prisma.bill.findFirst({
     where: { id: billId, organizationId },
+    include: { items: true },
   });
 };
 

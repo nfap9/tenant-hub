@@ -12,7 +12,6 @@ import {
   getBillMonthLabel,
   getCurrentMonthBillWindow,
 } from '../services/billing.js';
-import { createTransaction } from '../services/transaction.js';
 import { withLeaseLifecycle } from '../services/leaseLifecycle.js';
 import {
   ensureApartmentInOrg,
@@ -24,8 +23,6 @@ import {
   updateApartment,
   deleteApartment,
   countActiveLeasesInApartment,
-  createApartmentExpense,
-  getApartmentName,
   batchCreateRooms,
   updateRoom,
   getRoomStatus,
@@ -38,14 +35,13 @@ apartmentRouter.use(requireAuth, requireOrg);
 
 export const apartmentInput = z.object({
   name: z.string().min(1).describe('公寓名称'),
-  location: z.string().min(1).describe('公寓地址'),
-});
-
-export const apartmentExpenseInput = z.object({
-  name: z.string().min(1).describe('支出名称'),
-  amount: z.coerce.number().describe('支出金额'),
-  spentAt: z.coerce.date().describe('支出日期'),
-  note: z.string().optional().describe('备注'),
+  address: z.string().min(1).describe('公寓地址'),
+  rentAmount: z.coerce.number().nonnegative().optional().describe('上游租金'),
+  landlordName: z.string().optional().describe('房东姓名'),
+  landlordPhone: z.string().optional().describe('房东联系方式'),
+  contractStart: z.coerce.date().optional().describe('合同开始日期'),
+  contractEnd: z.coerce.date().optional().describe('合同结束日期'),
+  floors: z.coerce.number().int().min(1).optional().describe('楼层数'),
 });
 
 export const batchCreateRoomsInput = z.object({
@@ -55,7 +51,8 @@ export const batchCreateRoomsInput = z.object({
         roomNo: z.string().min(1).describe('房号'),
         layout: z.string().min(1).describe('户型'),
         area: z.coerce.number().optional().describe('面积（平方米）'),
-        facilities: z.array(z.string()).default([]).describe('配套设施'),
+        floor: z.coerce.number().int().optional().describe('楼层'),
+        furnishings: z.array(z.string()).default([]).describe('配套设施'),
       })
     )
     .describe('房间列表'),
@@ -65,13 +62,18 @@ export const updateRoomInput = z.object({
   roomNo: z.string().min(1).optional().describe('房号'),
   layout: z.string().min(1).optional().describe('户型'),
   area: z.coerce.number().optional().describe('面积（平方米）'),
-  facilities: z.array(z.string()).optional().describe('配套设施'),
+  floor: z.coerce.number().int().optional().describe('楼层'),
+  furnishings: z.array(z.string()).optional().describe('配套设施'),
   status: z
-    .enum(['VACANT', 'RESERVED', 'OCCUPIED', 'MAINTENANCE', 'SELF_USE'])
+    .enum(['VACANT', 'OCCUPIED', 'MAINTENANCE', 'SELF_USE'])
     .optional()
     .describe('房间状态'),
 });
 
+/**
+ * GET /api/apartments
+ * 获取当前组织下的公寓列表（含房间、租约及本月账单状态）
+ */
 apartmentRouter.get(
   '/',
   requirePermission(PERMISSIONS.APARTMENT_VIEW),
@@ -101,6 +103,10 @@ apartmentRouter.get(
   })
 );
 
+/**
+ * GET /api/apartments/rooms
+ * 获取当前组织下的房间列表（含活跃租约及本月账单状态）
+ */
 apartmentRouter.get(
   '/rooms',
   requirePermission(PERMISSIONS.ROOM_VIEW),
@@ -125,6 +131,10 @@ apartmentRouter.get(
   })
 );
 
+/**
+ * POST /api/apartments
+ * 在当前组织下创建新公寓
+ */
 apartmentRouter.post(
   '/',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
@@ -140,6 +150,10 @@ apartmentRouter.post(
   })
 );
 
+/**
+ * PUT /api/apartments/:id
+ * 更新指定公寓的基本信息
+ */
 apartmentRouter.put(
   '/:id',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
@@ -150,6 +164,10 @@ apartmentRouter.put(
   })
 );
 
+/**
+ * DELETE /api/apartments/:id
+ * 删除指定公寓（存在活跃租约时禁止删除）
+ */
 apartmentRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.APARTMENT_MANAGE),
@@ -165,37 +183,10 @@ apartmentRouter.delete(
   })
 );
 
-apartmentRouter.post(
-  '/:id/expenses',
-  requirePermission(PERMISSIONS.APARTMENT_MANAGE),
-  asyncHandler(async (req, res) => {
-    const input = apartmentExpenseInput.parse(req.body);
-    await ensureApartmentInOrg(req.params.id, req.organizationId!);
-
-    const expense = await createApartmentExpense({
-      ...input,
-      apartmentId: req.params.id,
-    });
-
-    const apartmentName = await getApartmentName(req.params.id);
-    await createTransaction({
-      organizationId: req.organizationId!,
-      type: 'EXPENSE',
-      category: 'OTHER_EXPENSE',
-      amount: input.amount,
-      method: '现金',
-      description: `${apartmentName || '公寓'} - ${input.name}`,
-      note: input.note,
-      operatorId: req.user!.id,
-      sourceType: 'APARTMENT_EXPENSE',
-      sourceId: expense.id,
-      apartmentId: req.params.id,
-    });
-
-    ok(res, expense);
-  })
-);
-
+/**
+ * POST /api/apartments/:id/rooms/batch
+ * 批量为指定公寓创建房间（自动去重）
+ */
 apartmentRouter.post(
   '/:id/rooms/batch',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
@@ -209,6 +200,10 @@ apartmentRouter.post(
   })
 );
 
+/**
+ * PUT /api/apartments/rooms/:roomId
+ * 更新指定房间的信息和状态
+ */
 apartmentRouter.put(
   '/rooms/:roomId',
   requirePermission(PERMISSIONS.ROOM_MANAGE),
@@ -230,6 +225,10 @@ apartmentRouter.put(
   })
 );
 
+/**
+ * GET /api/apartments/rooms/:roomId
+ * 获取指定房间的详细信息
+ */
 apartmentRouter.get(
   '/rooms/:roomId',
   requirePermission(PERMISSIONS.ROOM_VIEW),
@@ -252,6 +251,10 @@ apartmentRouter.get(
   })
 );
 
+/**
+ * DELETE /api/apartments/rooms/:roomId
+ * 删除指定房间（存在活跃租约时禁止删除）
+ */
 apartmentRouter.delete(
   '/rooms/:roomId',
   requirePermission(PERMISSIONS.ROOM_MANAGE),

@@ -1,7 +1,6 @@
 import { customAlphabet } from 'nanoid';
 import { prisma } from '../config/prisma.js';
 import { HttpError } from '../utils/http.js';
-import { enforceOrganizationQuota } from './quotas.js';
 import { generateInviteCode, normalizeInviteCode } from './orgInvites.js';
 
 const orgCode = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 8);
@@ -23,6 +22,7 @@ export const listUserOrganizations = async (userId: string) => {
           inviteCode: true,
           description: true,
           ownerId: true,
+          aiModelDefault: true,
         },
       },
       role: true,
@@ -108,18 +108,6 @@ export const joinOrganization = async (data: {
     if (existingMember?.status === 'ACTIVE')
       throw new HttpError(400, '不能重复加入同一个组织');
 
-    await enforceOrganizationQuota(
-      tx,
-      data.organizationId,
-      'member',
-      async () => {
-        const activeMemberCount = await tx.orgMember.count({
-          where: { organizationId: data.organizationId, status: 'ACTIVE' },
-        });
-        return activeMemberCount + 1;
-      }
-    );
-
     return tx.orgMember.upsert({
       where: {
         organizationId_userId: {
@@ -161,34 +149,6 @@ export const refreshOrganizationInviteCode = async (organizationId: string) => {
 };
 
 /**
- * 列出所有启用的套餐计划
- * @returns 套餐计划列表
- */
-export const listPlans = async () => {
-  return prisma.plan.findMany({
-    where: { enabled: true },
-    orderBy: [{ price: 'asc' }, { createdAt: 'asc' }],
-  });
-};
-
-/**
- * 获取组织的当前有效订阅
- * @param organizationId - 组织ID
- * @returns 订阅信息，未找到时返回 null
- */
-export const getOrganizationSubscription = async (organizationId: string) => {
-  return prisma.subscription.findFirst({
-    where: {
-      organizationId,
-      active: true,
-      OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
-    },
-    include: { plan: true },
-    orderBy: { startsAt: 'desc' },
-  });
-};
-
-/**
  * 获取组织的使用情况统计
  * @param organizationId - 组织ID
  * @returns 组织的公寓数和成员数统计
@@ -201,53 +161,6 @@ export const getOrganizationUsage = async (organizationId: string) => {
 };
 
 /**
- * 列出组织的配额包
- * @param organizationId - 组织ID
- * @returns 配额包列表
- */
-export const listOrgQuotaPackages = async (organizationId: string) => {
-  return prisma.orgQuotaPackage.findMany({
-    where: { organizationId },
-    orderBy: { createdAt: 'desc' },
-  });
-};
-
-/**
- * 通过ID查找套餐计划
- * @param planId - 套餐ID
- * @returns 套餐信息，未找到时返回 null
- */
-export const findPlanById = async (planId: string) => {
-  return prisma.plan.findUnique({ where: { id: planId } });
-};
-
-/**
- * 为组织创建新的订阅
- * @param data - 订阅创建数据，包含组织ID和套餐ID
- * @returns 新创建的订阅信息
- */
-export const createSubscription = async (data: {
-  organizationId: string;
-  planId: string;
-}) => {
-  return prisma.$transaction(async (tx) => {
-    await tx.subscription.updateMany({
-      where: { organizationId: data.organizationId, active: true },
-      data: { active: false, endsAt: new Date() },
-    });
-    return tx.subscription.create({
-      data: {
-        organizationId: data.organizationId,
-        planId: data.planId,
-        startsAt: new Date(),
-        endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      },
-      include: { plan: true },
-    });
-  });
-};
-
-/**
  * 更新组织信息
  * @param organizationId - 组织ID
  * @param data - 更新的数据，包含名称和/或描述
@@ -255,7 +168,7 @@ export const createSubscription = async (data: {
  */
 export const updateOrganization = async (
   organizationId: string,
-  data: { name?: string; description?: string }
+  data: { name?: string; description?: string; aiModelDefault?: string | null }
 ) => {
   return prisma.organization.update({
     where: { id: organizationId },
@@ -264,28 +177,14 @@ export const updateOrganization = async (
 };
 
 /**
- * 获取组织信息及其活跃订阅
- * @param organizationId - 组织ID
- * @returns 包含活跃订阅的组织信息
- */
-export const getOrganizationWithSubscriptions = async (
-  organizationId: string
-) => {
-  return prisma.organization.findUnique({
-    where: { id: organizationId },
-    include: { subscriptions: { where: { active: true } } },
-  });
-};
-
-/**
- * 软删除组织
+ * 软删除组织（将状态设为暂停）
  * @param organizationId - 组织ID
  * @returns 更新后的组织信息
  */
 export const softDeleteOrganization = async (organizationId: string) => {
   return prisma.organization.update({
     where: { id: organizationId },
-    data: { status: 'DELETED' },
+    data: { status: 'SUSPENDED' },
   });
 };
 

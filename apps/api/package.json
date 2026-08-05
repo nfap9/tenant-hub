@@ -14,8 +14,11 @@
     "prisma": "prisma"
   },
   "dependencies": {
-    "@langchain/core": "^1.1.48",
-    "@langchain/openai": "^1.4.7",
+    "@langchain/anthropic": "^1.5.2",
+    "@langchain/core": "^1.2.4",
+    "@langchain/langgraph": "^1.4.8",
+    "@langchain/langgraph-checkpoint-postgres": "^1.0.4",
+    "@langchain/openai": "^1.5.5",
     "@prisma/client": "5.22.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -25,7 +28,7 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.0.9",
-    "node-cron": "^4.2.1",
+    "pg": "^8.22.0",
     "prisma": "5.22.0",
     "zod": "^3.24.1"
   },
@@ -36,7 +39,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/ms": "^2.1.0",
     "@types/node": "^22.10.5",
-    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.20.3",
     "eslint": "^9.17.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
